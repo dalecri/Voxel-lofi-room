@@ -79,7 +79,7 @@ function startLofiRooms() {
     },
     lift() { return liftNow; },
   });
-  const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', paintTab: 'walls', drag: null };
+  const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
 
   (function starsBg() {
@@ -199,7 +199,8 @@ function startLofiRooms() {
         b.className = 'swatch' + (state.add === C.key ? ' on' : '');
         const name = C.kind === 'pet' ? 'Cats' : C.name;
         b.innerHTML = `<img alt="" src="${thumbOf(C.key, 0)}"><span>${name}</span>`;
-        b.onclick = () => { state.add = C.key; renderTray(); Sound.turn(); toast(`<span>Tap the room to place ${C.kind === 'pet' ? 'a cat' : 'the ' + C.name.toLowerCase()}</span>`, 1400); };
+        b.title = name;
+        b.onclick = () => pickAdd(C.key, true);
         row.appendChild(b);
       });
     } else {
@@ -235,6 +236,75 @@ function startLofiRooms() {
     }
     const on = row.querySelector('.on');
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+    updateTrayArrows();
+  }
+  function pickAdd(key, fromTray) {
+    const C = CAT[key];
+    state.add = key; state.addR = null;
+    renderTray(); Sound.turn(); refreshGhost();
+    if (fromTray || !FINE) toast(`<span>${FINE ? 'Click' : 'Tap'} the room to place ${C.kind === 'pet' ? 'a cat' : 'the ' + C.name.toLowerCase()}</span>`, 1400);
+  }
+
+  // ---------------------------------------------------------------
+  // Desktop: the mouse wheel and click-drag scroll the tray, arrows step through it
+  const FINE = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  function hScroll(el) {
+    el.addEventListener('wheel', e => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // trackpads already scroll sideways
+      e.preventDefault();
+      const d = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+      el.scrollBy({ left: d * 1.2, behavior: Math.abs(d) >= 50 ? 'smooth' : 'auto' });
+    }, { passive: false });
+    let drag = null;
+    el.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button === 0) drag = { x: e.clientX, s: el.scrollLeft, moved: false }; });
+    window.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; el.classList.add('dragging'); }
+      if (drag.moved) el.scrollLeft = drag.s - dx;
+    });
+    window.addEventListener('pointerup', () => {
+      if (drag && drag.moved) { el.dataset.dragged = '1'; setTimeout(() => { delete el.dataset.dragged; }, 0); }
+      el.classList.remove('dragging'); drag = null;
+    });
+    el.addEventListener('click', e => { if (el.dataset.dragged) { e.stopPropagation(); e.preventDefault(); } }, true);
+    el.addEventListener('scroll', updateTrayArrows, { passive: true });
+  }
+  function updateTrayArrows() {
+    const max = row.scrollWidth - row.clientWidth;
+    $('#trayPrev').hidden = row.scrollLeft < 4;
+    $('#trayNext').hidden = row.scrollLeft > max - 4;
+  }
+  hScroll(row); hScroll(tabs);
+  $('#trayPrev').onclick = () => row.scrollBy({ left: -row.clientWidth * 0.7, behavior: 'smooth' });
+  $('#trayNext').onclick = () => row.scrollBy({ left: row.clientWidth * 0.7, behavior: 'smooth' });
+  window.addEventListener('resize', updateTrayArrows);
+
+  // keyboard: step through the tray (←/→) and its tabs (↑/↓)
+  function stepTray(dir) {
+    if (state.tool === 'add') {
+      const list = Object.values(CAT).filter(C => C.group === state.group);
+      const i = list.findIndex(C => C.key === state.add);
+      pickAdd(list[(i + dir + list.length) % list.length].key);
+    } else {
+      const items = [...row.querySelectorAll('.swatch, .dot')];
+      const i = items.findIndex(b => b.classList.contains('on'));
+      const next = items[(i + dir + items.length) % items.length];
+      if (next) next.click();
+    }
+  }
+  function stepTab(dir) {
+    if (state.tool === 'add') {
+      const i = GROUPS.findIndex(g => g[0] === state.group);
+      state.group = GROUPS[(i + dir + GROUPS.length) % GROUPS.length][0];
+      const first = Object.values(CAT).find(C => C.group === state.group);
+      if (first) state.add = first.key;
+      state.addR = null;
+    } else {
+      const order = ['walls', 'color', 'floor'];
+      state.paintTab = order[(order.indexOf(state.paintTab) + dir + 3) % 3];
+    }
+    renderTray(); Sound.turn(); refreshGhost();
   }
   function paintRoom(fn) {
     pushUndo(); fn(); saveMeta(); changed(); renderTray();
@@ -268,8 +338,20 @@ function startLofiRooms() {
       store.set('lr.tipEdit', true);
       toast('<b>Decorating</b><span>Pick something from the tray, then tap or drag in the room to place it.</span>', 4200);
     }
+    if (mode === 'edit' && FINE && !store.get('lr.tipKeys', false)) {
+      store.set('lr.tipKeys', true);
+      toast('<b>Mouse & keys</b><span>Scroll the tray with the wheel · <kbd>←</kbd><kbd>→</kbd> pick · <kbd>↑</kbd><kbd>↓</kbd> tabs · <kbd>R</kbd> turn · <kbd>Del</kbd> remove</span>', 5200);
+    }
+    view.setHover(0);
   }
   $('#bEdit').onclick = () => { setMode('edit'); Sound.init(); };
+  if (FINE) {
+    const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
+    document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
+    document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
+    const chip = { bTime: 'Time of day', bRain: 'Rain', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bMenu: 'Menu (H)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
+  }
 
   function surprise() {
     pushUndo();
@@ -327,7 +409,7 @@ function startLofiRooms() {
       o.z = clampI(Math.round(p.z - (grab ? grab.z : fd / 2)), 0, N - fd);
       return o;
     };
-    if (!grab && C.wallish) {
+    if (!grab && C.wallish && state.addR == null) {
       // back it against the nearest wall, like you would in real life
       for (const r of [0, 1, 2, 3]) {
         const o = place(r), [fw, fd] = fp(o);
@@ -492,7 +574,7 @@ function startLofiRooms() {
     const tool = state.tool;
     if (tool === 'add') {
       const C = CAT[state.add];
-      const base = { t: state.add, c: 0, r: 0, on: C.on !== undefined ? C.on : false };
+      const base = { t: state.add, c: 0, r: state.addR || 0, on: C.on !== undefined ? C.on : false };
       if (state.add === 'cat') base.c = (room.count(i => i.t === 'cat')) % CATS.length;
       const cand = candidate(e.clientX, e.clientY, base);
       if (!cand) { startOrbit(e); return; }
@@ -629,13 +711,35 @@ function startLofiRooms() {
       return;
     }
     if (state.drag) { moveEdit(e); return; }
-    // desktop: preview the piece under the mouse
-    if (e.pointerType === 'mouse' && state.mode === 'edit' && state.tool === 'add' && !pointers.size) {
-      const C = CAT[state.add];
-      const cand = candidate(e.clientX, e.clientY, { t: state.add, c: state.add === 'cat' ? room.count(i => i.t === 'cat') % CATS.length : 0, r: 0, on: C.on !== undefined ? C.on : false });
-      if (cand) view.setGhost(cand, room.canPlace(cand), room); else view.setGhost(null);
-    }
+    // desktop: preview the piece under the mouse, outline what a tool would act on
+    if (e.pointerType === 'mouse' && !pointers.size) { mouse = { x: e.clientX, y: e.clientY }; hoverSoon(); }
   });
+  let mouse = null, hoverT = 0;
+  function hoverSoon() {
+    if (hoverT) return;
+    hoverT = requestAnimationFrame(() => { hoverT = 0; updateHover(); });
+  }
+  function refreshGhost() { if (mouse) updateHover(); }
+  function updateHover() {
+    if (!mouse || state.drag || orbit) return;
+    if (state.mode === 'edit' && state.tool === 'add') {
+      const C = CAT[state.add];
+      const cand = candidate(mouse.x, mouse.y, { t: state.add, c: state.add === 'cat' ? room.count(i => i.t === 'cat') % CATS.length : 0, r: state.addR || 0, on: C.on !== undefined ? C.on : false });
+      if (cand) view.setGhost(cand, room.canPlace(cand), room); else view.setGhost(null);
+      view.setHover(0); canvas.style.cursor = cand ? 'crosshair' : 'grab';
+      return;
+    }
+    const hit = view.pickItem(mouse.x, mouse.y);
+    const id = hit && !hit.behindWall ? hit.id : 0;
+    if (state.mode === 'edit') {
+      view.setHover(id, state.tool === 'remove' ? 0xff6a6a : state.tool === 'paint' ? 0x9ae8ff : 0xffffff);
+      canvas.style.cursor = id ? (state.tool === 'move' ? 'grab' : 'pointer') : 'grab';
+    } else {
+      view.setHover(0);
+      const it = id && room.get(id);
+      canvas.style.cursor = it && CAT[it.t].tap ? 'pointer' : 'grab';
+    }
+  }
   const up = e => {
     pointers.delete(e.pointerId);
     if (pointers.size < 2) gesture = null;
@@ -660,7 +764,7 @@ function startLofiRooms() {
   }
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', up);
-  canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !state.drag) view.setGhost(null); });
+  canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !state.drag) { view.setGhost(null); view.setHover(0); mouse = null; } });
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     view.zoomGoal = Math.max(0.7, Math.min(3, view.zoomGoal * Math.exp(-e.deltaY * 0.0015)));
@@ -677,16 +781,42 @@ function startLofiRooms() {
 
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
+    if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;   // leave browser shortcuts like Ctrl+R alone
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const trayOpen = tray.classList.contains('open');
     const keys = { 1: 'add', 2: 'move', 3: 'turn', 4: 'paint', 5: 'remove' };
-    if (keys[e.key]) { if (state.mode === 'explore') setMode('edit', true); document.querySelector(`.tools [data-tool="${keys[e.key]}"]`).click(); }
-    if (e.key === 'x') setMode(state.mode === 'explore' ? 'edit' : 'explore');
-    if (e.key === 'r') surprise();
-    if (e.key === 'q') rotate(-1);
-    if (e.key === 'e') rotate(1);
-    if (e.key === 'm') setMusic(!meta.music);
-    if ((e.key === 'z' && (e.ctrlKey || e.metaKey)) || e.key === 'u') doUndo();
-    if (e.key === 'Escape') { closeSheets(); $('#photo').classList.remove('open'); }
+    if (keys[key]) { if (state.mode === 'explore') setMode('edit', true); document.querySelector(`.tools [data-tool="${keys[key]}"]`).click(); }
+    else if (key === 'ArrowRight' && trayOpen) { e.preventDefault(); stepTray(1); }
+    else if (key === 'ArrowLeft' && trayOpen) { e.preventDefault(); stepTray(-1); }
+    else if ((key === 'ArrowDown' || key === ']') && trayOpen) { e.preventDefault(); stepTab(1); }
+    else if ((key === 'ArrowUp' || key === '[') && trayOpen) { e.preventDefault(); stepTab(-1); }
+    else if (key === 'r') turnKey();
+    else if ((key === 'Delete' || key === 'Backspace') && state.mode === 'edit' && view.hoverId) { const t = state.tool; state.tool = 'remove'; tapEdit(view.hoverId); state.tool = t; view.setHover(0); refreshGhost(); }
+    else if (key === 'x') setMode(state.mode === 'explore' ? 'edit' : 'explore');
+    else if (key === 'g') surprise();
+    else if (key === 'q') rotate(-1);
+    else if (key === 'e') rotate(1);
+    else if (key === 'm') setMusic(!meta.music);
+    else if (key === 'u') doUndo();
+    else if (key === '?' || key === 'h') { $('#bMenu').click(); }
+    else if (key === 'Escape') {
+      if (state.drag) { if (state.drag.kind === 'move') setHidden(0); state.drag = null; view.setGhost(null); }
+      else if (sheet.classList.contains('open') || $('#photo').classList.contains('open')) { closeSheets(); $('#photo').classList.remove('open'); }
+      else if (state.mode === 'edit') setMode('explore');
+    }
   });
+  // R: spin the piece you're about to place, or the one under the mouse
+  function turnKey() {
+    if (state.mode === 'edit' && state.tool === 'add') {
+      const C = CAT[state.add];
+      if (C.kind === 'wall') { toast('<span>Wall pieces stay flat against the wall</span>', 1200); return; }
+      state.addR = ((state.addR || 0) + 1) % 4; Sound.turn(); refreshGhost();
+      return;
+    }
+    if (state.mode === 'edit' && view.hoverId) { const t = state.tool; state.tool = 'turn'; tapEdit(view.hoverId); state.tool = t; refreshGhost(); return; }
+    rotate(1);
+  }
 
   function rotate(dir) {
     const q = Math.PI / 2;
@@ -820,7 +950,7 @@ function startLofiRooms() {
     };
     toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
     toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
-    h('p', 'muted small', 'Explore: drag to look around, pinch to zoom, double-tap to zoom in, tap lamps, records, plants and cats. Decorate: Add places things (tap or drag), Move drags them, Turn spins them, Paint changes walls, floors and colours, Remove puts things away. Small things like mugs and lamps sit on desks, tables and shelves. On a computer: right-drag spins, the wheel zooms, keys 1–5 pick tools, M plays music.');
+    h('p', 'muted small', 'Explore: drag to look around, pinch to zoom, double-tap to zoom in, tap lamps, records, plants and cats. Decorate: Add places things (tap or drag), Move drags them, Turn spins them, Paint changes walls, floors and colours, Remove puts things away. Small things like mugs and lamps sit on desks, tables and shelves. On a computer: left-drag or right-drag spins, the wheel zooms (or scrolls the tray when the mouse is over it), middle-drag pans. Keys: 1–5 tools, ←/→ pick from the tray, ↑/↓ switch tabs, R turns the piece you’re placing or the one under the mouse, Delete removes it, Q/E turn the room, X switches Explore/Decorate, G makes a surprise room, M plays music, Ctrl+Z or U undoes, Esc goes back.');
   }
 
   function showIntro() {
