@@ -96,7 +96,7 @@ npm install
 npm run apk        # → dist/lofi-rooms.apk
 ```
 
-`npm run build` assembles `www/`, which is the app plus local copies of three.js, the fonts and Capacitor, so the APK works offline. `npm run icons` regenerates launcher icons and splash screens from `resources/`, which are rendered from the app itself.
+`npm run build` assembles `www/`, which is the app plus local copies of three.js, the fonts and Capacitor, so the APK works offline. `npm run icons` regenerates the launcher icons from `resources/` (the voxel room icon on a lavender background). It also resets the splash screens to a small logo, so afterwards copy the full-size `resources/splash.png` and `splash-dark.png` back into `android/app/src/main/res/drawable*/`, cropped to each size.
 
 ## How it's made
 

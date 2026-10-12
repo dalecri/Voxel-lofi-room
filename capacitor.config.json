@@ -3,7 +3,7 @@
   "appName": "Lofi Rooms",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#d8a77e"
+    "backgroundColor": "#efeafe"
   },
   "plugins": {
     "CapacitorSQLite": {
