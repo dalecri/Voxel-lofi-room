@@ -72,15 +72,18 @@ Then open http://localhost:5180.
 
 | | Phone | Computer |
 |---|---|---|
-| Look around | Drag, pinch to zoom, double-tap to zoom in | Drag, wheel |
-| Use something | Tap it (Explore) | Click it |
-| Decorate / done | Decorate button / Done | <kbd>X</kbd> |
-| Pick a tool | Tool bar | <kbd>1</kbd>–<kbd>5</kbd> |
-| Turn the room | Two-finger twist or the turn buttons | Right-drag, <kbd>Q</kbd> / <kbd>E</kbd> |
-| Pan | Two-finger drag | Middle-drag |
+| Look around | Drag, pinch to zoom, double-tap to zoom in | Drag (left or right button), wheel to zoom, middle-drag to pan |
+| Use something | Tap it | Click it (the cursor turns into a hand over things you can use) |
+| Decorate / done | Decorate button / Done | <kbd>X</kbd> / <kbd>Esc</kbd> |
+| Pick a tool | Tool bar | <kbd>1</kbd>–<kbd>5</kbd> (Add, Move, Turn, Paint, Remove) |
+| Browse the tray | Swipe it | Mouse wheel or click-drag over it, the ‹ › arrows, <kbd>←</kbd> <kbd>→</kbd> to pick, <kbd>↑</kbd> <kbd>↓</kbd> (or <kbd>[</kbd> <kbd>]</kbd>) to switch tabs |
+| Place a piece | Tap, or drag to position it | A preview follows the mouse, click to place, <kbd>R</kbd> turns it first |
+| Turn / remove a piece | Turn or Remove tool | Hover a piece (it gets an outline), then <kbd>R</kbd> or <kbd>Delete</kbd> |
+| Turn the room | Two-finger twist or the turn buttons | <kbd>Q</kbd> / <kbd>E</kbd> |
 | Lofi radio | Music chip or the record player | <kbd>M</kbd> |
-| Undo | Undo chip | <kbd>U</kbd> or <kbd>Ctrl</kbd>+<kbd>Z</kbd> |
-| Random room | Surprise | <kbd>R</kbd> |
+| Undo | Undo chip | <kbd>Ctrl</kbd>+<kbd>Z</kbd> or <kbd>U</kbd> |
+| Random room | Surprise | <kbd>G</kbd> |
+| Menu | Menu chip | <kbd>H</kbd> |
 
 ## Install on Android
 

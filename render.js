@@ -547,6 +547,17 @@
       });
     }
   };
+  // desktop: an outline around the piece under the mouse
+  R.setHover = function (id, color) {
+    if (!this.hoverBox) {
+      this.hoverBox = new THREE.Box3Helper(new THREE.Box3(), 0xffffff);
+      this.hoverBox.material.depthTest = false; this.hoverBox.material.transparent = true; this.hoverBox.material.opacity = 0.85;
+      this.hoverBox.renderOrder = 9; this.scene.add(this.hoverBox);
+    }
+    this.hoverId = id || 0;
+    this.hoverBox.visible = !!id;
+    if (id) this.hoverBox.material.color.setHex(color || 0xffffff);
+  };
   R.openDoor = function (id) { const o = this.objs.get(id); if (o) o.userData.doorUntil = this.t + 2.6; };
   R.spin = function (id) { const o = this.objs.get(id); if (o) o.userData.spinV = 9; };
   R.excite = function (id) { const o = this.objs.get(id); if (o) o.userData.excited = this.t + 3; };
@@ -1040,6 +1051,11 @@
       s.material.opacity = Math.min(1, f * 3, (1 - f) * 10);
     }
     this.fx.update(dt); this.glowFx.update(dt);
+    if (this.hoverBox && this.hoverId) {
+      const o = this.objs.get(this.hoverId);
+      if (o && this.isShown(o)) { const b = this.hoverBox.box.makeEmpty(); o.userData.meshes.forEach(m => b.expandByObject(m)); b.expandByScalar(0.03); this.hoverBox.visible = true; }
+      else this.hoverBox.visible = false;
+    }
     this.r.render(this.scene, this.cam);
   };
 
