@@ -247,6 +247,56 @@
     },
     chime() { if (!this.ready()) return; const t = this.ctx.currentTime; [784, 1174.7, 1568].forEach((f, k) => this.tone(f, t + k * 0.12, 1.4, 0.05)); },
     arpeggio() { if (!this.ready()) return; const t = this.ctx.currentTime; [523.3, 659.3, 784, 987.8, 1174.7].forEach((f, k) => this.tone(f, t + k * 0.08, 0.7, 0.05)); },
+    // ---- sounds for the new pieces ----
+    static() { if (!this.ready()) return; this.burst(0.25, 0.08, 'bandpass', 3000); },
+    boot() { if (!this.ready()) return; const t = this.ctx.currentTime; [523.3, 784, 1046.5].forEach((f, k) => this.tone(f, t + k * 0.09, 0.5, 0.05, 'triangle')); },
+    coin() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(988, t, 0.08, 0.06, 'square'); this.tone(1319, t + 0.08, 0.35, 0.06, 'square'); },
+    chiptune() {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime, mel = [659, 784, 1047, 784, 880, 1175, 1047, 784];
+      mel.forEach((f, k) => this.tone(f, t + 0.25 + k * 0.11, 0.1, 0.04, 'square'));
+    },
+    fridge(open) {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime;
+      if (open) { this.burst(0.12, 0.15, 'lowpass', 600); const o = this.tone(60, t + 0.05, 1.6, 0.06, 'sawtooth'); o.frequency.value = 60; this.tone(1500, t + 0.3, 0.05, 0.03, 'sine'); }
+      else { this.burst(0.08, 0.22, 'lowpass', 300); }
+    },
+    creak() { if (!this.ready()) return; const t = this.ctx.currentTime, o = this.tone(180, t, 0.4, 0.04, 'sawtooth'); o.frequency.linearRampToValueAtTime(260, t + 0.35); this.burst(0.1, 0.08, 'lowpass', 500); },
+    whistle() {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime, o = this.tone(1700, t + 0.8, 1.8, 0.05, 'sine', 0.5);
+      o.frequency.setValueAtTime(1500, t + 0.8); o.frequency.linearRampToValueAtTime(1900, t + 2.4);
+      for (let k = 0; k < 8; k++) this.burst(0.2, 0.03 + k * 0.006, 'bandpass', 800 + k * 120);
+    },
+    gurgle(n) {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime;
+      for (let k = 0; k < (n || 6); k++) { const f = 140 + Math.random() * 140, o = this.tone(f, t + k * 0.11 + Math.random() * 0.04, 0.09, 0.09); o.frequency.exponentialRampToValueAtTime(f * 2.2, t + k * 0.11 + 0.08); }
+    },
+    pour() { if (!this.ready()) return; for (let k = 0; k < 6; k++) this.burst(0.18, 0.05, 'bandpass', 1400 + k * 150); this.gurgle(3); },
+    hum(up) { if (!this.ready()) return; const t = this.ctx.currentTime, o = this.tone(up ? 90 : 120, t, 1.2, 0.07, 'sawtooth', 0.1); o.frequency.linearRampToValueAtTime(up ? 120 : 90, t + 1.1); },
+    whoosh() { if (!this.ready()) return; this.burst(0.5, 0.12, 'bandpass', 900); },
+    strum() {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime, chord = PROGS[this.prog][this.bar % 4];
+      chord.forEach((m, k) => {
+        const o = this.tone(n(m), t + k * 0.03, 1.8, 0.05, 'triangle');
+        const o2 = this.tone(n(m) * 2.005, t + k * 0.03, 0.8, 0.015, 'sawtooth'); o2.frequency.value = n(m) * 2.005;
+      });
+    },
+    clack(k) {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime;
+      for (let i = 0; i < (k || 8); i++) { const at = t + i * (0.08 + Math.random() * 0.06); const s = this.ctx.createBufferSource(); s.buffer = this.noise; const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200 + Math.random() * 800; const g = this.ctx.createGain(); g.gain.setValueAtTime(0.18, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03); s.connect(f); f.connect(g); g.connect(this.master); s.start(at, Math.random()); s.stop(at + 0.04); }
+      this.tone(2637, t + (k || 8) * 0.11, 0.6, 0.04, 'sine');
+    },
+    squeak() { if (!this.ready()) return; const t = this.ctx.currentTime, o = this.tone(900, t, 0.18, 0.06, 'sine'); o.frequency.exponentialRampToValueAtTime(1500, t + 0.08); o.frequency.exponentialRampToValueAtTime(1000, t + 0.17); },
+    beep() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(1200, t, 0.08, 0.05, 'square'); this.tone(1600, t + 0.1, 0.1, 0.05, 'square'); },
+    flip() { if (!this.ready()) return; for (let k = 0; k < 3; k++) setTimeout(() => this.burst(0.06, 0.12, 'bandpass', 1800), k * 90); },
+    rustle() { if (!this.ready()) return; for (let k = 0; k < 4; k++) setTimeout(() => this.burst(0.15, 0.06, 'highpass', 3000), k * 70); },
+    drip() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(900 + Math.random() * 500, t + k * 0.18, 0.08, 0.05); o.frequency.exponentialRampToValueAtTime(1800, t + k * 0.18 + 0.06); } this.burst(0.6, 0.05, 'bandpass', 2500); },
+    puff() { if (!this.ready()) return; this.gurgle(9); this.burst(1, 0.04, 'lowpass', 500); },
     snap() { if (!this.ready()) return; this.burst(0.06, 0.25, 'highpass', 3000); const t = this.ctx.currentTime; this.tone(1500, t + 0.05, 0.08, 0.04, 'square'); },
   };
 

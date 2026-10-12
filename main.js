@@ -35,6 +35,11 @@ function startLofiRooms() {
     ['fire', 'Hearth', 'Lit the fireplace'],
     ['piano', 'Little tune', 'Played the piano'],
     ['sleep', 'Sweet dreams', 'Slept through the night'],
+    ['gamer', 'Player one', 'Played a video game'],
+    ['fish', 'Fish friends', 'Said hi to the fish'],
+    ['barista', 'Barista', 'Brewed a fresh pot of coffee'],
+    ['cinema', 'Movie night', 'Rolled a film after dark'],
+    ['golden', 'Golden hour', 'Evening light through an open window'],
     ['photo', 'Snapshot', 'Took a photo of your room'],
   ];
   const found = new Set(store.get('lr.found', []));
@@ -125,12 +130,13 @@ function startLofiRooms() {
   }
   function checkRoomMoments() {
     const n = t => room.count(i => i.t === t);
-    if (n('plant') + n('cactus') + n('succulent') + n('flowers') + n('hangplant') >= 5) discover('green');
+    if (room.count(i => CAT[i.t].group === 'plants') >= 5) discover('green');
     if (n('bookshelf') >= 2) discover('books');
     if (n('painting') + n('poster') + n('mirror') + n('neon') + n('clock') >= 4) discover('gallery');
     if (room.items.length >= 25) discover('cozy');
     if (meta.painted.wall && meta.painted.floor) discover('design');
     if (view.ph.night > 0.6 && room.items.some(i => CAT[i.t].light && i.on)) discover('nightowl');
+    if (meta.phase === 'evening' && room.items.some(i => CAT[i.t].beam && i.on)) discover('golden');
   }
   function updateHeader() {
     $('#roomName').textContent = room.name;
@@ -387,8 +393,73 @@ function startLofiRooms() {
       return;
     }
     if (tap === 'sleep') { sleep(); return; }
+    if (tap === 'screen') {
+      // off → each channel in turn → off
+      const chans = C.channels || [];
+      if (!it.on) { it.on = true; it.ch = 0; Sound.click(true); if (C.boot) Sound.boot(); }
+      else if ((it.ch | 0) + 1 >= chans.length) { it.on = false; it.ch = 0; Sound.click(false); }
+      else { it.ch = (it.ch | 0) + 1; Sound.static(); }
+      changed();
+      if (it.on) toast(`<span>${CH_NAMES[chans[it.ch | 0]] || 'On'}</span>`, 1100);
+      if (it.on && /game|arcade|retro/.test(chans[it.ch | 0])) discover('gamer');
+      if (it.on && it.t === 'projector' && view.ph.night > 0.3) discover('cinema');
+      return;
+    }
+    if (tap === 'console') {
+      // wake up the TVs and put the game on
+      Sound.boot(); setTimeout(() => Sound.chiptune(), 200);
+      let any = false;
+      room.items.forEach(o => { const OC = CAT[o.t]; const g = OC.channels ? OC.channels.findIndex(c => c === 'game' || c === 'retro') : -1; if (g >= 0 && o.t !== 'handheld' && o.t !== 'computer') { o.on = true; o.ch = g; any = true; view.boing(o.id); } });
+      changed(); discover('gamer');
+      toast(`<span>${any ? 'Player 1 ready!' : 'Player 1 ready! (Add a TV to play on)'}</span>`, 1500);
+      return;
+    }
+    if (tap === 'arcade') {
+      if (!it.on) { it.on = true; changed(); }
+      Sound.coin(); setTimeout(() => Sound.chiptune(), 300);
+      view.play(id, 9); discover('gamer');
+      toast('<span>Insert coin… GO!</span>', 1300);
+      return;
+    }
+    if (tap === 'tank') {
+      view.excite(id);
+      if (!C.tank.bowl) { it.on = !it.on; changed(); Sound.click(it.on); toast(`<span>${it.on ? 'Tank light on' : 'Tank light off'}</span>`, 1000); if (it.on) discover('fish'); }
+      else { Sound.gurgle(3); toast('<span>Blub!</span>', 900); discover('fish'); }
+      return;
+    }
+    if (tap === 'door') {
+      view.openDoor(id);
+      if (it.t === 'minifridge') { Sound.fridge(true); setTimeout(() => Sound.fridge(false), 2700); toast(`<span>${pickOne(['Grabbed a cold soda', 'Just looking…', 'Midnight snack time', 'Oat milk, nice'])}</span>`, 1500); }
+      else { Sound.creak(); setTimeout(() => Sound.creak(), 2600); toast(`<span>${pickOne(['What to wear…', 'So many sweaters', 'Found a lost sock'])}</span>`, 1500); }
+      return;
+    }
+    if (tap === 'raise') { it.on = !it.on; changed(); Sound.hum(it.on); toast(`<span>${it.on ? 'Standing mode' : 'Sitting mode'}</span>`, 1100); return; }
+    if (tap === 'blinds') { it.on = !it.on; changed(); Sound.rustle(); toast(`<span>${it.on ? 'Blinds up' : 'Blinds down'}</span>`, 1000); return; }
+    if (tap === 'spin') { view.spin(id); Sound.whoosh(); return; }
+    if (tap === 'puff') { view.burst(id, 'smoke', 3.5); Sound.puff(); toast('<span>Bubble bubble…</span>', 1100); return; }
+    if (tap === 'boil') { view.burst(id, 'steam', 3.5); Sound.whistle(); toast('<span>The kettle’s singing</span>', 1400); discover('tea'); return; }
+    if (tap === 'brew') { view.burst(id, 'steam', 4); Sound.gurgle(10); toast('<span>Fresh coffee ☕</span>', 1400); discover('barista'); return; }
+    if (tap === 'pour') { view.burst(id, 'steam', 2.5); Sound.pour(); toast('<span>Tea’s ready</span>', 1200); discover('tea'); return; }
+    if (tap === 'sink') { view.burst(id, 'drip', 1.5); Sound.drip(); return; }
+    if (tap === 'strum') {
+      Sound.strum();
+      for (let k = 0; k < 3; k++) setTimeout(() => { const p = view.itemPoint(id, [4, 14 + k * 3, 6]); if (p) view.icon('note', p, { size: 0.28 }); }, k * 180);
+      return;
+    }
+    if (tap === 'type') { Sound.clack(9); toast(`<span>${pickOne(['Dear diary…', 'Chapter one.', 'It was a rainy night…', 'Note to self: water plants'])}</span>`, 1500); return; }
+    if (tap === 'snow') { view.burst(id, 'snow', 3); Sound.chime(); return; }
+    if (tap === 'mist') { it.on = !it.on; changed(); Sound.whoosh(); toast(`<span>${it.on ? 'Lavender mist on' : 'Diffuser off'}</span>`, 1100); return; }
+    if (tap === 'squeak') { Sound.squeak(); const p = view.itemPoint(id, [4, 8, 4]); if (p) view.icon('heart', p, { size: 0.3 }); return; }
+    if (tap === 'robot') { view.petCat(id); Sound.beep(); toast('<span>Beep boop, cleaning!</span>', 1200); return; }
+    if (tap === 'flip') { Sound.flip(); toast(`<span>${pickOne(['Rainy Day Beats', 'Midnight Tapes', 'Sunday Jazz', 'Cat Naps Vol. 2'])}</span>`, 1300); return; }
+    if (tap === 'rustle') { Sound.rustle(); return; }
     Sound.click(true);
   }
+  const pickOne = a => a[(Math.random() * a.length) | 0];
+  const CH_NAMES = {
+    code: 'Coding…', game: 'Pixel Run', viz: 'Music visualizer', fish: 'Fish screensaver', cartoon: 'Cartoons', nature: 'Nature channel',
+    news: 'Evening news', retro: 'Retro pong', static: 'Static…', arcade: 'Star Raiders', movie: 'Movie night',
+  };
   function sleep() {
     const dream = $('#dream');
     const wasLate = meta.phase === 'night' || meta.phase === 'evening';
@@ -878,7 +949,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { room, view, state, meta, Sound, setPhase, setMode };   // handy for poking at it from the console
+  window.__lr = { room, view, state, meta, Sound, setPhase, setMode, interact, changed };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);

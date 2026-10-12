@@ -279,7 +279,7 @@
     },
   });
   def('desk', {
-    name: 'Desk', kind: 'floor', group: 'furniture', size: [2, 1], wallish: true, top: 12,
+    name: 'Desk', kind: 'floor', group: 'desks', size: [2, 1], wallish: true, top: 12,
     vars: [[WOOD.oak], [WOOD.walnut], [WOOD.white], [WOOD.black], [WOOD.pink], [WOOD.sage]],
     build(m, [w]) {
       const f = grain(w), d = shade(w, 0.85);
@@ -322,7 +322,7 @@
     },
   });
   def('bookshelf', {
-    name: 'Bookshelf', kind: 'floor', group: 'furniture', size: [2, 1], wallish: true, top: 28,
+    name: 'Bookshelf', kind: 'floor', group: 'desks', size: [2, 1], wallish: true, top: 28, seeded: true,
     vars: [[WOOD.walnut], [WOOD.oak], [WOOD.white], [WOOD.black], [WOOD.sage]],
     build(m, [w], s) {
       const f = grain(w), d = shade(w, 0.75);
@@ -347,7 +347,7 @@
     },
   });
   def('dresser', {
-    name: 'Dresser', kind: 'floor', group: 'furniture', size: [2, 1], wallish: true, top: 11,
+    name: 'Dresser', kind: 'floor', group: 'desks', size: [2, 1], wallish: true, top: 11,
     vars: [[WOOD.white], [WOOD.oak], [WOOD.walnut], [WOOD.pink], [WOOD.sage], [0x5a7fb0]],
     build(m, [w]) {
       [[1, 1], [14, 1], [1, 6], [14, 6]].forEach(([x, z]) => m.box(x, 0, z, x + 1, 1, z + 1, 0x4a3428));
@@ -359,7 +359,7 @@
     },
   });
   def('tv', {
-    name: 'TV', kind: 'floor', group: 'furniture', size: [2, 1], wallish: true, tap: 'toggle', on: false, anim: 'screen',
+    name: 'TV', kind: 'floor', group: 'tech', size: [2, 1], wallish: true, tap: 'screen', on: false, screen: { x: 2, y: 8, z: 5, w: 12, h: 8 }, channels: ['cartoon', 'nature', 'game', 'news'], light: { at: [8, 12, 7], color: 0xa8c8ff, i: 1.6, d: 5 },
     vars: [[0x3a3842], [WOOD.oak], [WOOD.white], [WOOD.pink]],
     build(m, [w], s) {
       m.box(0, 0, 1, 16, 6, 7, grain(w)).box(1, 1, 6, 15, 5, 7, shade(w, 0.85));
@@ -495,7 +495,7 @@
 
   // ---- small things (sit on tables and shelves, or the floor) ----
   def('mug', {
-    name: 'Mug', kind: 'small', group: 'decor', size: [1, 1], tap: 'sip', steam: [4, 4, 4],
+    name: 'Mug', kind: 'small', group: 'kitchen', size: [1, 1], tap: 'sip', steam: [4, 4, 4],
     vars: [[0xf4f0e8], [0xd9584a], [0x3f8f8a], [0xf2c14e], [0xe8a0b4]],
     build(m, [c]) {
       m.box(3, 0, 3, 6, 4, 6, c).box(4, 3, 4, 5, 4, 5, 0x5a3424);
@@ -512,7 +512,7 @@
     },
   });
   def('laptop', {
-    name: 'Laptop', kind: 'small', group: 'decor', size: [1, 1], tap: 'toggle', on: true, anim: 'screen',
+    name: 'Laptop', kind: 'small', group: 'tech', size: [1, 1], tap: 'screen', on: true, screen: { x: 1, y: 1, z: 2, w: 6, h: 4 }, channels: ['code', 'viz'], boot: true, light: { at: [4, 3, 4], color: 0x9ad0ff, i: 0.8, d: 3 },
     vars: [[0xc8ccd4], [0xf0b4c0], [0x3a3842], [0xf4f0e8]],
     build(m, [c], s) {
       m.box(0, 0, 2, 8, 1, 7, c).box(1, 0, 3, 7, 1, 6, shade(c, 0.75));
@@ -548,7 +548,7 @@
     },
   });
   def('record', {
-    name: 'Record player', kind: 'small', group: 'decor', size: [1, 1], tap: 'music', anim: 'record',
+    name: 'Record player', kind: 'small', group: 'tech', size: [1, 1], tap: 'music', anim: 'record',
     vars: [[WOOD.oak], [0xf4f0e8], [0xd9584a], [0x5a7fb0]],
     build(m, [c]) {
       m.box(0, 0, 1, 8, 2, 7, grain(c)).box(0, 1, 1, 8, 2, 7, shade(c, 1.08));
@@ -571,7 +571,7 @@
     },
   });
   def('alarm', {
-    name: 'Clock radio', kind: 'small', group: 'decor', size: [1, 1], tap: 'time',
+    name: 'Clock radio', kind: 'small', group: 'tech', size: [1, 1], tap: 'time',
     vars: [[0x2a2a32], [0xf4f0e8], [0xe8a0b4]],
     build(m, [c]) {
       m.box(1, 0, 3, 7, 4, 6, c);
@@ -582,7 +582,7 @@
 
   // ---- wall pieces ----
   def('window', {
-    name: 'Window', kind: 'wall', group: 'wall', size: [2, 3], tap: 'curtain', on: true, dyn: true, depth: 4,
+    name: 'Curtain window', kind: 'wall', group: 'windows', beam: 'plain', size: [2, 3], tap: 'curtain', on: true, dyn: true, depth: 4,
     vars: [[0xf6f4ee, 0xe8a0a8], [WOOD.oak, 0xf2e6d0], [0x3a3842, 0x9ad0c8], [WOOD.white, 0xf2c14e], [WOOD.sage, 0xf4f0e8]],
     build(m, [frame, cur], s) {
       m.box(0, 0, 0, 16, 24, 2, frame);
@@ -619,7 +619,7 @@
     },
   });
   def('shelf', {
-    name: 'Wall shelf', kind: 'wall', group: 'wall', size: [2, 1], top: 4, depth: 6,
+    name: 'Wall shelf', kind: 'wall', group: 'desks', size: [2, 1], top: 4, depth: 6,
     vars: [[WOOD.oak], [WOOD.walnut], [WOOD.white], [WOOD.black], [WOOD.pink]],
     build(m, [w]) {
       m.box(2, 0, 0, 3, 3, 4, 0x3a3842).box(13, 0, 0, 14, 3, 4, 0x3a3842);
@@ -729,8 +729,11 @@
   });
 
   const GROUPS = [
-    ['furniture', 'Furniture'], ['lights', 'Lights'], ['decor', 'Desk & decor'], ['plants', 'Plants'], ['wall', 'Wall'], ['pets', 'Pets'],
+    ['furniture', 'Furniture'], ['desks', 'Desks & storage'], ['tech', 'Tech & games'], ['kitchen', 'Kitchen & drinks'], ['lights', 'Lights'],
+    ['decor', 'Decor'], ['plants', 'Plants'], ['windows', 'Windows'], ['wall', 'Wall art'], ['pets', 'Pets'],
   ];
+  // height (in voxels) of the surface on top of a piece; some change with state (a standing desk)
+  const topOf = it => { const t = CAT[it.t].top; return typeof t === 'function' ? t(it) : t; };
 
   // ---------------------------------------------------------------
   // The room
@@ -763,8 +766,7 @@
   };
   RP.add = function (it) {
     it.id = this.next++;
-    if (it.t === 'bookshelf' && !it.seed) it.seed = (Math.random() * 1000) | 0;
-    if (it.t === 'window' && !it.seed) it.seed = (Math.random() * 1000) | 0;
+    if (!it.seed && (CAT[it.t].dyn || CAT[it.t].seeded)) it.seed = 1 + ((Math.random() * 1000) | 0);
     this.items.push(it);
     return it;
   };
@@ -778,6 +780,7 @@
   RP.surfaceCells = function (owner) {
     const C = CAT[owner.t];
     if (!C.top) return [];
+    if (C.surf) return C.surf.map(c => c.slice());
     const [w, d] = C.size;
     const cells = [];
     if (C.kind === 'wall') for (let lx = 0; lx < w; lx++) cells.push([lx, 0]);
@@ -940,6 +943,34 @@
         ]);
       },
     },
+    den: {
+      name: 'Gamer Den', blurb: 'RGB glow, an arcade cabinet and a fish tank.',
+      make(room) {
+        room.wall = { style: 'panels', color: 8 }; room.floor = { style: 'walnut' };
+        build(room, [
+          ['checkrug', { x: 4, z: 5, c: 2 }],
+          ['gamingdesk', { x: 3, z: 0, c: 0 }, [['computer', { lx: 0, lz: 0, c: 0 }], ['pctower', { lx: 1, lz: 0 }]]],
+          ['chair', { x: 3, z: 1, r: 2, c: 0 }],
+          ['arcade', { x: 0, z: 0, c: 0 }],
+          ['minifridge', { x: 1, z: 0, c: 3 }, [['lavalamp', { lx: 0, lz: 0, c: 1 }]]],
+          ['rgbbar', { x: 5, z: 0 }],
+          ['tv', { x: 8, z: 0, c: 0, on: true, ch: 2 }],
+          ['speaker', { x: 7, z: 0, c: 1 }],
+          ['kallax', { x: 0, z: 2, r: 1, c: 2 }, [['console', { lx: 0, lz: 0, c: 1 }], ['plushcat', { lx: 1, lz: 0, c: 0 }]]],
+          ['sofa', { x: 0, z: 5, r: 1, c: 5 }],
+          ['aquarium', { x: 9, z: 3, r: 3, c: 0 }],
+          ['pouf', { x: 6, z: 4, c: 1 }],
+          ['blinds', { k: 0, u: 5, e: 2, c: 1 }],
+          ['ledstrip', { k: 0, u: 0, e: 6 }],
+          ['movieposter', { k: 1, u: 2, e: 3, c: 0 }],
+          ['movieposter', { k: 1, u: 4, e: 3, c: 1 }],
+          ['neon', { k: 1, u: 6, e: 4, c: 3 }],
+          ['snakeplant', { x: 9, z: 8, c: 2 }],
+          ['robovac', { x: 6, z: 8, c: 1 }],
+          ['cat', { x: 4, z: 3, c: 3 }],
+        ]);
+      },
+    },
     blank: {
       name: 'Empty Room', blurb: 'Four walls and a floor. Make it yours.',
       make(room) {
@@ -1015,14 +1046,16 @@
       const [lx, lz] = pick(free);
       return this.add(this.make(t, { p: owner.id, lx, lz, r: 0, c: c === undefined ? (rnd() * CAT[t].vars.length) | 0 : c }));
     };
-    const smalls = ['mug', 'lamp', 'books', 'succulent', 'flowers', 'candle', 'record', 'alarm', 'laptop'];
+    const smalls = ['mug', 'lamp', 'books', 'succulent', 'flowers', 'candle', 'record', 'alarm', 'teacup', 'lavalamp', 'moonlamp', 'bonsai', 'pothos',
+      'snowglobe', 'globe', 'typewriter', 'crt', 'plushcat', 'vinylcrate', 'mushroom', 'saltlamp', 'shisha', 'herbs', 'fishbowl', 'coffeemaker', 'kettle', 'teapot', 'fruitbowl', 'diffuser'];
+    const windows = ['window', 'blinds', 'blinds', 'bigwindow', 'archwindow', 'roundwindow'];
 
     // windows first so they get the good spots
-    tryAdd('window', () => Object.assign(onWall('window', [0, 1], 2, 2)(), { c: (rnd() * 5) | 0 }));
-    if (chance(0.5)) tryAdd('window', () => Object.assign(onWall('window', [0, 1], 2, 2)(), { c: (rnd() * 5) | 0 }));
+    for (let k = 0; k < (chance(0.5) ? 2 : 1); k++) { const t = pick(windows); tryAdd(t, () => Object.assign(onWall(t, [0, 1], 2, 3)(), { c: (rnd() * CAT[t].vars.length) | 0 })); }
 
     // a cluster: rug + sofa or armchair + coffee table
-    const rug = tryAdd(chance(0.5) ? 'roundrug' : 'rug', () => Object.assign(anywhere('rug', (rnd() * 2) | 0)(), { c: (rnd() * 5) | 0 }));
+    const rt = pick(['roundrug', 'rug', 'checkrug', 'shagrug']);
+    const rug = tryAdd(rt, () => Object.assign(anywhere(rt, (rnd() * 2) | 0)(), { c: (rnd() * CAT[rt].vars.length) | 0 }));
     if (chance(0.75)) {
       const s = tryAdd(chance(0.6) ? 'sofa' : 'armchair', () => Object.assign(againstWall('sofa', [0, 1])(), { c: fab() }));
       if (s && chance(0.8)) {
@@ -1046,33 +1079,40 @@
       }
     }
     if (chance(0.85)) {
-      const desk = tryAdd('desk', () => Object.assign(againstWall('desk')(), { c: wood() }));
+      const dt = pick(['desk', 'desk', 'standdesk', 'trestle', 'gamingdesk', 'ldesk']);
+      const desk = tryAdd(dt, () => Object.assign(againstWall(dt)(), { c: (rnd() * CAT[dt].vars.length) | 0 }));
       if (desk) {
-        onTop(desk, chance(0.7) ? 'laptop' : 'books');
-        onTop(desk, pick(['lamp', 'mug', 'succulent', 'record']));
+        onTop(desk, pick(['laptop', 'computer', 'computer', 'books', 'typewriter']));
+        onTop(desk, pick(['lamp', 'desklamp', 'mug', 'teacup', 'succulent', 'record', 'pctower', 'lavalamp']));
+        if (dt === 'ldesk') onTop(desk, pick(['bonsai', 'moonlamp', 'handheld']));
         tryAdd('chair', () => {
           const [fw, fd] = fp(desk);
           return desk.r === 0 ? { x: desk.x + ((rnd() * fw) | 0), z: desk.z + fd, r: 2, c: (rnd() * 6) | 0 } : { x: desk.x + fw, z: desk.z + ((rnd() * fd) | 0), r: 3, c: (rnd() * 6) | 0 };
         }, 6);
       }
     }
-    const extras = ['bookshelf', 'bookshelf', 'dresser', 'tv', 'piano', 'fireplace'];
+    const extras = ['bookshelf', 'bookshelf', 'dresser', 'tv', 'piano', 'fireplace', 'kallax', 'kallax', 'kallaxtall', 'sideboard', 'minifridge',
+      'aquarium', 'arcade', 'wardrobe', 'speaker', 'counter'];
     for (let k = 0; k < 2 + ((rnd() * 2) | 0); k++) {
       const t = pick(extras);
       const it = tryAdd(t, () => Object.assign(againstWall(t)(), { c: t === 'bookshelf' || t === 'dresser' ? wood() : (rnd() * CAT[t].vars.length) | 0 }));
+      if (it && t === 'tv' && chance(0.5)) tryAdd('console', () => { const [fw, fd] = fp(it); return { x: it.r % 2 ? it.x + fw : it.x + ((rnd() * fw) | 0), z: it.r % 2 ? it.z + ((rnd() * fd) | 0) : it.z + fd, r: 0, c: (rnd() * 3) | 0 }; }, 4);
       if (it && CAT[t].top && chance(0.7)) onTop(it, pick(smalls));
       if (it && CAT[t].top && chance(0.4)) onTop(it, pick(smalls));
     }
-    for (let k = 0; k < 2 + ((rnd() * 3) | 0); k++) tryAdd(pick(['plant', 'plant', 'cactus', 'floorlamp']), () => Object.assign(anywhere('plant', 0)(), { c: (rnd() * 4) | 0 }));
-    if (chance(0.5)) tryAdd('beanbag', () => Object.assign(anywhere('beanbag')(), { c: (rnd() * 5) | 0 }));
+    for (let k = 0; k < 2 + ((rnd() * 3) | 0); k++) {
+      const t = pick(['plant', 'plant', 'cactus', 'floorlamp', 'snakeplant', 'fiddle', 'pampas', 'arclamp', 'lantern', 'tripod', 'guitar']);
+      tryAdd(t, () => Object.assign(anywhere(t, 0)(), { c: (rnd() * CAT[t].vars.length) | 0 }));
+    }
+    if (chance(0.5)) { const t = pick(['beanbag', 'pouf', 'beanbag']); tryAdd(t, () => Object.assign(anywhere(t)(), { c: (rnd() * 5) | 0 })); }
 
     // walls
-    const art = ['painting', 'painting', 'poster', 'clock', 'mirror', 'hangplant', 'sconce', 'neon'];
+    const art = ['painting', 'painting', 'poster', 'movieposter', 'movieposter', 'clock', 'mirror', 'hangplant', 'sconce', 'neon', 'recordframe', 'pegboard', 'wallcubes', 'projector'];
     for (let k = 0; k < 3 + ((rnd() * 3) | 0); k++) {
       const t = pick(art);
       tryAdd(t, () => Object.assign(onWall(t, [0, 1], 2, 4)(), { c: (rnd() * CAT[t].vars.length) | 0 }));
     }
-    if (chance(0.7)) tryAdd('fairylights', () => Object.assign(onWall('fairylights', [0, 1], 5, 6)(), { c: (rnd() * 3) | 0 }));
+    if (chance(0.7)) { const t = chance(0.7) ? 'fairylights' : 'ledstrip'; tryAdd(t, () => Object.assign(onWall(t, [0, 1], 5, 6)(), { c: (rnd() * CAT[t].vars.length) | 0 })); }
     if (chance(0.7)) {
       const sh = tryAdd('shelf', () => Object.assign(onWall('shelf', [0, 1], 3, 5)(), { c: wood() }));
       if (sh) { onTop(sh, pick(['books', 'succulent', 'flowers', 'candle'])); if (chance(0.6)) onTop(sh, pick(['books', 'succulent', 'record'])); }
@@ -1092,13 +1132,15 @@
         });
       }
     }
+    if (chance(0.25)) tryAdd('robovac', () => { const x = (rnd() * N) | 0, z = (rnd() * N) | 0; return this.walkGrid()[z * N + x] ? { x, z, c: (rnd() * 3) | 0 } : null; });
     if (th.night) this.items.forEach(i => { if (CAT[i.t].light) i.on = true; });
     return th;
   };
 
   const LR = {
     N, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART,
-    Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor,
+    Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor, topOf,
+    def, grain, stripes, WOOD, FABRIC, BOOKS, POTS, GREEN, GREEN_D, GREEN_L,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = LR;
   else root.LR = LR;

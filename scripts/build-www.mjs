@@ -12,7 +12,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'vendor', 'fonts'), { recursive: true });
 mkdirSync(join(out, 'assets'), { recursive: true });
 
-for (const f of ['room.js', 'sound.js', 'render.js', 'main.js', 'storage.js']) copyFileSync(join(root, f), join(out, f));
+for (const f of ['room.js', 'furniture.js', 'screens.js', 'sound.js', 'render.js', 'main.js', 'storage.js']) copyFileSync(join(root, f), join(out, f));
 copyFileSync(join(root, 'assets', 'icon.png'), join(out, 'assets', 'icon.png'));
 copyFileSync(nm('three/build/three.min.js'), join(out, 'vendor', 'three.min.js'));
 copyFileSync(nm('@capacitor/core/dist/capacitor.js'), join(out, 'vendor', 'capacitor.js'));
