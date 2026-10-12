@@ -7,7 +7,7 @@
 <p align="center">
   <img src="docs/study.png" alt="The Lofi Study by day" width="240">
   <img src="docs/night.png" alt="The same room at night" width="240">
-  <img src="docs/decorate.png" alt="Decorating a random room" width="240">
+  <img src="docs/den.png" alt="The Gamer Den at night" width="240">
 </p>
 
 A sibling of [Voxel Worlds](https://github.com/dalecri/voxel-worlds): same Explore and Edit idea, same touch controls, same Android build. Instead of landscapes, you make little rooms.
@@ -26,13 +26,17 @@ Then open http://localhost:5180.
 
 ## What you can do
 
-- **Decorate from scratch.** 40 voxel pieces in six groups:
-  - **Furniture:** bed, sofa, armchair, desk, desk chair, coffee table, side table, bookshelf, dresser, TV, piano, fireplace, beanbag and two rugs.
-  - **Lights:** floor lamp, table lamp, candles, fairy lights, wall lamp and a neon sign.
-  - **Desk and decor:** mug, laptop, books, record player and a clock radio.
-  - **Plants:** monstera, cactus, succulent, flowers and a wall planter.
-  - **Wall:** window, paintings, posters, wall shelf, clock and mirror.
-  - **Pets:** cats, cat beds and cat trees.
+- **Decorate from scratch.** Over 100 voxel pieces in ten groups:
+  - **Furniture:** bed, sofa, armchair, coffee table, side table, piano, fireplace, beanbag, pouf and four rugs.
+  - **Desks and storage, IKEA-style modular:** desk, corner desk, standing desk (tap to raise it), gaming desk with an RGB edge, trestle desk, cube shelves, sideboard, wardrobe with doors that open, bookshelf, dresser, pegboard, wall shelf and wall cubbies.
+  - **Tech and games:** computer, PC tower with RGB fans, TV, retro TV, game console, handheld, arcade cabinet, speaker, guitar, projector screen, laptop, record player, typewriter and a clock radio.
+  - **Kitchen and drinks:** mini fridge (the door opens), tea cup, teapot, kettle, coffee maker, mug, kitchen counter with a sink, bar stool and a fruit bowl.
+  - **Lights:** arc lamp, paper lantern, tripod lamp, desk lamp, moon lamp, mushroom lamp, lava lamp, salt lamp, RGB light bar, LED strip, floor and table lamps, candles, fairy lights, wall lamp and neon signs.
+  - **Decor:** shisha, aquarium, fishbowl, snow globe, globe, diffuser, cat plush, record crate and a pampas vase.
+  - **Plants:** monstera, snake plant, fiddle leaf fig, cactus, bonsai, trailing pothos, herbs, succulent, flowers and a wall planter.
+  - **Windows:** curtains, blinds, a picture window, a round window and an arched window. Each one throws a sunbeam across the floor that changes with the time of day, and closed blinds make it striped.
+  - **Wall art:** movie posters (7 made-up films), paintings, posters, a framed record, a wall clock and a mirror.
+  - **Pets:** cats, cat beds, cat trees and a robot vacuum.
 - **Small things stack.** Mugs, lamps, plants and records sit on desks, tables, dressers, bookshelves, the piano, the mantel and wall shelves. Move a desk and everything on it comes along.
 - **Five decorating tools:**
   - **Add:** tap or drag to place.
@@ -42,8 +46,12 @@ Then open http://localhost:5180.
   - **Remove:** tap to put things away.
   
   Beds, sofas, desks and shelves back up against the nearest wall on their own.
-- **Tap things to use them:**
-  - Lamps, the TV, the laptop, candles, fairy lights, the neon sign and the fireplace switch on and off.
+- **Tap things to use them.** Almost everything does something:
+  - Screens show real pixel animations. The computer boots up, then cycles through code, a platformer game, a music visualizer and a fish screensaver. The TV has cartoons, nature, a game and the news. The arcade plays a space shooter, and the projector shows a little movie.
+  - The game console switches the TVs to the game. The fish tank light turns on and off and the fish dart around. Blinds go up and down.
+  - The fridge and wardrobe doors swing open. The kettle whistles and steams, the coffee maker gurgles, the tea cup steams gently, and the shisha bubbles and puffs smoke.
+  - The globe spins, the snow globe snows, the guitar strums, the typewriter clacks and the robot vacuum beeps and zooms off.
+  - Lamps, candles, fairy lights, LED strips, RGB lights, the lava lamp and the fireplace switch on and off.
   - The record player starts the lofi radio.
   - Windows open and close their curtains.
   - The piano plays a phrase and the clocks tell the real time.
@@ -55,8 +63,8 @@ Then open http://localhost:5180.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and vinyl crackle, all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. Rain streaks the windows. At night the lamps light the room.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
-- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Empty Room) or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **17 cozy moments** to find, such as *Night owl*, *Cat nap* and *Sweet dreams*.
+- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Empty Room) or tap **Surprise** for a random themed room. Tap the room name to rename it.
+- **22 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 
@@ -91,8 +99,10 @@ npm run apk        # → dist/lofi-rooms.apk
 
 | File | What it does |
 |---|---|
-| `room.js` | The room model. The furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. It doesn't draw anything, so it runs in Node too. |
-| `render.js` | The three.js renderer. A voxel mesher with baked ambient occlusion, the cut-away room shell with stepped corners, furniture sync, lamp lights, the day cycle, cat behaviour, particles and picking. |
+| `room.js` | The room model. The original furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. It doesn't draw anything, so it runs in Node too. |
+| `furniture.js` | The expanded catalog: modular desks and storage, tech and games, the kitchen, modern lights, fish tanks, windows, movie posters and the robot vacuum. |
+| `screens.js` | The pixel-art programs that play on screens. |
+| `render.js` | The three.js renderer. A voxel mesher with baked ambient occlusion, the cut-away room shell with stepped corners, furniture sync, lamp lights, the day cycle, animated screens, fish, doors, sunbeams, cat and robot behaviour, particles and picking. |
 | `main.js` | Touch and mouse input, the decorating tools, things you can tap, rooms and saving, cozy moments, photo mode and the Android back button. |
 | `sound.js` | The generative lofi band, ambience and interface sounds, all made with Web Audio. |
 | `storage.js` | Mirrors saves into SQLite inside the app. |
