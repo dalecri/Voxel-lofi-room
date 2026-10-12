@@ -1,264 +1,321 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voxel Lofi Room</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #121212; font-family: 'Segoe UI', sans-serif; }
-        canvas { display: block; }
-        .glass {
-            background: rgba(20, 20, 20, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.5rem;
-        }
-        .icon-btn {
-            width: 54px;
-            height: 54px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            cursor: pointer;
-        }
-        .icon-btn:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
-        .icon-btn.active {
-            background: #a78bfa;
-            border-color: #c4b5fd;
-            box-shadow: 0 0 20px rgba(167, 139, 250, 0.4);
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<link rel="icon" type="image/png" href="assets/icon.png">
+<meta name="theme-color" content="#d8a77e" />
+<title>Lofi Rooms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --ink: #4a3530;
+    --ink-dim: rgba(74, 53, 48, 0.68);
+    --panel: rgba(255, 250, 243, 0.8);
+    --panel-solid: #fffaf3;
+    --line: rgba(74, 53, 48, 0.12);
+    --chip: rgba(74, 53, 48, 0.07);
+    --accent: #f07a5a;
+    --good: #6abf7a;
+    --shadow: 0 14px 40px -14px rgba(80, 40, 30, 0.5);
+    --font: 'Nunito', system-ui, sans-serif;
+    --display: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  }
+  body.night {
+    --ink: #f2eeff;
+    --ink-dim: rgba(242, 238, 255, 0.7);
+    --panel: rgba(40, 40, 78, 0.74);
+    --panel-solid: #262850;
+    --line: rgba(230, 225, 255, 0.14);
+    --chip: rgba(230, 225, 255, 0.09);
+    --shadow: 0 14px 40px -14px rgba(0, 0, 20, 0.8);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none;
+    font-family: var(--font); color: var(--ink); background: #d8a77e;
+    -webkit-user-select: none; user-select: none;
+  }
+  button { font-family: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+  #bg, #stars, #rainfx { position: fixed; inset: 0; }
+  #bg { background: linear-gradient(180deg, #f8e8d0, #d8a77e); }
+  #stars { opacity: 0; background-size: 600px 900px; transition: opacity 1.2s; pointer-events: none; }
+  #rainfx {
+    opacity: 0; pointer-events: none; transition: opacity 1.5s;
+    background-image: repeating-linear-gradient(105deg, rgba(255,255,255,0) 0 22px, rgba(255,255,255,.22) 22px 23px, rgba(255,255,255,0) 23px 47px);
+    background-size: 300px 300px; animation: rain .5s linear infinite;
+  }
+  body.raining #rainfx { opacity: .65; }
+  @keyframes rain { from { background-position: 0 0; } to { background-position: -80px 300px; } }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+    transition: background .8s, color .8s;
+  }
+
+  /* top bar */
+  header {
+    position: fixed; left: 0; right: 0; top: 0; padding: calc(var(--sat) + 12px) 16px 0;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; pointer-events: none;
+  }
+  header > * { pointer-events: auto; }
+  .brand { padding: 8px 14px 9px; border-radius: 18px; min-width: 0; flex: 1 1 auto; max-width: 260px; text-align: left; }
+  .brand b { font-family: var(--display); font-weight: 600; font-size: 17px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand span { font-size: 12px; color: var(--ink-dim); font-weight: 700; white-space: nowrap; display: block; overflow: hidden; text-overflow: ellipsis; }
+  .chips { display: flex; gap: 1px; padding: 5px; border-radius: 18px; flex: none; }
+  .chip { width: 34px; height: 38px; border-radius: 13px; display: grid; place-items: center; transition: background .2s, transform .15s; position: relative; }
+  .chip:active { transform: scale(.9); }
+  .chip.on { background: var(--chip); }
+  .chip svg { width: 22px; height: 22px; }
+  .chip.on::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 2px; background: var(--accent); }
+  #bTime .moon, #bTime .dusk { display: none; }
+  #bTime[data-phase="night"] .moon { display: block; }
+  #bTime[data-phase="night"] .sunI { display: none; }
+  #bTime[data-phase="evening"] .sunI { color: #ff8a4c; }
+  #bTime[data-phase="morning"] .sunI { color: #ff9ab0; }
+  .sunI { color: #f0a020; }
+  #bMusic.on svg { animation: bop .9s ease-in-out infinite; }
+  @keyframes bop { 50% { transform: translateY(-2px) rotate(-6deg); } }
+
+  /* rotate */
+  .rot { position: fixed; right: 16px; bottom: calc(var(--sab) + 104px); display: flex; flex-direction: column; gap: 8px; transition: bottom .35s cubic-bezier(.2,.9,.3,1); }
+  body:not(.exploring) .rot { bottom: calc(var(--sab) + 236px); }
+  .rot button { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; }
+  .rot svg { width: 22px; height: 22px; }
+
+  /* tray: tabs + a scrolling row of things */
+  #tray {
+    position: fixed; left: 16px; right: 16px; bottom: calc(var(--sab) + 96px);
+    border-radius: 22px; padding: 6px 6px 8px;
+    transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform .25s, opacity .2s, background .8s;
+  }
+  #tray.open { transform: none; opacity: 1; pointer-events: auto; }
+  .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 0 2px 6px; }
+  .tabs::-webkit-scrollbar, .row::-webkit-scrollbar { display: none; }
+  .tab { flex: none; padding: 6px 11px; border-radius: 11px; font-weight: 800; font-size: 12.5px; color: var(--ink-dim); transition: background .15s, color .15s; }
+  .tab.on { background: var(--ink); color: var(--panel-solid); }
+  .row { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-height: 84px; align-items: stretch; }
+  .swatch {
+    flex: none; width: 72px; padding: 5px 2px 5px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; gap: 1px;
+    transition: background .15s, transform .15s;
+  }
+  .swatch img, .swatch canvas { width: 50px; height: 50px; border-radius: 10px; }
+  .swatch span { font-size: 11px; font-weight: 800; line-height: 1.15; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .swatch.on { background: var(--chip); box-shadow: inset 0 0 0 2px var(--ink-dim); }
+  .swatch:active { transform: scale(.92); }
+  .dot { flex: none; width: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border-radius: 14px; }
+  .dot i { width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 -3px 0 rgba(0,0,0,.12), 0 0 0 2px var(--panel-solid); }
+  .dot.on i { box-shadow: inset 0 -3px 0 rgba(0,0,0,.12), 0 0 0 2px var(--panel-solid), 0 0 0 4px var(--ink); }
+  .dot span { font-size: 10px; font-weight: 800; color: var(--ink-dim); }
+  .hint { flex: none; align-self: center; font-size: 12px; font-weight: 700; color: var(--ink-dim); padding: 0 10px; max-width: 170px; line-height: 1.3; }
+
+  /* tool bar */
+  .tools {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--sab) + 16px);
+    width: min(500px, calc(100% - 32px)); display: grid; grid-template-columns: 0.85fr repeat(5, 1fr); gap: 3px;
+    padding: 6px; border-radius: 24px; transition: transform .35s cubic-bezier(.2,.9,.3,1), opacity .25s, background .8s, color .8s;
+  }
+  .tools button { height: 62px; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; transition: background .2s, transform .15s; }
+  .tools button:active { transform: scale(.92); }
+  .tools svg { width: 26px; height: 26px; }
+  .tools span { font-size: 11.5px; font-weight: 800; letter-spacing: .02em; }
+  .tools button.on { background: var(--ink); color: var(--panel-solid); }
+  .tools button.exit { color: var(--ink-dim); border-right: 1px solid var(--line); border-radius: 18px 10px 10px 18px; }
+  .tools button.exit span { font-size: 10.5px; }
+  body.exploring .tools { transform: translate(-50%, 140%); opacity: 0; pointer-events: none; }
+  body.exploring #tray { transform: translateY(16px); opacity: 0; pointer-events: none; }
+
+  /* explore bar */
+  .explorebar {
+    position: fixed; left: 50%; bottom: calc(var(--sab) + 16px); transform: translate(-50%, 140%); opacity: 0; pointer-events: none;
+    width: min(380px, calc(100% - 32px)); display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px; border-radius: 24px;
+    transition: transform .35s cubic-bezier(.2,.9,.3,1), opacity .25s, background .8s, color .8s;
+  }
+  body.exploring .explorebar { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+  .explorebar button { height: 54px; border-radius: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 15px; transition: transform .15s, background .2s; }
+  .explorebar button:active { transform: scale(.95); }
+  .explorebar svg { width: 24px; height: 24px; }
+  .explorebar #bSurprise { background: var(--chip); }
+  .explorebar .primary { background: var(--ink); color: var(--panel-solid); }
+  .spin { animation: spin .6s cubic-bezier(.3,1.4,.5,1); }
+  @keyframes spin { from { transform: rotate(-200deg) scale(.6); } }
+
+  /* toasts */
+  #toasts { position: fixed; left: 0; right: 0; top: calc(var(--sat) + 76px); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; padding: 0 16px; z-index: 5; }
+  .toast {
+    background: var(--panel-solid); color: var(--ink); border-radius: 16px; padding: 9px 16px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 100%;
+    transform: translateY(-10px) scale(.96); opacity: 0; transition: transform .35s cubic-bezier(.2,1.4,.4,1), opacity .3s;
+  }
+  .toast.in { transform: none; opacity: 1; }
+  .toast b { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--accent); }
+  .toast span { font-size: 13px; font-weight: 600; }
+
+  /* bottom sheet */
+  .sheet { position: fixed; inset: 0; background: rgba(40, 20, 20, 0); pointer-events: none; transition: background .3s; z-index: 10; }
+  .sheet.open { background: rgba(40, 20, 20, 0.25); pointer-events: auto; }
+  .sheet .body {
+    position: absolute; left: 0; right: 0; bottom: 0; max-height: 84%; overflow-y: auto; margin: 0 auto; max-width: 560px;
+    background: var(--panel-solid); border-radius: 26px 26px 0 0; padding: 8px 16px calc(var(--sab) + 24px);
+    transform: translateY(100%); transition: transform .35s cubic-bezier(.2,.9,.3,1); box-shadow: var(--shadow);
+  }
+  .sheet.open .body { transform: none; }
+  .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 4px auto 6px; }
+  h2 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 18px 0 8px; }
+  h2 small { font-size: 13px; color: var(--ink-dim); font-weight: 500; margin-left: 6px; }
+  .muted { color: var(--ink-dim); font-size: 13.5px; margin: -2px 0 10px; line-height: 1.45; }
+  .small { font-size: 12.5px; margin-top: 16px; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .card { text-align: left; border-radius: 18px; padding: 8px; background: var(--chip); display: flex; flex-direction: column; gap: 3px; transition: transform .15s; position: relative; }
+  .card:active { transform: scale(.96); }
+  .card .art { height: 64px; border-radius: 12px; margin-bottom: 4px; position: relative; overflow: hidden; display: grid; place-items: center; font-size: 28px; }
+  .card b { font-family: var(--display); font-weight: 600; font-size: 14px; }
+  .card span { font-size: 11.5px; color: var(--ink-dim); line-height: 1.35; }
+  .card.cur { box-shadow: inset 0 0 0 2px var(--accent); }
+  .card .x { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 9px; background: var(--panel-solid); font-weight: 800; font-size: 13px; color: var(--ink-dim); display: grid; place-items: center; }
+  .card.study .art { background: linear-gradient(160deg, #b8cca8 0 45%, #d8b48a 45%); }
+  .card.loft .art { background: linear-gradient(160deg, #f0c8c0 0 45%, #c8945c 45%); }
+  .card.nook .art { background: linear-gradient(160deg, #b85a40 0 45%, #2e8a86 45% 60%, #f0e6c8 60%); }
+  .card.blank .art { background: linear-gradient(160deg, #c9c0e0 0 45%, #7a5038 45%); }
+  .card.random .art { background: conic-gradient(from 30deg, #ffb7d5, #fbbd4e, #8ad856, #3cc8ee, #b084f0, #ffb7d5); }
+  .card.room .art { background: linear-gradient(160deg, var(--a, #f2e6d0) 0 45%, var(--b, #d8b48a) 45%); }
+  .card.add .art { background: var(--line); }
+
+  .disc { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .d { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 14px; background: var(--chip); opacity: .6; }
+  .d.got { opacity: 1; }
+  .d i { font-style: normal; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; background: var(--line); font-weight: 800; flex: none; }
+  .d.got i { background: var(--accent); color: #fff; }
+  .d b { display: block; font-size: 13px; }
+  .d span { font-size: 11px; color: var(--ink-dim); line-height: 1.3; display: block; }
+
+  .toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 4px; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 15px; }
+  .toggle i { width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; flex: none; }
+  .toggle i::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .toggle.on i { background: var(--good); }
+  .toggle.on i::after { transform: translateX(18px); }
+
+  /* intro */
+  #intro {
+    position: fixed; inset: 0; z-index: 20; display: none; align-items: flex-end; justify-content: center;
+    background: linear-gradient(180deg, rgba(60,30,30,0) 20%, rgba(60,30,30,.35));
+  }
+  #intro.open { display: flex; }
+  #intro .card0 { width: min(560px, 100%); max-height: 88%; overflow-y: auto; margin: 0 auto; padding: 22px 18px calc(var(--sab) + 22px); border-radius: 28px 28px 0 0; background: var(--panel-solid); animation: rise .6s cubic-bezier(.2,1,.3,1); }
+  @keyframes rise { from { transform: translateY(40%); opacity: 0; } }
+  #intro h1 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; letter-spacing: -.01em; }
+  #intro .lede { font-size: 15px; color: var(--ink-dim); margin: 4px 0 14px; line-height: 1.45; }
+  .tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .tips div { background: var(--chip); border-radius: 14px; padding: 9px 10px; font-size: 12px; font-weight: 700; line-height: 1.3; }
+  .tips b { display: block; font-size: 18px; margin-bottom: 2px; }
+  .pick { font-family: var(--display); font-weight: 500; font-size: 15px; margin: 0 0 8px; }
+
+  /* photo */
+  #photo { position: fixed; inset: 0; z-index: 30; background: rgba(30,15,15,.78); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(var(--sat) + 20px) 16px calc(var(--sab) + 20px); }
+  #photo.open { display: flex; }
+  #photo img { max-width: 100%; max-height: 70vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.4); -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; }
+  #photo .row2 { display: flex; gap: 10px; }
+  #photo a, #photo button { background: #fffaf3; color: #4a3530; border-radius: 16px; padding: 12px 22px; font-weight: 800; text-decoration: none; font-size: 15px; }
+  #photo p { color: #fff; opacity: .8; font-size: 12.5px; margin: 0; }
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 29; }
+  #flash.go { animation: flash .5s ease-out; }
+  @keyframes flash { from { opacity: .85; } to { opacity: 0; } }
+  #dream { position: fixed; inset: 0; background: #141733; opacity: 0; pointer-events: none; z-index: 25; transition: opacity 1.2s; display: grid; place-items: center; color: #d8e4ff; font-family: var(--display); font-size: 28px; }
+  #dream.on { opacity: 1; pointer-events: auto; }
+
+  @media (min-width: 760px) {
+    .rot, body:not(.exploring) .rot { bottom: 50%; transform: translateY(50%); }
+    #tray { left: 50%; right: auto; width: min(760px, calc(100% - 32px)); transform: translate(-50%, 16px); }
+    #tray.open { transform: translate(-50%, 0); }
+    .cards { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 380px) {
+    .chip { width: 31px; }
+    .brand { padding: 8px 10px 9px; }
+    .tips { grid-template-columns: 1fr; }
+  }
+</style>
 </head>
-<body>
+<body class="exploring">
+<div id="bg"></div>
+<div id="stars"></div>
+<div id="rainfx"></div>
+<canvas id="c"></canvas>
 
-    <div id="ui" class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 p-4 glass text-white flex flex-col items-center gap-3 select-none">
-        <div class="flex gap-3">
-            <button id="toggle-ceiling" class="icon-btn active" title="Ceiling Light">💡</button>
-            <button id="toggle-lamp" class="icon-btn active" title="Desk Lamp">🔦</button>
-            <button id="toggle-window" class="icon-btn active" title="Window Glow">🌅</button>
-            <button id="toggle-blinds" class="icon-btn active" title="Toggle Blinds">🪟</button>
-        </div>
-        <p class="text-[10px] uppercase tracking-widest opacity-40 font-bold">Lofi Environment Controls</p>
+<header>
+  <button class="brand panel" id="brand" aria-label="Rename this room"><b id="roomName">Lofi Rooms</b><span id="disc">0 cozy moments</span></button>
+  <div class="chips panel">
+    <button class="chip" id="bTime" aria-label="Time of day">
+      <svg class="sunI" viewBox="0 0 24 24" fill="currentColor"><rect x="8" y="8" width="8" height="8" rx="1.5"/><rect x="11" y="2" width="2" height="3" rx="1"/><rect x="11" y="19" width="2" height="3" rx="1"/><rect x="2" y="11" width="3" height="2" rx="1"/><rect x="19" y="11" width="3" height="2" rx="1"/><rect x="4.5" y="4.5" width="2.5" height="2.5" rx="1"/><rect x="17" y="17" width="2.5" height="2.5" rx="1"/><rect x="17" y="4.5" width="2.5" height="2.5" rx="1"/><rect x="4.5" y="17" width="2.5" height="2.5" rx="1"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="#c8d0ff"><path d="M15 3a9 9 0 1 0 6 15.5A8 8 0 0 1 15 3z"/></svg>
+    </button>
+    <button class="chip" id="bRain" aria-label="Rain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 15a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 6.5 4 4 0 0 1 17 15z" fill="currentColor" fill-opacity=".15"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/></svg></button>
+    <button class="chip" id="bMusic" aria-label="Lofi radio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6l11-2.5v11.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><ellipse cx="6.5" cy="17.5" rx="3" ry="2.5"/><ellipse cx="17.5" cy="15" rx="3" ry="2.5"/></svg></button>
+    <button class="chip" id="bUndo" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L5 11l4 4"/><path d="M5 11h9a5 5 0 0 1 0 10h-2"/></svg></button>
+    <button class="chip" id="bPhoto" aria-label="Photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+    <button class="chip" id="bMenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2" opacity=".45"/></svg></button>
+  </div>
+</header>
+
+<div class="rot">
+  <button class="panel" id="rotL" aria-label="Turn the room left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></svg></button>
+  <button class="panel" id="rotR" aria-label="Turn the room right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v4h-4"/></svg></button>
+</div>
+
+<div id="tray" class="panel"><div class="tabs" id="tabs"></div><div class="row" id="row"></div></div>
+
+<nav class="tools panel">
+  <button data-mode="explore" class="exit" aria-label="Done decorating"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12V6.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 10.5V5a1.5 1.5 0 0 1 3 0v5.5"/><path d="M14 10.5V6.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.6-2.2L3.6 14.9a1.5 1.5 0 0 1 2.2-2L8 15V9.5"/></svg><span>Done</span></button>
+  <button data-tool="add" class="on"><svg viewBox="0 0 24 24"><path d="M4 11h16v6H4z" fill="#f07a5a"/><path d="M4 9h3v8H4zM17 9h3v8h-3z" fill="#d85a3a"/><path d="M6 6h12v5H6z" fill="#f49a7a"/><path d="M5 17h2v2H5zM17 17h2v2h-2z" fill="#6a4a3a"/></svg><span>Add</span></button>
+  <button data-tool="move"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span>Move</span></button>
+  <button data-tool="turn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4h-4"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" fill-opacity=".25"/></svg><span>Turn</span></button>
+  <button data-tool="paint"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="14" height="6" rx="2" fill="#7ac8e8"/><path d="M18 6h2v6h-8v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="10" y="15" width="4" height="6" rx="1.2" fill="currentColor"/></svg><span>Paint</span></button>
+  <button data-tool="remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg><span>Remove</span></button>
+</nav>
+
+<div class="explorebar panel">
+  <button id="bSurprise" aria-label="Surprise room"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" fill="#ffffff" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.6" fill="currentColor"/></svg><span>Surprise</span></button>
+  <button id="bEdit" class="primary" aria-label="Decorate this room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>Decorate</span></button>
+</div>
+
+<div id="toasts"></div>
+
+<div id="sheet" class="sheet"><div class="body" id="sheetBody"></div></div>
+
+<div id="intro">
+  <div class="card0">
+    <h1>Lofi Rooms</h1>
+    <p class="lede">Build tiny cozy voxel rooms, one piece at a time. Switch on the lamps, put a record on and let the cats wander.</p>
+    <div class="tips">
+      <div><b>✋</b>Drag to look around. Tap things to use them.</div>
+      <div><b>✏️</b>Decorate to add, move, turn and paint.</div>
+      <div><b>🐈</b>Pet the cats. They like it.</div>
     </div>
+    <p class="pick">Pick a room to start</p>
+    <div id="introRooms"></div>
+  </div>
+</div>
 
-    <script>
-        let scene, camera, renderer, controls;
-        let ceilingLight, deskLamp, windowLight;
-        let lampMesh, monitorMesh, windowMesh, blindsGroup;
-        let blindsOpen = false;
+<div id="photo">
+  <img id="photoImg" alt="Snapshot of your room">
+  <p>Long-press the picture to save it, or</p>
+  <div class="row2"><a id="photoSave" download="lofi-room.png">Download</a><button id="photoClose">Back to room</button></div>
+</div>
+<div id="flash"></div>
+<div id="dream">z z z</div>
 
-        const COLORS = {
-            wall: 0xeeeeee,
-            floor: 0xcccccc,
-            wood: 0x8d6e63,
-            leaf: 0x66bb6a,
-            pot: 0xff8a65,
-            screen: 0x81d4fa,
-            lamp: 0xffca28,
-            keyboard: 0x424242,
-            rug: 0xab47bc,
-            art: [0xef5350, 0x42a5f5, 0xffca28]
-        };
-
-        window.onload = function() {
-            init();
-            buildRoom();
-            animate();
-            setupInteractions();
-        }
-
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a0a);
-            
-            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(15, 12, 15);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.body.appendChild(renderer.domElement);
-
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.maxPolarAngle = Math.PI / 2.1;
-            controls.target.set(0, 2, 0);
-
-            // Subtle Ambient
-            scene.add(new THREE.AmbientLight(0xffffff, 0.15));
-
-            // Lights
-            ceilingLight = new THREE.PointLight(0xffffff, 0.7, 25);
-            ceilingLight.position.set(0, 7, 0);
-            ceilingLight.castShadow = true;
-            scene.add(ceilingLight);
-
-            deskLamp = new THREE.PointLight(0xffaa66, 1.5, 10);
-            deskLamp.position.set(-3.5, 3.2, -3.5);
-            deskLamp.castShadow = true;
-            scene.add(deskLamp);
-
-            windowLight = new THREE.PointLight(0x88ccff, 1.8, 15);
-            windowLight.position.set(6, 4, 0);
-            scene.add(windowLight);
-        }
-
-        function createVoxel(x, y, z, color = 0xffffff, size = 1, emissive = 0) {
-            const geometry = new THREE.BoxGeometry(size, size, size);
-            const material = new THREE.MeshStandardMaterial({ 
-                color: color,
-                emissive: color,
-                emissiveIntensity: emissive
-            });
-            const cube = new THREE.Mesh(geometry, material);
-            cube.position.set(x, y, z);
-            cube.castShadow = true;
-            cube.receiveShadow = true;
-            return cube;
-        }
-
-        function buildRoom() {
-            const roomGroup = new THREE.Group();
-
-            // Floor
-            for(let x = -5; x <= 5; x++) {
-                for(let z = -5; z <= 5; z++) {
-                    const isRug = (Math.abs(x) <= 2 && Math.abs(z) <= 2);
-                    roomGroup.add(createVoxel(x, 0, z, isRug ? COLORS.rug : COLORS.floor));
-                }
-            }
-
-            // Walls
-            for(let i = 1; i <= 8; i++) {
-                for(let j = -5; j <= 5; j++) {
-                    // Back Wall (with new Window B)
-                    const isWindowB = (i >= 4 && i <= 6 && j >= -3 && j <= -1);
-                    if (!isWindowB) {
-                        roomGroup.add(createVoxel(j, i, -5.5, COLORS.wall));
-                    }
-                    
-                    // Left Wall (Window A)
-                    const isWindowA = (i >= 4 && i <= 6 && j >= 0 && j <= 3);
-                    if (!isWindowA) {
-                        roomGroup.add(createVoxel(5.5, i, j, COLORS.wall));
-                    }
-                }
-            }
-
-            // Painting above bed
-            roomGroup.add(createVoxel(0, 5, -5.4, COLORS.art[0], 0.8));
-            roomGroup.add(createVoxel(1, 5, -5.4, COLORS.art[1], 0.8));
-            roomGroup.add(createVoxel(0, 4, -5.4, COLORS.art[2], 0.8));
-
-            // Desk Setup
-            for(let x = -4.5; x <= -2.5; x++) {
-                for(let z = -4.5; z <= -1.5; z++) {
-                    roomGroup.add(createVoxel(x, 2.5, z, COLORS.wood));
-                }
-            }
-            // Desk legs
-            const legs = [[-4.5, -4.5], [-2.5, -4.5], [-4.5, -1.5], [-2.5, -1.5]];
-            legs.forEach(p => roomGroup.add(createVoxel(p[0], 1.25, p[1], COLORS.wood, 0.5)));
-
-            // Monitor
-            const monitorMat = new THREE.MeshStandardMaterial({ color: COLORS.screen, emissive: COLORS.screen, emissiveIntensity: 0.5 });
-            monitorMesh = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1, 0.1), monitorMat);
-            monitorMesh.position.set(-3.5, 3.5, -4.4);
-            roomGroup.add(monitorMesh);
-
-            // Lamp
-            const lampHead = createVoxel(-3.5, 3.5, -2, COLORS.lamp, 0.4, 1);
-            lampMesh = lampHead;
-            roomGroup.add(lampHead);
-
-            // Bed
-            for(let x = -1; x <= 4; x++) {
-                for(let z = -5; z <= -3; z++) {
-                    roomGroup.add(createVoxel(x, 1, z, 0x5c6bc0));
-                }
-            }
-
-            // Fixed Cactus (on floor)
-            roomGroup.add(createVoxel(4, 0.8, 4, COLORS.pot, 0.6));
-            roomGroup.add(createVoxel(4, 1.3, 4, COLORS.leaf, 0.5));
-
-            // Hanging Plant
-            roomGroup.add(createVoxel(5.2, 7, 4.5, COLORS.pot, 0.4));
-            roomGroup.add(createVoxel(5.2, 6.5, 4.5, COLORS.leaf, 0.3));
-            roomGroup.add(createVoxel(5.2, 6.2, 4.5, COLORS.leaf, 0.2));
-
-            // Main Window Glow
-            const winMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, emissive: 0x88ccff, emissiveIntensity: 0.8, transparent: true, opacity: 0.4 });
-            windowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3, 4), winMat);
-            windowMesh.position.set(5.5, 5, 1.5);
-            roomGroup.add(windowMesh);
-
-            // Blinds for Back Window
-            blindsGroup = new THREE.Group();
-            for(let k = 0; k < 5; k++) {
-                const slat = createVoxel(-2, 6.3 - (k * 0.6), -5.2, 0x444444, 1);
-                slat.scale.set(2.5, 0.2, 0.1);
-                blindsGroup.add(slat);
-            }
-            roomGroup.add(blindsGroup);
-
-            scene.add(roomGroup);
-        }
-
-        function setupInteractions() {
-            const btns = {
-                ceiling: document.getElementById('toggle-ceiling'),
-                lamp: document.getElementById('toggle-lamp'),
-                window: document.getElementById('toggle-window'),
-                blinds: document.getElementById('toggle-blinds')
-            };
-
-            btns.ceiling.onclick = () => {
-                ceilingLight.visible = !ceilingLight.visible;
-                btns.ceiling.classList.toggle('active', ceilingLight.visible);
-            };
-
-            btns.lamp.onclick = () => {
-                deskLamp.visible = !deskLamp.visible;
-                lampMesh.material.emissiveIntensity = deskLamp.visible ? 1 : 0;
-                monitorMesh.material.emissiveIntensity = deskLamp.visible ? 0.5 : 0.05;
-                btns.lamp.classList.toggle('active', deskLamp.visible);
-            };
-
-            btns.window.onclick = () => {
-                windowLight.visible = !windowLight.visible;
-                windowMesh.material.emissiveIntensity = windowLight.visible ? 0.8 : 0;
-                btns.window.classList.toggle('active', windowLight.visible);
-            };
-
-            btns.blinds.onclick = () => {
-                blindsOpen = !blindsOpen;
-                btns.blinds.classList.toggle('active', !blindsOpen);
-                // Simple animation trigger in the loop or direct jump
-                blindsGroup.visible = !blindsOpen;
-            };
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-
-        window.onresize = function() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-    </script>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="storage.js"></script>
+<script src="room.js"></script>
+<script src="sound.js"></script>
+<script src="render.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
