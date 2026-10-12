@@ -1,0 +1,884 @@
+// Lofi Rooms: input, decorating tools, things you can tap, sound, saving, the
+// list of rooms and the little "cozy moments" journal.
+// In the Android app, storage.js restores saves before boot and mirrors writes to SQLite.
+
+function startLofiRooms() {
+  const { N, HC, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, CATS, fp } = LR;
+  const Sound = window.LofiSound;
+  const $ = s => document.querySelector(s);
+  const put = (k, v) => {
+    if (window.Store) window.Store.set(k, v);
+    else try { localStorage.setItem(k, v); } catch (e) { /* private mode */ }
+  };
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { put(k, JSON.stringify(v)); },
+    del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
+  };
+
+  // ---------------------------------------------------------------
+  // Cozy moments
+  const MOMENTS = [
+    ['light', 'First light', 'Switched on a lamp'],
+    ['lofi', 'Lofi hour', 'Put a record on'],
+    ['rain', 'Rainy day', 'Listened to the rain'],
+    ['nightowl', 'Night owl', 'Lamps glowing after dark'],
+    ['purr', 'Purr', 'Petted a cat'],
+    ['catnap', 'Cat nap', 'A cat curled up in its bed'],
+    ['perch', 'High ground', 'A cat hopped up on the furniture'],
+    ['tea', 'Tea time', 'Sipped something warm'],
+    ['green', 'Green thumb', 'Five plants in one room'],
+    ['books', 'Bookworm', 'Two bookshelves in one room'],
+    ['gallery', 'Gallery wall', 'Four pieces of wall art'],
+    ['cozy', 'All moved in', 'Twenty-five things in one room'],
+    ['design', 'Redecorator', 'Changed the walls and the floor'],
+    ['fire', 'Hearth', 'Lit the fireplace'],
+    ['piano', 'Little tune', 'Played the piano'],
+    ['sleep', 'Sweet dreams', 'Slept through the night'],
+    ['photo', 'Snapshot', 'Took a photo of your room'],
+  ];
+  const found = new Set(store.get('lr.found', []));
+
+  // ---------------------------------------------------------------
+  // Rooms: a list of saved rooms, one open at a time
+  let rooms = store.get('lr.rooms', []);
+  const meta = Object.assign({ current: 0, realtime: true, phase: 'day', raining: false, music: false, sound: true, painted: {} }, store.get('lr.meta', {}));
+  Sound.on = meta.sound;
+  const room = new LR.Room();
+  function loadRoom(id) {
+    const d = store.get('lr.room.' + id, null);
+    if (d && room.load(d)) { meta.current = id; return true; }
+    return false;
+  }
+  let fresh = false;
+  if (!rooms.length || !loadRoom(meta.current)) {
+    if (rooms.length && loadRoom(rooms[0].id)) { /* recovered */ }
+    else {
+      PRESETS.study.make(room); room.name = PRESETS.study.name;
+      const id = Date.now();
+      rooms = [{ id, name: room.name, n: room.items.length }];
+      meta.current = id; fresh = true;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Renderer
+  const bg = $('#bg'), stars = $('#stars');
+  let liftNow = 40;
+  const view = new LRRender.Renderer($('#c'), {
+    sky(top, bot, night) {
+      bg.style.background = `linear-gradient(180deg, ${top} 0%, ${bot} 100%)`;
+      stars.style.opacity = Math.max(0, night - 0.4) * 1.6;
+      document.body.classList.toggle('night', night > 0.6);
+      const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = top;
+    },
+    lift() { return liftNow; },
+  });
+  const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', paintTab: 'walls', drag: null };
+  const undo = [];
+
+  (function starsBg() {
+    const c = document.createElement('canvas'); c.width = 600; c.height = 900;
+    const g = c.getContext('2d');
+    for (let k = 0; k < 150; k++) {
+      const s = Math.random() < 0.15 ? 3 : 2;
+      g.fillStyle = `rgba(255,255,240,${0.35 + Math.random() * 0.6})`;
+      g.fillRect((Math.random() * 600) | 0, (Math.random() * 900) | 0, s, s);
+    }
+    stars.style.backgroundImage = `url(${c.toDataURL()})`;
+  })();
+
+  function realPhase() {
+    const h = new Date().getHours();
+    return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 17 ? 'day' : h >= 17 && h < 20 ? 'evening' : 'night';
+  }
+  if (meta.realtime) meta.phase = realPhase();
+  view.env.phase = meta.phase; view.env.rain = !!meta.raining;
+  view.setPhase(meta.phase, true);
+  view.rainK = meta.raining ? 1 : 0; view.setRain(!!meta.raining); view.applyPhase(1);
+  document.body.classList.toggle('raining', !!meta.raining);
+  view.music = false;
+  view.sync(room);
+
+  // ---------------------------------------------------------------
+  // Toasts & moments
+  const toastQ = [];
+  let toastBusy = 0;
+  function toast(html, ms) {
+    if (performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms]); return; }
+    toastBusy = performance.now() + Math.min(ms || 3200, 1500);
+    setTimeout(() => { if (toastQ.length) toast(...toastQ.shift()); }, Math.min(ms || 3200, 1500) + 50);
+    const el = document.createElement('div');
+    el.className = 'toast'; el.innerHTML = html;
+    $('#toasts').appendChild(el);
+    requestAnimationFrame(() => el.classList.add('in'));
+    setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 400); }, ms || 3200);
+  }
+  function discover(key) {
+    if (found.has(key) || $('#intro').classList.contains('open')) return;
+    const d = MOMENTS.find(x => x[0] === key);
+    if (!d) return;
+    found.add(key); store.set('lr.found', [...found]);
+    toast(`<b>✦ ${d[1]}</b><span>${d[2]}</span>`, 3800);
+    Sound.chime();
+    updateHeader();
+  }
+  function checkRoomMoments() {
+    const n = t => room.count(i => i.t === t);
+    if (n('plant') + n('cactus') + n('succulent') + n('flowers') + n('hangplant') >= 5) discover('green');
+    if (n('bookshelf') >= 2) discover('books');
+    if (n('painting') + n('poster') + n('mirror') + n('neon') + n('clock') >= 4) discover('gallery');
+    if (room.items.length >= 25) discover('cozy');
+    if (meta.painted.wall && meta.painted.floor) discover('design');
+    if (view.ph.night > 0.6 && room.items.some(i => CAT[i.t].light && i.on)) discover('nightowl');
+  }
+  function updateHeader() {
+    $('#roomName').textContent = room.name;
+    $('#disc').textContent = `✦ ${found.size} of ${MOMENTS.length} cozy moments`;
+    $('#bRain').classList.toggle('on', !!meta.raining);
+    $('#bMusic').classList.toggle('on', !!meta.music);
+    $('#bTime').dataset.phase = meta.phase;
+  }
+  const haptic = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { /* unsupported */ } };
+
+  // ---------------------------------------------------------------
+  // Changing the room
+  function pushUndo() {
+    undo.push(room.snapshot());
+    if (undo.length > 40) undo.shift();
+  }
+  function changed() {
+    view.sync(room);
+    dirty = true;
+    checkRoomMoments();
+  }
+  function doUndo() {
+    if (!undo.length) { toast('<span>Nothing to undo</span>', 1200); return; }
+    room.restore(undo.pop());
+    changed(); updateHeader();
+    Sound.turn(); haptic(5);
+  }
+
+  // ---------------------------------------------------------------
+  // Tray: catalog thumbnails and paint swatches
+  const thumbs = new Map();
+  const thumbOf = (t, c) => {
+    const k = t + ':' + (c || 0);
+    if (!thumbs.has(k)) thumbs.set(k, view.thumb({ t, c: c || 0, on: CAT[t].on !== undefined ? CAT[t].on : false, r: 0, seed: 7 }));
+    return thumbs.get(k);
+  };
+  function swatchCanvas(draw) {
+    const c = document.createElement('canvas'); c.width = c.height = 48;
+    const g = c.getContext('2d');
+    for (let x = 0; x < 24; x++) for (let y = 0; y < 24; y++) {
+      g.fillStyle = LR.hex(draw(x, y)); g.fillRect(x * 2, (23 - y) * 2, 2, 2);
+    }
+    return c;
+  }
+  const tray = $('#tray'), tabs = $('#tabs'), row = $('#row');
+  function renderTray() {
+    const show = state.mode === 'edit' && (state.tool === 'add' || state.tool === 'paint');
+    tray.classList.toggle('open', show);
+    tabs.innerHTML = ''; row.innerHTML = '';
+    if (!show) return;
+    const tab = (label, on, fn) => {
+      const b = document.createElement('button'); b.className = 'tab' + (on ? ' on' : ''); b.textContent = label;
+      b.onclick = () => { fn(); renderTray(); Sound.turn(); };
+      tabs.appendChild(b);
+    };
+    if (state.tool === 'add') {
+      GROUPS.forEach(([k, label]) => tab(label, state.group === k, () => { state.group = k; }));
+      Object.values(CAT).filter(C => C.group === state.group).forEach(C => {
+        const b = document.createElement('button');
+        b.className = 'swatch' + (state.add === C.key ? ' on' : '');
+        const name = C.kind === 'pet' ? 'Cats' : C.name;
+        b.innerHTML = `<img alt="" src="${thumbOf(C.key, 0)}"><span>${name}</span>`;
+        b.onclick = () => { state.add = C.key; renderTray(); Sound.turn(); toast(`<span>Tap the room to place ${C.kind === 'pet' ? 'a cat' : 'the ' + C.name.toLowerCase()}</span>`, 1400); };
+        row.appendChild(b);
+      });
+    } else {
+      tab('Walls', state.paintTab === 'walls', () => { state.paintTab = 'walls'; });
+      tab('Wall colour', state.paintTab === 'color', () => { state.paintTab = 'color'; });
+      tab('Floor', state.paintTab === 'floor', () => { state.paintTab = 'floor'; });
+      const wc = (WALL_COLORS[room.wall.color] || WALL_COLORS[0])[1];
+      if (state.paintTab === 'walls') {
+        Object.entries(WALLS).forEach(([k, W]) => {
+          const b = document.createElement('button'); b.className = 'swatch' + (room.wall.style === k ? ' on' : '');
+          b.appendChild(swatchCanvas((x, y) => W.fn(wc, x + 64, y + 2)));
+          b.insertAdjacentHTML('beforeend', `<span>${W.label}</span>`);
+          b.onclick = () => paintRoom(() => { room.wall.style = k; meta.painted.wall = true; });
+          row.appendChild(b);
+        });
+      } else if (state.paintTab === 'color') {
+        WALL_COLORS.forEach(([name, c], i) => {
+          const b = document.createElement('button'); b.className = 'dot' + (room.wall.color === i ? ' on' : '');
+          b.innerHTML = `<i style="background:${LR.hex(c)}"></i><span>${name}</span>`;
+          b.onclick = () => paintRoom(() => { room.wall.color = i; meta.painted.wall = true; });
+          row.appendChild(b);
+        });
+      } else {
+        Object.entries(FLOORS).forEach(([k, Fl]) => {
+          const b = document.createElement('button'); b.className = 'swatch' + (room.floor.style === k ? ' on' : '');
+          b.appendChild(swatchCanvas((x, y) => Fl.fn(x + 64, y + 64)));
+          b.insertAdjacentHTML('beforeend', `<span>${Fl.label}</span>`);
+          b.onclick = () => paintRoom(() => { room.floor.style = k; meta.painted.floor = true; });
+          row.appendChild(b);
+        });
+      }
+      row.insertAdjacentHTML('beforeend', '<div class="hint">Tip: tap any piece in the room to try its next colour.</div>');
+    }
+    const on = row.querySelector('.on');
+    if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
+  function paintRoom(fn) {
+    pushUndo(); fn(); saveMeta(); changed(); renderTray();
+    Sound.paint(); haptic(6);
+  }
+
+  document.querySelectorAll('.tools button').forEach(b => {
+    b.onclick = () => {
+      if (b.dataset.mode === 'explore') { setMode('explore'); return; }
+      state.tool = b.dataset.tool;
+      document.querySelectorAll('.tools button').forEach(x => x.classList.toggle('on', x.dataset.tool === state.tool));
+      renderTray(); view.setGhost(null);
+      const tips = { move: 'Drag a piece to move it', turn: 'Tap a piece to turn it', paint: 'Pick a wall or floor style, or tap a piece to recolour it', remove: 'Tap a piece to put it away' };
+      if (tips[state.tool]) toast(`<span>${tips[state.tool]}</span>`, 1500);
+      Sound.init(); Sound.turn();
+    };
+  });
+
+  // ---------------------------------------------------------------
+  // Explore / Decorate
+  function setMode(mode, quiet) {
+    state.mode = mode;
+    store.set('lr.mode', mode);
+    document.body.classList.toggle('exploring', mode === 'explore');
+    state.drag = null; view.setGhost(null); setHidden(0);
+    view.petsPaused = mode === 'edit';
+    renderTray();
+    if (quiet) return;
+    haptic(6);
+    if (mode === 'edit' && !store.get('lr.tipEdit', false)) {
+      store.set('lr.tipEdit', true);
+      toast('<b>Decorating</b><span>Pick something from the tray, then tap or drag in the room to place it.</span>', 4200);
+    }
+  }
+  $('#bEdit').onclick = () => { setMode('edit'); Sound.init(); };
+
+  function surprise() {
+    pushUndo();
+    const seed = (Math.random() * 0xffffffff) >>> 0;
+    const th = room.generate(seed);
+    view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
+    changed(); updateHeader(); saveIndex();
+    toast(`<b>${room.name}</b><span>${th.name} · Undo brings your old room back</span>`, 2600);
+    const d = $('#bSurprise svg'); if (d) { d.classList.remove('spin'); requestAnimationFrame(() => d.classList.add('spin')); }
+    Sound.arpeggio(); haptic(10);
+  }
+  $('#bSurprise').onclick = () => { Sound.init(); surprise(); };
+
+  // ---------------------------------------------------------------
+  // Placement: where would this piece go under the finger?
+  function setHidden(id) {
+    view.hiddenId = id || 0;
+    view.applyVisibility(); view.assignLights();
+  }
+  const clampI = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  // base: the piece's type/colour/rotation; grab: offset between finger and anchor when moving
+  function candidate(cx, cy, base, grab) {
+    const C = CAT[base.t];
+    const it = Object.assign({ t: base.t, c: base.c, r: base.r || 0, on: base.on, seed: base.seed, name: base.name }, {});
+    if (C.kind === 'wall') {
+      const w = view.pickWall(cx, cy, true);
+      if (!w) return null;
+      const [ww, wh] = C.size;
+      it.k = w.k;
+      it.u = clampI(Math.round(w.u - (grab ? grab.u : ww / 2)), 0, N - ww);
+      it.e = clampI(Math.round(w.e - (grab ? grab.e : wh / 2)), 0, HC - wh);
+      return it;
+    }
+    if (C.kind === 'small') {
+      const ex = base.id ? [base.id, ...room.descendants(base.id).map(i => i.id)] : [];
+      const hit = view.pickItem(cx, cy, ex);
+      if (hit && !hit.behindWall) {
+        let owner = room.get(hit.id);
+        if (owner && !CAT[owner.t].top && owner.p) owner = room.get(owner.p);
+        if (owner && CAT[owner.t].top) {
+          const OC = CAT[owner.t], [w, d] = OC.size;
+          const obj = view.objs.get(owner.id);
+          const lp = obj.userData.inner.worldToLocal(hit.point.clone().add(view.root.position));
+          it.p = owner.id; it.lx = clampI(Math.floor(lp.x), 0, w - 1); it.lz = OC.kind === 'wall' ? 0 : clampI(Math.floor(lp.z), 0, d - 1);
+          return it;
+        }
+      }
+    }
+    const p = view.pickFloor(cx, cy);
+    if (!p || p.x < -2 || p.z < -2 || p.x > N + 2 || p.z > N + 2) return null;
+    const place = r => {
+      const o = Object.assign({}, it, { r });
+      const [fw, fd] = fp(o);
+      o.x = clampI(Math.round(p.x - (grab ? grab.x : fw / 2)), 0, N - fw);
+      o.z = clampI(Math.round(p.z - (grab ? grab.z : fd / 2)), 0, N - fd);
+      return o;
+    };
+    if (!grab && C.wallish) {
+      // back it against the nearest wall, like you would in real life
+      for (const r of [0, 1, 2, 3]) {
+        const o = place(r), [fw, fd] = fp(o);
+        const touches = (r === 0 && o.z === 0) || (r === 1 && o.x === 0) || (r === 2 && o.z + fd === N) || (r === 3 && o.x + fw === N);
+        if (touches && room.canPlace(o)) return o;
+      }
+    }
+    return place(it.r);
+  }
+  function applyPlacement(it, cand) {
+    ['x', 'z', 'k', 'u', 'e', 'p', 'lx', 'lz'].forEach(k => delete it[k]);
+    ['x', 'z', 'k', 'u', 'e', 'p', 'lx', 'lz', 'r'].forEach(k => { if (cand[k] !== undefined) it[k] = cand[k]; });
+  }
+
+  // ---------------------------------------------------------------
+  // Tapping things in the room
+  function interact(id) {
+    const it = room.get(id);
+    if (!it) return;
+    const C = CAT[it.t];
+    view.boing(id); haptic(5);
+    const tap = C.tap;
+    if (tap === 'toggle') {
+      pushUndo(); it.on = !it.on; changed();
+      Sound.click(it.on);
+      if (it.on && C.light) discover('light');
+      if (it.on && it.t === 'fireplace') discover('fire');
+      return;
+    }
+    if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.paint(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
+    if (tap === 'music') { setMusic(!meta.music); return; }
+    if (tap === 'pet') {
+      const P = CATS[it.c] || CATS[0];
+      view.petCat(id); Sound.purr(true); setTimeout(() => Sound.purr(false), 2600);
+      if (Math.random() < 0.35) setTimeout(() => Sound.meow(), 400);
+      toast(`<span>${it.name || P.name} purrs ♥</span>`, 1600);
+      discover('purr');
+      return;
+    }
+    if (tap === 'sip') {
+      Sound.sip(); discover('tea');
+      const p = view.itemPoint(id, [4.5, 5, 4.5]);
+      for (let k = 0; k < 10; k++) view.fx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.3, 0.5 + Math.random() * 0.4, (Math.random() - 0.5) * 0.3, 0xffffff, 0.08, 1.4, -0.05, 0.4, 0.6);
+      toast('<span>Mmm, still warm</span>', 1200);
+      return;
+    }
+    if (tap === 'water') {
+      Sound.water();
+      const p = view.itemPoint(id, [4, 14, 4]);
+      for (let k = 0; k < 3; k++) setTimeout(() => view.icon('drop', p.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0, (Math.random() - 0.5) * 0.4)), { size: 0.22, vy: -0.4, life: 1 }), k * 150);
+      view.sparkle(p, 0xa8f0a0, 10);
+      return;
+    }
+    if (tap === 'time') {
+      const d = new Date();
+      toast(`<span>It's ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>`, 1600);
+      Sound.click(true);
+      return;
+    }
+    if (tap === 'piano') {
+      Sound.piano(); discover('piano');
+      for (let k = 0; k < 4; k++) setTimeout(() => { const p = view.itemPoint(id, [3 + k * 3, 18, 6]); if (p) view.icon('note', p, { size: 0.3 }); }, k * 200);
+      return;
+    }
+    if (tap === 'sleep') { sleep(); return; }
+    Sound.click(true);
+  }
+  function sleep() {
+    const dream = $('#dream');
+    const wasLate = meta.phase === 'night' || meta.phase === 'evening';
+    dream.classList.add('on'); Sound.purr(false);
+    setTimeout(() => {
+      meta.realtime = false; setPhase('morning', true);
+      setTimeout(() => {
+        dream.classList.remove('on');
+        toast('<b>Good morning ☀</b><span>Time follows the clock again in Settings</span>', 2600);
+        if (wasLate) discover('sleep');
+      }, 900);
+    }, 1400);
+  }
+  function setMusic(on) {
+    meta.music = on; saveMeta();
+    Sound.init(); Sound.setMusic(on);
+    view.music = on;
+    updateHeader();
+    room.items.forEach(i => { if (i.t === 'record') view.boing(i.id); });
+    if (on) { discover('lofi'); toast('<span>♪ Lofi radio on</span>', 1300); }
+  }
+
+  // ---------------------------------------------------------------
+  // Input
+  const canvas = $('#c');
+  const pointers = new Map();
+  let gesture = null, orbit = null, lastTap = null;
+
+  function beginEdit(e) {
+    const tool = state.tool;
+    if (tool === 'add') {
+      const C = CAT[state.add];
+      const base = { t: state.add, c: 0, r: 0, on: C.on !== undefined ? C.on : false };
+      if (state.add === 'cat') base.c = (room.count(i => i.t === 'cat')) % CATS.length;
+      const cand = candidate(e.clientX, e.clientY, base);
+      if (!cand) { startOrbit(e); return; }
+      state.drag = { kind: 'add', base, cand, sx: e.clientX, sy: e.clientY };
+      view.setGhost(cand, room.canPlace(cand), room);
+      return;
+    }
+    const hit = view.pickItem(e.clientX, e.clientY);
+    if (tool === 'move' && hit && !hit.behindWall) {
+      const it = room.get(hit.id), C = CAT[it.t];
+      let grab;
+      if (C.kind === 'wall') { const w = view.pickWall(e.clientX, e.clientY, true); grab = w ? { u: w.u - it.u, e: w.e - it.e } : { u: CAT[it.t].size[0] / 2, e: CAT[it.t].size[1] / 2 }; }
+      else if (C.kind !== 'small' || !it.p) { const p = view.pickFloor(e.clientX, e.clientY); const ix = C.kind === 'pet' ? Math.floor(view.pets.get(it.id).x) : it.x, iz = C.kind === 'pet' ? Math.floor(view.pets.get(it.id).z) : it.z; grab = C.kind === 'small' ? null : { x: p.x - ix, z: p.z - iz }; }
+      state.drag = { kind: 'move', id: it.id, base: Object.assign({}, it), grab, cand: null, sx: e.clientX, sy: e.clientY };
+      setHidden(it.id);
+      const cand = candidate(e.clientX, e.clientY, it, grab);
+      state.drag.cand = cand;
+      if (cand) view.setGhost(cand, room.canPlace(cand, it.id), room);
+      Sound.lift(); haptic(6);
+      return;
+    }
+    // turn / paint / remove act on a tap; a drag spins the view instead
+    startOrbit(e, hit && !hit.behindWall ? hit.id : 0);
+  }
+  function moveEdit(e) {
+    const d = state.drag;
+    if (!d) return;
+    const base = d.kind === 'add' ? d.base : d.base;
+    const cand = candidate(e.clientX, e.clientY, base, d.kind === 'move' ? d.grab : null);
+    if (!cand) return;
+    d.cand = cand;
+    view.setGhost(cand, room.canPlace(cand, d.kind === 'move' ? d.id : undefined), room);
+  }
+  function endEdit() {
+    const d = state.drag;
+    state.drag = null;
+    if (!d) return;
+    view.setGhost(null);
+    if (d.kind === 'add') {
+      if (d.cand && room.canPlace(d.cand)) {
+        pushUndo();
+        const it = room.add(room.make(d.cand.t, d.cand));
+        changed();
+        view.boing(it.id); view.poof(it.id, [0xffffff, 0xfff0d0]);
+        Sound.place(); haptic(8);
+        if (it.t === 'cat') toast(`<span>Say hi to ${(CATS[it.c] || CATS[0]).name}!</span>`, 1600);
+      } else { Sound.nope(); toast('<span>That spot is taken</span>', 1100); }
+    } else if (d.kind === 'move') {
+      setHidden(0);
+      const it = room.get(d.id);
+      if (it && d.cand && room.canPlace(d.cand, d.id)) {
+        const same = ['x', 'z', 'k', 'u', 'e', 'p', 'lx', 'lz'].every(k => d.cand[k] === d.base[k] || (d.cand[k] == null && d.base[k] == null));
+        if (!same) { pushUndo(); applyPlacement(it, d.cand); changed(); Sound.place(); view.boing(it.id); haptic(6); }
+      } else if (d.cand) { Sound.nope(); toast('<span>That spot is taken</span>', 1100); }
+    }
+  }
+  function tapEdit(id) {
+    const it = room.get(id);
+    if (!it) return;
+    const C = CAT[it.t];
+    if (state.tool === 'remove') {
+      pushUndo();
+      view.poof(id, [0xf4e6d0, 0xffffff, 0xd8c8b8]);
+      const gone = room.remove(id);
+      changed(); Sound.poof(); haptic(8);
+      if (gone.length > 1) toast(`<span>Put away ${C.name.toLowerCase()} and ${gone.length - 1} thing${gone.length > 2 ? 's' : ''} on it</span>`, 1600);
+    } else if (state.tool === 'paint') {
+      pushUndo();
+      it.c = ((it.c | 0) + 1) % C.vars.length;
+      changed(); view.boing(id); Sound.paint(); haptic(5);
+      if (it.t === 'cat') toast(`<span>This is ${(CATS[it.c] || CATS[0]).name}</span>`, 1300);
+    } else if (state.tool === 'turn') {
+      if (C.kind === 'wall') { toast('<span>Wall pieces stay flat against the wall</span>', 1300); Sound.nope(); return; }
+      pushUndo();
+      if (C.kind === 'small' || C.kind === 'pet') { it.r = ((it.r || 0) + 1) % 4; changed(); view.boing(id); Sound.turn(); return; }
+      const [fw, fd] = fp(it), cx = it.x + fw / 2, cz = it.z + fd / 2;
+      const nr = ((it.r || 0) + 1) % 4, t = Object.assign({}, it, { r: nr }), [nw, nd] = fp(t);
+      const tries = [[0, 0], [0, -1], [-1, 0], [1, 0], [0, 1], [-1, -1], [1, 1], [1, -1], [-1, 1]];
+      for (const [ox, oz] of tries) {
+        t.x = Math.round(cx - nw / 2) + ox; t.z = Math.round(cz - nd / 2) + oz;
+        if (room.canPlace(t, it.id)) { it.r = nr; it.x = t.x; it.z = t.z; changed(); view.boing(id); Sound.turn(); haptic(5); return; }
+      }
+      undo.pop(); Sound.nope(); toast('<span>No room to turn it here</span>', 1200);
+    } else if (state.tool === 'move') {
+      // handled on drag
+    }
+  }
+
+  function startOrbit(e, tapId) {
+    orbit = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t0: performance.now(), tapId: tapId || 0, moved: false };
+  }
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('pointerdown', e => {
+    Sound.init(); if (Sound.ctx && Sound.ctx.state === 'suspended' && Sound.on) Sound.ctx.resume();
+    canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    closeSheets();
+    if (pointers.size === 2) {
+      // second finger: a camera gesture, so drop whatever the first finger started
+      if (state.drag) { if (state.drag.kind === 'move') setHidden(0); state.drag = null; view.setGhost(null); }
+      orbit = null;
+      const [a, b] = [...pointers.values()];
+      gesture = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, zoom: view.zoomGoal };
+      return;
+    }
+    if (pointers.size > 2) return;
+    if (e.button === 2 || e.button === 1 || e.altKey) { orbit = { x: e.clientX, y: e.clientY, pan: e.button === 1 }; return; }
+    if (state.mode === 'explore') {
+      const hit = view.pickItem(e.clientX, e.clientY);
+      startOrbit(e, hit && !hit.behindWall ? hit.id : 0);
+      return;
+    }
+    beginEdit(e);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gesture && pointers.size >= 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      view.zoomGoal = Math.max(0.7, Math.min(3, gesture.zoom * d / gesture.d));
+      let da = ang - gesture.ang; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
+      view.yawGoal -= da; gesture.ang = ang;
+      panBy(mx - gesture.mx, my - gesture.my); gesture.mx = mx; gesture.my = my;
+      return;
+    }
+    if (orbit) {
+      const dx = e.clientX - orbit.x, dy = e.clientY - orbit.y;
+      if (!orbit.moved && orbit.sx !== undefined && Math.hypot(e.clientX - orbit.sx, e.clientY - orbit.sy) < 8) return;
+      orbit.moved = true;
+      orbit.x = e.clientX; orbit.y = e.clientY;
+      if (orbit.pan) panBy(dx, dy);
+      else { view.yawGoal -= dx * 0.008; view.pitchGoal = Math.max(0.3, Math.min(1.2, view.pitchGoal + dy * 0.005)); }
+      return;
+    }
+    if (state.drag) { moveEdit(e); return; }
+    // desktop: preview the piece under the mouse
+    if (e.pointerType === 'mouse' && state.mode === 'edit' && state.tool === 'add' && !pointers.size) {
+      const C = CAT[state.add];
+      const cand = candidate(e.clientX, e.clientY, { t: state.add, c: state.add === 'cat' ? room.count(i => i.t === 'cat') % CATS.length : 0, r: 0, on: C.on !== undefined ? C.on : false });
+      if (cand) view.setGhost(cand, room.canPlace(cand), room); else view.setGhost(null);
+    }
+  });
+  const up = e => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) gesture = null;
+    if (orbit && orbit.t0 && e.type === 'pointerup' && pointers.size === 0 && !orbit.moved && performance.now() - orbit.t0 < 450) {
+      if (orbit.tapId) {
+        if (state.mode === 'explore') interact(orbit.tapId); else tapEdit(orbit.tapId);
+        lastTap = null;
+      } else if (state.mode === 'explore') {
+        const now = performance.now();
+        if (lastTap && now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) { zoomToward(e.clientX, e.clientY); lastTap = null; }
+        else lastTap = { t: now, x: e.clientX, y: e.clientY };
+      }
+    }
+    if (pointers.size === 0) { orbit = null; if (e.type === 'pointerup') endEdit(); else if (state.drag) { if (state.drag.kind === 'move') setHidden(0); state.drag = null; view.setGhost(null); } }
+  };
+  function zoomToward(cx, cy) {
+    const p = view.pickFloor(cx, cy);
+    if (!p || view.zoomGoal > 2.2 || p.x < 0 || p.z < 0 || p.x > N || p.z > N) { view.zoomGoal = 1; view.panGoal.set(0, 0, 0); return; }
+    view.panGoal.set(p.x - N / 2, 0, p.z - N / 2);
+    view.zoomGoal = Math.min(3, view.zoomGoal * 1.7);
+    haptic(5);
+  }
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !state.drag) view.setGhost(null); });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    view.zoomGoal = Math.max(0.7, Math.min(3, view.zoomGoal * Math.exp(-e.deltaY * 0.0015)));
+  }, { passive: false });
+
+  function panBy(dx, dy) {
+    const cam = view.cam;
+    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+    const upv = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
+    const s = 1 / (view.ppu * view.zoom);
+    view.panGoal.addScaledVector(right, -dx * s).addScaledVector(upv, dy * s);
+    if (view.panGoal.length() > 8) view.panGoal.setLength(8);
+  }
+
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    const keys = { 1: 'add', 2: 'move', 3: 'turn', 4: 'paint', 5: 'remove' };
+    if (keys[e.key]) { if (state.mode === 'explore') setMode('edit', true); document.querySelector(`.tools [data-tool="${keys[e.key]}"]`).click(); }
+    if (e.key === 'x') setMode(state.mode === 'explore' ? 'edit' : 'explore');
+    if (e.key === 'r') surprise();
+    if (e.key === 'q') rotate(-1);
+    if (e.key === 'e') rotate(1);
+    if (e.key === 'm') setMusic(!meta.music);
+    if ((e.key === 'z' && (e.ctrlKey || e.metaKey)) || e.key === 'u') doUndo();
+    if (e.key === 'Escape') { closeSheets(); $('#photo').classList.remove('open'); }
+  });
+
+  function rotate(dir) {
+    const q = Math.PI / 2;
+    view.yawGoal = Math.round((view.yawGoal - Math.PI / 4) / q) * q + Math.PI / 4 + dir * q;
+    Sound.turn();
+  }
+  $('#rotL').onclick = () => rotate(-1);
+  $('#rotR').onclick = () => rotate(1);
+  $('#bUndo').onclick = doUndo;
+
+  // ---------------------------------------------------------------
+  // Time and weather
+  const PHASE_ORDER = ['morning', 'day', 'evening', 'night'];
+  const PHASE_NAMES = { morning: 'Morning', day: 'Afternoon', evening: 'Evening', night: 'Night' };
+  function setPhase(p, quiet) {
+    if (p === meta.phase && view.env.phase === p) return;
+    meta.phase = p; saveMeta();
+    view.setPhase(p); view.refreshEnv(p);
+    updateHeader();
+    if (!quiet) toast(`<span>${PHASE_NAMES[p]}${meta.realtime ? '' : ' · Settings has “Follow the clock”'}</span>`, 1300);
+    setTimeout(checkRoomMoments, 2600);
+  }
+  $('#bTime').onclick = () => { meta.realtime = false; setPhase(PHASE_ORDER[(PHASE_ORDER.indexOf(meta.phase) + 1) % 4]); Sound.turn(); };
+  $('#bRain').onclick = () => {
+    meta.raining = !meta.raining; saveMeta();
+    view.setRain(meta.raining); view.refreshEnv(meta.phase);
+    document.body.classList.toggle('raining', meta.raining);
+    Sound.init();
+    updateHeader();
+    if (meta.raining) { discover('rain'); toast('<span>Rain on the window…</span>', 1600); }
+  };
+  $('#bMusic').onclick = () => setMusic(!meta.music);
+
+  // ---------------------------------------------------------------
+  // Rooms list & menu
+  const sheet = $('#sheet');
+  function closeSheets() { sheet.classList.remove('open'); }
+  $('#bMenu').onclick = () => { renderMenu(); sheet.classList.add('open'); };
+  sheet.addEventListener('click', e => { if (e.target === sheet) closeSheets(); });
+  $('#brand').onclick = () => {
+    const name = prompt('Name this room', room.name);
+    if (name && name.trim()) { room.name = name.trim().slice(0, 40); updateHeader(); dirty = true; saveIndex(); }
+  };
+
+  function presetCards(onPick) {
+    const wrap = document.createElement('div'); wrap.className = 'cards';
+    Object.entries(PRESETS).forEach(([k, p]) => {
+      const b = document.createElement('button'); b.className = 'card ' + k;
+      b.innerHTML = `<div class="art"></div><b>${p.name}</b><span>${p.blurb}</span>`;
+      b.onclick = () => onPick(k);
+      wrap.appendChild(b);
+    });
+    const rb = document.createElement('button'); rb.className = 'card random';
+    rb.innerHTML = `<div class="art">🎲</div><b>Surprise me</b><span>A brand-new random room every time.</span>`;
+    rb.onclick = () => onPick('random');
+    wrap.appendChild(rb);
+    return wrap;
+  }
+  function fillRoom(k) {
+    if (k === 'random') { room.generate((Math.random() * 0xffffffff) >>> 0); }
+    else { PRESETS[k].make(room); room.name = PRESETS[k].name; }
+  }
+  function newRoom(k) {
+    save();
+    const id = Date.now();
+    fillRoom(k);
+    rooms.push({ id, name: room.name, n: room.items.length });
+    meta.current = id; undo.length = 0;
+    view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
+    changed(); save(); saveIndex(); saveMeta(); updateHeader();
+    toast(`<b>${room.name}</b><span>A fresh room. Your other rooms are in the menu.</span>`, 2400);
+    Sound.arpeggio();
+  }
+  function switchRoom(id) {
+    if (id === meta.current) return;
+    save();
+    if (!loadRoom(id)) { toast('<span>Couldn’t open that room</span>', 1500); return; }
+    undo.length = 0; saveMeta();
+    view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
+    changed(); updateHeader();
+    toast(`<b>${room.name}</b>`, 1200); Sound.turn();
+  }
+  function deleteRoom(id) {
+    if (rooms.length < 2) { toast('<span>Keep at least one room</span>', 1400); return; }
+    const r = rooms.find(x => x.id === id);
+    if (!confirm(`Delete “${r ? r.name : 'this room'}”? This can’t be undone.`)) return;
+    rooms = rooms.filter(x => x.id !== id);
+    store.del('lr.room.' + id);
+    if (id === meta.current) { loadRoom(rooms[0].id); undo.length = 0; changed(); updateHeader(); }
+    saveIndex(); saveMeta(); renderMenu();
+  }
+  function renderMenu() {
+    saveIndex();
+    const body = $('#sheetBody');
+    body.innerHTML = '';
+    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
+    h('div', 'grab');
+    h('h2', '', `Your rooms <small>${rooms.length}</small>`);
+    const list = h('div', 'cards');
+    rooms.forEach(r => {
+      const b = document.createElement('button'); b.className = 'card room' + (r.id === meta.current ? ' cur' : '');
+      const d = r.id === meta.current ? room.serialize() : store.get('lr.room.' + r.id, null);
+      if (d) {
+        b.style.setProperty('--a', LR.hex(WALLS[d.wall.style] ? WALLS[d.wall.style].fn((WALL_COLORS[d.wall.color] || WALL_COLORS[0])[1], 70, 30) : 0xf2e6d0));
+        b.style.setProperty('--b', LR.hex(FLOORS[d.floor.style] ? FLOORS[d.floor.style].fn(70, 70) : 0xd8b48a));
+      }
+      b.innerHTML = `<div class="art"></div><b>${r.name}</b><span>${r.id === meta.current ? 'Open now · ' : ''}${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
+      b.onclick = () => { closeSheets(); switchRoom(r.id); };
+      if (rooms.length > 1) {
+        const x = document.createElement('i'); x.className = 'x'; x.textContent = '✕'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Delete room');
+        x.onclick = ev => { ev.stopPropagation(); deleteRoom(r.id); };
+        b.appendChild(x);
+      }
+      list.appendChild(b);
+    });
+    h('h2', '', 'Start a new room');
+    h('p', 'muted', 'Your current room is saved and stays in the list above.');
+    body.appendChild(presetCards(k => { closeSheets(); newRoom(k); }));
+    h('h2', '', `Cozy moments <small>${found.size}/${MOMENTS.length}</small>`);
+    const dl = h('div', 'disc');
+    MOMENTS.forEach(([k, name, desc]) => {
+      const got = found.has(k);
+      const el = document.createElement('div'); el.className = 'd' + (got ? ' got' : '');
+      el.innerHTML = `<i>${got ? '✦' : '?'}</i><div><b>${got ? name : '???'}</b><span>${got ? desc : 'Keep exploring…'}</span></div>`;
+      dl.appendChild(el);
+    });
+    h('h2', '', 'Settings');
+    const toggle = (label, on, fn) => {
+      const r = h('button', 'toggle' + (on ? ' on' : ''), `<span>${label}</span><i></i>`);
+      r.onclick = () => { fn(); renderMenu(); };
+    };
+    toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
+    toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
+    h('p', 'muted small', 'Explore: drag to look around, pinch to zoom, double-tap to zoom in, tap lamps, records, plants and cats. Decorate: Add places things (tap or drag), Move drags them, Turn spins them, Paint changes walls, floors and colours, Remove puts things away. Small things like mugs and lamps sit on desks, tables and shelves. On a computer: right-drag spins, the wheel zooms, keys 1–5 pick tools, M plays music.');
+  }
+
+  function showIntro() {
+    const intro = $('#intro');
+    intro.classList.add('open');
+    const cards = $('#introRooms'); cards.innerHTML = '';
+    cards.appendChild(presetCards(k => {
+      fillRoom(k);
+      rooms = [{ id: meta.current, name: room.name, n: room.items.length }];
+      undo.length = 0; store.set('lr.intro', true);
+      changed(); save(); saveIndex(); saveMeta(); updateHeader();
+      intro.classList.remove('open'); Sound.init(); Sound.chime();
+    }));
+  }
+  if (!store.get('lr.intro', false)) showIntro();
+
+  // ---------------------------------------------------------------
+  // Photo
+  $('#bPhoto').onclick = () => {
+    const shot = view.snapshot();
+    const img = new Image();
+    img.onload = () => {
+      // tall phone screens crop to a 4:5 portrait around the room, ready for Instagram
+      const dpr = img.height / innerHeight;
+      let sh = img.height, sy = 0;
+      if (img.height > img.width * 1.25) {
+        sh = Math.round(img.width * 1.25);
+        sy = Math.max(0, Math.min(img.height - sh, Math.round(img.height / 2 - liftNow * dpr - sh / 2)));
+      }
+      const c = document.createElement('canvas'); c.width = img.width; c.height = sh;
+      const g = c.getContext('2d');
+      const cs = getComputedStyle(bg).backgroundImage.match(/rgb[a]?\([^)]+\)|#[0-9a-f]{6}/gi) || ['#f8e8d0', '#d8a77e'];
+      const gr = g.createLinearGradient(0, 0, 0, c.height); gr.addColorStop(0, cs[0]); gr.addColorStop(1, cs[cs.length - 1]);
+      g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+      if (document.body.classList.contains('night')) { const si = new Image(); si.src = stars.style.backgroundImage.slice(5, -2); g.globalAlpha = 0.8; g.drawImage(si, 0, 0, c.width, c.height); g.globalAlpha = 1; }
+      g.drawImage(img, 0, -sy);
+      const s = c.width / 400;
+      g.font = `600 ${Math.round(13 * s)}px Fredoka, sans-serif`; g.fillStyle = document.body.classList.contains('night') ? 'rgba(255,255,255,0.8)' : 'rgba(74,53,48,0.7)';
+      g.fillText(room.name + ' · Lofi Rooms', 16 * s, c.height - 18 * s);
+      const url = c.toDataURL('image/png');
+      $('#photoImg').src = url;
+      const dl = $('#photoSave'); if (dl) dl.href = url;
+      $('#photo').classList.add('open');
+      $('#flash').classList.remove('go'); void $('#flash').offsetWidth; $('#flash').classList.add('go');
+      Sound.snap(); discover('photo');
+    };
+    img.src = shot;
+  };
+  $('#photoClose').onclick = () => $('#photo').classList.remove('open');
+  // in the app, hand the picture to Android's share sheet (Instagram, Photos, Messages…)
+  const cap = window.Capacitor;
+  if (cap && cap.isNativePlatform && cap.isNativePlatform()) {
+    const shareBtn = $('#photoSave');
+    shareBtn.textContent = 'Share';
+    shareBtn.removeAttribute('download');
+    shareBtn.onclick = async e => {
+      e.preventDefault();
+      try {
+        const fsys = cap.registerPlugin('Filesystem'), share = cap.registerPlugin('Share');
+        const file = await fsys.writeFile({ path: `lofi-room-${Date.now()}.png`, data: $('#photoImg').src.split(',')[1], directory: 'CACHE' });
+        await share.share({ title: 'My Lofi Room', files: [file.uri] });
+      } catch (err) {
+        if (!/cancel/i.test(String(err && err.message))) toast('<span>Couldn’t open the share sheet</span>', 2000);
+      }
+    };
+    $('#photo p').textContent = 'Share it, or long-press the picture to copy it';
+  }
+
+  // ---------------------------------------------------------------
+  // Save
+  let dirty = fresh;
+  function saveMeta() { store.set('lr.meta', meta); }
+  function saveIndex() {
+    const r = rooms.find(x => x.id === meta.current);
+    if (r) { r.name = room.name; r.n = room.items.length; }
+    store.set('lr.rooms', rooms);
+  }
+  function save() {
+    try { put('lr.room.' + meta.current, JSON.stringify(room.serialize())); } catch (e) { /* quota */ }
+    saveIndex(); saveMeta();
+    dirty = false;
+  }
+  if (fresh) save();
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  window.addEventListener('pagehide', save);
+
+  // ---------------------------------------------------------------
+  // Android: back button closes overlays first, pausing saves to disk
+  const app = window.Store && window.Store.app;
+  if (app) {
+    app.addListener('pause', () => { save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
+    app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); });
+    app.addListener('backButton', () => {
+      if ($('#photo').classList.contains('open')) $('#photo').classList.remove('open');
+      else if (sheet.classList.contains('open')) closeSheets();
+      else if (state.mode === 'edit') setMode('explore');
+      else { save(); window.Store.flush(); app.minimizeApp(); }
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Main loop
+  let last = performance.now(), t = 0, soundT = 0, saveT = 0, clockT = 0, momentT = 0;
+  function loop(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
+    const liftGoal = state.mode === 'edit' ? (innerWidth < 760 ? 84 : 60) : (innerWidth < 760 ? 24 : 16);
+    liftNow += (liftGoal - liftNow) * Math.min(1, dt * 6);
+    soundT += dt;
+    if (soundT > 0.3) { Sound.ambience(!!meta.raining, room.items.some(i => i.t === 'fireplace' && i.on), view.ph.night); soundT = 0; }
+    clockT += dt;
+    if (clockT > 20) { clockT = 0; if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); }
+    momentT += dt;
+    if (momentT > 2) {
+      momentT = 0;
+      if (view.petNapping()) discover('catnap');
+      if ([...view.pets.values()].some(P => P.perch && !P.hop)) discover('perch');
+    }
+    saveT += dt;
+    if (saveT > 3 && dirty) { save(); saveT = 0; }
+    view.frame(dt, t);
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', () => view.resize());
+  updateHeader();
+  setMode(state.mode, true);
+  if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
+  requestAnimationFrame(loop);
+  window.__lr = { room, view, state, meta, Sound, setPhase, setMode };   // handy for poking at it from the console
+}
+
+(window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);

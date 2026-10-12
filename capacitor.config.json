@@ -1,0 +1,13 @@
+{
+  "appId": "com.lofirooms.app",
+  "appName": "Lofi Rooms",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#d8a77e"
+  },
+  "plugins": {
+    "CapacitorSQLite": {
+      "androidIsEncryption": false
+    }
+  }
+}
