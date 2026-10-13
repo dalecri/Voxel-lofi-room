@@ -452,7 +452,7 @@
       }
       m.box(5, 0, 16, 11, 1, 18, 0xd8c4a8);
       m.set(9, 4, 15, 0xd9b25a);
-      m.box(7, 13, 16, 9, 15, 18, IRON).set(7, 13, 17, s.on ? 0xffe0a0 : 0x8a8a8a, s.on).set(8, 13, 17, s.on ? 0xffe0a0 : 0x8a8a8a, s.on);
+      m.box(7, 13, 16, 9, 15, 18, IRON); m.set(7, 13, 17, s.on ? 0xffe0a0 : 0x8a8a8a, s.on); m.set(8, 13, 17, s.on ? 0xffe0a0 : 0x8a8a8a, s.on);
       m.box(12, 13, 16, 14, 15, 17, (x, y) => talav(x * 3, y * 3, trim, GOLD));
       // barred windows with flower boxes
       [[1, 0], [12, 1]].forEach(([x0, k]) => {
@@ -526,7 +526,7 @@
       }
       [[14, 4], [17, 4], [14, 8], [17, 8]].forEach(([x, y]) => m.set(x, y, 30, 0xd9b25a));
       for (let x = 12; x < 21; x++) for (let y = 16; y < 26; y++) { const d = Math.hypot(x + 0.5 - 16, y + 0.5 - 21); if (d < 3.4) m.set(x, y, 30, d < 2.6 ? (s.on ? [0xff6a5a, 0xffd25a, 0x5ab0ff][Math.floor((Math.atan2(y + 0.5 - 21, x + 0.5 - 16) + 4) * 2) % 3] : DARKGLASS) : 0xd9b25a, d < 2.6 && s.on); }
-      [10, 20].forEach(x => { m.box(x, 16, 29, x + 2, 23, 30, shade(dark, 0.6)); m.box(x, 16, 30, x + 2, 17, 31, D); m.box(x, 17, 29, x + 2, 21, 30, 0xf2ece0).set(x, 21, 29, 0xe8c8a8).set(x + 1, 21, 29, 0xe8c8a8); });
+      [10, 20].forEach(x => { m.box(x, 16, 29, x + 2, 23, 30, shade(dark, 0.6)); m.box(x, 16, 30, x + 2, 17, 31, D); m.box(x, 17, 29, x + 2, 21, 30, 0xf2ece0); m.set(x, 21, 29, 0xe8c8a8); m.set(x + 1, 21, 29, 0xe8c8a8); });
       // a clock in the gable and a cross on top
       for (let x = 13; x < 20; x++) for (let y = 30; y < 37; y++) { const d = Math.hypot(x + 0.5 - 16, y + 0.5 - 33.5); if (d < 3.3) m.set(x, y, 30, d > 2.6 ? 0xd9b25a : 0xfaf6ee); }
       line(m, [16, 33, 31], [16, 35, 31], INK); line(m, [16, 33, 31], [17, 33, 31], INK);
@@ -607,7 +607,7 @@
       line(m, [12, 35, 12], [12, 40, 12], 0x8a8a90); m.box(13, 37, 12, 14, 40, 13, 0x2a8a4a).box(14, 37, 12, 15, 40, 13, 0xffffff).box(15, 37, 12, 16, 40, 13, 0xd8302a);
       // a little mariachi band
       [[8, 9, 0], [15, 9, 1], [11, 14, 2]].forEach(([x, z, k]) => {
-        m.box(x, 4, z, x + 2, 8, z + 2, INK).box(x, 8, z, x + 2, 11, z + 2, INK).set(x, 9, z + 2, 0xd8d8e0).set(x + 1, 7, z + 2, 0xd8d8e0);
+        m.box(x, 4, z, x + 2, 8, z + 2, INK).box(x, 8, z, x + 2, 11, z + 2, INK); m.set(x, 9, z + 2, 0xd8d8e0); m.set(x + 1, 7, z + 2, 0xd8d8e0);
         m.box(x, 11, z, x + 2, 13, z + 2, 0xc89070);
         lathe(m, x + 1, z + 1, 13, [2.8, 1.2, 1], k === 1 ? 0xf0e0b0 : 0x3a2a24);
         if (k === 0) m.box(x - 1, 6, z + 2, x + 3, 10, z + 3, 0xc88a4a).set(x, 8, z + 3, 0x2a1810);
@@ -665,7 +665,7 @@
       for (let y = 13; y < 21; y++) { m.set(2, y, 7, y % 2 ? 0xd8302a : 0xb82020); m.set(13, y, 7, y % 2 ? 0xb82020 : 0xd8302a); }
       m.box(6, 16, 7, 9, 20, 8, (x, y) => (y === 19 ? 0x6a5a2a : 0xf2d24a)); line(m, [7, 20, 7], [7, 21, 7], 0x6a5a2a);
       m.box(12, 9, 6, 15, 10, 8, 0xf2efe8).box(10, 7, 7, 11, 13, 8, 0x8a8a90).box(9, 13, 7, 12, 14, 8, 0x8a8a90);
-      m.box(12, 13, 0, 15, 17, 1, 0xfaf6ee).set(13, 15, 1, 0xe8307a).set(14, 15, 1, 0xe8307a).set(13, 14, 1, 0x2a2a30);
+      m.box(12, 13, 0, 15, 17, 1, 0xfaf6ee); m.set(13, 15, 1, 0xe8307a); m.set(14, 15, 1, 0xe8307a); m.set(13, 14, 1, 0x2a2a30);
     },
   });
   def('mxpicadost', {
@@ -770,9 +770,9 @@
       [[2, 3], [5, 3], [2, 11], [5, 11]].forEach(([x, z]) => m.box(x, 0, z, x + 1, 6, z + 1, coat).set(x, 0, z, 0x2a2420));
       m.box(1, 6, 2, 7, 11, 13, coat).box(2, 5, 3, 6, 6, 12, coat);
       m.box(2, 10, 12, 6, 15, 15, coat).box(2, 12, 15, 6, 15, 18, coat).box(2, 12, 17, 6, 14, 18, 0xe8e0d8);
-      m.box(2, 15, 13, 3, 19, 14, coat).box(5, 15, 13, 6, 19, 14, coat).set(2, 18, 13, 0x2a2420).set(5, 18, 13, 0x2a2420);
+      m.box(2, 15, 13, 3, 19, 14, coat).box(5, 15, 13, 6, 19, 14, coat); m.set(2, 18, 13, 0x2a2420); m.set(5, 18, 13, 0x2a2420);
       m.set(2, 14, 15, INK); m.set(5, 14, 15, INK); m.box(3, 11, 11, 5, 16, 13, 0x3a302a);
-      m.box(3, 8, -1, 5, 9, 2, coat).set(3, 7, -1, 0x2a2420).set(4, 7, -1, 0x2a2420);
+      m.box(3, 8, -1, 5, 9, 2, coat); m.set(3, 7, -1, 0x2a2420); m.set(4, 7, -1, 0x2a2420);
       // a sarape blanket and two baskets of flowers
       m.box(0, 9, 4, 8, 12, 10, (x, y, z) => FIESTA[(z) % 6]);
       [[-2, 0], [8, 1]].forEach(([x, k]) => { m.box(x, 4, 5, x + 2, 9, 9, (px, py) => (py % 2 ? 0xc8a070 : 0xa8804a)); for (let z = 5; z < 9; z++) m.set(x + (k ? 1 : 0), 9, z, [0xe8307a, 0xffd23a, MARI, 0xffffff][z % 4]); });

@@ -343,7 +343,6 @@
       m.box(0, 0, 7, 8, 1, 8, dim(neon, s.on), s.on);
       for (let y = 1; y < 28; y++) m.set(0, y, 7, dim(neon, s.on), s.on);
       m.box(1, 8, 7, 5, 10, 8, s.on ? 0x0a1a10 : 0x1a1a22);
-      glyphs('24', (x, y) => y < 2 || 1 ? 0 : 0);
       [[1, 9], [2, 8], [3, 9], [4, 8]].forEach(([x, y]) => m.set(x, y, 8, dim(LIME, s.on), s.on));
     },
   });
@@ -517,28 +516,28 @@
       const seed = s.seed || 3, H = 84 + (seed % 4) * 9, mid = 42 + (seed % 3) * 6, on = s.on;
       const wf = (x, y, z) => shade(wall, 0.92 + 0.12 * hash3(x >> 2, y >> 3, z >> 2, 5));
       // podium with shopfronts
-      m.box(0, 0, 0, 16, 12, 16, shade(wall, 0.8));
+      m.box(0, 0, 0, 16, 18, 16, shade(wall, 0.8));
       m.box(1, 1, 15, 15, 8, 16, on ? 0xffe0f0 : GLASS, on).box(15, 1, 1, 16, 8, 15, on ? 0xd8f4ff : GLASS, on);
       for (let x = 1; x < 15; x += 4) m.box(x, 1, 15, x + 1, 8, 16, INK);
       for (let z = 1; z < 15; z += 4) m.box(15, 1, z, 16, 8, z + 1, INK);
       m.box(6, 0, 15, 9, 6, 16, 0x1a1a22);
       m.box(0, 8, 16, 16, 9, 17, dim(na, on), on).box(16, 8, 0, 17, 9, 16, dim(nb, on), on);
-      m.box(2, 9, 16, 14, 12, 17, INK);
-      const word = SHOPS[seed % SHOPS.length], ww = glyphs(word, () => 0) + 0;
-      glyphs(word, (x, y) => { if (y > 0 && y < 4) m.set(8 - (ww >> 1) + x, 9 + y - 1 + (y > 2 ? 0 : 0), 17, dim(nb, on), on); });
+      m.box(2, 10, 16, 14, 17, 17, INK);
+      const word = SHOPS[seed % SHOPS.length], ww = glyphs(word, () => 0);
+      glyphs(word, (x, y) => m.set(8 - Math.ceil(ww / 2) + x, 11 + y, 17, dim(nb, on), on));
       // mid tower
-      m.box(1, 12, 1, 15, mid, 15, wf);
-      facade(m, s, 1, 15, 1, 15, 12, mid, wall, seed);
-      for (let y = 12; y < mid; y++) { m.set(1, y, 14, dim(na, on), on); m.set(14, y, 14, dim(nb, on), on); m.set(14, y, 1, dim(na, on), on); }
+      m.box(1, 18, 1, 15, mid, 15, wf);
+      facade(m, s, 1, 15, 1, 15, 18, mid, wall, seed);
+      for (let y = 18; y < mid; y++) { m.set(1, y, 14, dim(na, on), on); m.set(14, y, 14, dim(nb, on), on); m.set(14, y, 1, dim(na, on), on); }
       // billboard on the front and a vertical sign down the side
-      const by = 16 + (seed % 3) * 4, bh = Math.min(16, mid - by - 2);
+      const by = 21 + (seed % 3) * 3, bh = Math.min(16, mid - by - 2);
       m.box(3, by - 1, 15, 13, by + bh + 1, 16, INK);
       adPanel(m, ['can', 'face', 'koi', 'text'][seed % 4], 4, by, 16, 8, bh, na, nb, on);
       m.box(4, by - 2, 15, 5, by - 1, 17, STEEL).box(11, by - 2, 15, 12, by - 1, 17, STEEL);
-      const vw = VWORDS[(seed >> 2) % VWORDS.length].slice(0, Math.floor((mid - 18) / 6));
-      m.box(15, 16, 5, 17, 16 + vw.length * 6 + 1, 10, 0x1a1626);
+      const vw = VWORDS[(seed >> 2) % VWORDS.length].slice(0, Math.floor((mid - 22) / 6));
+      m.box(15, 20, 5, 17, 20 + vw.length * 6 + 1, 10, 0x1a1626);
       [...vw].forEach((ch, i) => (FONT[ch] || FONT.O).forEach((r, j) => [...r].forEach((p, k) => {
-        if (p === '#') m.set(17, 16 + vw.length * 6 - 1 - i * 6 - j, 8 - k, dim(na, on), on);
+        if (p === '#') m.set(17, 20 + vw.length * 6 - 1 - i * 6 - j, 8 - k, dim(na, on), on);
       })));
       // setback ledge with a neon trim, then the upper tower
       m.box(0, mid, 0, 16, mid + 2, 16, shade(wall, 0.75));
@@ -593,7 +592,7 @@
   }
   def('cymono', {
     name: 'Sky rail', kind: 'floor', group: 'cyber', size: [1, 6], tap: 'fx', anim: 'tram', on: true,
-    fx: { sfx: ['bell', 'whoosh'], say: ['Next stop: Neon Market', 'Mind the gap, choom', 'Sky rail, now departing'], moment: 'jackedin' },
+    fx: { sfx: ['bell', 'whoosh'], say: ['Next stop: Neon Market', 'Mind the gap, choom', 'Sky rail, now departing'] },
     vars: [[0xe8e8ee, CYAN], [0x2a2a36, PINK], [0xf2c14e, VIOLET], [0xd8302a, CYAN]],
     build(m, [c, neon], s) {
       railBeam(m, 48, neon, s.on); railPier(m, 6); railPier(m, 38);
@@ -823,7 +822,7 @@
       const S = [], at = (t, o, kids) => S.push(kids ? [t, o, kids] : [t, o]);
       const ROAD = 10;     // the north-south street runs down x = 10..11
       // lights first (the renderer lights the first dozen lit pieces)
-      at('cycart', { x: 4, z: 13, r: 2, c: 0 }); at('cycart', { x: 15, z: 13, r: 2, c: 1 });
+      at('cycart', { x: 4, z: 13, c: 0 }); at('cycart', { x: 15, z: 13, c: 1 });
       at('cylamp', { x: 9, z: 2, c: 0 }); at('cylamp', { x: 12, z: 9, c: 1 }); at('cylamp', { x: 9, z: 17, c: 2 }); at('cylamp', { x: 12, z: 22, c: 3 });
       at('cyholo', { x: 6, z: 15, c: 0 }); at('cyholo', { x: 17, z: 16, c: 1 });
       at('cysignpole', { x: 2, z: 12, c: 0, seed: 3 }); at('cysignpole', { x: 21, z: 12, c: 1, seed: 6 }); at('cysignpole', { x: 13, z: 3, c: 2, seed: 9 });
@@ -836,7 +835,6 @@
         if (x !== ROAD) at('sidewalk', { x, z: 4, c: 2 });
       }
       for (let z = 0; z < 24; z += 2) at(z === 6 || z === 20 || z === 14 ? 'crosswalk' : 'road', { x: ROAD, z });
-      at('road', { x: ROAD, z: 24 - 2 }) && 0;
       // back row of megatowers and a row facing the market
       const cols = [0, 2, 4, 6, 8, 12, 14, 16, 18, 20, 22];
       cols.forEach((x, i) => at('cytower', { x, z: 0, c: i % 5, seed: 11 + i * 7 }));
@@ -855,22 +853,22 @@
       at('cycar', { x: 4, z: 20, r: 1, c: 4 }); at('cycar', { x: 17, z: 21, r: 3, c: 0 }); at('car', { x: 21, z: 20, r: 1, c: 1, on: true });
       // street props along the back sidewalk
       at('cynoodle', { x: 1, z: 2, c: 0 }); at('vending', { x: 3, z: 2, c: 0 }); at('cyac', { x: 5, z: 2, c: 0 }); at('trashbin', { x: 7, z: 2, c: 2 });
-      at('cyescape', { x: 15, z: 2, r: 0, c: 1 }) && 0;
+      at('cyescape', { x: 15, z: 2, c: 1 });
       at('vending', { x: 17, z: 2, c: 3 }); at('cynoodle', { x: 18, z: 2, c: 1 }); at('cyac', { x: 20, z: 2, c: 1 }); at('cylamp', { x: 22, z: 3, c: 4 });
-      at('cylamp', { x: 0, z: 9, c: 3 }); at('cyac', { x: 3, z: 9, c: 2 }); at('trashbin', { x: 8, z: 9, c: 0 }); at('cynoodle', { x: 14, z: 9, c: 3 }); at('cyac', { x: 18, z: 9, c: 0 }); at('busstop', { x: 20, z: 8, r: 2, c: 0 });
+      at('cylamp', { x: 0, z: 9, c: 3 }); at('cyac', { x: 3, z: 9, r: 2, c: 2 }); at('trashbin', { x: 8, z: 9, c: 0 }); at('cynoodle', { x: 14, z: 9, r: 2, c: 3 }); at('cyac', { x: 18, z: 9, r: 2, c: 0 }); at('busstop', { x: 20, z: 8, r: 2, c: 0 });
       // the night market between z 12 and 17
-      at('yatai', { x: 0, z: 13, r: 2, c: 1 }); at('cycart', { x: 19, z: 13, r: 2, c: 3 });
+      at('yatai', { x: 0, z: 13, c: 1 }); at('cycart', { x: 19, z: 13, c: 3 });
       at('cysignpole', { x: 7, z: 12, c: 2, seed: 2 }); at('cysignpole', { x: 13, z: 12, c: 0, seed: 7 });
       at('cydrone', { x: 3, z: 15, c: 0 }); at('cydrone', { x: 14, z: 15, c: 2 }); at('cydrone', { x: 20, z: 15, c: 1 });
       at('bench', { x: 8, z: 16, c: 2 }); at('cykoi', { x: 12, z: 16, c: 0 }); at('cykoi', { x: 0, z: 16, c: 1 });
-      at('cycart', { x: 1, z: 17, c: 2 }); at('cycart', { x: 13, z: 17, c: 0 }); at('yatai', { x: 21, z: 17, c: 0 });
+      at('cycart', { x: 1, z: 17, r: 2, c: 2 }); at('cycart', { x: 13, z: 17, r: 2, c: 0 }); at('yatai', { x: 21, z: 17, r: 2, c: 0 });
       at('cyholo', { x: 4, z: 17, c: 2 }); at('cyholo', { x: 18, z: 18, c: 3 });
-      at('vending', { x: 7, z: 17, c: 2 }); at('cyneon', { k: 0, u: 0, e: 0 }) && 0;
-      at('cyac', { x: 16, z: 17, c: 2 }); at('trashbin', { x: 23, z: 16, c: 1 });
+      at('vending', { x: 7, z: 17, r: 2, c: 2 });
+      at('cyac', { x: 16, z: 17, r: 2, c: 2 }); at('trashbin', { x: 23, z: 16, c: 1 });
       // the front sidewalk
       at('cysignpole', { x: 2, z: 19, c: 1, seed: 4 }); at('cylamp', { x: 6, z: 18, c: 0 }); at('cylamp', { x: 16, z: 19, c: 2 });
-      at('streettree', { x: 23, z: 19, c: 1 }); at('cyplant', { x: 13, z: 18, c: 0 }); at('bikerack', { x: 19, z: 18, c: 0 });
-      at('cylamp', { x: 1, z: 23, c: 4 }); at('cyac', { x: 4, z: 22, c: 1 }); at('railing', { x: 6, z: 23, r: 0, c: 0 }); at('cypuddle', { x: 14, z: 22, c: 0 }) && 0;
+      at('streettree', { x: 23, z: 19, c: 1 }); at('cyplant', { x: 13, z: 18, c: 0 }); at('bikerack', { x: 20, z: 18, c: 0 });
+      at('cylamp', { x: 1, z: 23, c: 4 }); at('cyac', { x: 4, z: 22, c: 1 }); at('railing', { x: 6, z: 23, r: 0, c: 0 });
       at('cysignpole', { x: 9, z: 22, c: 2, seed: 8 }); at('vending', { x: 13, z: 22, c: 0 }); at('cyholo', { x: 15, z: 22, c: 0 }); at('railing', { x: 18, z: 23, c: 0 }); at('cylamp', { x: 21, z: 23, c: 1 });
       at('cat', { x: 9, z: 15, c: 1 }); at('cat', { x: 22, z: 9, c: 0 }); at('cat', { x: 5, z: 23, c: 3 });
       B(room, S, 24);
