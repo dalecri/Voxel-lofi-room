@@ -7,7 +7,7 @@
     "build": "node scripts/build-www.mjs",
     "sync": "npm run build && npx cap sync android",
     "apk": "npm run sync && node scripts/build-apk.mjs",
-    "icons": "npx @capacitor/assets generate --android --iconBackgroundColor '#ebe6fd' --iconBackgroundColorDark '#ebe6fd'"
+    "icons": "npx @capacitor/assets generate --android --iconBackgroundColor '#2a1c38' --iconBackgroundColorDark '#2a1c38'"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.1",
