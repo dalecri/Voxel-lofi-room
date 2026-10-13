@@ -190,6 +190,11 @@
   .small { font-size: 12.5px; margin-top: 16px; }
 
   .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .rowbtns { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .chipbtn { padding: 9px 14px; border-radius: 14px; background: var(--chip); font-weight: 700; font-size: 13px; }
+  textarea.code { width: 100%; border-radius: 14px; padding: 10px; font: 12px/1.4 ui-monospace, monospace; background: var(--chip); color: inherit; border: 0; resize: vertical; word-break: break-all; }
+  #fade { position: fixed; inset: 0; background: #1e1428; opacity: 0; pointer-events: none; transition: opacity .35s ease; z-index: 60; }
+  #fade.on { opacity: 1; }
   .cards h3 { grid-column: 1 / -1; margin: 6px 2px 0; font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--ink-dim); letter-spacing: .04em; text-transform: uppercase; }
   .card { text-align: left; border-radius: 18px; padding: 8px; background: var(--chip); display: flex; flex-direction: column; gap: 3px; transition: transform .15s; position: relative; }
   .card:active { transform: scale(.96); }
@@ -312,6 +317,7 @@
 
 <div id="toasts"></div>
 
+<div id="fade"></div>
 <div id="sheet" class="sheet"><div class="body" id="sheetBody"></div></div>
 
 <div id="intro">
@@ -355,6 +361,7 @@
 <script src="packs/cyber.js"></script>
 <script src="packs/garden.js"></script>
 <script src="packs/cozy.js"></script>
+<script src="packs/seasonal.js"></script>
 <script src="render.js"></script>
 <script src="main.js"></script>
 </body>

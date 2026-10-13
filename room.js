@@ -710,6 +710,7 @@
     { name: 'Ramses', base: 0xdcae62, eye: 0xc8b040, coat: (x, y, z) => (hash3(x, y, z, 17) < 0.24 ? 0x3a2a1e : 0xdcae62) },
     { name: 'Diego', base: 0xc88a4a, eye: 0x5aa060, coat: (x, y, z) => { const h = hash3(x >> 1, y, z >> 1, 23); return h < 0.18 ? 0x4a2c18 : h < 0.3 ? 0xa86a34 : 0xd4955a; } },
     { name: 'Mochi', base: 0xb8b4bc, eye: 0x4a8ac8, coat: (x, y, z) => (y > 3 && (z + x) % 3 === 0 ? 0x8a8690 : 0xb8b4bc) },
+    { name: 'Biscuit', base: 0xe8a050, eye: 0x6ab04a, coat: (x, y, z) => (y < 2 ? 0xf8f0e4 : (x + y) % 3 === 0 ? 0xd88a3a : 0xe8a050) },   // the neighbour's ginger cat
   ];
   def('cat', {
     name: 'Cat', kind: 'pet', group: 'pets', size: [1, 1], tap: 'pet',
@@ -847,7 +848,7 @@
   RP.count = function (pred) { return this.items.filter(pred).length; };
 
   RP.serialize = function () {
-    return { v: 1, name: this.name, n: this.n, wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.map(i => Object.assign({}, i)) };
+    return { v: 1, name: this.name, n: this.n, wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.filter(i => !i.visitor).map(i => Object.assign({}, i)) };
   };
   RP.load = function (d) {
     if (!d || d.v !== 1 || !Array.isArray(d.items)) return false;

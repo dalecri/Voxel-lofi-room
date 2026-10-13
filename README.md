@@ -91,15 +91,30 @@ Then open http://localhost:5180.
   - folded blanket → cat bed or futon: tucked in, and naps there last three times longer
   - fish food → any tank: feeding time
 - **Cats:** Cali (calico), Neo (tuxedo), Ramses (savannah), Diego (bengal) and Mochi (grey).
+  - When lofi is playing, cats near the music bop their heads to the beat.
+  - Now and then a cat knocks a small thing off a table, and the toast names the culprit ("Ramses did it"). Tap it to pick it back up. You can turn this off in Settings.
+  - A cat you've just petted follows your taps around for a few seconds.
+  - When it rains, cats go and sit at the windows to watch, and they nap more.
+  - Biscuit, the neighbour's ginger cat, wanders in now and then, hangs out and goes home. You can turn this off in Settings too.
   - They wander, hop onto sofas, beds, chairs and cat trees, and nap in cat beds.
   - Tap a cat to pet it and it purrs.
+- **Music that follows your day.** The radio picks a mood for the time of day: morning bossa, afternoon chillhop, evening lofi, night ambient, and jazz when it rains. Jukeboxes cycle through the moods, or back to following the day, and vinyl records pick one.
+  - While it plays, fairy lights, LED strips and RGB pieces pulse on the beat.
+  - The ultrawide and the computer have a visualizer channel that dances to it.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and vinyl crackle, all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. Rain streaks the windows. At night the lamps light the room.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
 - **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
 - **Bigger plots.** In Paint, Plot size, grow any room or scene from the cozy 10×10 to 14×14, 20×20 or 24×24 for multi-block cities. Pieces stay where they are when it grows, and it only shrinks once nothing would fall off the edge.
+- **A tiny apartment.** Put a **Door to another room** on a wall (in Windows) and tap it. Pick one of your rooms or a new one, and you walk through. A door on the other side leads back.
+- **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** opens one as a new room.
+- **Seasonal decor:**
+  - **Halloween:** a jack-o'-lantern, a pumpkin pile, a friendly ghost, a spider web, a bat garland and a candy bowl.
+  - **Winter holidays:** a tree, a wreath, stockings, gifts, a snowman and hot cocoa.
+  - The set that fits today's date moves to the front of the Add tray, with a one-time hint.
 - **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **39 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
+- **53 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
+- **Today's moment:** one small thing to do each day, the same for everyone that day, with a streak counter in the menu.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 

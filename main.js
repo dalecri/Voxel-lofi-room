@@ -45,6 +45,19 @@ function startLofiRooms() {
     ['tram', 'All aboard', 'Rang the tram bell'],
     ['city', 'City lights', 'An open-air scene after dark'],
     ['photo', 'Snapshot', 'Took a photo of your room'],
+    ['greenhouse', 'Greenhouse', 'Ten plants in one room'],
+    ['nightshift', 'Night shift', 'Working at a desk after midnight'],
+    ['mixtape', 'Mixtape', 'Three jukebox tracks in one session'],
+    ['stormwatch', 'Storm watcher', 'Rain outside, window open'],
+    ['crates', 'Crates', 'Setup complete: a record crate, a player and speakers'],
+    ['siesta', 'Siesta', 'A nap in the afternoon sunbeam'],
+    ['snowedin', 'Snowed in', 'The fire lit on a rainy night'],
+    ['stormy', 'Stormy night', 'Rain, a crackling fire and music all at once'],
+    ['stormytea', 'Stormy tea', 'Tea while it rains'],
+    ['moonlight', 'Moonlight sonata', 'Played the piano at night'],
+    ['parliament', 'Cat parliament', 'All five cats in one room'],
+    ['culprit', 'Whodunnit', 'A cat knocked something off a table'],
+    ['visitor', 'Neighbour cat', 'A cat from next door dropped by'],
   ].concat(LR.MOMENTS || []);   // theme packs can add their own with LR.MOMENTS.push([key, name, description])
   const found = new Set(store.get('lr.found', []));
 
@@ -53,7 +66,13 @@ function startLofiRooms() {
   let rooms = store.get('lr.rooms', []);
   const meta = Object.assign({ current: 0, realtime: true, phase: 'day', raining: false, music: false, sound: true, painted: {} }, store.get('lr.meta', {}));
   Sound.on = meta.sound;
-  if (meta.mood) Sound.setMood(meta.mood);
+  // music mood: 'auto' follows the time of day (morning bossa, afternoon chill, evening lofi, night ambient; jazz when it rains)
+  if (meta.mood == null || meta.mood === 0 && !meta.moodSet) meta.mood = 'auto';
+  const MOOD_BY = { morning: 4, day: 3, evening: 0, night: 5 };
+  const autoMood = () => (meta.raining ? 1 : MOOD_BY[meta.phase] != null ? MOOD_BY[meta.phase] : 0);
+  function applyMood() { return Sound.setMood(meta.mood === 'auto' ? autoMood() : meta.mood); }
+  applyMood();
+  let moodsPlayed = new Set();
   const room = new LR.Room();
   function loadRoom(id) {
     const d = store.get('lr.room.' + id, null);
@@ -125,7 +144,26 @@ function startLofiRooms() {
     requestAnimationFrame(() => el.classList.add('in'));
     setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 400); }, ms || 3200);
   }
+  // one special moment a day: the same task for everyone on a given date
+  const DAILY = [
+    ['tea', 'Make yourself a cup of tea'], ['purr', 'Pet one of the cats'], ['lofi', 'Put a record on'], ['light', 'Switch on a lamp'],
+    ['fish', 'Say hi to the fish'], ['barista', 'Brew a pot of coffee'], ['feast', 'Feed a cat'], ['stargazer', 'Find a constellation'],
+    ['cuckoo', 'Hear the cuckoo clock'], ['photo', 'Take a photo of your room'], ['gamer', 'Play a video game'], ['fire', 'Light the fireplace'], ['piano', 'Play the piano'],
+  ];
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+  const dailyTask = () => { const d = new Date(); const n = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5) + d.getFullYear() * 7; return DAILY[n % DAILY.length]; };
+  function dailyCheck(key) {
+    const D = meta.daily || (meta.daily = {});
+    if (D.date === today() || dailyTask()[0] !== key) return;
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
+    D.streak = D.date === yKey ? (D.streak || 0) + 1 : 1; D.date = today(); saveMeta();
+    setTimeout(() => { toast(`<b>☀ Today's moment</b><span>${dailyTask()[1]}. Streak: ${D.streak} day${D.streak > 1 ? 's' : ''}</span>`, 3200); Sound.arpeggio(); }, 1800);
+  }
   function discover(key) {
+    dailyCheck(key);
+    if (key === 'tea' && meta.raining) setTimeout(() => discover('stormytea'), 2000);
+    if (key === 'piano' && meta.phase === 'night') setTimeout(() => discover('moonlight'), 2000);
     if (found.has(key) || $('#intro').classList.contains('open')) return;
     const d = MOMENTS.find(x => x[0] === key);
     if (!d) return;
@@ -136,7 +174,12 @@ function startLofiRooms() {
   }
   function checkRoomMoments() {
     const n = t => room.count(i => i.t === t);
-    if (room.count(i => CAT[i.t].group === 'plants') >= 5) discover('green');
+    const plants = room.count(i => CAT[i.t].group === 'plants');
+    if (plants >= 5) discover('green');
+    if (plants >= 10) discover('greenhouse');
+    if (new Set(room.items.filter(i => i.t === 'cat' && !i.visitor && i.c < 5).map(i => i.c)).size >= 5) discover('parliament');
+    if (room.items.some(i => i.t === 'vinylcrate') && room.items.some(i => CAT[i.t].anim === 'record') && room.items.some(i => CAT[i.t].anim === 'speaker')) discover('crates');
+    if (meta.raining && room.items.some(i => CAT[i.t].beam && i.on)) discover('stormwatch');
     if (n('bookshelf') >= 2) discover('books');
     if (n('painting') + n('poster') + n('mirror') + n('neon') + n('clock') >= 4) discover('gallery');
     if (room.items.length >= 25) discover('cozy');
@@ -460,7 +503,7 @@ function startLofiRooms() {
     return place(it.r);
   }
   function applyPlacement(it, cand) {
-    ['x', 'z', 'k', 'u', 'e', 'p', 'lx', 'lz'].forEach(k => delete it[k]);
+    ['x', 'z', 'k', 'u', 'e', 'p', 'lx', 'lz', 'tipped'].forEach(k => delete it[k]);
     ['x', 'z', 'k', 'u', 'e', 'p', 'lx', 'lz', 'r'].forEach(k => { if (cand[k] !== undefined) it[k] = cand[k]; });
   }
 
@@ -471,6 +514,7 @@ function startLofiRooms() {
     if (!it) return;
     const C = CAT[it.t];
     view.boing(id); haptic(5);
+    if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     const tap = C.tap;
     if (tap === 'toggle') {
       pushUndo(); it.on = !it.on; changed();
@@ -494,6 +538,7 @@ function startLofiRooms() {
       if (F.moment) discover(F.moment);
       return;
     }
+    if (tap === 'portal') { const target = it.link && rooms.find(r => r.id === it.link); if (target) walkThrough(it, target.id); else doorPicker(it); return; }
     if (tap === 'cuckoo') { cuckoo(id); return; }
     if (tap === 'read') { Sound.flip(); toast(`<span>${pickOne(C.lines)}</span>`, 2200); return; }
     if (tap === 'calendar') {
@@ -509,8 +554,13 @@ function startLofiRooms() {
       return;
     }
     if (tap === 'mood') {
-      const name = Sound.setMood();
-      meta.mood = Sound.mood; if (!meta.music) setMusic(true); else saveMeta();
+      // cycle: auto → each mood in turn → back to auto
+      const n = Sound.moods.length;
+      meta.mood = meta.mood === 'auto' ? 0 : meta.mood + 1 >= n ? 'auto' : meta.mood + 1;
+      meta.moodSet = true;
+      const name = (meta.mood === 'auto' ? 'Follow the day · ' : '') + applyMood();
+      moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape');
+      if (!meta.music) setMusic(true); else saveMeta();
       view.excite(id); view.sparkle(view.itemPoint(id, [4, 14, 4]), 0xffd27a, 10);
       toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi');
       return;
@@ -536,6 +586,7 @@ function startLofiRooms() {
     if (tap === 'pet') {
       const P = CATS[it.c] || CATS[0];
       view.petCat(id); Sound.purr(true); setTimeout(() => Sound.purr(false), 2600);
+      follow = { id, until: performance.now() + 9000 };   // for a little while it follows your taps
       if (Math.random() < 0.35) setTimeout(() => Sound.meow(), 400);
       toast(`<span>${it.name || P.name} purrs ♥</span>`, 1600);
       discover('purr');
@@ -567,6 +618,7 @@ function startLofiRooms() {
       return;
     }
     if (tap === 'sleep') { sleep(); return; }
+    if ((tap === 'screen' || tap === 'type') && new Date().getHours() < 5) setTimeout(() => discover('nightshift'), 1200);
     if (tap === 'screen') {
       // off → each channel in turn → off
       const chans = C.channels || [];
@@ -646,6 +698,67 @@ function startLofiRooms() {
     toast(`<span>Cuckoo! It's ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>`, 1500);
     discover('cuckoo');
   }
+  // seasonal decor: the set that matches today's date goes to the front of the tray, mentioned once a season
+  (function suggestSeason() {
+    const d = new Date(), m = d.getMonth(), day = d.getDate();
+    const inRange = S => { const a = S.from[0] * 40 + S.from[1], b = S.to[0] * 40 + S.to[1], x = m * 40 + day; return a <= b ? x >= a && x <= b : x >= a || x <= b; };
+    const S = (LR.SEASONS || []).find(inRange);
+    if (!S) return;
+    const i = GROUPS.findIndex(g => g[0] === S.group);
+    if (i > 0) GROUPS.unshift(GROUPS.splice(i, 1)[0]);
+    const key = S.group + '-' + (m === 0 ? d.getFullYear() - 1 : d.getFullYear());
+    if (meta.season !== key) { meta.season = key; saveMeta(); setTimeout(() => toast(`<span>${S.label}</span>`, 3200), 4000); }
+  })();
+  let follow = null;
+  const catName = it => it.name || (CATS[it.c] || CATS[0]).name;
+  // mischief: now and then a cat wanders over and knocks something off a table
+  function mischief() {
+    if (meta.mischief === false || state.mode !== 'explore' || state.drag || !room.items.some(i => i.t === 'cat' && !i.visitor)) return;
+    const pick = room.items.filter(i => {
+      const C = CAT[i.t], o = i.p && room.get(i.p);
+      return o && !i.tipped && CAT[o.t].kind !== 'wall' && CAT[o.t].kind !== 'small' && (typeof CAT[o.t].top !== 'function' ? CAT[o.t].top : 12) <= 22 && C.size[0] === 1 && !C.light && !C.tank && !C.screen && !room.descendants(i.id).length;
+    });
+    if (!pick.length) return;
+    const it = pick[(Math.random() * pick.length) | 0], owner = room.get(it.p);
+    const sent = view.sendCat(view.spotsAround(owner));
+    if (!sent) return;
+    const knock = P => {
+      if (!room.get(it.id) || it.p !== owner.id) return;
+      const spots = view.spotsAround(owner).filter(([x, z]) => !(Math.floor(P.x) === x && Math.floor(P.z) === z) && room.canPlace({ t: it.t, x, z, r: 0, id: -1 }));
+      if (!spots.length) return;
+      const [x, z] = spots[(Math.random() * spots.length) | 0];
+      ['p', 'lx', 'lz'].forEach(k => delete it[k]);
+      Object.assign(it, { x, z, r: (Math.random() * 4) | 0, tipped: true });
+      changed(); view.poof(it.id, [0xffffff, 0xd8d0c4]); Sound.clatter(); haptic(12);
+      const cat = room.get(sent.id), who = cat ? catName(cat) : 'Someone';
+      toast(`<span>${pickOne([`${who} did it`, `${who} knocked the ${CAT[it.t].name.toLowerCase()} over`, `Crash! ${who} looks innocent`, `${who} is pretending nothing happened`])}</span>`, 2000, true);
+      discover('culprit');
+    };
+    if (sent.path.length) sent.P.onArrive = knock; else knock(sent.P);
+  }
+  setInterval(() => { if (Math.random() < 0.35) mischief(); }, 40000);
+  // a neighbour's cat wanders in now and then, hangs out and goes home
+  let visitor = null;
+  function visit() {
+    if (visitor || state.mode !== 'explore' || meta.visitors === false) return;
+    const n = room.n, edge = [];
+    for (let k = 0; k < n; k++) edge.push([k, 0], [0, k], [k, n - 1], [n - 1, k]);
+    const free = edge.filter(([x, z]) => view.cellFree(x, z) && room.canPlace({ t: 'cat', x, z, r: 0, id: -1 }));
+    if (!free.length) return;
+    const [x, z] = free[(Math.random() * free.length) | 0];
+    const it = room.add(room.make('cat', { x, z, c: 5, visitor: true }));
+    visitor = it.id; changed();
+    toast(`<span>Biscuit from next door wandered in 🐾</span>`, 2200, true); Sound.meow(); discover('visitor');
+    setTimeout(() => {
+      const v = room.get(visitor);
+      visitor = null;
+      if (!v) return;
+      view.poof(v.id, [0xe8a050, 0xffffff]);
+      room.remove(v.id); changed();
+      toast('<span>Biscuit heads home</span>', 1500);
+    }, 45000 + Math.random() * 30000);
+  }
+  setInterval(() => { if (Math.random() < 0.15) visit(); }, 60000);
   // cuckoo clocks call the hour on their own, like the wall clock tells real time
   let lastHour = new Date().getHours();
   setInterval(() => {
@@ -691,7 +804,7 @@ function startLofiRooms() {
     if (tool === 'add') {
       const C = CAT[state.add];
       const base = { t: state.add, c: 0, r: state.addR || 0, on: C.on !== undefined ? C.on : false };
-      if (state.add === 'cat') base.c = (room.count(i => i.t === 'cat')) % CATS.length;
+      if (state.add === 'cat') base.c = (room.count(i => i.t === 'cat' && !i.visitor)) % 5;
       const cand = candidate(e.clientX, e.clientY, base);
       if (!cand) { startOrbit(e); return; }
       state.drag = { kind: 'add', base, cand, sx: e.clientX, sy: e.clientY };
@@ -724,7 +837,7 @@ function startLofiRooms() {
     { from: a => CAT[a.t].group === 'plants', to: b => CAT[b.t].tap === 'sink', hint: 'Drop to water it',
       run(a) { Sound.water(); view.burst(a.id, 'drip', 2); view.sparkle(view.itemPoint(a.id, [4, 12, 4]), 0xa8f0a0, 12); toast('<span>Watered! It perks right up</span>', 1400); } },
     { from: a => a.t === 'vinyl', to: b => CAT[b.t].tap === 'mood' || (CAT[b.t].tap === 'music' && CAT[b.t].anim === 'record'), hint: 'Drop to play this record',
-      run(a, b) { const name = Sound.setMood(a.c | 0); meta.mood = Sound.mood; if (!meta.music) setMusic(true); else saveMeta(); Sound.needle(); view.excite(b.id); toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi'); } },
+      run(a, b) { const name = Sound.setMood(a.c | 0); meta.mood = Sound.mood; meta.moodSet = true; moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape'); if (!meta.music) setMusic(true); else saveMeta(); Sound.needle(); view.excite(b.id); toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi'); } },
     { from: a => a.t === 'treats', to: b => b.t === 'cat', hint: 'Drop to give a treat',
       run(a, b) { view.feedCat(b.id); Sound.crunch(); Sound.purr(true); setTimeout(() => Sound.purr(false), 2400); toast(`<span>${nameOf(b)} munches happily ♥</span>`, 1500); discover('feast'); } },
     { from: a => a.t === 'blanket', to: b => !!CAT[b.t].nap && !b.p && !b.blanket, hint: 'Drop to tuck it in',
@@ -881,7 +994,7 @@ function startLofiRooms() {
     if (!mouse || state.drag || orbit) return;
     if (state.mode === 'edit' && state.tool === 'add') {
       const C = CAT[state.add];
-      const cand = candidate(mouse.x, mouse.y, { t: state.add, c: state.add === 'cat' ? room.count(i => i.t === 'cat') % CATS.length : 0, r: state.addR || 0, on: C.on !== undefined ? C.on : false });
+      const cand = candidate(mouse.x, mouse.y, { t: state.add, c: state.add === 'cat' ? room.count(i => i.t === 'cat' && !i.visitor) % 5 : 0, r: state.addR || 0, on: C.on !== undefined ? C.on : false });
       if (cand) view.setGhost(cand, room.canPlace(cand), room); else view.setGhost(null);
       view.setHover(0); canvas.style.cursor = cand ? 'crosshair' : 'grab';
       return;
@@ -904,6 +1017,9 @@ function startLofiRooms() {
       if (orbit.tapId) {
         if (state.mode === 'explore') interact(orbit.tapId); else tapEdit(orbit.tapId);
         lastTap = null;
+      } else if (state.mode === 'explore' && follow && performance.now() < follow.until) {
+        const p = view.pickFloor(e.clientX, e.clientY);
+        if (p && view.walkCatTo(follow.id, Math.floor(p.x), Math.floor(p.z))) { follow.until = performance.now() + 6000; view.sparkle(new THREE.Vector3(Math.floor(p.x) + 0.5, 0.1, Math.floor(p.z) + 0.5), 0xffd0e0, 6); }
       } else if (state.mode === 'explore') {
         const now = performance.now();
         if (lastTap && now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) { zoomToward(e.clientX, e.clientY); lastTap = null; }
@@ -992,6 +1108,7 @@ function startLofiRooms() {
     if (p === meta.phase && view.env.phase === p) return;
     meta.phase = p; saveMeta();
     view.setPhase(p); view.refreshEnv(p);
+    if (meta.mood === 'auto') applyMood();
     updateHeader();
     if (!quiet) toast(`<span>${PHASE_NAMES[p]}${meta.realtime ? '' : ' · Settings has “Follow the clock”'}</span>`, 1300);
     setTimeout(checkRoomMoments, 2600);
@@ -1000,6 +1117,7 @@ function startLofiRooms() {
   $('#bRain').onclick = () => {
     meta.raining = !meta.raining; saveMeta();
     view.setRain(meta.raining); view.refreshEnv(meta.phase);
+    if (meta.mood === 'auto') applyMood();
     document.body.classList.toggle('raining', meta.raining);
     Sound.init();
     updateHeader();
@@ -1044,9 +1162,9 @@ function startLofiRooms() {
     if (k === 'random') { room.n = LR.N; room.generate((Math.random() * 0xffffffff) >>> 0); }
     else { PRESETS[k].make(room); room.name = PRESETS[k].name; }
   }
-  function newRoom(k) {
+  function newRoom(k, forcedId) {
     save();
-    const id = Date.now();
+    const id = forcedId || Date.now();
     fillRoom(k);
     rooms.push({ id, name: room.name, n: room.items.length });
     meta.current = id; undo.length = 0;
@@ -1054,6 +1172,116 @@ function startLofiRooms() {
     changed(); save(); saveIndex(); saveMeta(); updateHeader();
     toast(`<b>${room.name}</b><span>A fresh room. Your other rooms are in the menu.</span>`, 2400);
     Sound.arpeggio();
+  }
+  // share codes: a room squeezed into a short text a friend can paste in
+  const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64u = str => Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  async function squeeze(bytes, how) {
+    const stream = new Blob([bytes]).stream().pipeThrough(how === 'in' ? new CompressionStream('deflate-raw') : new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  async function roomCode() {
+    const d = room.serialize(); delete d.seed;
+    d.items = d.items.map(i => { const o = Object.assign({}, i); if (!o.c) delete o.c; if (!o.r) delete o.r; if (!o.on) delete o.on; return o; });   // drop the defaults
+    const raw = new TextEncoder().encode(JSON.stringify(d));
+    if (typeof CompressionStream === 'undefined') return 'LR0.' + b64u(raw);
+    return 'LR1.' + b64u(await squeeze(raw, 'in'));
+  }
+  async function readCode(code) {
+    const m = String(code).trim().match(/^LR([01])\.([A-Za-z0-9_-]+)$/);
+    if (!m) throw new Error('not a room code');
+    const bytes = unb64u(m[2]);
+    const d = JSON.parse(new TextDecoder().decode(m[1] === '1' ? await squeeze(bytes, 'out') : bytes));
+    d.items.forEach(i => { ['c', 'r'].forEach(k => { if (i[k] == null) i[k] = 0; }); if (i.on == null) i.on = false; });
+    return d;
+  }
+  function codeSheet(title, sub, build) {
+    const body = $('#sheetBody'); body.innerHTML = '';
+    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
+    h('div', 'grab'); h('h2', '', title); h('p', 'muted', sub);
+    build(h); sheet.classList.add('open');
+  }
+  async function shareSheet() {
+    const code = await roomCode();
+    codeSheet(`Share “${room.name}”`, 'Send this code to a friend. They tap “Open a friend’s code” in their menu and paste it.', h => {
+      const ta = h('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 4;
+      h('p', 'muted small', `${code.length} characters`);
+      const row = h('div', 'rowbtns');
+      row.innerHTML = '<button class="chipbtn" id="bCopyCode">Copy</button>' + (cap && cap.isNativePlatform && cap.isNativePlatform() || navigator.share ? '<button class="chipbtn" id="bSendCode">Send…</button>' : '');
+      row.querySelector('#bCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(code); toast('<span>Code copied</span>', 1200); } catch (e) { ta.select(); document.execCommand('copy'); toast('<span>Code copied</span>', 1200); } };
+      const send = row.querySelector('#bSendCode');
+      if (send) send.onclick = async () => {
+        try {
+          if (cap && cap.isNativePlatform && cap.isNativePlatform()) await cap.registerPlugin('Share').share({ title: 'My Lofi Room', text: `Come see my Lofi Room! Paste this code in the app: ${code}` });
+          else await navigator.share({ title: 'My Lofi Room', text: code });
+        } catch (e) { /* cancelled */ }
+      };
+      ta.onclick = () => ta.select();
+    });
+  }
+  function importSheet() {
+    codeSheet('Open a friend’s room', 'Paste a room code. It opens as a new room, so nothing of yours is replaced.', h => {
+      const ta = h('textarea', 'code'); ta.rows = 4; ta.placeholder = 'LR1.…';
+      const row = h('div', 'rowbtns'); row.innerHTML = '<button class="chipbtn" id="bOpenCode">Open room</button>';
+      row.querySelector('#bOpenCode').onclick = async () => {
+        try {
+          const d = await readCode(ta.value);
+          const probe = new LR.Room();
+          if (!probe.load(d)) throw new Error('bad room');
+          probe.items = probe.items.filter(i => CAT[i.t]);   // pieces this version doesn't know are skipped
+          save();
+          const id = Date.now();
+          room.load(probe.serialize());
+          rooms.push({ id, name: room.name, n: room.items.length });
+          meta.current = id; undo.length = 0;
+          view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
+          changed(); save(); saveIndex(); saveMeta(); updateHeader(); closeSheets();
+          toast(`<b>${room.name}</b><span>A friend’s room, now in your list</span>`, 2200); Sound.arpeggio();
+        } catch (e) { Sound.nope(); toast('<span>That code doesn’t look right</span>', 1600); }
+      };
+    });
+  }
+  // linked rooms: a door opens onto another saved room, and the rooms become a tiny apartment
+  function walkThrough(door, to) {
+    const from = meta.current, k = door.k, u = door.u;
+    view.openDoor(door.id); Sound.creak();
+    setTimeout(() => $('#fade').classList.add('on'), 420);
+    setTimeout(() => {
+      switchRoom(to, true);
+      // the first unlinked door on the other side leads back, or we add one
+      let back = room.items.find(i => i.t === 'roomdoor' && i.link === from) || room.items.find(i => i.t === 'roomdoor' && !i.link);
+      if (!back) { const d = room.make('roomdoor', { k, u, e: 0, link: from }); if (room.canPlace(d)) back = room.add(d); }
+      if (back && !back.link) back.link = from;
+      changed(); save();
+      $('#fade').classList.remove('on');
+      if (back) setTimeout(() => view.openDoor(back.id), 200);
+      discover('openhouse');
+    }, 820);
+  }
+  function doorPicker(door) {
+    const body = $('#sheetBody'); body.innerHTML = '';
+    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
+    h('div', 'grab'); h('h2', '', 'Where does this door go?');
+    h('p', 'muted', 'Pick one of your rooms, or start a new one. Walking through brings you back the same way.');
+    const list = h('div', 'cards');
+    const link = id => { pushUndo(); door.link = id; changed(); save(); closeSheets(); walkThrough(door, id); };
+    rooms.filter(r => r.id !== meta.current).forEach(r => {
+      const b = document.createElement('button'); b.className = 'card room';
+      b.innerHTML = `<div class="art">🚪</div><b>${r.name}</b><span>${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
+      b.onclick = () => link(r.id); list.appendChild(b);
+    });
+    const nb = document.createElement('button'); nb.className = 'card random';
+    nb.innerHTML = `<div class="art">✨</div><b>A new room</b><span>An empty room through this door.</span>`;
+    nb.onclick = () => {
+      const from = meta.current, id = Date.now();
+      pushUndo(); door.link = id; save(); closeSheets();
+      newRoom('blank', id);
+      const d = room.make('roomdoor', { k: door.k, u: door.u, e: 0, link: from });
+      if (room.canPlace(d)) room.add(d);
+      changed(); save(); discover('openhouse');
+    };
+    list.appendChild(nb);
+    sheet.classList.add('open');
   }
   function switchRoom(id) {
     if (id === meta.current) return;
@@ -1097,9 +1325,16 @@ function startLofiRooms() {
       }
       list.appendChild(b);
     });
+    const sh = h('div', 'rowbtns');
+    sh.innerHTML = '<button class="chipbtn" id="bShareCode">Share this room as a code</button><button class="chipbtn" id="bImportCode">Open a friend’s code</button>';
+    sh.querySelector('#bShareCode').onclick = () => shareSheet();
+    sh.querySelector('#bImportCode').onclick = () => importSheet();
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'Your current room is saved and stays in the list above.');
     body.appendChild(presetCards(k => { closeSheets(); newRoom(k); }));
+    const D = meta.daily || {}, doneToday = D.date === today();
+    h('h2', '', `Today's moment <small>${D.streak ? `${D.streak} day streak` : ''}</small>`);
+    h('div', 'disc', `<div class="d${doneToday ? ' got' : ''}"><i>${doneToday ? '✦' : '☀'}</i><div><b>${dailyTask()[1]}</b><span>${doneToday ? 'Done for today. See you tomorrow!' : 'A new one every day'}</span></div></div>`);
     h('h2', '', `Cozy moments <small>${found.size}/${MOMENTS.length}</small>`);
     const dl = h('div', 'disc');
     MOMENTS.forEach(([k, name, desc]) => {
@@ -1114,6 +1349,8 @@ function startLofiRooms() {
       r.onclick = () => { fn(); renderMenu(); };
     };
     toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
+    toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
+    toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
     toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
     h('p', 'muted small', 'Explore: drag to look around, pinch to zoom, double-tap to zoom in, tap lamps, records, plants and cats. Decorate: Add places things (tap or drag), Move drags them, Turn spins them, Paint changes walls, floors and colours, Remove puts things away. Small things like mugs and lamps sit on desks, tables and shelves. On a computer: left-drag or right-drag spins, the wheel zooms (or scrolls the tray when the mouse is over it), middle-drag pans. Keys: 1–5 tools, ←/→ pick from the tray, ↑/↓ switch tabs, R turns the piece you’re placing or the one under the mouse, Delete removes it, Q/E turn the room, X switches Explore/Decorate, G makes a surprise room, M plays music, Ctrl+Z or U undoes, Esc goes back.');
   }
@@ -1231,10 +1468,18 @@ function startLofiRooms() {
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
+      const fire = room.items.some(i => (i.t === 'fireplace' || i.t === 'eukachel') && i.on);
+      if (meta.raining && fire && meta.music) discover('stormy');
+      if (meta.raining && fire && meta.phase === 'night') discover('snowedin');
+      if (meta.phase === 'day' && !meta.raining) {
+        const sun = view.windowSpots().filter(w => room.items.some(i => CAT[i.t].beam && i.on));
+        if ([...view.pets.values()].some(P => P.state === 'nap' && sun.some(w => Math.hypot(w.x + 0.5 - P.x, w.z + 0.5 - P.z) < 3))) discover('siesta');
+      }
       if ([...view.pets.values()].some(P => P.perch && !P.hop)) discover('perch');
     }
     saveT += dt;
     if (saveT > 3 && dirty) { save(); saveT = 0; }
+    view.beat = meta.music ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
     view.frame(dt, t);
     requestAnimationFrame(loop);
   }
@@ -1244,7 +1489,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { room, view, state, meta, Sound, setPhase, setMode, interact, changed };   // handy for poking at it from the console
+  window.__lr = { room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyTask, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);

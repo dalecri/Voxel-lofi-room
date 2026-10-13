@@ -608,6 +608,7 @@
       const [fw, fd] = fp(it);
       obj.position.set(it.x + fw / 2, 0, it.z + fd / 2);
       obj.rotation.set(0, (it.r || 0) * Math.PI / 2, 0);
+      if (it.tipped) { obj.rotation.z = Math.PI / 2 * 0.94; obj.position.y = 0.3; }   // knocked over by a cat
     }
     if (obj.parent !== parent) parent.add(obj);
   };
@@ -924,9 +925,12 @@
         if (!P.path.length) {
           if (P.next) { const n = P.next; P.next = null; this.startHop(P, n); }
           else if (P.eat) this.startEating(P);
+          else if (P.onArrive) { const cb = P.onArrive; P.onArrive = null; P.state = 'sit'; P.timer = 2.5; cb(P); }
+          else if (P.watch != null) { P.heading = P.watch; P.watch = null; P.state = 'sit'; P.timer = 10 + Math.random() * 14; }   // watching the rain
           else {
-            P.state = !P.robot && (Math.random() < 0.3 || this.blanketAt(P)) ? 'nap' : 'sit';
-            P.timer = P.state === 'nap' ? (8 + Math.random() * 10) * (this.blanketAt(P) ? 3 : 1) : P.robot ? 0.5 + Math.random() * 2 : 2 + Math.random() * 4;
+            const rainy = this.env.rain ? 1.8 : 1;   // rainy days are for naps
+            P.state = !P.robot && (Math.random() < 0.3 * rainy || this.blanketAt(P)) ? 'nap' : 'sit';
+            P.timer = P.state === 'nap' ? (8 + Math.random() * 10) * (this.blanketAt(P) ? 3 : 1) * (this.env.rain ? 1.5 : 1) : P.robot ? 0.5 + Math.random() * 2 : 2 + Math.random() * 4;
           }
         }
       } else if (P.timer <= 0 && P.state !== 'pet' && P.state !== 'eat') {
@@ -949,6 +953,13 @@
         P.heading += dh * Math.min(1, dt * 6);
         squash = 1 + Math.sin(t * 20) * 0.02;
       }
+      // head-bop: an idle cat near the music nods along to the beat
+      let nod = 0;
+      if (this.beat >= 0 && this.music && !P.robot && (P.state === 'sit' || P.state === 'pet') && this.nearMusic(P)) {
+        const g = Math.pow(1 - this.beat, 3);
+        nod = g * 0.16; bob += g * 0.025;
+      }
+      inner.rotation.x = nod;
       inner.position.y = bob;
       inner.scale.set(1 + (1 - squash) * 0.4, squash, 1 + (1 - squash) * 0.25);
       if (tail) tail.rotation.y = Math.sin(t * (P.state === 'pet' ? 9 : P.state === 'walk' ? 6 : 2) + id) * (P.state === 'nap' ? 0.15 : 0.45);
@@ -976,6 +987,15 @@
         return;
       }
       P.timer = 3; return;
+    }
+    // when it rains, cats like to sit by a window and watch
+    if (this.env.rain && Math.random() < 0.4) {
+      const spots = this.windowSpots().filter(w => ![...this.pets.values()].some(o => o !== P && Math.floor(o.x) === w.x && Math.floor(o.z) === w.z));
+      if (spots.length) {
+        const w = spots[(Math.random() * spots.length) | 0];
+        const path = cx === w.x && cz === w.z ? [] : this.path(cx, cz, w.x, w.z);
+        if (path) { P.watch = w.heading; if (path.length) { P.path = path; P.state = 'walk'; } else { P.heading = w.heading; P.watch = null; P.state = 'sit'; P.timer = 12; } return; }
+      }
     }
     const r = Math.random();
     if (r < 0.3) {
@@ -1008,6 +1028,16 @@
       if (path && path.length) { P.path = path; P.state = 'walk'; return; }
     }
     P.state = 'sit'; P.timer = 2 + Math.random() * 3;
+  };
+  // within earshot of something playing music (or anywhere, if nothing in the room plays)
+  R.nearMusic = function (P) {
+    if (!this.room) return false;
+    if (this.musicT !== this.t) {
+      this.musicT = this.t;
+      this.musicSrc = this.room.items.filter(i => !i.p ? (CAT[i.t].anim === 'speaker' || CAT[i.t].tap === 'mood' || CAT[i.t].anim === 'record') : (CAT[i.t].anim === 'record' || CAT[i.t].anim === 'speaker')).map(i => i.p ? this.room.get(i.p) : i).filter(Boolean);
+    }
+    if (!this.musicSrc.length) return true;
+    return this.musicSrc.some(i => i.x != null && Math.hypot(i.x + 0.5 - P.x, i.z + 0.5 - P.z) < 4.5);
   };
   // is this cat standing on a bed with a blanket in it?
   R.blanketAt = function (P) {
@@ -1050,29 +1080,66 @@
   };
   R.pop = function (id, secs) { const o = this.objs.get(id); if (o) o.userData.popUntil = this.t + (secs || 2.5); };
   R.feedBirds = function (id) { const o = this.objs.get(id); if (o) { o.userData.fedUntil = this.t + 25; o.userData.excited = this.t + 3; } };
-  // the nearest cat trots over to a bowl and eats; returns the cat's name id or 0
-  R.callCat = function (bowlId) {
-    const bowl = this.room && this.room.get(bowlId);
-    if (!bowl || bowl.p) return 0;
-    const [w, d] = fp(bowl), spots = [];
-    for (let x = bowl.x - 1; x <= bowl.x + w; x++) for (let z = bowl.z - 1; z <= bowl.z + d; z++) {
-      const inside = x >= bowl.x && x < bowl.x + w && z >= bowl.z && z < bowl.z + d;
+  // free cells right next to a floor piece
+  R.spotsAround = function (it) {
+    const [w, d] = fp(it), spots = [];
+    for (let x = it.x - 1; x <= it.x + w; x++) for (let z = it.z - 1; z <= it.z + d; z++) {
+      const inside = x >= it.x && x < it.x + w && z >= it.z && z < it.z + d;
       if (!inside && this.cellFree(x, z)) spots.push([x, z]);
     }
+    return spots;
+  };
+  // the nearest free cat (or the one asked for) walks to one of these cells; returns { id, P, path } or null
+  R.sendCat = function (spots, only) {
     let best = null;
     for (const [id, P] of this.pets) {
-      if (P.robot || P.state === 'hop' || P.perch) continue;
+      if (P.robot || P.visitorLeaving || P.state === 'hop' || P.perch || (only && id !== only)) continue;
       const cx = Math.floor(P.x), cz = Math.floor(P.z);
       for (const [x, z] of spots) {
         const path = cx === x && cz === z ? [] : this.path(cx, cz, x, z);
-        if (path && (!best || path.length < best.path.length)) best = { id, P, path, x, z };
+        if (path && (!best || path.length < best.path.length)) best = { id, P, path };
       }
     }
-    if (!best) return 0;
+    if (!best) return null;
     const P = best.P;
-    P.eat = { x: bowl.x + w / 2, z: bowl.z + d / 2 }; P.next = null;
-    if (best.path.length) { P.path = best.path; P.state = 'walk'; } else this.startEating(P);
+    P.next = null; P.watch = null; P.eat = null; P.onArrive = null;
+    if (best.path.length) { P.path = best.path; P.state = 'walk'; }
+    return best;
+  };
+  // the nearest cat trots over to a bowl and eats; returns the cat's id or 0
+  R.callCat = function (bowlId) {
+    const bowl = this.room && this.room.get(bowlId);
+    if (!bowl || bowl.p) return 0;
+    const best = this.sendCat(this.spotsAround(bowl));
+    if (!best) return 0;
+    const [w, d] = fp(bowl);
+    best.P.eat = { x: bowl.x + w / 2, z: bowl.z + d / 2 };
+    if (!best.path.length) this.startEating(best.P);
     return best.id;
+  };
+  // a cat that's just been petted follows your taps for a little while
+  R.walkCatTo = function (id, x, z) {
+    const P = this.pets.get(id);
+    if (!P || P.perch || P.state === 'hop' || !this.cellFree(x, z)) return false;
+    const path = this.path(Math.floor(P.x), Math.floor(P.z), x, z);
+    if (!path || !path.length) return false;
+    P.path = path; P.state = 'walk'; P.next = null; P.eat = null; P.watch = null;
+    return true;
+  };
+  // cells just inside the room in front of each window, and which way to face to look out
+  R.windowSpots = function () {
+    if (!this.room || this.noWalls) return [];
+    const out = [];
+    this.room.items.forEach(i => {
+      const C = CAT[i.t];
+      if (C.kind !== 'wall' || !C.beam) return;
+      for (let k = 0; k < C.size[0]; k++) {
+        const u = i.u + k;
+        const cell = [[u, 0, Math.PI], [0, N - 1 - u, -Math.PI / 2], [N - 1 - u, N - 1, 0], [N - 1, u, Math.PI / 2]][i.k];
+        if (cell && this.cellFree(cell[0], cell[1])) out.push({ x: cell[0], z: cell[1], heading: cell[2] });
+      }
+    });
+    return out;
   };
   R.startEating = function (P, secs) {
     if (P.eat) P.heading = Math.atan2(P.eat.x - P.x, P.eat.z - P.z);
@@ -1084,6 +1151,8 @@
   // ---- per frame ----
   R.frame = function (dt, t) {
     this.t = t;
+    if (this.beat >= 0 && this.lastBeat >= 0 && this.beat < this.lastBeat) this.beatN = (this.beatN || 0) + 1;
+    this.lastBeat = this.beat;
     const k = 1 - Math.exp(-dt * 9);
     this.yaw += (this.yawGoal - this.yaw) * k;
     this.pitch += (this.pitchGoal - this.pitch) * k;
@@ -1126,11 +1195,12 @@
         const s = now.getSeconds() + now.getMilliseconds() / 1000, m = now.getMinutes() + s / 60, h = (now.getHours() % 12) + m / 60;
         ud.hands[0].rotation.z = -h / 12 * Math.PI * 2; ud.hands[1].rotation.z = -m / 60 * Math.PI * 2; ud.hands[2].rotation.z = -Math.floor(s) / 60 * Math.PI * 2;
       }
+      const groove = this.beat >= 0 && this.music ? Math.pow(1 - this.beat, 3) : 0;   // 1 right on the beat, fading to 0
       if (ud.glowMat) {
         if (C.anim === 'screen' && it.on) ud.glowMat.color.setHSL((t * 0.05 + id * 0.17) % 1, 0.35, 0.8 + 0.06 * Math.sin(t * 7));
-        else if (C.anim === 'twinkle') { const v = 0.82 + 0.18 * Math.sin(t * 2.2 + id); ud.glowMat.color.setRGB(v, v, v); }
+        else if (C.anim === 'twinkle') { const v = (0.82 + 0.18 * Math.sin(t * 2.2 + id)) * (groove ? 0.7 + 0.45 * groove : 1); ud.glowMat.color.setRGB(v, v, v); }
         else if (C.anim === 'fire' || C.anim === 'flame') { const v = 0.85 + 0.1 * Math.sin(t * 17 + id) + 0.06 * Math.sin(t * 41); ud.glowMat.color.setRGB(v, v * 0.97, v * 0.9); }
-        else if (C.anim === 'rgb') ud.glowMat.color.setHSL((t * 0.08 + id * 0.13) % 1, 0.9, 0.62);
+        else if (C.anim === 'rgb') ud.glowMat.color.setHSL((t * 0.08 + id * 0.13 + (groove ? Math.floor(this.beatN || 0) * 0.07 : 0)) % 1, 0.9, groove ? 0.45 + 0.3 * groove : 0.62);
         else if (C.anim === 'lava') { const v = 0.9 + 0.1 * Math.sin(t * 0.7 + id); ud.glowMat.color.setRGB(v, v, v); }
         else if (C.anim === 'buzz') { const off = Math.sin(t * 0.37 + id * 5) > 0.97 && Math.sin(t * 31) > 0; const v = off ? 0.35 : 0.95 + 0.05 * Math.sin(t * 50); ud.glowMat.color.setRGB(v, v, v); }
       }
@@ -1169,7 +1239,7 @@
         sc.next = t + 1 / 12;
         const age = t - sc.since;
         const prog = sc.boot && C.boot && age < 1.3 ? 'boot' : !sc.boot && age < 0.35 ? 'static' : chans[ch];
-        LRScreens.draw(prog, sc.g, sc.W, sc.H, t + it.id * 3.7, { music: this.music, play: ud.playUntil > t });
+        LRScreens.draw(prog, sc.g, sc.W, sc.H, t + it.id * 3.7, { music: this.music, play: ud.playUntil > t, beat: this.beat == null ? -1 : this.beat });
         sc.tex.needsUpdate = true;
       }
     } else if (ud.screen) { ud.screen.mesh.visible = false; ud.screen.ch = -1; }

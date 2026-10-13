@@ -58,7 +58,7 @@
     },
     viz(g, W, H, t, s) {
       px(g, 0, 0, W, H, '#140f24');
-      const n = Math.max(6, (W / 3) | 0), amp = s && s.music ? 1 : 0.35, beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 74 / 60)), 6);
+      const n = Math.max(6, (W / 3) | 0), amp = s && s.music ? 1 : 0.35, beat = s && s.beat >= 0 ? Math.pow(1 - s.beat, 3) : Math.pow(Math.max(0, Math.sin(t * Math.PI * 74 / 60)), 6);
       for (let k = 0; k < n; k++) {
         const v = (0.25 + 0.5 * Math.abs(Math.sin(t * (2 + k * 0.37) + k)) + beat * 0.4 * (k < n / 3 ? 1 : 0.4)) * amp;
         const h = Math.max(1, v * (H - 3)), hue = (k / n * 280 + t * 30) % 360;
@@ -157,6 +157,21 @@
       const k2 = (t * 3) % 1, h = Math.round(H * (1 - k2));
       px(g, 0, 0, W, h, '#efe6d6'); px(g, 0, h - 1, W, 1, '#c8b8a0');
     }
+  };
+  // a beat-synced visualizer: a pulsing ring, a bass bar row and a scrolling waveform
+  P.eq = function (g, W, H, t, s) {
+    const b = s && s.beat >= 0 ? Math.pow(1 - s.beat, 3) : 0.15 + 0.15 * Math.sin(t * 3);
+    px(g, 0, 0, W, H, '#0c0818');
+    const cx = W / 2, cy = H * 0.45, r = Math.min(W, H) * (0.18 + 0.12 * b);
+    for (let a = 0; a < 48; a++) {
+      const th = a / 48 * Math.PI * 2, rr = r + Math.abs(Math.sin(a * 1.7 + t * 4)) * 3 * (0.4 + b);
+      px(g, cx + Math.cos(th) * rr, cy + Math.sin(th) * rr * 0.8, 1, 1, `hsl(${(a * 7 + t * 60) % 360},90%,${55 + b * 25}%)`);
+    }
+    for (let x = 0; x < W; x += 2) {
+      const h = (0.2 + 0.8 * Math.abs(Math.sin(x * 0.35 + t * 5))) * (1 + b) * 3;
+      px(g, x, H - 1 - h, 1, h, b > 0.5 ? '#ff7ad8' : '#7ad8ff');
+    }
+    for (let x = 0; x < W; x++) px(g, x, cy + Math.sin(x * 0.5 - t * 9) * (1 + b * 3), 1, 1, 'rgba(255,255,255,.5)');
   };
   // a calm tablet wallpaper: a soft dusk gradient, drifting clouds and a moon
   P.calm = function (g, W, H, t) {
