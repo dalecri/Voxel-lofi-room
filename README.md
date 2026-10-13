@@ -49,7 +49,7 @@ Then open http://localhost:5180.
   - **Decor:** shisha, aquarium, fishbowl, snow globe, globe, diffuser, cat plush, record crate and a pampas vase.
   - **Plants:** monstera, snake plant, fiddle leaf fig, cactus, bonsai, trailing pothos, herbs, succulent, flowers and a wall planter.
   - **Windows:** curtains, blinds, a picture window, a round window and an arched window. Each one throws a sunbeam across the floor that changes with the time of day, and closed blinds make it striped.
-  - **Wall art:** movie posters (7 made-up films), paintings, posters, a framed record, a wall clock and a mirror.
+  - **Wall art:** music posters (13 loose takes on artists' best-known covers), movie posters (7 made-up films), paintings, posters, a framed record, a wall clock and a mirror.
   - **Pets:** cats, cat beds, cat trees and a robot vacuum.
 - **Small things stack.** Mugs, lamps, plants and records sit on desks, tables, dressers, bookshelves, the piano, the mantel and wall shelves. Move a desk and everything on it comes along.
 - **Five decorating tools:**

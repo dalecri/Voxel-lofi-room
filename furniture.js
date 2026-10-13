@@ -728,6 +728,89 @@
       });
     },
   });
+  // Music posters: loose voxel takes on each artist's best-known cover (its colours, motifs and mood),
+  // not copies. Same 8 × 12 art area and title band as the movie posters.
+  const wave = (x, y, f, a) => y + Math.round(Math.sin(x * f + y * 0.35) * a);
+  const ARTIST_POSTERS = {
+    kimpetras(x, y) {   // chrome and dark red
+      if (Math.hypot(x - 3.5, y - 6) < 2.2) return y > 6 ? 0x8a1a22 : 0x5a0e16;
+      if ((x + y) % 7 === 0) return 0xffffff;
+      return shade(0xb8bcc8, 0.75 + 0.35 * Math.abs(Math.sin((x - y) * 0.45)));
+    },
+    tameimpala(x, y) {   // wavy currents on cream
+      const w = ((wave(x, y, 0.9, 1.4) % 3) + 3) % 3;
+      return w === 0 ? (y > 5 ? 0xd8402a : 0xf08a2a) : w === 1 && y % 2 ? 0xf6c87a : 0xf6ecd8;
+    },
+    ninajirachi(x, y) {   // hot pink hyperpop, cyan and white sparkles
+      const heart = (dx => y <= 7 && y >= 3 + dx && dx < 3)(Math.abs(x - 3.5) - 0.5) || ((x === 2 || x === 5) && y === 8);
+      if (heart) return 0xffffff;
+      if (hash3(x, y, 3, 7) < 0.12) return 0x4af0ff;
+      return y > 8 ? 0xff7ad0 : 0xff3aa8;
+    },
+    pinkpantheress(x, y) {   // a soft dreamy garden
+      if (hash3(x, y, 5, 2) < 0.16 && y < 8) return hash3(x, y, 1, 2) < 0.5 ? 0xff9ac8 : 0xffd0e4;
+      if (y < 3) return x % 2 ? 0x5a9a5a : 0x6aaa62;
+      return mix(0xa8d8a0, 0xe8f4e0, y / 11);
+    },
+    janeremover(x, y) {   // blurry blue-grey static
+      if (Math.hypot(x - 3.5, y - 6.5) < 2.2) return mix(0xc8d0dc, 0x8a96a8, hash3(x, y, 2, 9));
+      return shade(0x5a6a80, 0.7 + 0.45 * hash3(x, y, 8, 3));
+    },
+    sade(x, y) {   // bold red, black, elegant
+      if (Math.hypot((x - 4) * 1.2, y - 7) < 2.3 || (x >= 3 && x <= 4 && y >= 3 && y < 6)) return 0x141014;
+      if (y === 1 && x > 0 && x < 7) return 0xf4e8d8;
+      return 0xc81e24;
+    },
+    aphextwin(x, y) {   // a white mark on black
+      const d = Math.hypot(x - 3.5, y - 6);
+      if ((d > 1.6 && d < 2.8 && y >= 5) || (y >= 3 && y < 6 && (x === 1 || x === 6))) return 0xf4f4f0;
+      return 0x0e0e10;
+    },
+    thexx(x, y) {   // a big white X on black
+      const a = Math.abs(x - 3.5 - (y - 6) * 0.62), b = Math.abs(x - 3.5 + (y - 6) * 0.62);
+      return (a < 0.8 || b < 0.8) && y > 1 && y < 11 ? 0xf8f8f4 : 0x0c0c0e;
+    },
+    daine(x, y) {   // dark purple with glitches
+      if (hash3(0, y, 4, 6) < 0.2) return hash3(x >> 2, y, 1, 6) < 0.5 ? 0xd85aff : 0x4af0f0;
+      return mix(0x0e0814, 0x4a1e6a, Math.max(0, 1 - Math.hypot(x - 3.5, y - 6) / 6));
+    },
+    deadmau5(x, y) {   // a round mouse head with big ears, red on black
+      const head = Math.hypot(x - 3.5, y - 5) < 2.4, ear = Math.hypot(x - 1, y - 8.2) < 1.5 || Math.hypot(x - 6, y - 8.2) < 1.5;
+      if (head && y === 5 && (x === 2 || x === 5)) return 0xffffff;
+      if (head || ear) return 0xe0202a;
+      return 0x0e0a0c;
+    },
+    sza(x, y) {   // ocean blue, a diving board over the water
+      if (y === 6 && x >= 2) return 0xf4f0e8;
+      if (x === 2 && y > 6 && y < 9) return 0x2a2a30;
+      if (x === 2 && y >= 9 && y < 10) return 0x8a5a3a;
+      if (y < 6) return hash3(x, y, 2, 5) < 0.12 ? 0x9ad8f0 : mix(0x0e3a78, 0x2a6ab0, y / 6);
+      return mix(0x6ab8e8, 0xc8e8f8, (y - 6) / 6);
+    },
+    kendrick(x, y) {   // a black-and-white crowd with red and blue accents
+      const row = y < 7 && y > 1 && (y - 2) < 2 + ((x * 5) % 3);
+      if (row) return hash3(x, y, 6, 1) < 0.1 ? (x % 2 ? 0xd8202a : 0x2a5ad8) : x % 2 ? 0x1a1a1c : 0x3a3a3e;
+      if (y >= 7) return y > 9 ? 0xe8e8e4 : 0xc8c8c4;
+      return 0x8a8a88;
+    },
+    mgmt(x, y) {   // a surreal collage
+      const w = ((wave(x, y, 0.6, 2) >> 1) % 3 + 3) % 3;
+      if (Math.hypot(x - 5, y - 8) < 1.6) return 0xffe07a;
+      return [0x2ab0a8, 0xf0782a, 0xd83a9a][w];
+    },
+  };
+  def('artistposter', {
+    name: 'Music poster', kind: 'wall', group: 'wall', size: [1, 2], depth: 1, tap: 'music',
+    vars: Object.keys(ARTIST_POSTERS).map(k => [k]),
+    build(m, [k]) {
+      const art = ARTIST_POSTERS[k];
+      m.box(0, 0, 0, 8, 16, 1, (x, y) => {
+        if (y >= 13) return (y === 14 && x > 0 && x < 7 && x !== 3) ? 0xf4ead0 : 0x1a1a1e;
+        if (y === 0) return 0x1a1a1e;
+        return art(x, y - 1);
+      });
+    },
+  });
   def('recordframe', {
     name: 'Framed record', kind: 'wall', group: 'wall', size: [1, 1], depth: 2, tap: 'music',
     vars: [[0xd9584a], [0xf2c14e], [0x5ad8ff], [0xe8a0b4]],
