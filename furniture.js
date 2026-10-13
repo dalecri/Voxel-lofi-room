@@ -176,6 +176,93 @@
       m.set(5, 10, 7, s.on ? 0x7aff9a : 0x3a3a3a, s.on);
     },
   });
+  // =================================================================
+  // Desk tech: small pieces sized to sit on a desk next to everything else
+  def('ipadmini', {
+    name: 'iPad mini', kind: 'small', group: 'tech', size: [1, 1], tap: 'screen', on: true,
+    screen: { x: 1.5, y: 1, z: 1.5, w: 5, h: 5, face: 'up' }, channels: ['calm', 'fish', 'nature'],
+    vars: [[0x9aa0aa], [0xe8dcd0], [0x8a7aa8]],
+    build(m, [c]) {
+      m.box(1, 0, 1, 7, 1, 7, (x, y, z) => (x === 1 || x === 6 || z === 1 || z === 6 ? shade(c, 1.05) : 0x26262e));
+      m.box(7, 0, 2, 8, 1, 7, 0xf2efe8).set(7, 0, 1, 0x9a9aa4);   // a pencil alongside
+    },
+  });
+  def('iphonestand', {
+    name: 'iPhone stand', kind: 'small', group: 'tech', size: [1, 1], tap: 'screen', on: true,
+    screen: { x: 2.5, y: 2.5, z: 5, w: 3, h: 6 }, channels: ['lockscreen', 'calm'],
+    vars: [[0xc8ccd4, 0x26262e], [0x3a3842, 0xe8dcd0], [WOOD.walnut, 0x26262e]],
+    build(m, [stand, phone]) {
+      m.box(1, 0, 1, 7, 1, 7, stand === WOOD.walnut ? grain(stand) : stand);   // weighted base
+      m.box(1, 0, 1, 7, 1, 2, shade(stand, 0.85));
+      m.box(3, 1, 2, 5, 7, 3, shade(stand, 0.92));                              // the upright
+      m.box(2, 1, 5, 6, 2, 6, shade(stand, 1.08));                              // front lip
+      m.box(2, 2, 4, 6, 9, 5, phone).box(2, 2, 3, 6, 9, 4, shade(phone, 0.85)); // the phone
+      m.set(4, 8, 5, 0x1a1a1e);
+    },
+  });
+  def('ultrawide', {
+    name: 'Ultrawide monitor', kind: 'small', group: 'tech', size: [2, 1], tap: 'screen', on: true, anim: 'rgb',
+    screen: { x: 1.5, y: 5.5, z: 5, w: 13, h: 5.5 }, channels: ['game', 'arcade', 'viz', 'nature'],
+    light: { at: [8, 1, 6], color: 0xff7ad8, i: 1.2, d: 3 },
+    vars: [[0x26262e], [0xf2efe8], [0x3a3a52]],
+    build(m, [c], s) {
+      m.box(5, 0, 2, 11, 1, 6, shade(c, 0.9)).box(7, 1, 3, 9, 6, 4, shade(c, 0.95));       // stand
+      m.box(1, 5, 3, 15, 12, 5, c).box(0, 5, 4, 1, 12, 6, c).box(15, 5, 4, 16, 12, 6, c);   // a gently curved panel
+      m.box(1, 5, 5, 15, 6, 6, shade(c, 0.85)).box(1, 11, 5, 15, 12, 6, shade(c, 0.85));
+      if (s.on) for (let x = 4; x < 12; x++) m.set(x, 0, 6, 0xffffff, true);               // RGB underglow
+      for (let x = 3; x < 13; x += 2) m.set(x, 6, 2, s.on ? 0xffffff : 0x3a3a44, s.on);     // and a strip on the back
+    },
+  });
+  def('rgbpc', {
+    name: 'RGB gaming PC', kind: 'small', group: 'tech', size: [1, 1], tap: 'toggle', on: true, anim: 'rgb',
+    light: { at: [4, 7, 8], color: 0x7ad8ff, i: 1.6, d: 4 },
+    vars: [[0x26262e], [0xf2efe8], [0xe8a0b4]],
+    build(m, [c], s) {
+      m.box(1, 0, 1, 7, 13, 7, c).box(1, 0, 1, 7, 1, 7, shade(c, 0.8));
+      // tempered glass front and side, with the glow inside
+      for (let y = 1; y < 12; y++) for (let k = 2; k < 6; k++) {
+        const strip = k === 2 || k === 5, fan = y >= 7 && y <= 10 && (k === 3 || k === 4) && (y === 7 || y === 10);
+        const lit = strip || fan;
+        m.set(k, y, 7, lit ? (s.on ? 0xffffff : 0x55556a) : 0x1a1a24, lit && s.on);
+        const inside = y === 5 ? 0x3a3a48 : (y === 9 && k > 2) ? (s.on ? 0xffffff : 0x55556a) : 0x14141c;
+        m.set(7, y, k, inside, y === 9 && k > 2 && s.on);
+      }
+      m.box(7, 4, 2, 8, 5, 6, 0x5a5a66);                       // the graphics card
+      m.set(5, 12, 6, s.on ? 0x7aff9a : 0x3a3a3a, s.on);       // power light
+      m.box(2, 13, 2, 6, 14, 6, (x, y, z) => ((x + z) % 2 ? shade(c, 0.85) : 0x3a3a44));   // top vents
+    },
+  });
+  def('bookshelfspeakers', {
+    name: 'Bookshelf speakers', kind: 'small', group: 'tech', size: [2, 1], tap: 'music', anim: 'speaker',
+    vars: [[WOOD.walnut, 0x26262c], [0xf2efe8, 0x8a8a94], [0x26262e, 0xd9784a]],
+    build(m, [c, cone]) {
+      [1, 10].forEach(x0 => {
+        m.box(x0, 0, 2, x0 + 5, 9, 7, c === WOOD.walnut ? grain(c) : c);
+        for (let x = x0; x < x0 + 5; x++) for (let y = 1; y < 8; y++) {
+          const w = Math.hypot(x + 0.5 - (x0 + 2.5), y + 0.5 - 3), tw = Math.hypot(x + 0.5 - (x0 + 2.5), y + 0.5 - 6.5);
+          if (w < 1.9) m.set(x, y, 7, w < 0.8 ? shade(cone, 1.4) : cone);
+          else if (tw < 0.8) m.set(x, y, 7, 0xd8d8e0);
+        }
+      });
+    },
+  });
+  def('waterbong', {
+    name: 'Glass water bong', kind: 'small', group: 'decor', size: [1, 1], burstAt: [4, 3, 4], fxColor: 0xe8f8ff,
+    tap: 'fx', fx: { burst: 'bubbles', secs: 1.5, sfx: 'gurgle', say: ['It catches the light nicely', 'Freshly rinsed, sparkling clean', 'Hand-blown glass'] },
+    vars: [[0xb8e8d8], [0xb8d8f0], [0xd8d0f0]],
+    build(m, [g]) {
+      const rim = mix(g, 0xffffff, 0.55), water = mix(g, 0x4aa8d8, 0.45);
+      // a beaker base, a little water inside, then a tall straight neck
+      for (let y = 0; y < 5; y++) for (let x = 0; x < 8; x++) for (let z = 0; z < 8; z++) {
+        const r = Math.hypot(x + 0.5 - 4, z + 0.5 - 4), R = 3.6 - y * 0.45;
+        if (r < R && r > R - 1.1) m.set(x, y, z, (x + z + y) % 5 === 0 ? rim : g);
+        else if (r <= R - 1.1 && y < 2) m.set(x, y, z, water);
+      }
+      for (let y = 5; y < 15; y++) for (let x = 3; x < 5; x++) for (let z = 3; z < 5; z++) m.set(x, y, z, y === 14 ? rim : (x === 3 && z === 4 ? rim : g));
+      m.box(3, 9, 3, 5, 10, 5, rim);                                       // a glass ring on the neck
+      m.set(5, 3, 5, g).set(6, 4, 6, g).set(6, 5, 6, rim);                // a small side stem
+    },
+  });
   def('console', {
     name: 'Game console', kind: 'small', group: 'tech', size: [1, 1], tap: 'console',
     vars: [[0xf2efe8, 0x5ad8ff], [0x26262e, 0xff5a7a], [0xd9584a, 0xffffff]],
@@ -721,6 +808,89 @@
     vars: Object.keys(POSTERS).map(k => [k]),
     build(m, [k]) {
       const art = POSTERS[k];
+      m.box(0, 0, 0, 8, 16, 1, (x, y) => {
+        if (y >= 13) return (y === 14 && x > 0 && x < 7 && x !== 3) ? 0xf4ead0 : 0x1a1a1e;
+        if (y === 0) return 0x1a1a1e;
+        return art(x, y - 1);
+      });
+    },
+  });
+  // Music posters: loose voxel takes on each artist's best-known cover (its colours, motifs and mood),
+  // not copies. Same 8 × 12 art area and title band as the movie posters.
+  const wave = (x, y, f, a) => y + Math.round(Math.sin(x * f + y * 0.35) * a);
+  const ARTIST_POSTERS = {
+    kimpetras(x, y) {   // chrome and dark red
+      if (Math.hypot(x - 3.5, y - 6) < 2.2) return y > 6 ? 0x8a1a22 : 0x5a0e16;
+      if ((x + y) % 7 === 0) return 0xffffff;
+      return shade(0xb8bcc8, 0.75 + 0.35 * Math.abs(Math.sin((x - y) * 0.45)));
+    },
+    tameimpala(x, y) {   // wavy currents on cream
+      const w = ((wave(x, y, 0.9, 1.4) % 3) + 3) % 3;
+      return w === 0 ? (y > 5 ? 0xd8402a : 0xf08a2a) : w === 1 && y % 2 ? 0xf6c87a : 0xf6ecd8;
+    },
+    ninajirachi(x, y) {   // hot pink hyperpop, cyan and white sparkles
+      const heart = (dx => y <= 7 && y >= 3 + dx && dx < 3)(Math.abs(x - 3.5) - 0.5) || ((x === 2 || x === 5) && y === 8);
+      if (heart) return 0xffffff;
+      if (hash3(x, y, 3, 7) < 0.12) return 0x4af0ff;
+      return y > 8 ? 0xff7ad0 : 0xff3aa8;
+    },
+    pinkpantheress(x, y) {   // a soft dreamy garden
+      if (hash3(x, y, 5, 2) < 0.16 && y < 8) return hash3(x, y, 1, 2) < 0.5 ? 0xff9ac8 : 0xffd0e4;
+      if (y < 3) return x % 2 ? 0x5a9a5a : 0x6aaa62;
+      return mix(0xa8d8a0, 0xe8f4e0, y / 11);
+    },
+    janeremover(x, y) {   // blurry blue-grey static
+      if (Math.hypot(x - 3.5, y - 6.5) < 2.2) return mix(0xc8d0dc, 0x8a96a8, hash3(x, y, 2, 9));
+      return shade(0x5a6a80, 0.7 + 0.45 * hash3(x, y, 8, 3));
+    },
+    sade(x, y) {   // bold red, black, elegant
+      if (Math.hypot((x - 4) * 1.2, y - 7) < 2.3 || (x >= 3 && x <= 4 && y >= 3 && y < 6)) return 0x141014;
+      if (y === 1 && x > 0 && x < 7) return 0xf4e8d8;
+      return 0xc81e24;
+    },
+    aphextwin(x, y) {   // a white mark on black
+      const d = Math.hypot(x - 3.5, y - 6);
+      if ((d > 1.6 && d < 2.8 && y >= 5) || (y >= 3 && y < 6 && (x === 1 || x === 6))) return 0xf4f4f0;
+      return 0x0e0e10;
+    },
+    thexx(x, y) {   // a big white X on black
+      const a = Math.abs(x - 3.5 - (y - 6) * 0.62), b = Math.abs(x - 3.5 + (y - 6) * 0.62);
+      return (a < 0.8 || b < 0.8) && y > 1 && y < 11 ? 0xf8f8f4 : 0x0c0c0e;
+    },
+    daine(x, y) {   // dark purple with glitches
+      if (hash3(0, y, 4, 6) < 0.2) return hash3(x >> 2, y, 1, 6) < 0.5 ? 0xd85aff : 0x4af0f0;
+      return mix(0x0e0814, 0x4a1e6a, Math.max(0, 1 - Math.hypot(x - 3.5, y - 6) / 6));
+    },
+    deadmau5(x, y) {   // a round mouse head with big ears, red on black
+      const head = Math.hypot(x - 3.5, y - 5) < 2.4, ear = Math.hypot(x - 1, y - 8.2) < 1.5 || Math.hypot(x - 6, y - 8.2) < 1.5;
+      if (head && y === 5 && (x === 2 || x === 5)) return 0xffffff;
+      if (head || ear) return 0xe0202a;
+      return 0x0e0a0c;
+    },
+    sza(x, y) {   // ocean blue, a diving board over the water
+      if (y === 6 && x >= 2) return 0xf4f0e8;
+      if (x === 2 && y > 6 && y < 9) return 0x2a2a30;
+      if (x === 2 && y >= 9 && y < 10) return 0x8a5a3a;
+      if (y < 6) return hash3(x, y, 2, 5) < 0.12 ? 0x9ad8f0 : mix(0x0e3a78, 0x2a6ab0, y / 6);
+      return mix(0x6ab8e8, 0xc8e8f8, (y - 6) / 6);
+    },
+    kendrick(x, y) {   // a black-and-white crowd with red and blue accents
+      const row = y < 7 && y > 1 && (y - 2) < 2 + ((x * 5) % 3);
+      if (row) return hash3(x, y, 6, 1) < 0.1 ? (x % 2 ? 0xd8202a : 0x2a5ad8) : x % 2 ? 0x1a1a1c : 0x3a3a3e;
+      if (y >= 7) return y > 9 ? 0xe8e8e4 : 0xc8c8c4;
+      return 0x8a8a88;
+    },
+    mgmt(x, y) {   // a surreal collage
+      const w = ((wave(x, y, 0.6, 2) >> 1) % 3 + 3) % 3;
+      if (Math.hypot(x - 5, y - 8) < 1.6) return 0xffe07a;
+      return [0x2ab0a8, 0xf0782a, 0xd83a9a][w];
+    },
+  };
+  def('artistposter', {
+    name: 'Music poster', kind: 'wall', group: 'wall', size: [1, 2], depth: 1, tap: 'music',
+    vars: Object.keys(ARTIST_POSTERS).map(k => [k]),
+    build(m, [k]) {
+      const art = ARTIST_POSTERS[k];
       m.box(0, 0, 0, 8, 16, 1, (x, y) => {
         if (y >= 13) return (y === 14 && x > 0 && x < 7 && x !== 3) ? 0xf4ead0 : 0x1a1a1e;
         if (y === 0) return 0x1a1a1e;

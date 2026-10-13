@@ -53,6 +53,7 @@ function startLofiRooms() {
   let rooms = store.get('lr.rooms', []);
   const meta = Object.assign({ current: 0, realtime: true, phase: 'day', raining: false, music: false, sound: true, painted: {} }, store.get('lr.meta', {}));
   Sound.on = meta.sound;
+  if (meta.mood) Sound.setMood(meta.mood);
   const room = new LR.Room();
   function loadRoom(id) {
     const d = store.get('lr.room.' + id, null);
@@ -113,7 +114,8 @@ function startLofiRooms() {
   // Toasts & moments
   const toastQ = [];
   let toastBusy = 0;
-  function toast(html, ms) {
+  function toast(html, ms, now) {
+    if (now) { toastQ.length = 0; toastBusy = 0; document.querySelectorAll('#toasts .toast').forEach(el => el.remove()); }   // drag hints jump the queue
     if (performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms]); return; }
     toastBusy = performance.now() + Math.min(ms || 3200, 1500);
     setTimeout(() => { if (toastQ.length) toast(...toastQ.shift()); }, Math.min(ms || 3200, 1500) + 50);
@@ -432,7 +434,8 @@ function startLofiRooms() {
           const OC = CAT[owner.t], [w, d] = OC.size;
           const obj = view.objs.get(owner.id);
           const lp = obj.userData.inner.worldToLocal(hit.point.clone().add(view.root.position));
-          it.p = owner.id; it.lx = clampI(Math.floor(lp.x), 0, w - 1); it.lz = OC.kind === 'wall' ? 0 : clampI(Math.floor(lp.z), 0, d - 1);
+          const [cw, cd] = fp(it);
+          it.p = owner.id; it.lx = clampI(Math.floor(lp.x - (cw - 1) / 2), 0, w - cw); it.lz = OC.kind === 'wall' ? 0 : clampI(Math.floor(lp.z - (cd - 1) / 2), 0, d - cd);
           return it;
         }
       }
@@ -491,6 +494,43 @@ function startLofiRooms() {
       if (F.moment) discover(F.moment);
       return;
     }
+    if (tap === 'cuckoo') { cuckoo(id); return; }
+    if (tap === 'read') { Sound.flip(); toast(`<span>${pickOne(C.lines)}</span>`, 2200); return; }
+    if (tap === 'calendar') {
+      const o = view.objs.get(id); if (o) o.userData.playUntil = view.t + 0.7;
+      Sound.flip();
+      toast(`<span>${new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</span>`, 1600);
+      return;
+    }
+    if (tap === 'feeder') {
+      view.feedBirds(id); Sound.crunch(); setTimeout(() => Sound.tweet(), 500); setTimeout(() => Sound.tweet(), 1300);
+      view.sparkle(view.itemPoint(id, [4, 4, 5]), 0xc8a060, 10);
+      toast(`<span>${pickOne(['A robin and a blue tit swoop in', 'Seed scattered, here they come', 'Tweet tweet!'])}</span>`, 1500);
+      return;
+    }
+    if (tap === 'mood') {
+      const name = Sound.setMood();
+      meta.mood = Sound.mood; if (!meta.music) setMusic(true); else saveMeta();
+      view.excite(id); view.sparkle(view.itemPoint(id, [4, 14, 4]), 0xffd27a, 10);
+      toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi');
+      return;
+    }
+    if (tap === 'stars') {
+      if (meta.phase === 'night' || meta.phase === 'evening' && Math.random() < 0.5) {
+        const sky = ['Orion, the hunter', 'The Big Dipper', 'Cassiopeia’s W', 'Lyra and bright Vega', 'The Pleiades, seven sisters', 'Cygnus, the swan', 'A shooting star! Make a wish', 'Saturn, rings and all'];
+        Sound.chime(); view.sparkle(view.itemPoint(id, [4, 16, 9]), 0xd8e0ff, 14);
+        toast(`<span>✦ ${pickOne(sky)}</span>`, 1800); discover('stargazer');
+      } else { Sound.click(false); toast(`<span>${meta.phase === 'evening' ? 'Not dark enough yet' : 'Too bright out there'}</span>`, 1300); }
+      return;
+    }
+    if (tap === 'bowl') {
+      Sound.crunch();
+      const cat = view.callCat(id);
+      if (cat) { const ci = room.get(cat); setTimeout(() => Sound.meow(), 300); toast(`<span>${ci ? (ci.name || (CATS[ci.c] || CATS[0]).name) : 'A cat'} comes running!</span>`, 1500); discover('feast'); }
+      else toast(`<span>${room.items.some(i => i.t === 'cat') ? 'Nobody can reach the bowl' : 'Food’s out, but no cats yet'}</span>`, 1400);
+      return;
+    }
+    if (tap === 'treats') { Sound.crunch(); toast('<span>Shake shake! Drop the jar on a cat with Move</span>', 1600); return; }
     if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.paint(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
     if (tap === 'music') { setMusic(!meta.music); return; }
     if (tap === 'pet') {
@@ -557,7 +597,8 @@ function startLofiRooms() {
     }
     if (tap === 'tank') {
       view.excite(id);
-      if (!C.tank.bowl && !C.tank.pond) { it.on = !it.on; changed(); Sound.click(it.on); toast(`<span>${it.on ? 'Tank light on' : 'Tank light off'}</span>`, 1000); if (it.on) discover('fish'); }
+      // switching the light on is breakfast time: food drifts down and the fish swarm it
+      if (!C.tank.bowl && !C.tank.pond) { it.on = !it.on; changed(); Sound.click(it.on); if (it.on) { setTimeout(() => { view.feedFish(id); Sound.plop(); }, 120); discover('fish'); } toast(`<span>${it.on ? 'Light on, breakfast time!' : 'Tank light off'}</span>`, 1100); }
       else { Sound.gurgle(3); toast('<span>Blub!</span>', 900); discover('fish'); }
       return;
     }
@@ -599,6 +640,20 @@ function startLofiRooms() {
     Sound.click(true);
   }
   const pickOne = a => a[(Math.random() * a.length) | 0];
+  function cuckoo(id) {
+    view.pop(id, 2.6); Sound.cuckoo(); setTimeout(() => Sound.cuckoo(), 900);
+    const d = new Date();
+    toast(`<span>Cuckoo! It's ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>`, 1500);
+    discover('cuckoo');
+  }
+  // cuckoo clocks call the hour on their own, like the wall clock tells real time
+  let lastHour = new Date().getHours();
+  setInterval(() => {
+    const h = new Date().getHours();
+    if (h === lastHour) return;
+    lastHour = h;
+    room.items.filter(i => i.t === 'cuckoo').forEach((i, k) => setTimeout(() => cuckoo(i.id), k * 400));
+  }, 15000);
   const CH_NAMES = {
     code: 'Coding…', game: 'Pixel Run', viz: 'Music visualizer', fish: 'Fish screensaver', cartoon: 'Cartoons', nature: 'Nature channel',
     news: 'Evening news', retro: 'Retro pong', static: 'Static…', arcade: 'Star Raiders', movie: 'Movie night',
@@ -660,9 +715,46 @@ function startLofiRooms() {
     // turn / paint / remove act on a tap; a drag spins the view instead
     startOrbit(e, hit && !hit.behindWall ? hit.id : 0);
   }
+  // ---------------------------------------------------------------
+  // Item-to-item: drop one thing onto another with Move and they do something together
+  const nameOf = it => it.t === 'cat' ? (it.name || (CATS[it.c] || CATS[0]).name) : CAT[it.t].name.toLowerCase();
+  const COMBOS = [
+    { from: a => ['mug', 'teacup', 'barlatte'].includes(a.t), to: b => CAT[b.t].tap === 'brew', hint: 'Drop to fill it up',
+      run(a, b) { view.burst(b.id, 'steam', 3.5); Sound.gurgle(8); setTimeout(() => Sound.pour(), 500); view.burst(a.id, 'steam', 4); toast('<span>Fresh cup, still steaming ☕</span>', 1500); discover('barista'); } },
+    { from: a => CAT[a.t].group === 'plants', to: b => CAT[b.t].tap === 'sink', hint: 'Drop to water it',
+      run(a) { Sound.water(); view.burst(a.id, 'drip', 2); view.sparkle(view.itemPoint(a.id, [4, 12, 4]), 0xa8f0a0, 12); toast('<span>Watered! It perks right up</span>', 1400); } },
+    { from: a => a.t === 'vinyl', to: b => CAT[b.t].tap === 'mood' || (CAT[b.t].tap === 'music' && CAT[b.t].anim === 'record'), hint: 'Drop to play this record',
+      run(a, b) { const name = Sound.setMood(a.c | 0); meta.mood = Sound.mood; if (!meta.music) setMusic(true); else saveMeta(); Sound.needle(); view.excite(b.id); toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi'); } },
+    { from: a => a.t === 'treats', to: b => b.t === 'cat', hint: 'Drop to give a treat',
+      run(a, b) { view.feedCat(b.id); Sound.crunch(); Sound.purr(true); setTimeout(() => Sound.purr(false), 2400); toast(`<span>${nameOf(b)} munches happily ♥</span>`, 1500); discover('feast'); } },
+    { from: a => a.t === 'blanket', to: b => !!CAT[b.t].nap && !b.p && !b.blanket, hint: 'Drop to tuck it in',
+      run(a, b) { pushUndo(); b.blanket = true; room.remove(a.id); changed(); view.poof(b.id, [0xc8484a, 0xf4e8d4]); Sound.place(); toast('<span>All tucked in. Naps here last longer</span>', 1600); } },
+    { from: a => a.t === 'fishfood', to: b => !!CAT[b.t].tank, hint: 'Drop to feed the fish',
+      run(a, b) { if (!view.feedFish(b.id)) view.excite(b.id); Sound.plop(); toast('<span>Dinner time for the fish!</span>', 1300); discover('fish'); } },
+  ];
+  function comboAt(cx, cy, d) {
+    const a = room.get(d.id);
+    if (!a) return null;
+    const hit = view.pickItem(cx, cy, [d.id, ...room.descendants(d.id).map(i => i.id)]);
+    if (!hit || hit.behindWall) return null;
+    for (let b = room.get(hit.id), k = 0; b && k < 2; b = b.p ? room.get(b.p) : null, k++) {
+      const c = COMBOS.find(c => c.from(a) && c.to(b));
+      if (c) return { c, b };
+    }
+    return null;
+  }
   function moveEdit(e) {
     const d = state.drag;
     if (!d) return;
+    if (d.kind === 'move') {
+      const combo = comboAt(e.clientX, e.clientY, d);
+      if ((combo && combo.b.id) !== (d.combo && d.combo.b.id)) {
+        d.combo = combo;
+        view.setHover(combo ? combo.b.id : 0, 0x9ae8ff);
+        if (combo) { view.setGhost(null); toast(`<span>${combo.c.hint}</span>`, 1000, true); haptic(4); }
+      }
+      if (combo) return;
+    }
     const base = d.kind === 'add' ? d.base : d.base;
     const cand = candidate(e.clientX, e.clientY, base, d.kind === 'move' ? d.grab : null);
     if (!cand) return;
@@ -683,6 +775,10 @@ function startLofiRooms() {
         Sound.place(); haptic(8);
         if (it.t === 'cat') toast(`<span>Say hi to ${(CATS[it.c] || CATS[0]).name}!</span>`, 1600);
       } else { Sound.nope(); toast('<span>That spot is taken</span>', 1100); }
+    } else if (d.kind === 'move' && d.combo) {
+      setHidden(0); view.setHover(0);
+      const a = room.get(d.id);
+      if (a && room.get(d.combo.b.id)) { toastQ.length = 0; toastBusy = 0; d.combo.c.run(a, d.combo.b); view.boing(d.combo.b.id); haptic(8); }
     } else if (d.kind === 'move') {
       setHidden(0);
       const it = room.get(d.id);
