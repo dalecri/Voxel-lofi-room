@@ -158,6 +158,23 @@
       px(g, 0, 0, W, h, '#efe6d6'); px(g, 0, h - 1, W, 1, '#c8b8a0');
     }
   };
+  // a calm tablet wallpaper: a soft dusk gradient, drifting clouds and a moon
+  P.calm = function (g, W, H, t) {
+    for (let y = 0; y < H; y++) { const k = y / H; px(g, 0, y, W, 1, `rgb(${(120 + 110 * k) | 0},${(140 + 60 * k) | 0},${(220 - 30 * k) | 0})`); }
+    px(g, W - 7, 3, 3, 3, '#fff6d8');
+    for (let c = 0; c < 3; c++) { const x = ((t * (1.2 + c * 0.5) + c * 11) % (W + 10)) - 8, y = 5 + c * 4; px(g, x, y, 7, 2, 'rgba(255,255,255,.75)'); px(g, x + 2, y - 1, 3, 1, 'rgba(255,255,255,.75)'); }
+    px(g, 0, H - 4, W, 4, '#5a6a9a'); for (let x = 0; x < W; x += 3) px(g, x, H - 5 - ((x * 7) % 3), 2, 2, '#4a5a8a');
+  };
+  // a phone lock screen with the real time
+  P.lockscreen = function (g, W, H, t) {
+    for (let y = 0; y < H; y++) { const k = y / H; px(g, 0, y, W, 1, `rgb(${(250 - 90 * k) | 0},${(160 - 40 * k) | 0},${(190 + 30 * k) | 0})`); }
+    const d = new Date(), hh = String(d.getHours() % 12 || 12), mm = String(d.getMinutes()).padStart(2, '0');
+    // hours over minutes, so the time fits a narrow phone
+    text(g, hh, Math.round((W - (hh.length * 4 - 1)) / 2), 3, '#fff', 1);
+    text(g, mm, Math.round((W - 7) / 2), 9, '#fff', 1);
+    px(g, Math.round(W / 2) - 3, H - 3, 6, 1, 'rgba(255,255,255,.8)');
+    if (Math.sin(t * 0.8) > 0.6) px(g, 1, 16, W - 2, 4, 'rgba(255,255,255,.55)');   // a notification slides in now and then
+  };
   // the handheld and arcade "game" channels share the platformer
   window.LRScreens = { draw(name, g, W, H, t, s) { (P[name] || P.static)(g, W, H, t, s); }, names: Object.keys(P), add(name, fn) { P[name] = fn; this.names.push(name); }, px, sprite };
 })();

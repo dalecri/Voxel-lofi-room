@@ -812,8 +812,11 @@
     if (C.kind === 'small' && it.p) {
       const owner = this.get(it.p);
       if (!owner || skip.has(owner.id)) return false;
-      if (!this.surfaceCells(owner).some(([x, z]) => x === it.lx && z === it.lz)) return false;
-      return !others.some(o => o.p === it.p && o.lx === it.lx && o.lz === it.lz);
+      // smalls can be wider than one cell (an ultrawide monitor): every cell must be free surface
+      const cells = sp => { const [w, d] = fp(sp), out = []; for (let x = 0; x < w; x++) for (let z = 0; z < d; z++) out.push((sp.lx + x) + ',' + (sp.lz + z)); return out; };
+      const surf = new Set(this.surfaceCells(owner).map(([x, z]) => x + ',' + z)), mine = cells(it);
+      if (!mine.every(c => surf.has(c))) return false;
+      return !others.some(o => o.p === it.p && cells(o).some(c => mine.includes(c)));
     }
     const [fw, fd] = fp(it);
     if (it.x < 0 || it.z < 0 || it.x + fw > N || it.z + fd > N) return false;

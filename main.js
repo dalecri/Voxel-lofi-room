@@ -434,7 +434,8 @@ function startLofiRooms() {
           const OC = CAT[owner.t], [w, d] = OC.size;
           const obj = view.objs.get(owner.id);
           const lp = obj.userData.inner.worldToLocal(hit.point.clone().add(view.root.position));
-          it.p = owner.id; it.lx = clampI(Math.floor(lp.x), 0, w - 1); it.lz = OC.kind === 'wall' ? 0 : clampI(Math.floor(lp.z), 0, d - 1);
+          const [cw, cd] = fp(it);
+          it.p = owner.id; it.lx = clampI(Math.floor(lp.x - (cw - 1) / 2), 0, w - cw); it.lz = OC.kind === 'wall' ? 0 : clampI(Math.floor(lp.z - (cd - 1) / 2), 0, d - cd);
           return it;
         }
       }

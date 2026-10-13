@@ -599,8 +599,9 @@
       if (po) {
         parent = po;
         const [w, d] = OC.size;
-        if (OC.kind === 'wall') obj.position.set(it.lx + 0.5 - w / 2, topOf(owner) * S, 0.5);
-        else obj.position.set(it.lx + 0.5 - w / 2, topOf(owner) * S, it.lz + 0.5 - d / 2);
+        const [cw, cd] = fp(it);   // the small's own footprint, for pieces wider than a cell
+        if (OC.kind === 'wall') obj.position.set(it.lx + cw / 2 - w / 2, topOf(owner) * S, 0.5);
+        else obj.position.set(it.lx + cw / 2 - w / 2, topOf(owner) * S, it.lz + cd / 2 - d / 2);
         obj.rotation.set(0, (it.r || 0) * Math.PI / 2, 0);   // relative to the piece it sits on
       }
     } else {

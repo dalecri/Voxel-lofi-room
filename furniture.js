@@ -176,6 +176,93 @@
       m.set(5, 10, 7, s.on ? 0x7aff9a : 0x3a3a3a, s.on);
     },
   });
+  // =================================================================
+  // Desk tech: small pieces sized to sit on a desk next to everything else
+  def('ipadmini', {
+    name: 'iPad mini', kind: 'small', group: 'tech', size: [1, 1], tap: 'screen', on: true,
+    screen: { x: 1.5, y: 1, z: 1.5, w: 5, h: 5, face: 'up' }, channels: ['calm', 'fish', 'nature'],
+    vars: [[0x9aa0aa], [0xe8dcd0], [0x8a7aa8]],
+    build(m, [c]) {
+      m.box(1, 0, 1, 7, 1, 7, (x, y, z) => (x === 1 || x === 6 || z === 1 || z === 6 ? shade(c, 1.05) : 0x26262e));
+      m.box(7, 0, 2, 8, 1, 7, 0xf2efe8).set(7, 0, 1, 0x9a9aa4);   // a pencil alongside
+    },
+  });
+  def('iphonestand', {
+    name: 'iPhone stand', kind: 'small', group: 'tech', size: [1, 1], tap: 'screen', on: true,
+    screen: { x: 2.5, y: 2.5, z: 5, w: 3, h: 6 }, channels: ['lockscreen', 'calm'],
+    vars: [[0xc8ccd4, 0x26262e], [0x3a3842, 0xe8dcd0], [WOOD.walnut, 0x26262e]],
+    build(m, [stand, phone]) {
+      m.box(1, 0, 1, 7, 1, 7, stand === WOOD.walnut ? grain(stand) : stand);   // weighted base
+      m.box(1, 0, 1, 7, 1, 2, shade(stand, 0.85));
+      m.box(3, 1, 2, 5, 7, 3, shade(stand, 0.92));                              // the upright
+      m.box(2, 1, 5, 6, 2, 6, shade(stand, 1.08));                              // front lip
+      m.box(2, 2, 4, 6, 9, 5, phone).box(2, 2, 3, 6, 9, 4, shade(phone, 0.85)); // the phone
+      m.set(4, 8, 5, 0x1a1a1e);
+    },
+  });
+  def('ultrawide', {
+    name: 'Ultrawide monitor', kind: 'small', group: 'tech', size: [2, 1], tap: 'screen', on: true, anim: 'rgb',
+    screen: { x: 1.5, y: 5.5, z: 5, w: 13, h: 5.5 }, channels: ['game', 'arcade', 'viz', 'nature'],
+    light: { at: [8, 1, 6], color: 0xff7ad8, i: 1.2, d: 3 },
+    vars: [[0x26262e], [0xf2efe8], [0x3a3a52]],
+    build(m, [c], s) {
+      m.box(5, 0, 2, 11, 1, 6, shade(c, 0.9)).box(7, 1, 3, 9, 6, 4, shade(c, 0.95));       // stand
+      m.box(1, 5, 3, 15, 12, 5, c).box(0, 5, 4, 1, 12, 6, c).box(15, 5, 4, 16, 12, 6, c);   // a gently curved panel
+      m.box(1, 5, 5, 15, 6, 6, shade(c, 0.85)).box(1, 11, 5, 15, 12, 6, shade(c, 0.85));
+      if (s.on) for (let x = 4; x < 12; x++) m.set(x, 0, 6, 0xffffff, true);               // RGB underglow
+      for (let x = 3; x < 13; x += 2) m.set(x, 6, 2, s.on ? 0xffffff : 0x3a3a44, s.on);     // and a strip on the back
+    },
+  });
+  def('rgbpc', {
+    name: 'RGB gaming PC', kind: 'small', group: 'tech', size: [1, 1], tap: 'toggle', on: true, anim: 'rgb',
+    light: { at: [4, 7, 8], color: 0x7ad8ff, i: 1.6, d: 4 },
+    vars: [[0x26262e], [0xf2efe8], [0xe8a0b4]],
+    build(m, [c], s) {
+      m.box(1, 0, 1, 7, 13, 7, c).box(1, 0, 1, 7, 1, 7, shade(c, 0.8));
+      // tempered glass front and side, with the glow inside
+      for (let y = 1; y < 12; y++) for (let k = 2; k < 6; k++) {
+        const strip = k === 2 || k === 5, fan = y >= 7 && y <= 10 && (k === 3 || k === 4) && (y === 7 || y === 10);
+        const lit = strip || fan;
+        m.set(k, y, 7, lit ? (s.on ? 0xffffff : 0x55556a) : 0x1a1a24, lit && s.on);
+        const inside = y === 5 ? 0x3a3a48 : (y === 9 && k > 2) ? (s.on ? 0xffffff : 0x55556a) : 0x14141c;
+        m.set(7, y, k, inside, y === 9 && k > 2 && s.on);
+      }
+      m.box(7, 4, 2, 8, 5, 6, 0x5a5a66);                       // the graphics card
+      m.set(5, 12, 6, s.on ? 0x7aff9a : 0x3a3a3a, s.on);       // power light
+      m.box(2, 13, 2, 6, 14, 6, (x, y, z) => ((x + z) % 2 ? shade(c, 0.85) : 0x3a3a44));   // top vents
+    },
+  });
+  def('bookshelfspeakers', {
+    name: 'Bookshelf speakers', kind: 'small', group: 'tech', size: [2, 1], tap: 'music', anim: 'speaker',
+    vars: [[WOOD.walnut, 0x26262c], [0xf2efe8, 0x8a8a94], [0x26262e, 0xd9784a]],
+    build(m, [c, cone]) {
+      [1, 10].forEach(x0 => {
+        m.box(x0, 0, 2, x0 + 5, 9, 7, c === WOOD.walnut ? grain(c) : c);
+        for (let x = x0; x < x0 + 5; x++) for (let y = 1; y < 8; y++) {
+          const w = Math.hypot(x + 0.5 - (x0 + 2.5), y + 0.5 - 3), tw = Math.hypot(x + 0.5 - (x0 + 2.5), y + 0.5 - 6.5);
+          if (w < 1.9) m.set(x, y, 7, w < 0.8 ? shade(cone, 1.4) : cone);
+          else if (tw < 0.8) m.set(x, y, 7, 0xd8d8e0);
+        }
+      });
+    },
+  });
+  def('waterbong', {
+    name: 'Glass water bong', kind: 'small', group: 'decor', size: [1, 1], burstAt: [4, 3, 4], fxColor: 0xe8f8ff,
+    tap: 'fx', fx: { burst: 'bubbles', secs: 1.5, sfx: 'gurgle', say: ['It catches the light nicely', 'Freshly rinsed, sparkling clean', 'Hand-blown glass'] },
+    vars: [[0xb8e8d8], [0xb8d8f0], [0xd8d0f0]],
+    build(m, [g]) {
+      const rim = mix(g, 0xffffff, 0.55), water = mix(g, 0x4aa8d8, 0.45);
+      // a beaker base, a little water inside, then a tall straight neck
+      for (let y = 0; y < 5; y++) for (let x = 0; x < 8; x++) for (let z = 0; z < 8; z++) {
+        const r = Math.hypot(x + 0.5 - 4, z + 0.5 - 4), R = 3.6 - y * 0.45;
+        if (r < R && r > R - 1.1) m.set(x, y, z, (x + z + y) % 5 === 0 ? rim : g);
+        else if (r <= R - 1.1 && y < 2) m.set(x, y, z, water);
+      }
+      for (let y = 5; y < 15; y++) for (let x = 3; x < 5; x++) for (let z = 3; z < 5; z++) m.set(x, y, z, y === 14 ? rim : (x === 3 && z === 4 ? rim : g));
+      m.box(3, 9, 3, 5, 10, 5, rim);                                       // a glass ring on the neck
+      m.set(5, 3, 5, g).set(6, 4, 6, g).set(6, 5, 6, rim);                // a small side stem
+    },
+  });
   def('console', {
     name: 'Game console', kind: 'small', group: 'tech', size: [1, 1], tap: 'console',
     vars: [[0xf2efe8, 0x5ad8ff], [0x26262e, 0xff5a7a], [0xd9584a, 0xffffff]],
