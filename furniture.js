@@ -151,7 +151,7 @@
   // Tech & games
   def('computer', {
     name: 'Computer', kind: 'small', group: 'tech', size: [1, 1], tap: 'screen', on: true, boot: true,
-    screen: { x: 1, y: 5, z: 2, w: 6, h: 4 }, channels: ['code', 'game', 'viz', 'fish'],
+    screen: { x: 1, y: 5, z: 2, w: 6, h: 4 }, channels: ['code', 'game', 'viz', 'eq', 'fish'],
     light: { at: [4, 7, 4], color: 0x9ad0ff, i: 1, d: 4 },
     vars: [[0x26262e], [0xf2efe8], [0xe8a0b4]],
     build(m, [c]) {
@@ -202,7 +202,7 @@
   });
   def('ultrawide', {
     name: 'Ultrawide monitor', kind: 'small', group: 'tech', size: [2, 1], tap: 'screen', on: true, anim: 'rgb',
-    screen: { x: 1.5, y: 5.5, z: 5, w: 13, h: 5.5 }, channels: ['game', 'arcade', 'viz', 'nature'],
+    screen: { x: 1.5, y: 5.5, z: 5, w: 13, h: 5.5 }, channels: ['eq', 'game', 'arcade', 'viz', 'nature'],
     light: { at: [8, 1, 6], color: 0xff7ad8, i: 1.2, d: 3 },
     vars: [[0x26262e], [0xf2efe8], [0x3a3a52]],
     build(m, [c], s) {

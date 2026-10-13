@@ -217,5 +217,19 @@
     },
   });
 
-  LR.MOMENTS.push(['cuckoo', 'Cuckoo!', 'Heard the cuckoo clock call the hour'], ['feast', 'Dinner time', 'A cat came running for food'], ['stargazer', 'Stargazer', 'Found a constellation']);
+  // ---- a door into another of your rooms ----
+  def('roomdoor', {
+    name: 'Door to another room', kind: 'wall', group: 'windows', size: [1, 3], depth: 2, tap: 'portal',
+    vars: [[WOOD.oak, BRASS], [0xeeeae2, BRASS], [0x3f6a8a, 0xd8d8e0], [WOOD.walnut, BRASS], [0xc84a4a, 0xf2efe8]],
+    build(m, [w, knob]) {
+      m.box(0, 0, 0, 8, 24, 1, 0x2a2228);                                   // the doorway behind
+      m.box(0, 0, 1, 1, 24, 2, shade(w, 0.85)).box(7, 0, 1, 8, 24, 2, shade(w, 0.85)).box(0, 23, 1, 8, 24, 2, shade(w, 0.85));
+      m.part('door', [1, 0, 1.5]);
+      m.box(1, 0, 1, 7, 23, 2, (x, y) => ((y === 4 || y === 12 || y === 20 || x === 1 || x === 6) ? shade(w, 0.92) : w));
+      m.box(5, 10, 2, 6, 11, 3, knob);
+      m.main();
+    },
+  });
+
+  LR.MOMENTS.push(['openhouse', 'Open house', 'Walked through a door into another room'], ['cuckoo', 'Cuckoo!', 'Heard the cuckoo clock call the hour'], ['feast', 'Dinner time', 'A cat came running for food'], ['stargazer', 'Stargazer', 'Found a constellation']);
 })();

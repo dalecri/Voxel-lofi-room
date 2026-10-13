@@ -178,7 +178,7 @@ function startLofiRooms() {
     if (plants >= 5) discover('green');
     if (plants >= 10) discover('greenhouse');
     if (new Set(room.items.filter(i => i.t === 'cat' && !i.visitor && i.c < 5).map(i => i.c)).size >= 5) discover('parliament');
-    if (room.items.some(i => i.t === 'crate') && room.items.some(i => CAT[i.t].anim === 'record') && room.items.some(i => CAT[i.t].anim === 'speaker')) discover('crates');
+    if (room.items.some(i => i.t === 'vinylcrate') && room.items.some(i => CAT[i.t].anim === 'record') && room.items.some(i => CAT[i.t].anim === 'speaker')) discover('crates');
     if (meta.raining && room.items.some(i => CAT[i.t].beam && i.on)) discover('stormwatch');
     if (n('bookshelf') >= 2) discover('books');
     if (n('painting') + n('poster') + n('mirror') + n('neon') + n('clock') >= 4) discover('gallery');
@@ -538,6 +538,7 @@ function startLofiRooms() {
       if (F.moment) discover(F.moment);
       return;
     }
+    if (tap === 'portal') { const target = it.link && rooms.find(r => r.id === it.link); if (target) walkThrough(it, target.id); else doorPicker(it); return; }
     if (tap === 'cuckoo') { cuckoo(id); return; }
     if (tap === 'read') { Sound.flip(); toast(`<span>${pickOne(C.lines)}</span>`, 2200); return; }
     if (tap === 'calendar') {
@@ -697,6 +698,17 @@ function startLofiRooms() {
     toast(`<span>Cuckoo! It's ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>`, 1500);
     discover('cuckoo');
   }
+  // seasonal decor: the set that matches today's date goes to the front of the tray, mentioned once a season
+  (function suggestSeason() {
+    const d = new Date(), m = d.getMonth(), day = d.getDate();
+    const inRange = S => { const a = S.from[0] * 40 + S.from[1], b = S.to[0] * 40 + S.to[1], x = m * 40 + day; return a <= b ? x >= a && x <= b : x >= a || x <= b; };
+    const S = (LR.SEASONS || []).find(inRange);
+    if (!S) return;
+    const i = GROUPS.findIndex(g => g[0] === S.group);
+    if (i > 0) GROUPS.unshift(GROUPS.splice(i, 1)[0]);
+    const key = S.group + '-' + (m === 0 ? d.getFullYear() - 1 : d.getFullYear());
+    if (meta.season !== key) { meta.season = key; saveMeta(); setTimeout(() => toast(`<span>${S.label}</span>`, 3200), 4000); }
+  })();
   let follow = null;
   const catName = it => it.name || (CATS[it.c] || CATS[0]).name;
   // mischief: now and then a cat wanders over and knocks something off a table
@@ -1150,9 +1162,9 @@ function startLofiRooms() {
     if (k === 'random') { room.n = LR.N; room.generate((Math.random() * 0xffffffff) >>> 0); }
     else { PRESETS[k].make(room); room.name = PRESETS[k].name; }
   }
-  function newRoom(k) {
+  function newRoom(k, forcedId) {
     save();
-    const id = Date.now();
+    const id = forcedId || Date.now();
     fillRoom(k);
     rooms.push({ id, name: room.name, n: room.items.length });
     meta.current = id; undo.length = 0;
@@ -1160,6 +1172,116 @@ function startLofiRooms() {
     changed(); save(); saveIndex(); saveMeta(); updateHeader();
     toast(`<b>${room.name}</b><span>A fresh room. Your other rooms are in the menu.</span>`, 2400);
     Sound.arpeggio();
+  }
+  // share codes: a room squeezed into a short text a friend can paste in
+  const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64u = str => Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  async function squeeze(bytes, how) {
+    const stream = new Blob([bytes]).stream().pipeThrough(how === 'in' ? new CompressionStream('deflate-raw') : new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  async function roomCode() {
+    const d = room.serialize(); delete d.seed;
+    d.items = d.items.map(i => { const o = Object.assign({}, i); if (!o.c) delete o.c; if (!o.r) delete o.r; if (!o.on) delete o.on; return o; });   // drop the defaults
+    const raw = new TextEncoder().encode(JSON.stringify(d));
+    if (typeof CompressionStream === 'undefined') return 'LR0.' + b64u(raw);
+    return 'LR1.' + b64u(await squeeze(raw, 'in'));
+  }
+  async function readCode(code) {
+    const m = String(code).trim().match(/^LR([01])\.([A-Za-z0-9_-]+)$/);
+    if (!m) throw new Error('not a room code');
+    const bytes = unb64u(m[2]);
+    const d = JSON.parse(new TextDecoder().decode(m[1] === '1' ? await squeeze(bytes, 'out') : bytes));
+    d.items.forEach(i => { ['c', 'r'].forEach(k => { if (i[k] == null) i[k] = 0; }); if (i.on == null) i.on = false; });
+    return d;
+  }
+  function codeSheet(title, sub, build) {
+    const body = $('#sheetBody'); body.innerHTML = '';
+    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
+    h('div', 'grab'); h('h2', '', title); h('p', 'muted', sub);
+    build(h); sheet.classList.add('open');
+  }
+  async function shareSheet() {
+    const code = await roomCode();
+    codeSheet(`Share “${room.name}”`, 'Send this code to a friend. They tap “Open a friend’s code” in their menu and paste it.', h => {
+      const ta = h('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 4;
+      h('p', 'muted small', `${code.length} characters`);
+      const row = h('div', 'rowbtns');
+      row.innerHTML = '<button class="chipbtn" id="bCopyCode">Copy</button>' + (cap && cap.isNativePlatform && cap.isNativePlatform() || navigator.share ? '<button class="chipbtn" id="bSendCode">Send…</button>' : '');
+      row.querySelector('#bCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(code); toast('<span>Code copied</span>', 1200); } catch (e) { ta.select(); document.execCommand('copy'); toast('<span>Code copied</span>', 1200); } };
+      const send = row.querySelector('#bSendCode');
+      if (send) send.onclick = async () => {
+        try {
+          if (cap && cap.isNativePlatform && cap.isNativePlatform()) await cap.registerPlugin('Share').share({ title: 'My Lofi Room', text: `Come see my Lofi Room! Paste this code in the app: ${code}` });
+          else await navigator.share({ title: 'My Lofi Room', text: code });
+        } catch (e) { /* cancelled */ }
+      };
+      ta.onclick = () => ta.select();
+    });
+  }
+  function importSheet() {
+    codeSheet('Open a friend’s room', 'Paste a room code. It opens as a new room, so nothing of yours is replaced.', h => {
+      const ta = h('textarea', 'code'); ta.rows = 4; ta.placeholder = 'LR1.…';
+      const row = h('div', 'rowbtns'); row.innerHTML = '<button class="chipbtn" id="bOpenCode">Open room</button>';
+      row.querySelector('#bOpenCode').onclick = async () => {
+        try {
+          const d = await readCode(ta.value);
+          const probe = new LR.Room();
+          if (!probe.load(d)) throw new Error('bad room');
+          probe.items = probe.items.filter(i => CAT[i.t]);   // pieces this version doesn't know are skipped
+          save();
+          const id = Date.now();
+          room.load(probe.serialize());
+          rooms.push({ id, name: room.name, n: room.items.length });
+          meta.current = id; undo.length = 0;
+          view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
+          changed(); save(); saveIndex(); saveMeta(); updateHeader(); closeSheets();
+          toast(`<b>${room.name}</b><span>A friend’s room, now in your list</span>`, 2200); Sound.arpeggio();
+        } catch (e) { Sound.nope(); toast('<span>That code doesn’t look right</span>', 1600); }
+      };
+    });
+  }
+  // linked rooms: a door opens onto another saved room, and the rooms become a tiny apartment
+  function walkThrough(door, to) {
+    const from = meta.current, k = door.k, u = door.u;
+    view.openDoor(door.id); Sound.creak();
+    setTimeout(() => $('#fade').classList.add('on'), 420);
+    setTimeout(() => {
+      switchRoom(to, true);
+      // the first unlinked door on the other side leads back, or we add one
+      let back = room.items.find(i => i.t === 'roomdoor' && i.link === from) || room.items.find(i => i.t === 'roomdoor' && !i.link);
+      if (!back) { const d = room.make('roomdoor', { k, u, e: 0, link: from }); if (room.canPlace(d)) back = room.add(d); }
+      if (back && !back.link) back.link = from;
+      changed(); save();
+      $('#fade').classList.remove('on');
+      if (back) setTimeout(() => view.openDoor(back.id), 200);
+      discover('openhouse');
+    }, 820);
+  }
+  function doorPicker(door) {
+    const body = $('#sheetBody'); body.innerHTML = '';
+    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
+    h('div', 'grab'); h('h2', '', 'Where does this door go?');
+    h('p', 'muted', 'Pick one of your rooms, or start a new one. Walking through brings you back the same way.');
+    const list = h('div', 'cards');
+    const link = id => { pushUndo(); door.link = id; changed(); save(); closeSheets(); walkThrough(door, id); };
+    rooms.filter(r => r.id !== meta.current).forEach(r => {
+      const b = document.createElement('button'); b.className = 'card room';
+      b.innerHTML = `<div class="art">🚪</div><b>${r.name}</b><span>${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
+      b.onclick = () => link(r.id); list.appendChild(b);
+    });
+    const nb = document.createElement('button'); nb.className = 'card random';
+    nb.innerHTML = `<div class="art">✨</div><b>A new room</b><span>An empty room through this door.</span>`;
+    nb.onclick = () => {
+      const from = meta.current, id = Date.now();
+      pushUndo(); door.link = id; save(); closeSheets();
+      newRoom('blank', id);
+      const d = room.make('roomdoor', { k: door.k, u: door.u, e: 0, link: from });
+      if (room.canPlace(d)) room.add(d);
+      changed(); save(); discover('openhouse');
+    };
+    list.appendChild(nb);
+    sheet.classList.add('open');
   }
   function switchRoom(id) {
     if (id === meta.current) return;
@@ -1203,6 +1325,10 @@ function startLofiRooms() {
       }
       list.appendChild(b);
     });
+    const sh = h('div', 'rowbtns');
+    sh.innerHTML = '<button class="chipbtn" id="bShareCode">Share this room as a code</button><button class="chipbtn" id="bImportCode">Open a friend’s code</button>';
+    sh.querySelector('#bShareCode').onclick = () => shareSheet();
+    sh.querySelector('#bImportCode').onclick = () => importSheet();
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'Your current room is saved and stays in the list above.');
     body.appendChild(presetCards(k => { closeSheets(); newRoom(k); }));
@@ -1363,7 +1489,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { room, view, state, meta, Sound, setPhase, setMode, interact, changed };   // handy for poking at it from the console
+  window.__lr = { room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyTask, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);
