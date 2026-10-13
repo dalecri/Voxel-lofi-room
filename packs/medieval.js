@@ -929,7 +929,7 @@
         table(1, 0), table(7, 0),
         ['mdbench', { x: 0, z: 3, r: 1, c: 0 }], ['mdbench', { x: 3, z: 3, r: 1, c: 0 }],
         ['mdbench', { x: 6, z: 3, r: 1, c: 0 }], ['mdbench', { x: 9, z: 3, r: 1, c: 0 }],
-        ['mdrack', { x: 9, z: 7, r: 3, c: 0 }],
+        ['mdbarrels', { x: 9, z: 9, c: 0 }], ['mdbarrels', { x: 9, z: 8, c: 1 }],
         ['mdchest', { x: 3, z: 8, c: 0 }], ['mdcauldron', { x: 0, z: 8, c: 0 }],
         ['mdbarrels', { x: 0, z: 9, c: 0 }], ['mdbarrels', { x: 1, z: 9, c: 1 }], ['mdbarrels', { x: 0, z: 7, c: 3 }], ['mdbarrels', { x: 2, z: 9, c: 2 }],
         ['mdtorchpost', { x: 6, z: 9, c: 0 }],

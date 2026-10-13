@@ -181,7 +181,7 @@
       m.box(3, 20, 6, 21, 21, 8, dim(neon, s.on), s.on);
       m.box(14, 12, 3, 20, 17, 4, s.on ? 0x1a3a5a : 0x222230).box(15, 13, 4, 19, 16, 4, null);
       if (s.on) { for (let x = 15; x < 19; x++) m.set(x, 13 + (x % 3), 3, neon, true); m.set(15, 16, 3, WHITE, true); }
-      m.box(4, 12, 3, 10, 13, 5, GUN).set(5, 13, 3, AMBER).set(7, 13, 4, CYAN).set(8, 13, 4, 0xe8e8e8);
+      m.box(4, 12, 3, 10, 13, 5, GUN).set(5, 13, 3, AMBER); m.set(7, 13, 4, CYAN); m.set(8, 13, 4, 0xe8e8e8);
       // mattress, pillow, blanket
       m.box(2, 5, 3, 22, 8, 15, 0xe8e6f0);
       m.box(3, 8, 4, 7, 10, 13, 0xf8f8fc).box(3, 9, 5, 7, 10, 12, 0xffffff);
@@ -225,7 +225,7 @@
       m.box(7, 12, 5, 17, 13, 7, INK);
       for (let x = 8; x < 16; x++) for (let z = 5; z < 7; z++) if ((x + z) % 2) m.set(x, 13, z, s.on ? mix(neon, 0xffffff, 0.3) : 0x3a3a44, s.on);
       m.box(19, 12, 5, 20, 13, 7, INK).set(19, 13, 5, dim(neon, s.on), s.on);
-      m.box(2, 12, 5, 3, 16, 6, LIME).set(2, 16, 5, CHROME).box(3, 12, 5, 4, 15, 6, PINK);
+      m.box(2, 12, 5, 3, 16, 6, LIME).set(2, 16, 5, CHROME); m.box(3, 12, 5, 4, 15, 6, PINK);
       line(m, [4, 14, 0], [4, 0, 0], INK); line(m, [21, 14, 0], [20, 0, 0], 0x3a2a4a);
     },
   });
@@ -255,7 +255,7 @@
       m.part('spin', [4, 0, 4], 'y');
       m.box(1, 4, 1, 7, 6, 7, c).box(2, 5, 2, 6, 6, 7, a);
       m.box(1, 6, 0, 7, 18, 2, c).box(3, 7, 1, 5, 17, 2, a).box(2, 17, 0, 6, 19, 2, c);
-      m.box(2, 14, 2, 6, 16, 3, 0xf4f4f8).set(3, 15, 3, a).set(4, 15, 3, a);
+      m.box(2, 14, 2, 6, 16, 3, 0xf4f4f8).set(3, 15, 3, a); m.set(4, 15, 3, a);
       m.box(0, 7, 2, 1, 9, 7, INK).box(7, 7, 2, 8, 9, 7, INK).box(0, 6, 4, 1, 7, 5, INK).box(7, 6, 4, 8, 7, 5, INK);
       m.box(1, 5, 0, 7, 6, 1, a);
     },
@@ -286,8 +286,8 @@
     build(m, [word, c, edge], s) {
       m.box(2, 1, 0, 6, 3, 2, STEEL).box(2, 21, 0, 6, 23, 2, STEEL);
       m.box(3, 0, 1, 5, 24, 9, 0x1a1626);
-      for (let y = 0; y < 24; y++) m.set(3, y, 9, dim(y % 2 ? edge : c, s.on), s.on).set(4, y, 9, dim(y % 2 ? edge : c, s.on), s.on);
-      for (let z = 1; z < 9; z++) { m.set(3, 0, z, dim(edge, s.on), s.on).set(4, 0, z, dim(edge, s.on), s.on).set(3, 23, z, dim(edge, s.on), s.on).set(4, 23, z, dim(edge, s.on), s.on); }
+      for (let y = 0; y < 24; y++) m.set(3, y, 9, dim(y % 2 ? edge : c, s.on), s.on); m.set(4, y, 9, dim(y % 2 ? edge : c, s.on), s.on);
+      for (let z = 1; z < 9; z++) { m.set(3, 0, z, dim(edge, s.on), s.on); m.set(4, 0, z, dim(edge, s.on), s.on); m.set(3, 23, z, dim(edge, s.on), s.on); m.set(4, 23, z, dim(edge, s.on), s.on); }
       const n = Math.min(word.length, 4), top = 22 - Math.floor((23 - n * 6 + 1) / 2);
       [...word.slice(0, n)].forEach((ch, i) => (FONT[ch] || FONT.O).forEach((r, j) => [...r].forEach((p, k) => {
         if (p !== '#') return;
@@ -361,7 +361,7 @@
         }
       });
       m.box(2, 0, 1, 4, 2, 2, STEEL).set(3, 2, 1, neon, true);
-      m.box(11, 0, 5, 14, 2, 7, STEEL).set(12, 2, 6, neon, true).set(13, 2, 5, RED, true);
+      m.box(11, 0, 5, 14, 2, 7, STEEL).set(12, 2, 6, neon, true); m.set(13, 2, 5, RED, true);
     },
   });
 
@@ -694,11 +694,11 @@
     vars: [[0xe8e8ee, CYAN], [GUN, RED], [0xf2c14e, PINK]],
     build(m, [c, eye], s) {
       m.part('float', [4, 8, 4]);
-      m.box(2, 8, 2, 6, 11, 6, c).box(3, 7, 3, 5, 8, 5, INK).set(4, 7, 5, eye, true).set(4, 9, 6, eye, true);
+      m.box(2, 8, 2, 6, 11, 6, c).box(3, 7, 3, 5, 8, 5, INK).set(4, 7, 5, eye, true); m.set(4, 9, 6, eye, true);
       line(m, [2, 10, 2], [0, 11, 0], shade(c, 0.8)); line(m, [5, 10, 2], [7, 11, 0], shade(c, 0.8));
       line(m, [2, 10, 5], [0, 11, 7], shade(c, 0.8)); line(m, [5, 10, 5], [7, 11, 7], shade(c, 0.8));
       [[0, 0], [7, 0], [0, 7], [7, 7]].forEach(([x, z]) => {
-        m.box(x - 1, 12, z, x + 2, 12, z + 1, INK).set(x, 12, z, INK).set(x - 1, 12, z, 0xc8c8d0).set(x + 1, 12, z, 0xc8c8d0).set(x, 12, z - 1, 0xc8c8d0).set(x, 12, z + 1, 0xc8c8d0);
+        m.box(x - 1, 12, z, x + 2, 12, z + 1, INK).set(x, 12, z, INK); m.set(x - 1, 12, z, 0xc8c8d0); m.set(x + 1, 12, z, 0xc8c8d0); m.set(x, 12, z - 1, 0xc8c8d0); m.set(x, 12, z + 1, 0xc8c8d0);
       });
       m.box(3, 5, 3, 5, 7, 5, 0xc8a06a);
       m.set(4, 11, 4, s.on ? LIME : 0x3a3a44, s.on);
@@ -716,7 +716,7 @@
         if (dir === 'z') {
           m.box(3, y0, 5, 5, y0 + h, 11, INK);
           for (let z = 5; z < 11; z++) { m.set(3, y0, z, dim(col, on), on); m.set(3, y0 + h - 1, z, dim(col, on), on); m.set(4, y0, z, dim(col, on), on); m.set(4, y0 + h - 1, z, dim(col, on), on); }
-          for (let y = y0; y < y0 + h; y++) m.set(4, y, 11, dim(col, on), on).set(3, y, 11, dim(col, on), on);
+          for (let y = y0; y < y0 + h; y++) m.set(4, y, 11, dim(col, on), on); m.set(3, y, 11, dim(col, on), on);
           [...word].forEach((ch, i) => (FONT[ch] || FONT.O).forEach((r, j) => [...r].forEach((p, k) => { if (p === '#') { const y = y0 + h - 2 - i * 6 - j; m.set(5, y, 9 - k, dim(col, on), on); m.set(2, y, 7 + k, dim(col, on), on); } })));
         } else {
           m.box(5, y0, 3, 12, y0 + h, 5, INK);
