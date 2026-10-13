@@ -40,6 +40,8 @@ function startLofiRooms() {
     ['barista', 'Barista', 'Brewed a fresh pot of coffee'],
     ['cinema', 'Movie night', 'Rolled a film after dark'],
     ['golden', 'Golden hour', 'Evening light through an open window'],
+    ['hanami', 'Hanami', 'Watched the cherry blossoms fall'],
+    ['lucky', 'Lucky cat', 'A maneki-neko waved hello'],
     ['photo', 'Snapshot', 'Took a photo of your room'],
   ];
   const found = new Set(store.get('lr.found', []));
@@ -505,7 +507,7 @@ function startLofiRooms() {
     }
     if (tap === 'tank') {
       view.excite(id);
-      if (!C.tank.bowl) { it.on = !it.on; changed(); Sound.click(it.on); toast(`<span>${it.on ? 'Tank light on' : 'Tank light off'}</span>`, 1000); if (it.on) discover('fish'); }
+      if (!C.tank.bowl && !C.tank.pond) { it.on = !it.on; changed(); Sound.click(it.on); toast(`<span>${it.on ? 'Tank light on' : 'Tank light off'}</span>`, 1000); if (it.on) discover('fish'); }
       else { Sound.gurgle(3); toast('<span>Blub!</span>', 900); discover('fish'); }
       return;
     }
@@ -535,6 +537,12 @@ function startLofiRooms() {
     if (tap === 'robot') { view.petCat(id); Sound.beep(); toast('<span>Beep boop, cleaning!</span>', 1200); return; }
     if (tap === 'flip') { Sound.flip(); toast(`<span>${pickOne(['Rainy Day Beats', 'Midnight Tapes', 'Sunday Jazz', 'Cat Naps Vol. 2'])}</span>`, 1300); return; }
     if (tap === 'rustle') { Sound.rustle(); return; }
+    if (tap === 'lucky') { view.excite(id); Sound.coin(); setTimeout(() => Sound.chime(), 200); toast(`<span>${pickOne(['Good luck is on its way!', 'Fortune smiles on you', 'Lucky day!'])}</span>`, 1400); discover('lucky'); return; }
+    if (tap === 'wish') { Sound.place(); toast(`<span>${pickOne(['Make a wish…', 'Wishing you a cozy day', 'Fall down seven times, stand up eight'])}</span>`, 1500); return; }
+    if (tap === 'slurp') { view.burst(id, 'steam', 2); Sound.sip(); toast('<span>Itadakimasu! 🍜</span>', 1300); discover('tea'); return; }
+    if (tap === 'petals') { view.burst(id, 'petals', 3); Sound.rustle(); setTimeout(() => Sound.chime(), 150); discover('hanami'); return; }
+    if (tap === 'vend') { Sound.coin(); setTimeout(() => Sound.fridge(false), 500); toast(`<span>${pickOne(['Hot canned coffee', 'Melon soda', 'Cold green tea', 'Calpis, nice', 'Royal milk tea'])}</span>`, 1500); return; }
+    if (tap === 'shoji') { it.on = !it.on; changed(); Sound.rustle(); toast(`<span>${it.on ? 'Shoji slid open' : 'Shoji closed'}</span>`, 1000); return; }
     Sound.click(true);
   }
   const pickOne = a => a[(Math.random() * a.length) | 0];

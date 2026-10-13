@@ -729,7 +729,7 @@
   });
 
   const GROUPS = [
-    ['furniture', 'Furniture'], ['desks', 'Desks & storage'], ['tech', 'Tech & games'], ['kitchen', 'Kitchen & drinks'], ['lights', 'Lights'],
+    ['furniture', 'Furniture'], ['japan', 'Japanese'], ['desks', 'Desks & storage'], ['tech', 'Tech & games'], ['kitchen', 'Kitchen & drinks'], ['lights', 'Lights'],
     ['decor', 'Decor'], ['plants', 'Plants'], ['windows', 'Windows'], ['wall', 'Wall art'], ['pets', 'Pets'],
   ];
   // height (in voxels) of the surface on top of a piece; some change with state (a standing desk)
@@ -1048,7 +1048,8 @@
     };
     const smalls = ['mug', 'lamp', 'books', 'succulent', 'flowers', 'candle', 'record', 'alarm', 'teacup', 'lavalamp', 'moonlamp', 'bonsai', 'pothos',
       'snowglobe', 'globe', 'typewriter', 'crt', 'plushcat', 'vinylcrate', 'mushroom', 'saltlamp', 'shisha', 'herbs', 'fishbowl', 'coffeemaker', 'kettle', 'teapot', 'fruitbowl', 'diffuser'];
-    const windows = ['window', 'blinds', 'blinds', 'bigwindow', 'archwindow', 'roundwindow'];
+    const windows = th.windows || ['window', 'blinds', 'blinds', 'bigwindow', 'archwindow', 'roundwindow'];
+    if (th.smalls) smalls.push(...th.smalls, ...th.smalls);
 
     // windows first so they get the good spots
     for (let k = 0; k < (chance(0.5) ? 2 : 1); k++) { const t = pick(windows); tryAdd(t, () => Object.assign(onWall(t, [0, 1], 2, 3)(), { c: (rnd() * CAT[t].vars.length) | 0 })); }
@@ -1092,7 +1093,7 @@
       }
     }
     const extras = ['bookshelf', 'bookshelf', 'dresser', 'tv', 'piano', 'fireplace', 'kallax', 'kallax', 'kallaxtall', 'sideboard', 'minifridge',
-      'aquarium', 'arcade', 'wardrobe', 'speaker', 'counter'];
+      'aquarium', 'arcade', 'wardrobe', 'speaker', 'counter', ...(th.extras || []), ...(th.extras || [])];
     for (let k = 0; k < 2 + ((rnd() * 2) | 0); k++) {
       const t = pick(extras);
       const it = tryAdd(t, () => Object.assign(againstWall(t)(), { c: t === 'bookshelf' || t === 'dresser' ? wood() : (rnd() * CAT[t].vars.length) | 0 }));
@@ -1107,7 +1108,8 @@
     if (chance(0.5)) { const t = pick(['beanbag', 'pouf', 'beanbag']); tryAdd(t, () => Object.assign(anywhere(t)(), { c: (rnd() * 5) | 0 })); }
 
     // walls
-    const art = ['painting', 'painting', 'poster', 'movieposter', 'movieposter', 'clock', 'mirror', 'hangplant', 'sconce', 'neon', 'recordframe', 'pegboard', 'wallcubes', 'projector'];
+    const art = th.art || ['painting', 'painting', 'poster', 'movieposter', 'movieposter', 'clock', 'mirror', 'hangplant', 'sconce', 'neon', 'recordframe', 'pegboard', 'wallcubes', 'projector'];
+    if (th.floorThings) for (let k = 0; k < 2 + ((rnd() * 2) | 0); k++) { const t = pick(th.floorThings); tryAdd(t, () => Object.assign(anywhere(t, CAT[t].wallish ? 0 : undefined)(), { c: (rnd() * CAT[t].vars.length) | 0 })); }
     for (let k = 0; k < 3 + ((rnd() * 3) | 0); k++) {
       const t = pick(art);
       tryAdd(t, () => Object.assign(onWall(t, [0, 1], 2, 4)(), { c: (rnd() * CAT[t].vars.length) | 0 }));
@@ -1140,7 +1142,7 @@
   const LR = {
     N, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART,
     Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor, topOf,
-    def, grain, stripes, WOOD, FABRIC, BOOKS, POTS, GREEN, GREEN_D, GREEN_L,
+    def, grain, stripes, WOOD, FABRIC, BOOKS, POTS, GREEN, GREEN_D, GREEN_L, buildRoom: build,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = LR;
   else root.LR = LR;
