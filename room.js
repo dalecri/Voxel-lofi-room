@@ -50,8 +50,9 @@
   Model.prototype.main = function () { this.cur = this.parts.main; return this; };
   Model.prototype.set = function (x, y, z, col, glow) {
     if (typeof col === 'function') col = col(x, y, z);
-    if (col == null) return;
+    if (col == null) return this;
     this.cur.vox.set(KEY(x, y, z), glow ? (col | GLOW) : col);
+    return this;
   };
   Model.prototype.box = function (x0, y0, z0, x1, y1, z1, col, glow) {
     for (let x = x0; x < x1; x++) for (let y = y0; y < y1; y++) for (let z = z0; z < z1; z++) this.set(x, y, z, col, glow);

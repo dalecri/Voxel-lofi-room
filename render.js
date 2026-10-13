@@ -1204,12 +1204,14 @@
       const B = ud.burst;
       if (C.petals && Math.random() < step * (B && B.until > this.t && B.kind === 'petals' ? 14 : 1.6)) {
         const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 9, 16 + Math.random() * 6, 4 + (Math.random() - 0.5) * 9]);
-        this.fx.spawn(p.x, p.y, p.z, 0.15 + Math.random() * 0.2, -0.25 - Math.random() * 0.15, (Math.random() - 0.5) * 0.2, Math.random() < 0.5 ? 0xf6a8c4 : 0xfad0e0, 0.06, 6, 0.02, 0.3, 0.95);
+        this.fx.spawn(p.x, p.y, p.z, 0.15 + Math.random() * 0.2, -0.25 - Math.random() * 0.15, (Math.random() - 0.5) * 0.2, (C.petalColors ? C.petalColors[(Math.random() * C.petalColors.length) | 0] : Math.random() < 0.5 ? 0xf6a8c4 : 0xfad0e0), 0.06, 6, 0.02, 0.3, 0.95);
       }
       if (B && B.until > this.t && B.kind !== 'petals') {
         const n = B.kind === 'snow' ? 8 : 4;
         for (let k = 0; k < n * step * 8; k++) {
-          if (B.kind === 'snow') { const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 6, 7 + Math.random() * 2, 4 + (Math.random() - 0.5) * 6]); this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.1, -0.15, (Math.random() - 0.5) * 0.1, 0xffffff, 0.04, 2.5, 0, 0.5, 0.9); }
+          if (B.kind === 'snow' && C.burstAt) this.emitFx(it, C, 'snow', C.burstAt, C.fxColor);
+          else if (B.kind === 'drip' && C.burstAt) this.emitFx(it, C, 'drip', C.burstAt, C.fxColor);
+          else if (B.kind === 'snow') { const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 6, 7 + Math.random() * 2, 4 + (Math.random() - 0.5) * 6]); this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.1, -0.15, (Math.random() - 0.5) * 0.1, 0xffffff, 0.04, 2.5, 0, 0.5, 0.9); }
           else if (B.kind === 'smoke') { const p = this.itemPoint(it.id, C.burstAt || [7, 3, 7]); this.fx.spawn(p.x, p.y, p.z, 0.2 + Math.random() * 0.2, 0.25 + Math.random() * 0.15, 0.2 + Math.random() * 0.2, 0xe8e4f0, 0.18 + Math.random() * 0.1, 3, -0.04, 0.6, 0.45); }
           else if (B.kind === 'drip') { const p = this.itemPoint(it.id, [5, 14, 2.5]); this.fx.spawn(p.x, p.y, p.z, 0, -0.6, 0, 0x9ad8ff, 0.04, 0.5, 4, 0, 0.9); }
           else if (B.kind === 'sparks' || B.kind === 'magic') { this.emitFx(it, C, B.kind, C.burstAt, C.fxColor); }
