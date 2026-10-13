@@ -26,7 +26,8 @@ Then open http://localhost:5180.
 
 ## What you can do
 
-- **Decorate from scratch.** Over 100 voxel pieces in ten groups:
+- **Decorate from scratch.** Over 125 voxel pieces in eleven groups:
+  - **Japanese:** tatami mats, a kotatsu that warms up, a futon the cats nap on, a low table, zabuton cushions, a step chest, a folding screen, a glowing shoji screen, a waving lucky cat, daruma, ikebana, a kokeshi doll, a matcha set, a steaming bowl of ramen, a sakura tree that drops petals, bamboo, a koi pond, a vending machine, red paper lanterns, an andon lamp, a stone lantern, katakana neon (コーヒー, ラーメン, ネコ), a noren curtain, hanging scrolls, a folding fan and a sliding shoji window. Plus shoji, washi, cedar and wave-paper walls and tatami, engawa and garden stone floors.
   - **Furniture:** bed, sofa, armchair, coffee table, side table, piano, fireplace, beanbag, pouf and four rugs.
   - **Desks and storage, IKEA-style modular:** desk, corner desk, standing desk (tap to raise it), gaming desk with an RGB edge, trestle desk, cube shelves, sideboard, wardrobe with doors that open, bookshelf, dresser, pegboard, wall shelf and wall cubbies.
   - **Tech and games:** computer, PC tower with RGB fans, TV, retro TV, game console, handheld, arcade cabinet, speaker, guitar, projector screen, laptop, record player, typewriter and a clock radio.
@@ -63,8 +64,8 @@ Then open http://localhost:5180.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and vinyl crackle, all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. Rain streaks the windows. At night the lamps light the room.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
-- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Empty Room) or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **22 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
+- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Tokyo Tea Room, Empty Room) or tap **Surprise** for a random themed room. Tap the room name to rename it.
+- **24 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 
@@ -103,6 +104,7 @@ npm run apk        # → dist/lofi-rooms.apk
 | File | What it does |
 |---|---|
 | `room.js` | The room model. The original furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. It doesn't draw anything, so it runs in Node too. |
+| `japan.js` | The Japanese collection: pieces, wall and floor styles, the Tea Room template and two Japanese themes for Surprise rooms. |
 | `furniture.js` | The expanded catalog: modular desks and storage, tech and games, the kitchen, modern lights, fish tanks, windows, movie posters and the robot vacuum. |
 | `screens.js` | The pixel-art programs that play on screens. |
 | `render.js` | The three.js renderer. A voxel mesher with baked ambient occlusion, the cut-away room shell with stepped corners, furniture sync, lamp lights, the day cycle, animated screens, fish, doors, sunbeams, cat and robot behaviour, particles and picking. |

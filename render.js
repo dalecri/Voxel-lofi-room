@@ -444,7 +444,7 @@
     else inner.position.set(-w / 2, 0, -d / 2);
     obj.userData = { id: it.id, key: itemKey(it, this.env), inner, parts: {}, meshes: [], boing: 0, glowMat: null };
     let glowMat = this.glowMat;
-    if (!ghost && ['twinkle', 'fire', 'flame', 'rgb', 'lava'].includes(C.anim)) glowMat = obj.userData.glowMat = this.glowMat.clone();
+    if (!ghost && ['twinkle', 'fire', 'flame', 'rgb', 'lava', 'buzz'].includes(C.anim)) glowMat = obj.userData.glowMat = this.glowMat.clone();
     for (const name in g) {
       const P = g[name];
       const holder = name === 'main' ? inner : new THREE.Group();
@@ -485,6 +485,7 @@
         if (shape === 'round') inside = Math.hypot((x - 32) / 28, (y - 64) / 60) < 1;
         if (shape === 'arch') inside = inside && (y < 100 || Math.hypot((x - 32) / 28, (y - 100) / 28) < 1);
         if (shape === 'stripes' && (y >> 3) % 2) inside = false;
+        if (shape === 'grid' && ((y % 22) < 3 || (x % 21) < 3)) inside = false;
         if (!inside) continue;
         const edge = Math.min(1, Math.min(x - 3, 60 - x) / 8);
         g.fillStyle = `rgba(255,255,255,${(fade * edge * 0.9).toFixed(3)})`;
@@ -1034,6 +1035,7 @@
         else if (C.anim === 'fire' || C.anim === 'flame') { const v = 0.85 + 0.1 * Math.sin(t * 17 + id) + 0.06 * Math.sin(t * 41); ud.glowMat.color.setRGB(v, v * 0.97, v * 0.9); }
         else if (C.anim === 'rgb') ud.glowMat.color.setHSL((t * 0.08 + id * 0.13) % 1, 0.9, 0.62);
         else if (C.anim === 'lava') { const v = 0.9 + 0.1 * Math.sin(t * 0.7 + id); ud.glowMat.color.setRGB(v, v, v); }
+        else if (C.anim === 'buzz') { const off = Math.sin(t * 0.37 + id * 5) > 0.97 && Math.sin(t * 31) > 0; const v = off ? 0.35 : 0.95 + 0.05 * Math.sin(t * 50); ud.glowMat.color.setRGB(v, v, v); }
       }
       this.animatePiece(obj, it, C, dt, t);
     }
@@ -1101,6 +1103,7 @@
       if (ud.parts.door) ud.parts.door.rotation.y = -ud.doorA * 1.9;
       if (ud.parts.door2) ud.parts.door2.rotation.y = ud.doorA * 1.9;
     }
+    if (ud.parts.paw) ud.parts.paw.rotation.z = Math.sin(t * (ud.excited > t ? 9 : 3) + it.id) * 0.45;
     if (ud.parts.spin) { ud.spinV = (ud.spinV || 0.3) * Math.exp(-dt * 0.8); ud.parts.spin.rotation.y += Math.max(0.3, ud.spinV) * dt; }
     if (C.anim === 'speaker' && this.music && !ud.boing) {
       const beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 74 / 60)), 8);
@@ -1141,7 +1144,11 @@
         this.fx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.1, 0.3 + Math.random() * 0.15, (Math.random() - 0.5) * 0.1, 0xf4f8ff, 0.12, 2.4, -0.03, 0.4, 0.4);
       }
       const B = ud.burst;
-      if (B && B.until > this.t) {
+      if (C.petals && Math.random() < step * (B && B.until > this.t && B.kind === 'petals' ? 14 : 1.6)) {
+        const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 9, 16 + Math.random() * 6, 4 + (Math.random() - 0.5) * 9]);
+        this.fx.spawn(p.x, p.y, p.z, 0.15 + Math.random() * 0.2, -0.25 - Math.random() * 0.15, (Math.random() - 0.5) * 0.2, Math.random() < 0.5 ? 0xf6a8c4 : 0xfad0e0, 0.06, 6, 0.02, 0.3, 0.95);
+      }
+      if (B && B.until > this.t && B.kind !== 'petals') {
         const n = B.kind === 'snow' ? 8 : 4;
         for (let k = 0; k < n * step * 8; k++) {
           if (B.kind === 'snow') { const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 6, 7 + Math.random() * 2, 4 + (Math.random() - 0.5) * 6]); this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.1, -0.15, (Math.random() - 0.5) * 0.1, 0xffffff, 0.04, 2.5, 0, 0.5, 0.9); }
