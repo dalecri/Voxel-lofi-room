@@ -231,5 +231,20 @@
     },
   });
 
-  LR.MOMENTS.push(['openhouse', 'Open house', 'Walked through a door into another room'], ['cuckoo', 'Cuckoo!', 'Heard the cuckoo clock call the hour'], ['feast', 'Dinner time', 'A cat came running for food'], ['stargazer', 'Stargazer', 'Found a constellation']);
+  // a free-standing doorway, so open plots and scenes can join the house too
+  def('roomgate', {
+    name: 'Doorway to another room', kind: 'floor', group: 'windows', size: [1, 1], tap: 'portal',
+    vars: [[WOOD.oak, BRASS], [0xeeeae2, BRASS], [0x3f6a8a, 0xd8d8e0], [0x8a8a92, 0xd8d8e0], [0xc84a4a, 0xf2efe8]],
+    build(m, [w, knob]) {
+      m.box(0, 0, 3, 8, 1, 5, 0x9a9aa4);                                     // threshold
+      m.box(0, 0, 3, 1, 25, 5, shade(w, 0.85)).box(7, 0, 3, 8, 25, 5, shade(w, 0.85)).box(0, 24, 3, 8, 26, 5, shade(w, 0.85));
+      m.box(1, 1, 4, 7, 24, 5, 0x2a2228);                                     // the way through
+      m.part('door', [1, 0, 4.5]);
+      m.box(1, 1, 4, 7, 24, 5, (x, y) => ((y === 5 || y === 13 || y === 20 || x === 1 || x === 6) ? shade(w, 0.92) : w));
+      m.box(5, 11, 5, 6, 12, 6, knob);
+      m.main();
+    },
+  });
+
+  LR.MOMENTS.push(['wanderer', 'Wanderer', 'Walked through a door as a cat'], ['openhouse', 'Open house', 'Walked through a door into another room'], ['cuckoo', 'Cuckoo!', 'Heard the cuckoo clock call the hour'], ['feast', 'Dinner time', 'A cat came running for food'], ['stargazer', 'Stargazer', 'Found a constellation']);
 })();
