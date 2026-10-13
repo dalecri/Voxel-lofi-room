@@ -190,6 +190,7 @@
   .small { font-size: 12.5px; margin-top: 16px; }
 
   .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .cards h3 { grid-column: 1 / -1; margin: 6px 2px 0; font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--ink-dim); letter-spacing: .04em; text-transform: uppercase; }
   .card { text-align: left; border-radius: 18px; padding: 8px; background: var(--chip); display: flex; flex-direction: column; gap: 3px; transition: transform .15s; position: relative; }
   .card:active { transform: scale(.96); }
   .card .art { height: 64px; border-radius: 12px; margin-bottom: 4px; position: relative; overflow: hidden; display: grid; place-items: center; font-size: 28px; }
@@ -343,6 +344,16 @@
 <script src="scene.js"></script>
 <script src="screens.js"></script>
 <script src="sound.js"></script>
+<script src="packs/bar.js"></script>
+<script src="packs/library.js"></script>
+<script src="packs/lab.js"></script>
+<script src="packs/space.js"></script>
+<script src="packs/mexico.js"></script>
+<script src="packs/europe.js"></script>
+<script src="packs/medieval.js"></script>
+<script src="packs/cave.js"></script>
+<script src="packs/cyber.js"></script>
+<script src="packs/garden.js"></script>
 <script src="render.js"></script>
 <script src="main.js"></script>
 </body>
