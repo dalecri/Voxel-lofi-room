@@ -717,7 +717,7 @@
       for (let x = 8; x < 16; x += 2) for (let z = 8; z < 16; z += 2) at('eucobble', { x, z, c: (x + z) % 4 ? 0 : 2 });
       at('eufountain', { x: 11, z: 11, c: 0 });
       at('euironbench', { x: 11, z: 9, c: 0 }); at('euironbench', { x: 11, z: 14, r: 2, c: 0 }); at('euironbench', { x: 9, z: 11, r: 1, c: 2 }); at('euironbench', { x: 14, z: 11, r: 3, c: 2 });
-      [[9, 9], [14, 9], [9, 14], [14, 14]].forEach(([x, z]) => at('eugaslamp', { x, z, c: 0 }));
+      [[9, 9], [14, 9], [8, 15], [15, 14]].forEach(([x, z]) => at('eugaslamp', { x, z, c: 0 }));
       [[7, 5], [8, 16], [16, 9], [12, 6]].forEach(([x, z], k) => at('streettree', { x, z, c: k % 2 ? 2 : 0 }));
       at('euflowercart', { x: 7, z: 12, r: 1, c: 0 }); at('euflowercart', { x: 13, z: 17, c: 3 });
       // a café terrace by the bakery
