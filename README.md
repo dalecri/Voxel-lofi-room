@@ -26,7 +26,19 @@ Then open http://localhost:5180.
 
 ## What you can do
 
-- **Decorate from scratch.** Over 150 voxel pieces in twelve groups:
+- **Decorate from scratch.** Over 400 voxel pieces in 22 groups.
+- **Ten theme packs** for building intricate rooms and scenes, each with its own pieces, wall and floor styles, templates and a cozy moment:
+  - **Bar & café:** a back bar of glowing bottles, beer taps, an espresso machine, a jukebox, a pool table, booths and neon. Templates: The Night Owl Bar, Corner Café.
+  - **Library:** tall bookcases, gallery walkways, a rolling ladder, a spiral stair, a card catalog, banker's lamps, a lectern and a grandfather clock. Templates: Old Library, Reading Room.
+  - **Future lab:** a holo table, bubbling lab benches, monitor walls, server racks, cryo pods, a robot arm and drones. Template: Future Lab.
+  - **Spaceship:** porthole windows, a pilot console, a teleporter pad, a reactor core, alien plants and floating orb lamps. Templates: Starship Cabin, Alien Bridge.
+  - **Mexican casa:** Talavera counters, a comal, a hammock, an ofrenda, papel picado, plus casitas, a parroquia, a kiosco, a fountain and a taco stand for the Pueblo Plaza scene.
+  - **Old Europe:** a four-poster bed, a tile stove, a gramophone, a birdcage, plus half-timbered and canal houses, a bakery, a café terrace and a cathedral for the Old Town Square scene.
+  - **Castle:** a great hall with a hearth, torches, banners, armour and a treasure chest, plus walls, towers, a gatehouse and a forge. Templates: Great Hall, Castle Keep.
+  - **Caves:** blocky stone, glowing ores and crystals, lava, a furnace, a crafting table and mine rails, for a Crystal Cave and a Mine Hideout.
+  - **Cyberpunk:** a capsule bed, a hacker rig, holo pets, neon signs, plus megatowers, a sky rail, flying cars and food carts for the 24×24 Neo City scene.
+  - **Zen garden:** raked gravel, stepping stones, ponds, an arched bridge, a torii, a shishi-odoshi, maples, a tea house and lanterns, for the Zen Garden and Moon Viewing Deck.
+- **The original collection:**
   - **Streets and scenes:** road, crosswalk, sidewalk, tram track, grass and canal tiles; shop buildings, apartment blocks, a corner store and brick walk-ups whose windows light up; street lamps, a traffic light that cycles, power poles, benches, a bus shelter, bikes, a ramen stall, little cars with headlights, a scooter, a post box, cones, hydrants, bins, street trees, railings, stairs and a tram that runs along its line.
   - **Japanese:** tatami mats, a kotatsu that warms up, a futon the cats nap on, a low table, zabuton cushions, a step chest, a folding screen, a glowing shoji screen, a waving lucky cat, daruma, ikebana, a kokeshi doll, a matcha set, a steaming bowl of ramen, a sakura tree that drops petals, bamboo, a koi pond, a vending machine, red paper lanterns, an andon lamp, a stone lantern, katakana neon (コーヒー, ラーメン, ネコ), a noren curtain, hanging scrolls, a folding fan and a sliding shoji window. Plus shoji, washi, cedar and wave-paper walls and tatami, engawa and garden stone floors.
   - **Furniture:** bed, sofa, armchair, coffee table, side table, piano, fireplace, beanbag, pouf and four rugs.
@@ -67,8 +79,8 @@ Then open http://localhost:5180.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
 - **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
 - **Bigger plots.** In Paint, Plot size, grow any room or scene from the cozy 10×10 to 14×14, 20×20 or 24×24 for multi-block cities. Pieces stay where they are when it grows, and it only shrinks once nothing would fall off the edge.
-- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Tokyo Tea Room, Empty Room, plus the Neon Alley, Tram Stop, City Block and Empty Plot scenes) or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **26 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
+- **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
+- **36 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 
@@ -108,6 +120,7 @@ npm run apk        # → dist/lofi-rooms.apk
 |---|---|
 | `room.js` | The room model. The original furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. It doesn't draw anything, so it runs in Node too. |
 | `scene.js` | Scene mode: the open plot, outdoor ground, street tiles, buildings, street furniture, the tram and the scene templates. |
+| `packs/` | The ten theme packs (bar, library, lab, space, mexico, europe, medieval, cave, cyber, garden). Each one is a single file that adds its own pieces, wall and floor styles, Add-tray tab, templates, sounds, screen programs and moments, using the engine's generic hooks: `tap: 'fx'` for declarative interactions, `emit` for steady particles and `float`, `swing` and `blink` parts. |
 | `japan.js` | The Japanese collection: pieces, wall and floor styles, the Tea Room template and two Japanese themes for Surprise rooms. |
 | `furniture.js` | The expanded catalog: modular desks and storage, tech and games, the kitchen, modern lights, fish tanks, windows, movie posters and the robot vacuum. |
 | `screens.js` | The pixel-art programs that play on screens. |
