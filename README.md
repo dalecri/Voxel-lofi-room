@@ -106,6 +106,10 @@ Then open http://localhost:5180.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
 - **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
 - **Bigger plots.** In Paint, Plot size, grow any room or scene from the cozy 10×10 to 14×14, 20×20 or 24×24 for multi-block cities. Pieces stay where they are when it grows, and it only shrinks once nothing would fall off the edge.
+- **Cat view.** Tap the paw button (or press <kbd>C</kbd>) to see the room in first person through a cat's eyes. Up close, at cat height, with all four walls up.
+  - The camera rides along as the cat wanders, and you drag to look around.
+  - Tap the floor to walk there, and tap things to use them. On a computer, WASD or the arrow keys walk too.
+  - **Next cat** hops into another cat's head, and **Back to room** returns to the diorama.
 - **A tiny apartment.** Put a **Door to another room** on a wall (in Windows) and tap it. Pick one of your rooms or a new one, and you walk through. A door on the other side leads back.
 - **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** opens one as a new room.
 - **Seasonal decor:**
@@ -113,7 +117,7 @@ Then open http://localhost:5180.
   - **Winter holidays:** a tree, a wreath, stockings, gifts, a snowman and hot cocoa.
   - The set that fits today's date moves to the front of the Add tray, with a one-time hint.
 - **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **53 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
+- **54 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
 - **Today's moment:** one small thing to do each day, the same for everyone that day, with a streak counter in the menu.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
@@ -133,6 +137,7 @@ Then open http://localhost:5180.
 | Lofi radio | Music chip or the record player | <kbd>M</kbd> |
 | Undo | Undo chip | <kbd>Ctrl</kbd>+<kbd>Z</kbd> or <kbd>U</kbd> |
 | Random room | Surprise | <kbd>G</kbd> |
+| Cat view | Paw button, then drag to look and tap the floor to walk | <kbd>C</kbd>, then WASD or the arrows to walk, drag or <kbd>Q</kbd>/<kbd>E</kbd> to look, <kbd>N</kbd> for the next cat, <kbd>Esc</kbd> to leave |
 | Menu | Menu chip | <kbd>H</kbd> |
 
 ## Install on Android

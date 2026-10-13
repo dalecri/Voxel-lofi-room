@@ -130,13 +130,13 @@
     this.aAlpha = new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage);
     g.setAttribute('position', this.aPos); g.setAttribute('pcolor', this.aCol);
     g.setAttribute('psize', this.aSize); g.setAttribute('palpha', this.aAlpha);
-    this.uScale = { value: 10 };
+    this.uScale = { value: 10 }; this.uPersp = { value: 0 };
     const m = new THREE.ShaderMaterial({
-      uniforms: { uScale: this.uScale },
-      vertexShader: `attribute vec3 pcolor; attribute float psize; attribute float palpha; uniform float uScale;
+      uniforms: { uScale: this.uScale, uPersp: this.uPersp },
+      vertexShader: `attribute vec3 pcolor; attribute float psize; attribute float palpha; uniform float uScale; uniform float uPersp;
         varying vec3 vC; varying float vA;
         void main(){ vC = pcolor; vA = palpha; vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_Position = projectionMatrix * mv; gl_PointSize = max(1.5, psize * uScale); }`,
+          gl_Position = projectionMatrix * mv; gl_PointSize = max(1.5, psize * uScale * (uPersp > 0.5 ? 1.0 / max(0.05, -mv.z) : 1.0)); }`,
       fragmentShader: `varying vec3 vC; varying float vA;
         void main(){ if (vA < 0.01) discard; gl_FragColor = vec4(vC, vA);
           #include <colorspace_fragment>
@@ -233,7 +233,9 @@
     r.toneMappingExposure = 1.1;
 
     const scene = this.scene = new THREE.Scene();
-    this.cam = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 400);
+    this.cam = this.isoCam = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 400);
+    this.fpCam = new THREE.PerspectiveCamera(72, 1, 0.02, 120);   // the cat's-eye view
+    this.fp = null;
     this.yaw = this.yawGoal = Math.PI / 4;
     this.pitch = this.pitchGoal = 0.6;
     this.zoom = this.zoomGoal = 1;
@@ -321,6 +323,12 @@
 
   R.placeCamera = function () {
     const aspect = this.w / this.h;
+    if (this.fp) {
+      this.fpCam.aspect = aspect; this.fpCam.updateProjectionMatrix();
+      const ppu = this.h / (2 * Math.tan(this.fpCam.fov * Math.PI / 360));
+      this.fx.uScale.value = this.glowFx.uScale.value = ppu * this.r.getPixelRatio();
+      return;
+    }
     const viewH = Math.max(aspect > 1 ? 19 : 17, 16.6 / aspect) * Math.max(1, (N + 2) / 12) / this.zoom;
     const cam = this.cam;
     cam.top = viewH / 2; cam.bottom = -viewH / 2;
@@ -933,6 +941,9 @@
             P.timer = P.state === 'nap' ? (8 + Math.random() * 10) * (this.blanketAt(P) ? 3 : 1) * (this.env.rain ? 1.5 : 1) : P.robot ? 0.5 + Math.random() * 2 : 2 + Math.random() * 4;
           }
         }
+      } else if (P.manual > t) {
+        if (P.state === 'walk' && !P.path) P.state = 'sit';   // stands where you left it
+        P.timer = Math.max(P.timer, 1);
       } else if (P.timer <= 0 && P.state !== 'pet' && P.state !== 'eat') {
         this.decidePet(P, cx, cz);
       } else if ((P.state === 'pet' || P.state === 'eat') && P.timer <= 0) {
@@ -1159,7 +1170,7 @@
     this.zoom += (this.zoomGoal - this.zoom) * k;
     this.pan.lerp(this.panGoal, k);
     this.placeCamera();
-    const mask = this.noWalls ? 0 : this.visibleMask();
+    const mask = this.noWalls ? 0 : this.fp ? 15 : this.visibleMask();   // inside the room every wall stays up
     if (mask !== this.mask && this.room) { this.buildShell(this.room, mask); this.applyVisibility(); }
 
     let phaseDirty = false;
@@ -1225,7 +1236,64 @@
       if (o && this.isShown(o)) { const b = this.hoverBox.box.makeEmpty(); o.userData.meshes.forEach(m => b.expandByObject(m)); b.expandByScalar(0.03); this.hoverBox.visible = true; }
       else this.hoverBox.visible = false;
     }
+    if (this.fp) this.updateCatView(dt, t);
     this.r.render(this.scene, this.cam);
+  };
+
+  // ---- cat view: first person from a cat's eyes ----
+  R.enterCatView = function (id) {
+    const P = this.pets.get(id);
+    if (!P || P.robot) return false;
+    if (this.fp) { const o = this.objs.get(this.fp.id); if (o) o.visible = true; }   // switching cats
+    this.fp = { id, yaw: P.heading, look: 0, pitch: -0.08, bob: 0 };
+    this.cam = this.fpCam;
+    [this.fx, this.glowFx].forEach(f => { f.uPersp.value = 1; });
+    this.setHover(0);
+    this.placeCamera();
+    return true;
+  };
+  R.exitCatView = function () {
+    if (!this.fp) return;
+    const o = this.objs.get(this.fp.id); if (o) o.visible = true;
+    const P = this.pets.get(this.fp.id); if (P) P.manual = 0;
+    this.fp = null; this.cam = this.isoCam;
+    [this.fx, this.glowFx].forEach(f => { f.uPersp.value = 0; });
+    this.placeCamera();
+  };
+  // walking yourself: f forward/back, s sideways, in the direction you're looking
+  R.catMove = function (f, s, dt) {
+    const fp = this.fp, P = fp && this.pets.get(fp.id);
+    if (!P || (!f && !s)) return;
+    const yaw = fp.yaw + fp.look;
+    const dx = Math.sin(yaw) * f + Math.cos(yaw) * s, dz = Math.cos(yaw) * f - Math.sin(yaw) * s;
+    const len = Math.hypot(dx, dz) || 1, sp = 1.6 * dt;
+    if (P.perch) { P.perch = null; P.y = 0; }
+    P.path = null; P.next = null; P.eat = null; P.watch = null; P.onArrive = null; P.hop = null;
+    P.state = 'walk'; P.manual = this.t + 5;
+    const nx = P.x + dx / len * sp, nz = P.z + dz / len * sp, r = 0.22;
+    const free = (x, z) => this.cellFree(Math.floor(x), Math.floor(z));
+    if (free(nx + Math.sign(dx) * r, P.z)) P.x = nx;          // slide along walls and furniture
+    if (free(P.x, nz + Math.sign(dz) * r)) P.z = nz;
+    if (f > 0) { P.heading = yaw; fp.yaw = yaw; fp.look = 0; }
+    fp.bob += dt * 11;
+  };
+  R.updateCatView = function (dt, t) {
+    const fp = this.fp, P = this.pets.get(fp.id), obj = this.objs.get(fp.id);
+    if (!P || !obj) { this.exitCatView(); if (this.hooks.catViewEnded) this.hooks.catViewEnded(); return; }
+    obj.visible = false;   // no looking at the inside of your own head
+    // follow where the cat is facing, keeping whatever look-around the player added
+    let dh = P.heading - fp.yaw; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
+    fp.yaw += dh * Math.min(1, dt * 3);
+    const walking = P.state === 'walk' || P.hop;
+    if (walking && !(P.manual > t)) fp.bob += dt * 11;
+    const yaw = fp.yaw + fp.look;
+    const eye = (P.state === 'nap' ? 0.34 : 0.62) + (walking ? Math.abs(Math.sin(fp.bob)) * 0.025 : 0);
+    const local = new THREE.Vector3(P.x + Math.sin(yaw) * 0.22, P.y + eye, P.z + Math.cos(yaw) * 0.22);
+    const pos = this.root.localToWorld(local);
+    this.fpCam.position.copy(pos);
+    const cp = Math.cos(fp.pitch);
+    this.fpCam.lookAt(pos.x + Math.sin(yaw) * cp, pos.y + Math.sin(fp.pitch), pos.z + Math.cos(yaw) * cp);
+    this.fpCam.updateMatrixWorld();
   };
 
   R.animatePiece = function (obj, it, C, dt, t) {

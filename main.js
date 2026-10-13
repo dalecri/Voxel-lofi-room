@@ -58,6 +58,7 @@ function startLofiRooms() {
     ['parliament', 'Cat parliament', 'All five cats in one room'],
     ['culprit', 'Whodunnit', 'A cat knocked something off a table'],
     ['visitor', 'Neighbour cat', 'A cat from next door dropped by'],
+    ['catseye', 'Cat’s-eye view', 'Saw the room through a cat’s eyes'],
   ].concat(LR.MOMENTS || []);   // theme packs can add their own with LR.MOMENTS.push([key, name, description])
   const found = new Set(store.get('lr.found', []));
 
@@ -95,6 +96,7 @@ function startLofiRooms() {
   const bg = $('#bg'), stars = $('#stars');
   let liftNow = 40;
   const view = new LRRender.Renderer($('#c'), {
+    catViewEnded() { document.body.classList.remove('catcam'); },
     sky(top, bot, night) {
       bg.style.background = `linear-gradient(180deg, ${top} 0%, ${bot} 100%)`;
       stars.style.opacity = Math.max(0, night - 0.4) * 1.6;
@@ -408,6 +410,7 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Explore / Decorate
   function setMode(mode, quiet) {
+    if (mode !== 'explore') exitCat(true);
     state.mode = mode;
     store.set('lr.mode', mode);
     document.body.classList.toggle('exploring', mode === 'explore');
@@ -431,7 +434,7 @@ function startLofiRooms() {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bRain: 'Rain', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bMenu: 'Menu (H)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bRain: 'Rain', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -710,6 +713,37 @@ function startLofiRooms() {
     if (meta.season !== key) { meta.season = key; saveMeta(); setTimeout(() => toast(`<span>${S.label}</span>`, 3200), 4000); }
   })();
   let follow = null;
+  // cat view: the room in first person, from one of the cats
+  const held = new Set();
+  window.addEventListener('keyup', e => { held.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key); });
+  window.addEventListener('blur', () => held.clear());
+  const residentCats = () => room.items.filter(i => i.t === 'cat');
+  function enterCat(id) {
+    const cats = residentCats();
+    if (!cats.length) { Sound.nope(); toast('<span>Add a cat first (Decorate, Add, Pets)</span>', 1800); return; }
+    const pick = id ? room.get(id) : (follow && room.get(follow.id)) || cats.find(c => !c.visitor) || cats[0];
+    if (!pick || !view.enterCatView(pick.id)) return;
+    document.body.classList.add('catcam');
+    $('#catName').textContent = catName(pick);
+    Sound.meow(); haptic(8);
+    if (!store.get('lr.tipCat', false)) { store.set('lr.tipCat', true); toast(`<span>${FINE ? 'Drag to look around, click the floor to walk, click things to use them. WASD walks too.' : 'Drag to look around, tap the floor to walk, tap things to use them'}</span>`, 3600); }
+    else toast(`<span>You're ${catName(pick)} now</span>`, 1200);
+    discover('catseye');
+  }
+  function nextCat() {
+    const cats = residentCats(); if (!view.fp || cats.length < 2) return;
+    const i = cats.findIndex(c => c.id === view.fp.id);
+    enterCat(cats[(i + 1) % cats.length].id);
+  }
+  function exitCat(quiet) {
+    if (!view.fp) return;
+    view.exitCatView(); held.clear();
+    document.body.classList.remove('catcam');
+    if (!quiet) Sound.turn();
+  }
+  $('#bCat').onclick = () => { if (view.fp) exitCat(); else enterCat(); };
+  $('#catNext').onclick = () => nextCat();
+  $('#catExit').onclick = () => exitCat();
   const catName = it => it.name || (CATS[it.c] || CATS[0]).name;
   // mischief: now and then a cat wanders over and knocks something off a table
   function mischief() {
@@ -961,6 +995,7 @@ function startLofiRooms() {
   });
   canvas.addEventListener('pointermove', e => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gesture && pointers.size >= 2 && view.fp) return;
     if (gesture && pointers.size >= 2) {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
@@ -976,7 +1011,8 @@ function startLofiRooms() {
       if (!orbit.moved && orbit.sx !== undefined && Math.hypot(e.clientX - orbit.sx, e.clientY - orbit.sy) < 8) return;
       orbit.moved = true;
       orbit.x = e.clientX; orbit.y = e.clientY;
-      if (orbit.pan) panBy(dx, dy);
+      if (view.fp) { view.fp.look -= dx * 0.006; view.fp.pitch = Math.max(-0.9, Math.min(0.75, view.fp.pitch + dy * 0.005)); }   // look around
+      else if (orbit.pan) panBy(dx, dy);
       else { view.yawGoal -= dx * 0.008; view.pitchGoal = Math.max(0.3, Math.min(1.2, view.pitchGoal + dy * 0.005)); }
       return;
     }
@@ -1017,6 +1053,9 @@ function startLofiRooms() {
       if (orbit.tapId) {
         if (state.mode === 'explore') interact(orbit.tapId); else tapEdit(orbit.tapId);
         lastTap = null;
+      } else if (state.mode === 'explore' && view.fp) {
+        const p = view.pickFloor(e.clientX, e.clientY);
+        if (p && view.walkCatTo(view.fp.id, Math.floor(p.x), Math.floor(p.z))) { const P = view.pets.get(view.fp.id); if (P) P.manual = 0; }
       } else if (state.mode === 'explore' && follow && performance.now() < follow.until) {
         const p = view.pickFloor(e.clientX, e.clientY);
         if (p && view.walkCatTo(follow.id, Math.floor(p.x), Math.floor(p.z))) { follow.until = performance.now() + 6000; view.sparkle(new THREE.Vector3(Math.floor(p.x) + 0.5, 0.1, Math.floor(p.z) + 0.5), 0xffd0e0, 6); }
@@ -1040,6 +1079,7 @@ function startLofiRooms() {
   canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !state.drag) { view.setGhost(null); view.setHover(0); mouse = null; } });
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
+    if (view.fp) { view.fpCam.fov = Math.max(45, Math.min(90, view.fpCam.fov + e.deltaY * 0.03)); view.placeCamera(); return; }
     view.zoomGoal = Math.max(0.7, Math.min(room.n > 14 ? 4.5 : 3, view.zoomGoal * Math.exp(-e.deltaY * 0.0015)));
   }, { passive: false });
 
@@ -1057,6 +1097,13 @@ function startLofiRooms() {
     if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // leave browser shortcuts like Ctrl+R alone
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (view.fp) {   // cat view: WASD or the arrows walk, Q/E look around, C or Esc goes back
+      if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); held.add(key); return; }
+      if (key === 'q') { view.fp.look += 0.35; return; }
+      if (key === 'e') { view.fp.look -= 0.35; return; }
+      if (key === 'Escape' || key === 'c') { exitCat(); return; }
+      if (key === 'n') { nextCat(); return; }
+    } else if (key === 'c' && state.mode === 'explore') { enterCat(); return; }
     const trayOpen = tray.classList.contains('open');
     const keys = { 1: 'add', 2: 'move', 3: 'turn', 4: 'paint', 5: 'remove' };
     if (keys[key]) { if (state.mode === 'explore') setMode('edit', true); document.querySelector(`.tools [data-tool="${keys[key]}"]`).click(); }
@@ -1285,6 +1332,7 @@ function startLofiRooms() {
   }
   function switchRoom(id) {
     if (id === meta.current) return;
+    exitCat(true);
     save();
     if (!loadRoom(id)) { toast('<span>Couldn’t open that room</span>', 1500); return; }
     undo.length = 0; saveMeta();
@@ -1479,6 +1527,12 @@ function startLofiRooms() {
     }
     saveT += dt;
     if (saveT > 3 && dirty) { save(); saveT = 0; }
+    if (view.fp && held.size) {
+      const f = (held.has('w') || held.has('ArrowUp') ? 1 : 0) - (held.has('s') || held.has('ArrowDown') ? 1 : 0);
+      const sd = (held.has('d') ? 1 : 0) - (held.has('a') ? 1 : 0), turn = (held.has('ArrowLeft') ? 1 : 0) - (held.has('ArrowRight') ? 1 : 0);
+      if (turn) view.fp.look += turn * dt * 2.2;
+      view.catMove(f, sd, dt);
+    }
     view.beat = meta.music ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
     view.frame(dt, t);
     requestAnimationFrame(loop);
