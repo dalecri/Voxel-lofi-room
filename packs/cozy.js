@@ -105,8 +105,8 @@
     name: 'Bird feeder', kind: 'wall', group: 'windows', size: [1, 2], depth: 6, tap: 'feeder',
     vars: [[WOOD.oak, 0xc8302a], [0xeeeae2, 0x3f8f8a], [WOOD.walnut, 0xe6b450]],
     build(m, [w, roof]) {
-      m.box(3, 15, 0, 5, 16, 3, 0x5a5a62);                       // bracket
-      m.box(3, 10, 2, 5, 15, 3, 0x5a5a62);
+      m.box(4, 14, 0, 5, 15, 4, 0x5a5a62);                       // a thin hook arm from the wall
+      m.box(4, 11, 3, 5, 14, 4, 0x8a8a92);
       for (let k = 0; k < 3; k++) m.box(k, 8 + k, 1, 8 - k, 9 + k, 6, roof);
       m.box(1, 3, 2, 7, 8, 5, grain(w)).box(2, 4, 4, 6, 7, 5, 0x9ad0e8);   // seed window
       m.box(2, 4, 4, 6, 5, 5, 0xc8a060);
@@ -115,7 +115,7 @@
       // the birds that come and go
       m.part('birds', [4, 3, 3]);
       [[0, 0xe8784a], [6, 0x4a8ad8]].forEach(([x, c]) => {
-        m.box(x, 3, 3, x + 2, 5, 5, c).set(x + (x ? 1 : 0), 5, 4, c).set(x + (x ? 0 : 1), 4, 5, INK).set(x + (x ? -1 : 2), 4, 4, 0xf2c14e);
+        m.box(x, 3, 3, x + 2, 6, 6, c).box(x, 3, 5, x + 2, 4, 6, mix(c, 0xffffff, 0.5)).set(x + (x ? 0 : 1), 5, 6, INK).set(x + (x ? -1 : 2), 5, 5, 0xf2c14e).set(x + (x ? 1 : 0), 6, 4, shade(c, 0.8));
       });
       m.main();
     },
