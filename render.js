@@ -4,7 +4,8 @@
 // Exposes window.LRRender.
 
 (function () {
-  const { N, HC, V, GLOW, CAT, WALLS, FLOORS, WALL_COLORS, Model, hash3, mix, fp, topOf } = LR;
+  const { HC, V, GLOW, CAT, WALLS, FLOORS, WALL_COLORS, Model, hash3, mix, fp, topOf } = LR;
+  let N = LR.N;   // plot size in cells; changes when a bigger scene is loaded (see setSize)
   const S = 1 / V;          // world units per voxel
   const T = 4, F = 4;       // wall and floor thickness in voxels
   const HV = HC * V;        // wall height in voxels
@@ -198,12 +199,13 @@
   const hexMix = (a, b, t) => new THREE.Color(a).lerp(new THREE.Color(b), t);
 
   // walls: inward normal, along-vector, origin (u = 0), rotation
-  const WALLDEF = [
+  const wallDefs = n => [
     { n: [0, 0, 1], a: [1, 0, 0], o: [0, 0, 0], th: 0 },
-    { n: [1, 0, 0], a: [0, 0, -1], o: [0, 0, N], th: Math.PI / 2 },
-    { n: [0, 0, -1], a: [-1, 0, 0], o: [N, 0, N], th: Math.PI },
-    { n: [-1, 0, 0], a: [0, 0, 1], o: [N, 0, 0], th: -Math.PI / 2 },
+    { n: [1, 0, 0], a: [0, 0, -1], o: [0, 0, n], th: Math.PI / 2 },
+    { n: [0, 0, -1], a: [-1, 0, 0], o: [n, 0, n], th: Math.PI },
+    { n: [-1, 0, 0], a: [0, 0, 1], o: [n, 0, 0], th: -Math.PI / 2 },
   ];
+  let WALLDEF = wallDefs(N);
 
   // =================================================================
   function Renderer(canvas, hooks) {
@@ -259,7 +261,7 @@
 
     // lamp lights: a fixed pool so shaders never recompile
     this.pool = [];
-    for (let k = 0; k < 8; k++) {
+    for (let k = 0; k < 12; k++) {
       const L = new THREE.PointLight(0xffc98a, 0, 8, 1.6);
       this.pool.push(L); this.root.add(L);
     }
@@ -306,7 +308,7 @@
 
   R.placeCamera = function () {
     const aspect = this.w / this.h;
-    const viewH = Math.max(aspect > 1 ? 19 : 17, 16.6 / aspect) / this.zoom;
+    const viewH = Math.max(aspect > 1 ? 19 : 17, 16.6 / aspect) * Math.max(1, (N + 2) / 12) / this.zoom;
     const cam = this.cam;
     cam.top = viewH / 2; cam.bottom = -viewH / 2;
     cam.left = -viewH * aspect / 2; cam.right = viewH * aspect / 2;
@@ -597,8 +599,27 @@
   };
 
   // bring the scene in line with the room
+  // bigger plots for scenes: everything that depends on the plot size follows it
+  R.setSize = function (n) {
+    if (n === N) return;
+    N = n; WALLDEF = wallDefs(n);
+    this.root.position.set(-N / 2, 0, -N / 2);
+    this.under.position.set(N / 2, -1.2, N / 2); this.under.scale.setScalar(N / 10);
+    const r = N * 1.1;
+    Object.assign(this.sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, far: 80 + N * 4 });
+    this.sun.shadow.mapSize.set(N > 14 ? 4096 : 2048, N > 14 ? 4096 : 2048);
+    if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    this.sun.shadow.camera.updateProjectionMatrix();
+    this.shellCache.forEach(g => g.dispose()); this.shellCache.clear(); this.shellStyle = ''; this.mask = -1;
+    this.pets.clear();
+    this.panGoal.set(0, 0, 0);
+    this.placeCamera();
+  };
+  R.size = function () { return N; };
+
   R.sync = function (room) {
     this.room = room;
+    this.setSize(room.n || LR.N);
     this.buildShell(room, this.visibleMask());
     const depth = it => { let d = 0, p = it.p; while (p && d < 8) { const o = room.get(p); p = o ? o.p : 0; d++; } return d; };
     const order = room.items.slice().sort((a, b) => depth(a) - depth(b));
@@ -1229,5 +1250,5 @@
     if (this.room) this.sync(this.room);
   };
 
-  window.LRRender = { Renderer, PHASES, WALLDEF };
+  window.LRRender = { Renderer, PHASES };
 })();

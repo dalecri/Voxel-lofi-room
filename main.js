@@ -3,7 +3,7 @@
 // In the Android app, storage.js restores saves before boot and mirrors writes to SQLite.
 
 function startLofiRooms() {
-  const { N, HC, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, CATS, fp } = LR;
+  const { HC, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, CATS, fp } = LR;
   const Sound = window.LofiSound;
   const $ = s => document.querySelector(s);
   const put = (k, v) => {
@@ -212,6 +212,7 @@ function startLofiRooms() {
       tab('Walls', state.paintTab === 'walls', () => { state.paintTab = 'walls'; });
       tab('Wall colour', state.paintTab === 'color', () => { state.paintTab = 'color'; });
       tab('Floor', state.paintTab === 'floor', () => { state.paintTab = 'floor'; });
+      tab('Plot size', state.paintTab === 'size', () => { state.paintTab = 'size'; });
       const wc = (WALL_COLORS[room.wall.color] || WALL_COLORS[0])[1];
       if (state.paintTab === 'walls') {
         Object.entries(WALLS).forEach(([k, W]) => {
@@ -228,6 +229,19 @@ function startLofiRooms() {
           b.onclick = () => paintRoom(() => { room.wall.color = i; meta.painted.wall = true; });
           row.appendChild(b);
         });
+      } else if (state.paintTab === 'size') {
+        const names = { 10: 'Cozy', 14: 'Roomy', 20: 'Block', 24: 'City' };
+        LR.SIZES.forEach(n => {
+          const b = document.createElement('button'); b.className = 'swatch' + (room.n === n ? ' on' : '');
+          b.appendChild(swatchCanvas((x, y) => {
+            const c = x, r = y, o = (24 - n) / 2;
+            const inside = c >= o && c < o + n && r >= o && r < o + n;
+            return inside ? ((c + r) & 1 ? 0xb89a72 : 0xa8885f) : 0x2a1c38;
+          }));
+          b.insertAdjacentHTML('beforeend', `<span>${n}×${n}</span>`); b.title = `${names[n] || 'Plot'} ${n}×${n}`;
+          b.onclick = () => setPlot(n);
+          row.appendChild(b);
+        });
       } else {
         Object.entries(FLOORS).forEach(([k, Fl]) => {
           const b = document.createElement('button'); b.className = 'swatch' + (room.floor.style === k ? ' on' : '');
@@ -237,7 +251,9 @@ function startLofiRooms() {
           row.appendChild(b);
         });
       }
-      row.insertAdjacentHTML('beforeend', '<div class="hint">Tip: tap any piece in the room to try its next colour.</div>');
+      row.insertAdjacentHTML('beforeend', state.paintTab === 'size'
+        ? '<div class="hint">Bigger plots fit whole city blocks. Your pieces stay put when it grows.</div>'
+        : '<div class="hint">Tip: tap any piece in the room to try its next colour.</div>');
     }
     const on = row.querySelector('.on');
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -306,10 +322,26 @@ function startLofiRooms() {
       if (first) state.add = first.key;
       state.addR = null;
     } else {
-      const order = ['walls', 'color', 'floor'];
-      state.paintTab = order[(order.indexOf(state.paintTab) + dir + 3) % 3];
+      const order = ['walls', 'color', 'floor', 'size'];
+      state.paintTab = order[(order.indexOf(state.paintTab) + dir + order.length) % order.length];
     }
     renderTray(); Sound.turn(); refreshGhost();
+  }
+  // grow or shrink the plot; growing keeps everything where it is, shrinking only if nothing would fall off
+  function setPlot(n) {
+    if (n === room.n) return;
+    if (n < room.n) {
+      const out = room.items.filter(it => {
+        const C = CAT[it.t];
+        if (!C || it.p) return false;
+        if (C.kind === 'wall') return it.u + C.size[0] > n;
+        const [w, d] = LR.fp(it);
+        return it.x + w > n || it.z + d > n;
+      });
+      if (out.length) { toast(`<span>Move ${out.length} piece${out.length > 1 ? 's' : ''} in from the edges first</span>`, 1800); Sound.turn(); return; }
+    }
+    paintRoom(() => { room.n = n; });
+    toast(`<span>Plot is now ${n}×${n}</span>`, 1100);
   }
   function paintRoom(fn) {
     pushUndo(); fn(); saveMeta(); changed(); renderTray();
@@ -386,7 +418,7 @@ function startLofiRooms() {
       if (!w) return null;
       const [ww, wh] = C.size;
       it.k = w.k;
-      it.u = clampI(Math.round(w.u - (grab ? grab.u : ww / 2)), 0, N - ww);
+      it.u = clampI(Math.round(w.u - (grab ? grab.u : ww / 2)), 0, room.n - ww);
       it.e = clampI(Math.round(w.e - (grab ? grab.e : wh / 2)), 0, HC - wh);
       return it;
     }
@@ -406,19 +438,19 @@ function startLofiRooms() {
       }
     }
     const p = view.pickFloor(cx, cy);
-    if (!p || p.x < -2 || p.z < -2 || p.x > N + 2 || p.z > N + 2) return null;
+    if (!p || p.x < -2 || p.z < -2 || p.x > room.n + 2 || p.z > room.n + 2) return null;
     const place = r => {
       const o = Object.assign({}, it, { r });
       const [fw, fd] = fp(o);
-      o.x = clampI(Math.round(p.x - (grab ? grab.x : fw / 2)), 0, N - fw);
-      o.z = clampI(Math.round(p.z - (grab ? grab.z : fd / 2)), 0, N - fd);
+      o.x = clampI(Math.round(p.x - (grab ? grab.x : fw / 2)), 0, room.n - fw);
+      o.z = clampI(Math.round(p.z - (grab ? grab.z : fd / 2)), 0, room.n - fd);
       return o;
     };
     if (!grab && C.wallish && state.addR == null) {
       // back it against the nearest wall, like you would in real life
       for (const r of [0, 1, 2, 3]) {
         const o = place(r), [fw, fd] = fp(o);
-        const touches = (r === 0 && o.z === 0) || (r === 1 && o.x === 0) || (r === 2 && o.z + fd === N) || (r === 3 && o.x + fw === N);
+        const touches = (r === 0 && o.z === 0) || (r === 1 && o.x === 0) || (r === 2 && o.z + fd === room.n) || (r === 3 && o.x + fw === room.n);
         if (touches && room.canPlace(o)) return o;
       }
     }
@@ -709,7 +741,7 @@ function startLofiRooms() {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      view.zoomGoal = Math.max(0.7, Math.min(3, gesture.zoom * d / gesture.d));
+      view.zoomGoal = Math.max(0.7, Math.min(room.n > 14 ? 4.5 : 3, gesture.zoom * d / gesture.d));
       let da = ang - gesture.ang; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
       view.yawGoal -= da; gesture.ang = ang;
       panBy(mx - gesture.mx, my - gesture.my); gesture.mx = mx; gesture.my = my;
@@ -771,9 +803,9 @@ function startLofiRooms() {
   };
   function zoomToward(cx, cy) {
     const p = view.pickFloor(cx, cy);
-    if (!p || view.zoomGoal > 2.2 || p.x < 0 || p.z < 0 || p.x > N || p.z > N) { view.zoomGoal = 1; view.panGoal.set(0, 0, 0); return; }
-    view.panGoal.set(p.x - N / 2, 0, p.z - N / 2);
-    view.zoomGoal = Math.min(3, view.zoomGoal * 1.7);
+    if (!p || view.zoomGoal > 2.2 || p.x < 0 || p.z < 0 || p.x > room.n || p.z > room.n) { view.zoomGoal = 1; view.panGoal.set(0, 0, 0); return; }
+    view.panGoal.set(p.x - room.n / 2, 0, p.z - room.n / 2);
+    view.zoomGoal = Math.min(room.n > 14 ? 4.5 : 3, view.zoomGoal * 1.7);
     haptic(5);
   }
   canvas.addEventListener('pointerup', up);
@@ -781,7 +813,7 @@ function startLofiRooms() {
   canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !state.drag) { view.setGhost(null); view.setHover(0); mouse = null; } });
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
-    view.zoomGoal = Math.max(0.7, Math.min(3, view.zoomGoal * Math.exp(-e.deltaY * 0.0015)));
+    view.zoomGoal = Math.max(0.7, Math.min(room.n > 14 ? 4.5 : 3, view.zoomGoal * Math.exp(-e.deltaY * 0.0015)));
   }, { passive: false });
 
   function panBy(dx, dy) {
@@ -790,7 +822,7 @@ function startLofiRooms() {
     const upv = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
     const s = 1 / (view.ppu * view.zoom);
     view.panGoal.addScaledVector(right, -dx * s).addScaledVector(upv, dy * s);
-    if (view.panGoal.length() > 8) view.panGoal.setLength(8);
+    if (view.panGoal.length() > room.n * 0.8) view.panGoal.setLength(room.n * 0.8);
   }
 
   window.addEventListener('keydown', e => {
@@ -890,7 +922,7 @@ function startLofiRooms() {
     return wrap;
   }
   function fillRoom(k) {
-    if (k === 'random') { room.generate((Math.random() * 0xffffffff) >>> 0); }
+    if (k === 'random') { room.n = LR.N; room.generate((Math.random() * 0xffffffff) >>> 0); }
     else { PRESETS[k].make(room); room.name = PRESETS[k].name; }
   }
   function newRoom(k) {
