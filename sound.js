@@ -4,23 +4,36 @@
 // Web Audio API, so there are no audio files. Exposes window.LofiSound.
 
 (function () {
-  const BPM = 74;
-  const BEAT = 60 / BPM;
+  let BEAT = 60 / 74;   // set by the mood
   // ii–V–I–vi style loops, voiced as 7ths and 9ths (frequencies in Hz)
   const n = m => 440 * Math.pow(2, (m - 69) / 12);
   const PROGS = [
     [[50, 53, 57, 60, 64], [55, 59, 62, 65, 69], [48, 52, 55, 59, 62], [45, 48, 52, 55, 59]],   // Dm9 G13 Cmaj9 Am9
     [[53, 57, 60, 64, 67], [52, 55, 59, 62, 66], [50, 53, 57, 60, 64], [48, 52, 55, 59, 62]],   // Fmaj9 Em9 Dm9 Cmaj9
     [[49, 53, 56, 60, 63], [51, 54, 58, 61, 65], [46, 49, 53, 56, 60], [44, 48, 51, 55, 58]],   // Dbmaj9 Ebm9 Bbm9 Abmaj9
+    [[52, 55, 59, 62, 66], [57, 60, 64, 67, 71], [50, 53, 57, 60, 64], [55, 59, 62, 65, 69]],   // Em9 Am9 Dm9 G13, a slow jazz turnaround
+    [[48, 52, 55, 59, 62], [53, 57, 60, 64, 67], [45, 48, 52, 55, 59], [53, 57, 60, 64, 69]],   // Cmaj9 Fmaj9 Am9 F6/9, bright and open
   ];
   const DRUMS = {        // 16 steps: kick, snare, hat
     k: [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0],
     s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
     h: [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1],
   };
+  // moods the jukebox and records switch between: tempo, chords, groove and tone
+  const MOODS = [
+    { name: 'Late night lofi', bpm: 74, progs: [0, 1, 2], drums: DRUMS, tape: 2600, bells: 0.35, up: 0 },
+    { name: 'Rainy day jazz', bpm: 66, progs: [1, 3], tape: 2000, bells: 0.5, up: -3, drums: {
+      k: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], h: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1] } },
+    { name: 'Sunny morning', bpm: 84, progs: [4, 1], tape: 3600, bells: 0.5, up: 2, drums: {
+      k: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1] } },
+    { name: 'Chillhop bounce', bpm: 88, progs: [0, 2], tape: 3000, bells: 0.25, up: 0, drums: {
+      k: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0] } },
+    { name: 'Dreamy ambient', bpm: 60, progs: [3, 4], tape: 1600, bells: 0.7, up: -5, drums: {
+      k: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], h: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] } },
+  ];
 
   const S = {
-    on: true, ctx: null, music: false, night: 0,
+    on: true, ctx: null, music: false, night: 0, mood: 0, moods: MOODS,
     init() {
       if (this.ctx || !this.on) return;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -89,6 +102,15 @@
       this.crackle.gain.setTargetAtTime(on ? 0.5 : 0, t, 0.5);
       if (on) { this.nextStep = Math.max(this.nextStep, t + 0.05); this.needle(); }
     },
+    // switch to a mood (or the next one); the band picks it up on the next bar
+    setMood(i) {
+      this.mood = ((i == null ? this.mood + 1 : i) % MOODS.length + MOODS.length) % MOODS.length;
+      const M = MOODS[this.mood];
+      BEAT = 60 / M.bpm;
+      this.prog = 0;
+      if (this.ctx) this.tape.frequency.setTargetAtTime(M.tape, this.ctx.currentTime, 0.8);
+      return M.name;
+    },
     schedule() {
       const ctx = this.ctx;
       if (!ctx || ctx.state !== 'running') return;
@@ -100,21 +122,22 @@
         this.step = (this.step + 1) % 16;
         if (this.step === 0) {
           this.bar++;
-          if (this.bar % 16 === 0) this.prog = (this.prog + 1) % PROGS.length;
+          if (this.bar % 16 === 0) this.prog = (this.prog + 1) % MOODS[this.mood].progs.length;
         }
       }
     },
     playStep(st, t) {
-      const ctx = this.ctx, chord = PROGS[this.prog][this.bar % 4];
+      const M = MOODS[this.mood], D = M.drums;
+      const ctx = this.ctx, chord = PROGS[M.progs[this.prog % M.progs.length]][this.bar % 4].map(m => m + M.up);
       const hum = () => (Math.random() - 0.5) * 0.012;
       if (st === 0) this.keys(chord, t + 0.02);
       if (st === 10 && Math.random() < 0.55) this.keys(chord.slice(1, 4).map(m => m + 12), t + 0.01, 0.5);
       if (st === 0 || st === 8 || (st === 14 && Math.random() < 0.4)) this.bass(chord[0] - 12 - (chord[0] > 52 ? 12 : 0) + (st === 14 ? 7 : 0), t);
-      if (DRUMS.k[st]) this.kick(t + hum());
-      if (DRUMS.s[st]) this.snare(t + hum() + 0.01);
-      if (DRUMS.h[st] && Math.random() < 0.92) this.hat(t + hum(), st % 4 === 2 ? 0.05 : 0.03);
+      if (D.k[st]) this.kick(t + hum());
+      if (D.s[st]) this.snare(t + hum() + 0.01);
+      if (D.h[st] && Math.random() < 0.92) this.hat(t + hum(), st % 4 === 2 ? 0.05 : 0.03);
       // a sparse lazy melody from the chord's top notes
-      if ((st === 6 || st === 12 || st === 3) && Math.random() < 0.35) {
+      if ((st === 6 || st === 12 || st === 3) && Math.random() < M.bells) {
         const m = chord[2 + ((Math.random() * 3) | 0)] + 12 + (Math.random() < 0.3 ? 2 : 0);
         this.bell(n(m), t + 0.02);
       }
@@ -188,7 +211,8 @@
       this.fireBed.g.gain.setTargetAtTime(fire ? 0.06 : 0, t, 0.8);
       if (fire && Math.random() < 0.05) this.burst(0.03, 0.14, 'highpass', 2500);       // a pop from the logs
       if (rain && Math.random() < 0.08) this.burst(0.02, 0.05, 'bandpass', 4000 + Math.random() * 2000);   // a drop on the glass
-      this.tape.frequency.setTargetAtTime(night > 0.5 ? 1700 : 2600, t, 2);
+      const tone = MOODS[this.mood].tape;
+      this.tape.frequency.setTargetAtTime(night > 0.5 ? Math.min(tone, 1700) : tone, t, 2);
     },
     purr(on) {
       if (!this.ready()) return;
@@ -298,6 +322,11 @@
     drip() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(900 + Math.random() * 500, t + k * 0.18, 0.08, 0.05); o.frequency.exponentialRampToValueAtTime(1800, t + k * 0.18 + 0.06); } this.burst(0.6, 0.05, 'bandpass', 2500); },
     bell() { if (!this.ready()) return; const t = this.ctx.currentTime; [0, 0.28].forEach(d => { this.tone(1318.5, t + d, 0.9, 0.06, 'triangle'); this.tone(2637, t + d, 0.5, 0.02, 'sine'); }); },
     puff() { if (!this.ready()) return; this.gurgle(9); this.burst(1, 0.04, 'lowpass', 500); },
+    cuckoo() { if (!this.ready()) return; const t = this.ctx.currentTime; [0, 0.42].forEach(d => { this.tone(784, t + d, 0.18, 0.07, 'sine', 0.01); this.tone(622, t + d + 0.2, 0.24, 0.07, 'sine', 0.01); }); },
+    tweet() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 3; k++) { const o = this.tone(2600 + Math.random() * 600, t + k * 0.11, 0.07, 0.03, 'sine'); o.frequency.exponentialRampToValueAtTime(3600, t + k * 0.11 + 0.06); } },
+    crunch() { if (!this.ready()) return; for (let k = 0; k < 4; k++) setTimeout(() => this.burst(0.05, 0.08, 'bandpass', 2200 + Math.random() * 1500), k * 110); },
+    plop() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(500 + Math.random() * 300, t + k * 0.13, 0.09, 0.05, 'sine'); o.frequency.exponentialRampToValueAtTime(1400, t + k * 0.13 + 0.08); } },
+    tick() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(1600, t, 0.02, 0.04, 'square'); this.burst(0.15, 0.03, 'lowpass', 600); },
     snap() { if (!this.ready()) return; this.burst(0.06, 0.25, 'highpass', 3000); const t = this.ctx.currentTime; this.tone(1500, t + 0.05, 0.08, 0.04, 'square'); },
   };
 

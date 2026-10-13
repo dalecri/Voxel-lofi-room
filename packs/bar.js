@@ -416,7 +416,7 @@
 
   // ---- the room ----
   def('barjukebox', {
-    name: 'Jukebox', kind: 'floor', group: 'bar', size: [1, 1], wallish: true, tap: 'music', anim: 'record', on: true,
+    name: 'Jukebox', kind: 'floor', group: 'bar', size: [1, 1], wallish: true, tap: 'mood', anim: 'record', on: true,
     light: { at: [4, 14, 9], color: 0xff9a6a, i: 2.6, d: 5 },
     vars: [[MAHOG, 0xff5a5a], [WOOD.oak, 0x5ae8f0], [0xf2efe8, 0xff8ad8], [IRON, 0xffd25a]],
     build(m, [w, glow], s) {

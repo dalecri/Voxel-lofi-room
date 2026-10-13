@@ -26,7 +26,7 @@ Then open http://localhost:5180.
 
 ## What you can do
 
-- **Decorate from scratch.** Over 400 voxel pieces in 22 groups.
+- **Decorate from scratch.** Over 410 voxel pieces in 22 groups.
 - **Ten theme packs** for building intricate rooms and scenes, each with its own pieces, wall and floor styles, templates and a cozy moment:
   - **Bar & café:** a back bar of glowing bottles, beer taps, an espresso machine, a jukebox, a pool table, booths and neon. Templates: The Night Owl Bar, Corner Café.
   - **Library:** tall bookcases, gallery walkways, a rolling ladder, a spiral stair, a card catalog, banker's lamps, a lectern and a grandfather clock. Templates: Old Library, Reading Room.
@@ -54,7 +54,7 @@ Then open http://localhost:5180.
 - **Small things stack.** Mugs, lamps, plants and records sit on desks, tables, dressers, bookshelves, the piano, the mantel and wall shelves. Move a desk and everything on it comes along.
 - **Five decorating tools:**
   - **Add:** tap or drag to place.
-  - **Move:** drag pieces around.
+  - **Move:** drag pieces around, or drop one onto another to use them together.
   - **Turn:** tap to rotate.
   - **Paint:** change walls, wall colours, floors and the plot size (10×10 up to 24×24), or tap any piece to cycle its colours.
   - **Remove:** tap to put things away.
@@ -71,6 +71,25 @@ Then open http://localhost:5180.
   - The piano plays a phrase and the clocks tell the real time.
   - Mugs steam, and plants enjoy a watering.
   - Tap the bed to sleep until morning.
+- **Cozy extras that do something:**
+  - A **cuckoo clock** whose bird pops out when tapped and calls the hour on its own.
+  - **Incense** that burns with a slow curl of smoke.
+  - A **ceiling fan** that spins while it's on.
+  - A **Currently reading** stack that reads you a line.
+  - A **wall calendar** showing today's real date that flips its page.
+  - A **bird feeder** that birds visit in the morning, or whenever you scatter seed.
+  - A **radiator** with heat shimmer.
+  - A **jukebox** that switches the music between five moods: Late night lofi, Rainy day jazz, Sunny morning, Chillhop bounce, Dreamy ambient.
+  - A **telescope** that finds constellations after dark.
+  - A **food bowl** the nearest cat runs over to.
+  - Switching a fish tank's light on drops in breakfast, and the fish swarm the flakes.
+- **Drag one thing onto another** with Move and they work together (the target lights up and tells you what will happen):
+  - mug or tea cup → coffee maker or espresso machine: a fresh cup
+  - plant → sink: watered
+  - vinyl record → record player, gramophone or jukebox: plays that record's mood
+  - cat treats → a cat: a happy snack
+  - folded blanket → cat bed or futon: tucked in, and naps there last three times longer
+  - fish food → any tank: feeding time
 - **Cats:** Cali (calico), Neo (tuxedo), Ramses (savannah), Diego (bengal) and Mochi (grey).
   - They wander, hop onto sofas, beds, chairs and cat trees, and nap in cat beds.
   - Tap a cat to pet it and it purrs.
@@ -80,7 +99,7 @@ Then open http://localhost:5180.
 - **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
 - **Bigger plots.** In Paint, Plot size, grow any room or scene from the cozy 10×10 to 14×14, 20×20 or 24×24 for multi-block cities. Pieces stay where they are when it grows, and it only shrinks once nothing would fall off the edge.
 - **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **36 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
+- **39 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 
@@ -120,7 +139,7 @@ npm run apk        # → dist/lofi-rooms.apk
 |---|---|
 | `room.js` | The room model. The original furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. It doesn't draw anything, so it runs in Node too. |
 | `scene.js` | Scene mode: the open plot, outdoor ground, street tiles, buildings, street furniture, the tram and the scene templates. |
-| `packs/` | The ten theme packs (bar, library, lab, space, mexico, europe, medieval, cave, cyber, garden). Each one is a single file that adds its own pieces, wall and floor styles, Add-tray tab, templates, sounds, screen programs and moments, using the engine's generic hooks: `tap: 'fx'` for declarative interactions, `emit` for steady particles and `float`, `swing` and `blink` parts. |
+| `packs/` | The ten theme packs (bar, library, lab, space, mexico, europe, medieval, cave, cyber, garden), plus `cozy.js` with the everyday extras above. Each one is a single file that adds its own pieces, wall and floor styles, Add-tray tab, templates, sounds, screen programs and moments, using the engine's generic hooks: `tap: 'fx'` for declarative interactions, `emit` for steady particles and `float`, `swing` and `blink` parts. |
 | `japan.js` | The Japanese collection: pieces, wall and floor styles, the Tea Room template and two Japanese themes for Surprise rooms. |
 | `furniture.js` | The expanded catalog: modular desks and storage, tech and games, the kitchen, modern lights, fish tanks, windows, movie posters and the robot vacuum. |
 | `screens.js` | The pixel-art programs that play on screens. |

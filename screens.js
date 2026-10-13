@@ -132,6 +132,32 @@
       for (let k = 0; k < 5; k++) px(g, (k * 11) % W, H - 1 - ((t * 6 + k * 5) % H), 1, 1, '#9ad8ff');
     },
   };
+  // 3×5 pixel letters and digits for the wall calendar
+  const GLYPH = {
+    0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001',
+    5: '111100111001111', 6: '111100111101111', 7: '111001010010010', 8: '111101111101111', 9: '111101111001111',
+    A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111',
+    F: '111100110100100', G: '011100101101011', J: '001001001101010', L: '100100100100111', M: '101111111101101',
+    N: '110101101101101', O: '010101101101010', P: '110101110100100', R: '110101110101101', S: '011100010001110',
+    T: '111010010010010', U: '101101101101111', V: '101101101101010', Y: '101101010010010',
+  };
+  function text(g, str, x, y, c, k) {
+    [...String(str)].forEach((ch, i) => { const gl = GLYPH[ch]; if (gl) [...gl].forEach((b, j) => { if (b === '1') px(g, x + (i * 4 + j % 3) * k, y + ((j / 3) | 0) * k, k, k, c); }); });
+  }
+  P.calendar = function (g, W, H, t, s) {
+    const d = new Date(), MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    px(g, 0, 0, W, H, '#fbf6ec');
+    px(g, 0, 0, W, 8, '#d8504a');
+    const mon = MON[d.getMonth()];
+    text(g, mon, Math.round((W - 11) / 2), 2, '#fff', 1);
+    const day = String(d.getDate()), k = W >= 20 ? 2 : 1, dw = (day.length * 4 - 1) * k;
+    text(g, day, Math.round((W - dw) / 2), 10 + Math.max(0, Math.round((H - 10 - 5 * k) / 2) - 1), '#3a3448', k);
+    for (let x = 2; x < W - 2; x += 4) px(g, x, 0, 1, 1, '#8a3a36');
+    if (s && s.play) {   // a page flipping over
+      const k2 = (t * 3) % 1, h = Math.round(H * (1 - k2));
+      px(g, 0, 0, W, h, '#efe6d6'); px(g, 0, h - 1, W, 1, '#c8b8a0');
+    }
+  };
   // the handheld and arcade "game" channels share the platformer
   window.LRScreens = { draw(name, g, W, H, t, s) { (P[name] || P.static)(g, W, H, t, s); }, names: Object.keys(P), add(name, fn) { P[name] = fn; this.names.push(name); }, px, sprite };
 })();

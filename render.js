@@ -82,7 +82,19 @@
   const GEO = new Map();
   function itemKey(it, env) {
     const C = CAT[it.t];
-    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') : ''].join('|');
+    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') : '', it.blanket ? 'b' : ''].join('|');
+  }
+  // a little plaid throw laid over the top of a bed (dropped there with Move)
+  function drapeBlanket(m, C) {
+    const top = new Map();
+    m.parts.main.vox.forEach((v, k) => { const [x, y, z] = Model.decode(k); const c = x + ',' + z; if (!top.has(c) || top.get(c) < y) top.set(c, y); });
+    const [w, d] = C.size, W = w * V, D = d * V;
+    for (let x = Math.round(W * 0.15); x < Math.round(W * 0.85); x++) for (let z = Math.round(D * 0.3); z < Math.round(D * 0.95); z++) {
+      const y = top.get(x + ',' + z);
+      if (y == null) continue;
+      const plaid = ((x >> 1) % 3 === 0) || ((z >> 1) % 3 === 0);
+      m.set(x, y + 1, z, plaid ? 0xc8484a : ((x + z) % 2 ? 0xf4e8d4 : 0xe8d8c0));
+    }
   }
   function itemGeo(it, env) {
     const key = itemKey(it, env);
@@ -90,7 +102,8 @@
     if (g) return g;
     const C = CAT[it.t];
     const m = new Model();
-    C.build(m, C.vars[Math.min(it.c | 0, C.vars.length - 1)], { on: !!it.on, phase: env.phase, rain: env.rain, seed: it.seed || 1 });
+    C.build(m, C.vars[Math.min(it.c | 0, C.vars.length - 1)], { on: !!it.on, phase: env.phase, rain: env.rain, seed: it.seed || 1, blanket: !!it.blanket });
+    if (it.blanket) drapeBlanket(m, C);
     g = {};
     for (const name in m.parts) {
       const P = m.parts[name], vox = P.vox;
@@ -909,12 +922,20 @@
         bob = P.robot ? 0 : Math.abs(Math.sin(t * 13 + id)) * 0.05;
         if (!P.path.length) {
           if (P.next) { const n = P.next; P.next = null; this.startHop(P, n); }
-          else { P.state = !P.robot && Math.random() < 0.3 ? 'nap' : 'sit'; P.timer = P.state === 'nap' ? 8 + Math.random() * 10 : P.robot ? 0.5 + Math.random() * 2 : 2 + Math.random() * 4; }
+          else if (P.eat) this.startEating(P);
+          else {
+            P.state = !P.robot && (Math.random() < 0.3 || this.blanketAt(P)) ? 'nap' : 'sit';
+            P.timer = P.state === 'nap' ? (8 + Math.random() * 10) * (this.blanketAt(P) ? 3 : 1) : P.robot ? 0.5 + Math.random() * 2 : 2 + Math.random() * 4;
+          }
         }
-      } else if (P.timer <= 0 && P.state !== 'pet') {
+      } else if (P.timer <= 0 && P.state !== 'pet' && P.state !== 'eat') {
         this.decidePet(P, cx, cz);
-      } else if (P.state === 'pet' && P.timer <= 0) {
+      } else if ((P.state === 'pet' || P.state === 'eat') && P.timer <= 0) {
         P.state = 'sit'; P.timer = 2;
+      }
+      if (P.state === 'eat') {
+        squash = 0.9 + Math.abs(Math.sin(t * 8)) * 0.06;
+        if (Math.random() < dt * 1.4) this.icon('heart', new THREE.Vector3(P.x + (Math.random() - 0.5) * 0.3, P.y + 0.8, P.z), { size: 0.28 });
       }
       if (P.state === 'nap') {
         squash = 0.72;
@@ -987,6 +1008,11 @@
     }
     P.state = 'sit'; P.timer = 2 + Math.random() * 3;
   };
+  // is this cat standing on a bed with a blanket in it?
+  R.blanketAt = function (P) {
+    const cx = Math.floor(P.x), cz = Math.floor(P.z);
+    return !!this.room && this.room.items.some(i => i.blanket && !i.p && CAT[i.t].nap && (() => { const [w, d] = fp(i); return cx >= i.x && cx < i.x + w && cz >= i.z && cz < i.z + d; })());
+  };
   R.startHop = function (P, p) {
     P.heading = Math.atan2(p.x + 0.5 - P.x, p.z + 0.5 - P.z);
     P.hop = { x0: P.x, z0: P.z, y0: P.y, x1: p.x + 0.5, z1: p.z + 0.5, y1: p.y, t: 0, dur: 0.55, then: Math.random() < 0.6 ? 'nap' : 'sit', stay: 6 + Math.random() * 10 };
@@ -1006,6 +1032,52 @@
     }
     return false;
   };
+  // food pellets drop into a tank and the fish swarm them
+  R.feedFish = function (id) {
+    const o = this.objs.get(id), ud = o && o.userData;
+    if (!ud || !ud.fish || !ud.fish.length) return false;
+    const [ax, , az, bx, by, bz] = ud.tank.box, parent = ud.fish[0].parent;
+    ud.pellets = ud.pellets || [];
+    for (let k = 0; k < 6; k++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.018, 0.018), new THREE.MeshLambertMaterial({ color: k % 2 ? 0xc8783a : 0xe8a050 }));
+      m.position.set(ax + Math.random() * (bx - ax), by - 0.01 - Math.random() * 0.03, az + Math.random() * (bz - az));
+      m.userData.until = this.t + 14;
+      parent.add(m); ud.pellets.push(m);
+    }
+    ud.excited = this.t + 6;
+    return true;
+  };
+  R.pop = function (id, secs) { const o = this.objs.get(id); if (o) o.userData.popUntil = this.t + (secs || 2.5); };
+  R.feedBirds = function (id) { const o = this.objs.get(id); if (o) { o.userData.fedUntil = this.t + 25; o.userData.excited = this.t + 3; } };
+  // the nearest cat trots over to a bowl and eats; returns the cat's name id or 0
+  R.callCat = function (bowlId) {
+    const bowl = this.room && this.room.get(bowlId);
+    if (!bowl || bowl.p) return 0;
+    const [w, d] = fp(bowl), spots = [];
+    for (let x = bowl.x - 1; x <= bowl.x + w; x++) for (let z = bowl.z - 1; z <= bowl.z + d; z++) {
+      const inside = x >= bowl.x && x < bowl.x + w && z >= bowl.z && z < bowl.z + d;
+      if (!inside && this.cellFree(x, z)) spots.push([x, z]);
+    }
+    let best = null;
+    for (const [id, P] of this.pets) {
+      if (P.robot || P.state === 'hop' || P.perch) continue;
+      const cx = Math.floor(P.x), cz = Math.floor(P.z);
+      for (const [x, z] of spots) {
+        const path = cx === x && cz === z ? [] : this.path(cx, cz, x, z);
+        if (path && (!best || path.length < best.path.length)) best = { id, P, path, x, z };
+      }
+    }
+    if (!best) return 0;
+    const P = best.P;
+    P.eat = { x: bowl.x + w / 2, z: bowl.z + d / 2 }; P.next = null;
+    if (best.path.length) { P.path = best.path; P.state = 'walk'; } else this.startEating(P);
+    return best.id;
+  };
+  R.startEating = function (P, secs) {
+    if (P.eat) P.heading = Math.atan2(P.eat.x - P.x, P.eat.z - P.z);
+    P.eat = null; P.path = null; P.state = 'eat'; P.timer = secs || 4.5;
+  };
+  R.feedCat = function (id) { const P = this.pets.get(id); if (!P || P.robot) return false; if (P.state !== 'hop') this.startEating(P, 3); return true; };
   R.petAt = function (id) { const P = this.pets.get(id); return P ? new THREE.Vector3(P.x, P.y, P.z) : null; };
 
   // ---- per frame ----
@@ -1101,10 +1173,21 @@
       }
     } else if (ud.screen) { ud.screen.mesh.visible = false; ud.screen.ch = -1; }
     if (ud.fish) {
-      const [ax, ay, az, bx, by, bz] = ud.tank.box, fast = ud.excited > t ? 3 : 1;
+      const [ax, ay, az, bx, by, bz] = ud.tank.box, fast = ud.excited > t || (ud.pellets && ud.pellets.length) ? 3 : 1;
       ud.tank.water.material.emissiveIntensity += ((it.on ? 0.55 : 0.08) - ud.tank.water.material.emissiveIntensity) * Math.min(1, dt * 4);
+      const food = ud.pellets && ud.pellets.length ? ud.pellets : null;
+      if (food) {
+        ud.pellets = food.filter(p => {
+          p.position.y = Math.max(ay, p.position.y - dt * 0.07);
+          const gone = p.userData.until < t || ud.fish.some(f => f.position.distanceTo(p.position) < 0.035);
+          if (gone) { p.parent.remove(p); p.geometry.dispose(); }
+          return !gone;
+        });
+      }
       for (const f of ud.fish) {
-        const u = f.userData, d = u.goal.clone().sub(f.position);
+        const u = f.userData;
+        if (ud.pellets && ud.pellets.length) { let best = null, bd = 9; ud.pellets.forEach(p => { const dd = p.position.distanceTo(f.position); if (dd < bd) { bd = dd; best = p; } }); if (best) u.goal.copy(best.position); }
+        const d = u.goal.clone().sub(f.position);
         if (d.length() < 0.04 || Math.random() < dt * 0.15) u.goal.set(ax + Math.random() * (bx - ax), ay + Math.random() * (by - ay), az + Math.random() * (bz - az));
         const v = d.normalize().multiplyScalar(u.speed * fast * dt);
         f.position.add(v);
@@ -1145,7 +1228,22 @@
     if (ud.parts.float) { const f = ud.parts.float; if (f.userData.y0 == null) f.userData.y0 = f.position.y; f.position.y = f.userData.y0 + (0.5 + 0.5 * Math.sin(t * 1.6 + it.id)) * 0.06 * (ud.excited > t ? 3 : 1); }
     if (ud.parts.swing) ud.parts.swing.rotation.z = Math.sin(t * 1.7 + it.id) * (ud.excited > t ? 0.35 : 0.12);
     if (ud.parts.blink) ud.parts.blink.visible = !!it.on && Math.sin(t * 5 + it.id * 2.3) > -0.2;
-    if (ud.parts.spin) { ud.spinV = (ud.spinV || 0.3) * Math.exp(-dt * 0.8); ud.parts.spin.rotation.y += Math.max(0.3, ud.spinV) * dt; }
+    if (ud.parts.spin) {
+      if (C.spinOn) { ud.spinW = (ud.spinW || 0) + ((it.on ? C.spinOn : 0) - (ud.spinW || 0)) * Math.min(1, dt * 1.5); ud.parts.spin.rotation.y += ud.spinW * dt; }   // fans: only while switched on
+      else { ud.spinV = (ud.spinV || 0.3) * Math.exp(-dt * 0.8); ud.parts.spin.rotation.y += Math.max(0.3, ud.spinV) * dt; }
+    }
+    // a part that slides out for a moment (the cuckoo) and birds that visit by day or when fed
+    if (ud.parts.pop) {
+      const P = ud.parts.pop; if (P.userData.z0 == null) P.userData.z0 = P.position.z;
+      ud.popK = (ud.popK || 0) + ((ud.popUntil > t ? 1 : 0) - (ud.popK || 0)) * Math.min(1, dt * 8);
+      P.position.z = P.userData.z0 + ud.popK * (C.popOut || 3) * S;
+      P.rotation.z = ud.popUntil > t ? Math.sin(t * 18) * 0.12 : 0;
+    }
+    if (ud.parts.birds) {
+      const fed = ud.fedUntil > t, by = (this.phase === 'morning' || this.phase === 'day') && !this.env.rain;
+      ud.parts.birds.visible = fed || by;
+      ud.parts.birds.position.y = Math.abs(Math.sin(t * (fed ? 9 : 3) + it.id)) * 0.025;
+    }
     if (C.anim === 'speaker' && this.music && !ud.boing) {
       const beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 74 / 60)), 8);
       ud.inner.scale.set(1 + beat * 0.03, 1 + beat * 0.05, 1 + beat * 0.03);
@@ -1161,6 +1259,8 @@
     else if (kind === 'bubbles') this.fx.spawn(p.x, p.y, p.z, j(0.06), 0.3 + Math.random() * 0.2, j(0.06), color || 0xe8f8ff, 0.05, 1.2, 0, 0, 0.8);
     else if (kind === 'drip') this.fx.spawn(p.x, p.y, p.z, 0, -0.6, 0, color || 0x9ad8ff, 0.04, 0.6, 4, 0, 0.9);
     else if (kind === 'smoke') this.fx.spawn(p.x, p.y, p.z, j(0.12), 0.3 + Math.random() * 0.15, j(0.12), color || 0xd8d4e0, 0.16 + Math.random() * 0.08, 2.6, -0.04, 0.5, 0.4);
+    else if (kind === 'heat') this.fx.spawn(p.x, p.y, p.z, j(0.1), 0.35 + Math.random() * 0.2, j(0.1), color || 0xffd8b0, 0.09, 1.2, -0.02, 0.6, 0.18);
+    else if (kind === 'wisp') this.fx.spawn(p.x, p.y, p.z, j(0.03) + Math.sin(this.t * 1.3) * 0.03, 0.18 + Math.random() * 0.05, j(0.03), color || 0xe8e4f0, 0.035 + Math.random() * 0.02, 3.4, -0.01, 0.2, 0.5);
     else if (kind === 'snow') this.glowFx.spawn(p.x, p.y, p.z, j(0.1), -0.15, j(0.1), color || 0xffffff, 0.04, 2.5, 0, 0.5, 0.9);
     else this.fx.spawn(p.x, p.y, p.z, j(0.08), 0.35, j(0.08), color || 0xffffff, 0.07, 1.6, -0.05, 0.3, 0.55);   // steam
   };
