@@ -119,7 +119,7 @@
     label: 'Neon metal', fn: (c, u, y) => {
       if (y === 21) return 0xff6ac0;
       if (y === 3) return 0x4ae8f8;
-      const base = mix(0x24242e, c, 0.12), pu = u % 16, py = y % 14;
+      const base = mix(0x34343f, c, 0.15), pu = u % 16, py = y % 14;
       if (pu === 0 || py === 0) return shade(base, 0.7);
       if ((pu === 2 || pu === 14) && (py === 2 || py === 12)) return 0x6a6a7a;
       return shade(base, 0.92 + 0.12 * hash3(u >> 4, (y / 14) | 0, 0, 3));
@@ -155,8 +155,8 @@
   FLOORS.grating = {
     label: 'Metal grating', fn: (x, z) => {
       const lx = x % 8, lz = z % 8;
-      if (lx === 0 || lz === 0) return 0x5a5a68;
-      return (lx + lz) % 2 ? 0x2a2a34 : 0x3e3e4a;
+      if (lx === 0 || lz === 0) return 0x6a6a78;
+      return (lx + lz) % 2 ? 0x34343e : 0x4a4a56;
     },
   };
 
@@ -286,7 +286,7 @@
     build(m, [word, c, edge], s) {
       m.box(2, 1, 0, 6, 3, 2, STEEL).box(2, 21, 0, 6, 23, 2, STEEL);
       m.box(3, 0, 1, 5, 24, 9, 0x1a1626);
-      for (let y = 0; y < 24; y++) m.set(3, y, 9, dim(y % 2 ? edge : c, s.on), s.on); m.set(4, y, 9, dim(y % 2 ? edge : c, s.on), s.on);
+      for (let y = 0; y < 24; y++) { m.set(3, y, 9, dim(y % 2 ? edge : c, s.on), s.on); m.set(4, y, 9, dim(y % 2 ? edge : c, s.on), s.on); }
       for (let z = 1; z < 9; z++) { m.set(3, 0, z, dim(edge, s.on), s.on); m.set(4, 0, z, dim(edge, s.on), s.on); m.set(3, 23, z, dim(edge, s.on), s.on); m.set(4, 23, z, dim(edge, s.on), s.on); }
       const n = Math.min(word.length, 4), top = 22 - Math.floor((23 - n * 6 + 1) / 2);
       [...word.slice(0, n)].forEach((ch, i) => (FONT[ch] || FONT.O).forEach((r, j) => [...r].forEach((p, k) => {
@@ -377,7 +377,7 @@
         m.box(1, y, 7, 7, y + 2, 8, shade(c === INK ? GUN : c, 0.9 + 0.1 * (y % 2)));
         for (let x = 1; x < 4; x++) m.set(x, y + 1, 8, s.on && hash3(x, y, 0, 3) < 0.6 ? [LIME, neon, AMBER][(x + y) % 3] : 0x2a2a30, s.on);
       }
-      m.part('blink');
+      m.part('blink', [0, 0, 0]);
       for (let y = 2; y < 30; y += 3) for (let x = 5; x < 7; x++) if (hash3(x, y, 1, 7) < 0.5) m.set(x, y + 1, 8, x % 2 ? neon : 0xffffff, true);
       m.main();
       line(m, [7, 30, 0], [7, 30, -1], 0x3a3a48);
@@ -513,7 +513,7 @@
     name: 'Megatower', kind: 'floor', group: 'cyber', size: [2, 2], wallish: true, tap: 'building', on: true, seeded: true,
     vars: [[0x2a2c3a, PINK, CYAN], [0x3a3448, VIOLET, AMBER], [0x23303a, CYAN, LIME], [0x4a4a56, AMBER, PINK], [0x1e2230, RED, CYAN]],
     build(m, [wall, na, nb], s) {
-      const seed = s.seed || 3, H = 84 + (seed % 4) * 9, mid = 42 + (seed % 3) * 6, on = s.on;
+      const seed = s.seed || 3, H = 78 + (seed % 4) * 8, mid = 42 + (seed % 3) * 6, on = s.on;
       const wf = (x, y, z) => shade(wall, 0.92 + 0.12 * hash3(x >> 2, y >> 3, z >> 2, 5));
       // podium with shopfronts
       m.box(0, 0, 0, 16, 18, 16, shade(wall, 0.8));
@@ -552,7 +552,7 @@
       m.blob(11, H + 3, 6, 1.8, 1.2, 1.8, 0xc8c8d0);
       line(m, [10, H + 2, 10], [10, H + 20, 10], STEEL);
       m.box(9, H + 8, 10, 12, H + 9, 11, STEEL).box(9, H + 14, 10, 12, H + 15, 11, STEEL);
-      m.part('blink');
+      m.part('blink', [0, 0, 0]);
       m.set(10, H + 21, 10, 0xff2a3a, true);
       m.set(9, H + 9, 10, 0xff2a3a, true);
       m.main();
@@ -698,7 +698,7 @@
       line(m, [2, 10, 2], [0, 11, 0], shade(c, 0.8)); line(m, [5, 10, 2], [7, 11, 0], shade(c, 0.8));
       line(m, [2, 10, 5], [0, 11, 7], shade(c, 0.8)); line(m, [5, 10, 5], [7, 11, 7], shade(c, 0.8));
       [[0, 0], [7, 0], [0, 7], [7, 7]].forEach(([x, z]) => {
-        m.box(x - 1, 12, z, x + 2, 12, z + 1, INK).set(x, 12, z, INK); m.set(x - 1, 12, z, 0xc8c8d0); m.set(x + 1, 12, z, 0xc8c8d0); m.set(x, 12, z - 1, 0xc8c8d0); m.set(x, 12, z + 1, 0xc8c8d0);
+        m.set(x, 12, z, INK); m.set(x - 1, 12, z, 0xc8c8d0); m.set(x + 1, 12, z, 0xc8c8d0); m.set(x, 12, z - 1, 0xc8c8d0); m.set(x, 12, z + 1, 0xc8c8d0);
       });
       m.box(3, 5, 3, 5, 7, 5, 0xc8a06a);
       m.set(4, 11, 4, s.on ? LIME : 0x3a3a44, s.on);
@@ -716,7 +716,7 @@
         if (dir === 'z') {
           m.box(3, y0, 5, 5, y0 + h, 11, INK);
           for (let z = 5; z < 11; z++) { m.set(3, y0, z, dim(col, on), on); m.set(3, y0 + h - 1, z, dim(col, on), on); m.set(4, y0, z, dim(col, on), on); m.set(4, y0 + h - 1, z, dim(col, on), on); }
-          for (let y = y0; y < y0 + h; y++) m.set(4, y, 11, dim(col, on), on); m.set(3, y, 11, dim(col, on), on);
+          for (let y = y0; y < y0 + h; y++) { m.set(4, y, 11, dim(col, on), on); m.set(3, y, 11, dim(col, on), on); }
           [...word].forEach((ch, i) => (FONT[ch] || FONT.O).forEach((r, j) => [...r].forEach((p, k) => { if (p === '#') { const y = y0 + h - 2 - i * 6 - j; m.set(5, y, 9 - k, dim(col, on), on); m.set(2, y, 7 + k, dim(col, on), on); } })));
         } else {
           m.box(5, y0, 3, 12, y0 + h, 5, INK);

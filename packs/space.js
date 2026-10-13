@@ -6,7 +6,7 @@
 
 (function () {
   const LR = typeof module !== 'undefined' && module.exports ? require('../room.js') : window.LR;
-  const { def, shade, mix, hash3, WALLS, FLOORS, PRESETS, GLOW, buildRoom: B } = LR;
+  const { def, shade, mix, hash3, WALLS, FLOORS, PRESETS, buildRoom: B } = LR;
   const HULL = 0x6a7488, HULL_L = 0x949eb2, HULL_D = 0x3e4658, INK = 0x1a1d2a, SPACE = 0x0a0c22;
   const TEAL = 0x3ae0d0, PINK = 0xff6ad0, AMB = 0xffb44a, PURP = 0x7a5ab0, LIME = 0x9aff6a;
   LR.addGroup('space', 'Spaceship');
@@ -95,18 +95,19 @@
     label: 'Hull plates', fn: (c, u, y) => {
       if (y < 3) return y === 2 ? 0x2a2e3a : 0x1e212c;
       const pu = u % 16, py = (y - 3) % 13;
-      if (py === 0) return (u % 16 < 14 ? mix(0x3ae0d0, c, 0.1) | GLOW : 0x2a2e3a);
+      if (py === 0) return (u % 16 < 14 ? 0x6af0e0 : 0x2a2e3a);
+      if (py === 1 || py === 12) return 0x3a4252;
       if (pu === 0) return 0x2a2e3a;
       if ((pu === 2 || pu === 14) && (py === 2 || py === 11)) return 0xc8ccd8;
       const curve = Math.sin(py / 13 * Math.PI);
-      return shade(mix(HULL, c, 0.2), 0.72 + 0.32 * curve + 0.03 * hash3(u >> 1, y >> 1, 0, 5));
+      return shade(mix(HULL_L, c, 0.25), 0.8 + 0.22 * curve + 0.03 * hash3(u >> 1, y >> 1, 0, 5));
     },
   };
   WALLS.shiporganic = {
     label: 'Alien wall', fn: (c, u, y) => {
       if (y < 3) return 0x2a1a3a;
       const v = Math.sin(u * 0.21 + Math.sin(y * 0.17) * 2.2) + Math.sin(y * 0.13 + Math.cos(u * 0.11) * 1.8);
-      if (Math.abs(v) < 0.09) return 0x5af0d8 | GLOW;
+      if (Math.abs(v) < 0.09) return 0x7afff0;
       if (Math.abs(v) < 0.22) return 0x2e8a90;
       const k = 0.8 + 0.25 * Math.abs(Math.sin(v * 2)) + 0.04 * hash3(u, y, 0, 3);
       return shade(mix(0x5a3a8a, c, 0.15), k);
@@ -122,7 +123,7 @@
   };
   FLOORS.shipgrid = {
     label: 'Glow grid', fn: (x, z) => {
-      if (x % 16 === 0 || z % 16 === 0) return (x % 16 === 0 && z % 16 === 0) ? (0xff6ad0 | GLOW) : (0x2ac8c0 | GLOW);
+      if (x % 16 === 0 || z % 16 === 0) return (x % 16 === 0 && z % 16 === 0) ? 0xff7ad8 : 0x4ae8e0;
       return shade(0x1e2232, 0.92 + 0.12 * hash3(x >> 2, 0, z >> 2, 4));
     },
   };
@@ -466,7 +467,7 @@
     name: 'Starship Cabin', blurb: 'A cozy cabin on an alien starship, stars drifting past the porthole.',
     art: 'radial-gradient(circle at 70% 35%, #e8884a 0 12%, transparent 13%), linear-gradient(160deg, #241a4a 0%, #0a0c26 60%, #3ae0d0 140%)',
     make(room) {
-      room.wall = { style: 'shiphull', color: 8 }; room.floor = { style: 'shiphex' };
+      room.wall = { style: 'shiphull', color: 4 }; room.floor = { style: 'shiphex' };
       B(room, [
         ['shiprunner', { x: 4, z: 3, c: 0 }], ['shiprunner', { x: 4, z: 5, c: 0 }], ['shiprunner', { x: 4, z: 7, c: 0 }],
         ['shipbed', { x: 0, z: 0, c: 0 }],
@@ -478,7 +479,9 @@
         ['shipplant', { x: 8, z: 0, c: 0 }], ['shipplant', { x: 7, z: 0, c: 1 }],
         ['shipsuit', { x: 0, z: 4, r: 1, c: 0 }], ['shipsuit', { x: 0, z: 5, r: 1, c: 2 }],
         ['shipcrate', { x: 0, z: 7, c: 1 }, [['shipjelly', { lx: 0, lz: 0, c: 0 }]]], ['shipcrate', { x: 0, z: 8, c: 0 }, [['shipalien', { lx: 0, lz: 0, c: 0 }]]],
-        ['shipcrate', { x: 1, z: 8, c: 2 }],
+        ['shipcrate', { x: 1, z: 8, c: 2 }, [['shiporb', { lx: 0, lz: 0, c: 4 }]]],
+        ['shipcrate', { x: 3, z: 0, c: 3 }, [['shipalien', { lx: 0, lz: 0, c: 1 }]]], ['shipcrate', { x: 4, z: 0, c: 1 }, [['shipjelly', { lx: 0, lz: 0, c: 1 }]]],
+        ['shipplant', { x: 9, z: 9, c: 2 }], ['shiptube', { x: 9, z: 7, r: 3, c: 2 }], ['shipcrate', { x: 6, z: 9, c: 0 }, [['mug', { lx: 0, lz: 0, c: 2 }]]],
         ['shipegg', { x: 0, z: 9, c: 0 }],
         ['shippad', { x: 7, z: 7, c: 0 }],
         ['shipstarmap', { x: 5, z: 4, c: 0 }],
@@ -513,7 +516,7 @@
       [3, 5, 7, 9].forEach((x, i) => at('shipconsole', { x, z: 0, c: i % 2 ? 1 : 0 }));
       [4, 6, 8, 10].forEach((x, i) => at('shipchair', { x, z: 1, r: 2, c: i % 2 ? 2 : 3 }));
       at('shipreactor', { x: 0, z: 0, c: 0 }); at('shipreactor', { x: 13, z: 0, c: 1 });
-      at('shipreactor', { x: 0, z: 13, c: 1 }); at('shipreactor', { x: 13, z: 13, c: 0 });
+      at('shipreactor', { x: 0, z: 13, c: 1 }); at('shipplant', { x: 13, z: 13, c: 1 }); at('shiporb', { x: 12, z: 13, c: 0 });
       at('shipplant', { x: 1, z: 0, c: 0 }); at('shipplant', { x: 12, z: 0, c: 1 }); at('shipplant', { x: 2, z: 0, c: 2 }); at('shipplant', { x: 11, z: 0, c: 3 });
       // the captain's spot and the star map in the middle
       for (let z = 3; z < 13; z += 2) at('shiprunner', { x: 6, z, c: 0 });

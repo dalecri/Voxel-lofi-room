@@ -6,7 +6,7 @@
 
 (function () {
   const LR = typeof module !== 'undefined' && module.exports ? require('../room.js') : window.LR;
-  const { def, shade, mix, hash3, GREEN, GREEN_D, GREEN_L, WALLS, FLOORS, PRESETS, GLOW, buildRoom: B } = LR;
+  const { def, shade, mix, hash3, GREEN, GREEN_D, GREEN_L, WALLS, FLOORS, PRESETS, buildRoom: B } = LR;
   const WH = 0xeef1f4, WH2 = 0xdde3ea, STEEL = 0xa8b2bc, STEEL_D = 0x6a7480, DARK = 0x262c36, TOP = 0x3a4250;
   const CY = 0x5ae8f0, MINT = 0x7af0c0, ORG = 0xff9a4a, GLASS = 0xcdeef8;
   LR.addGroup('lab', 'Future lab');
@@ -97,7 +97,7 @@
   WALLS.labpanel = {
     label: 'Lab panels', fn: (c, u, y) => {
       if (y < 3) return y === 2 ? 0xc8d0d8 : 0x8a94a0;
-      if (y === 40 || y === 41) return (u % 24 < 22 ? 0xcff8ff : 0x9aa6b0) | (u % 24 < 22 ? GLOW : 0);
+      if (y === 40 || y === 41) return u % 24 < 22 ? (y === 40 ? 0xb8f4fc : 0xe4fcff) : 0x9aa6b0;
       if (y === 39 || y === 42) return 0xb0bac4;
       const pu = u % 12, py = (y - 3) % 13;
       if (pu === 0 || py === 0) return shade(mix(0xf2f4f6, c, 0.15), 0.8);

@@ -87,7 +87,7 @@
       if (lx === 2 && lz === 2) return 0x8a8478;
       if ((lx === 2) !== (lz === 2) && (lx + lz) % 2 === 0) return 0x9a9488;
       const px = ((x + off) / 3) | 0, h = hash3(px, row, 0, 13);
-      const flower = (Math.abs((px % 6) - 3) + Math.abs((row % 6) - 3)) < 2;
+      const flower = (Math.abs((px % 8) - 4) + Math.abs((row % 8) - 4)) < 1.5;
       return flower ? 0x2e5a44 : h < 0.06 ? 0x3a3a40 : shade(0xf2ece0, 0.94 + 0.06 * hash3(px, row, 1, 3));
     },
   };
@@ -573,7 +573,7 @@
         ['barbarrel', { x: 9, z: 6, c: 2 }, [['barglasses', { lx: 0, lz: 0, c: 1 }]]],
         ['barbarrel', { x: 9, z: 7, c: 0 }],
         ['barchair', { x: 8, z: 6, c: 2 }],
-        ['barbistro', { x: 8, z: 9, c: 1 }, [['barglasses', { lx: 0, lz: 0, c: 0 }]]],
+        ['barbistro', { x: 8, z: 9, c: 1 }, [['barjar', { lx: 0, lz: 0, c: 1 }]]],
         ['barbistrochair', { x: 7, z: 9, r: 1, c: 0 }],
         ['cat', { x: 3, z: 5, c: 1 }], ['cat', { x: 6, z: 9, c: 2 }],
         // walls

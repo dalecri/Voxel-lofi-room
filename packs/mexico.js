@@ -869,7 +869,7 @@
       at('mxfountain', { x: 11, z: 9, c: 0 });
       [[4, 6], [15, 6], [4, 13], [15, 13], [9, 6], [9, 13]].forEach(([x, z], k) => at('mxlaurel', { x, z, c: k % 3 }));
       at('bench', { x: 11, z: 6, c: 2 }); at('bench', { x: 11, z: 13, r: 2, c: 2 }); at('bench', { x: 14, z: 8, r: 3, c: 1 });
-      at('mxfarol', { x: 10, z: 8 }); at('mxfarol', { x: 13, z: 11 }); at('mxfarol', { x: 8, z: 11 });
+      at('mxfarol', { x: 10, z: 8 }); at('mxfarol', { x: 14, z: 11 }); at('mxfarol', { x: 8, z: 11 });
       at('mxbulbs', { x: 4, z: 11, c: 0 });
       at('mxagave', { x: 14, z: 12, c: 3 }); at('mxagave', { x: 10, z: 12, c: 1 });
       // the market lane in front
