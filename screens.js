@@ -133,5 +133,5 @@
     },
   };
   // the handheld and arcade "game" channels share the platformer
-  window.LRScreens = { draw(name, g, W, H, t, s) { (P[name] || P.static)(g, W, H, t, s); }, names: Object.keys(P) };
+  window.LRScreens = { draw(name, g, W, H, t, s) { (P[name] || P.static)(g, W, H, t, s); }, names: Object.keys(P), add(name, fn) { P[name] = fn; this.names.push(name); }, px, sprite };
 })();

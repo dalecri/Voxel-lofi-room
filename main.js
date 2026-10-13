@@ -45,7 +45,7 @@ function startLofiRooms() {
     ['tram', 'All aboard', 'Rang the tram bell'],
     ['city', 'City lights', 'An open-air scene after dark'],
     ['photo', 'Snapshot', 'Took a photo of your room'],
-  ];
+  ].concat(LR.MOMENTS || []);   // theme packs can add their own with LR.MOMENTS.push([key, name, description])
   const found = new Set(store.get('lr.found', []));
 
   // ---------------------------------------------------------------
@@ -474,6 +474,21 @@ function startLofiRooms() {
       Sound.click(it.on);
       if (it.on && C.light) discover('light');
       if (it.on && it.t === 'fireplace') discover('fire');
+      return;
+    }
+    // a declarative tap any piece can describe with fx: { toggle, say, sayOn, sayOff, burst, secs, sfx, sparkle, excite, spin, door, moment }
+    if (tap === 'fx') {
+      const F = C.fx || {};
+      if (F.toggle) { pushUndo(); it.on = !it.on; changed(); if (it.on && C.light) discover('light'); }
+      if (F.burst && (!F.toggle || it.on)) view.burst(id, F.burst, F.secs || 3);
+      if (F.sparkle) view.sparkle(view.itemPoint(id, C.burstAt || [4, 8, 4]), F.sparkle, 12);
+      if (F.excite) view.excite(id);
+      if (F.spin) view.spin(id);
+      if (F.door) view.openDoor(id);
+      [].concat(F.sfx || (F.toggle ? 'click' : [])).forEach((s, k) => setTimeout(() => Sound[s] && Sound[s](it.on), k * 160));
+      const lines = F.toggle ? (it.on ? F.sayOn : F.sayOff) || F.say : F.say;
+      if (lines && lines.length) toast(`<span>${pickOne([].concat(lines))}</span>`, 1400);
+      if (F.moment) discover(F.moment);
       return;
     }
     if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.paint(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
@@ -907,18 +922,26 @@ function startLofiRooms() {
     if (name && name.trim()) { room.name = name.trim().slice(0, 40); updateHeader(); dirty = true; saveIndex(); }
   };
 
+  // template cards, rooms first and open-air scenes after, each under a little heading
   function presetCards(onPick) {
     const wrap = document.createElement('div'); wrap.className = 'cards';
-    Object.entries(PRESETS).forEach(([k, p]) => {
+    const head = text => { const h = document.createElement('h3'); h.textContent = text; wrap.appendChild(h); };
+    const card = (k, p) => {
       const b = document.createElement('button'); b.className = 'card ' + k;
       b.innerHTML = `<div class="art">${p.scene ? '<em class="tag">Scene</em>' : ''}</div><b>${p.name}</b><span>${p.blurb}</span>`;
+      if (p.art) b.querySelector('.art').style.background = p.art;   // packs give their own card colours
       b.onclick = () => onPick(k);
       wrap.appendChild(b);
-    });
+    };
+    const all = Object.entries(PRESETS);
+    head('Rooms');
     const rb = document.createElement('button'); rb.className = 'card random';
     rb.innerHTML = `<div class="art">🎲</div><b>Surprise me</b><span>A brand-new random room every time.</span>`;
     rb.onclick = () => onPick('random');
     wrap.appendChild(rb);
+    all.filter(([, p]) => !p.scene).forEach(([k, p]) => card(k, p));
+    head('Scenes');
+    all.filter(([, p]) => p.scene).forEach(([k, p]) => card(k, p));
     return wrap;
   }
   function fillRoom(k) {

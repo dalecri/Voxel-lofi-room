@@ -1141,11 +1141,28 @@
       ud.parts.car.position.y = Math.abs(Math.sin(t * 22)) * 0.004 * (k > 0 && k < 1 ? 1 : 0);
     }
     if (ud.parts.paw) ud.parts.paw.rotation.z = Math.sin(t * (ud.excited > t ? 9 : 3) + it.id) * 0.45;
+    // generic parts any piece can use: float bobs, swing sways, blink flashes while on
+    if (ud.parts.float) { const f = ud.parts.float; if (f.userData.y0 == null) f.userData.y0 = f.position.y; f.position.y = f.userData.y0 + (0.5 + 0.5 * Math.sin(t * 1.6 + it.id)) * 0.06 * (ud.excited > t ? 3 : 1); }
+    if (ud.parts.swing) ud.parts.swing.rotation.z = Math.sin(t * 1.7 + it.id) * (ud.excited > t ? 0.35 : 0.12);
+    if (ud.parts.blink) ud.parts.blink.visible = !!it.on && Math.sin(t * 5 + it.id * 2.3) > -0.2;
     if (ud.parts.spin) { ud.spinV = (ud.spinV || 0.3) * Math.exp(-dt * 0.8); ud.parts.spin.rotation.y += Math.max(0.3, ud.spinV) * dt; }
     if (C.anim === 'speaker' && this.music && !ud.boing) {
       const beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 74 / 60)), 8);
       ud.inner.scale.set(1 + beat * 0.03, 1 + beat * 0.05, 1 + beat * 0.03);
     }
+  };
+
+  // one particle of a named kind, at a voxel point on the piece
+  R.emitFx = function (it, C, kind, at, color) {
+    const a = at || [4, 8, 4], j = k => (Math.random() - 0.5) * k;
+    const p = this.itemPoint(it.id, [a[0] + 0.5 + j(2), a[1] + 0.5, a[2] + 0.5 + j(2)]);
+    if (kind === 'sparks' || kind === 'embers') this.glowFx.spawn(p.x, p.y, p.z, j(0.3), 0.6 + Math.random() * 0.6, j(0.3), color || (Math.random() < 0.5 ? 0xffa040 : 0xffd060), 0.045, kind === 'embers' ? 1.4 : 0.8, -0.2, 0.5);
+    else if (kind === 'magic') this.glowFx.spawn(p.x, p.y, p.z, j(0.2), 0.25 + Math.random() * 0.3, j(0.2), color || [0x9af0ff, 0xd0a0ff, 0xfff0a0][(Math.random() * 3) | 0], 0.05, 1.8, -0.02, 0.4, 0.9);
+    else if (kind === 'bubbles') this.fx.spawn(p.x, p.y, p.z, j(0.06), 0.3 + Math.random() * 0.2, j(0.06), color || 0xe8f8ff, 0.05, 1.2, 0, 0, 0.8);
+    else if (kind === 'drip') this.fx.spawn(p.x, p.y, p.z, 0, -0.6, 0, color || 0x9ad8ff, 0.04, 0.6, 4, 0, 0.9);
+    else if (kind === 'smoke') this.fx.spawn(p.x, p.y, p.z, j(0.12), 0.3 + Math.random() * 0.15, j(0.12), color || 0xd8d4e0, 0.16 + Math.random() * 0.08, 2.6, -0.04, 0.5, 0.4);
+    else if (kind === 'snow') this.glowFx.spawn(p.x, p.y, p.z, j(0.1), -0.15, j(0.1), color || 0xffffff, 0.04, 2.5, 0, 0.5, 0.9);
+    else this.fx.spawn(p.x, p.y, p.z, j(0.08), 0.35, j(0.08), color || 0xffffff, 0.07, 1.6, -0.05, 0.3, 0.55);   // steam
   };
 
   // steam, music notes, embers, dust in the sunbeam, rain on the glass
@@ -1162,6 +1179,10 @@
         const p = this.itemPoint(it.id, [C.steam[0] + 0.5, C.steam[1] + 0.5, C.steam[2] + 0.5]);
         this.fx.spawn(p.x + (Math.random() - 0.5) * 0.1, p.y, p.z + (Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.08, 0.35, (Math.random() - 0.5) * 0.08, 0xffffff, 0.07, 1.6, -0.05, 0.3, 0.55);
       }
+      // steady particles a piece gives off: emit { kind, at, rate, color, on }
+      if (C.emit) (Array.isArray(C.emit) ? C.emit : [C.emit]).forEach(E => {
+        if ((E.on === false || it.on || E.on === 'always') && Math.random() < step * (E.rate || 2)) this.emitFx(it, C, E.kind, E.at, E.color);
+      });
       if (C.anim === 'record' && this.music && Math.random() < step * 0.9) {
         const p = this.itemPoint(it.id, [4, 4, 4]);
         this.icon('note', p, { size: 0.3, life: 2.2, vy: 0.5 });
@@ -1183,15 +1204,19 @@
       const B = ud.burst;
       if (C.petals && Math.random() < step * (B && B.until > this.t && B.kind === 'petals' ? 14 : 1.6)) {
         const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 9, 16 + Math.random() * 6, 4 + (Math.random() - 0.5) * 9]);
-        this.fx.spawn(p.x, p.y, p.z, 0.15 + Math.random() * 0.2, -0.25 - Math.random() * 0.15, (Math.random() - 0.5) * 0.2, Math.random() < 0.5 ? 0xf6a8c4 : 0xfad0e0, 0.06, 6, 0.02, 0.3, 0.95);
+        this.fx.spawn(p.x, p.y, p.z, 0.15 + Math.random() * 0.2, -0.25 - Math.random() * 0.15, (Math.random() - 0.5) * 0.2, (C.petalColors ? C.petalColors[(Math.random() * C.petalColors.length) | 0] : Math.random() < 0.5 ? 0xf6a8c4 : 0xfad0e0), 0.06, 6, 0.02, 0.3, 0.95);
       }
       if (B && B.until > this.t && B.kind !== 'petals') {
         const n = B.kind === 'snow' ? 8 : 4;
         for (let k = 0; k < n * step * 8; k++) {
-          if (B.kind === 'snow') { const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 6, 7 + Math.random() * 2, 4 + (Math.random() - 0.5) * 6]); this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.1, -0.15, (Math.random() - 0.5) * 0.1, 0xffffff, 0.04, 2.5, 0, 0.5, 0.9); }
-          else if (B.kind === 'smoke') { const p = this.itemPoint(it.id, [7, 3, 7]); this.fx.spawn(p.x, p.y, p.z, 0.2 + Math.random() * 0.2, 0.25 + Math.random() * 0.15, 0.2 + Math.random() * 0.2, 0xe8e4f0, 0.18 + Math.random() * 0.1, 3, -0.04, 0.6, 0.45); }
+          if (B.kind === 'snow' && C.burstAt) this.emitFx(it, C, 'snow', C.burstAt, C.fxColor);
+          else if (B.kind === 'drip' && C.burstAt) this.emitFx(it, C, 'drip', C.burstAt, C.fxColor);
+          else if (B.kind === 'snow') { const p = this.itemPoint(it.id, [4 + (Math.random() - 0.5) * 6, 7 + Math.random() * 2, 4 + (Math.random() - 0.5) * 6]); this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.1, -0.15, (Math.random() - 0.5) * 0.1, 0xffffff, 0.04, 2.5, 0, 0.5, 0.9); }
+          else if (B.kind === 'smoke') { const p = this.itemPoint(it.id, C.burstAt || [7, 3, 7]); this.fx.spawn(p.x, p.y, p.z, 0.2 + Math.random() * 0.2, 0.25 + Math.random() * 0.15, 0.2 + Math.random() * 0.2, 0xe8e4f0, 0.18 + Math.random() * 0.1, 3, -0.04, 0.6, 0.45); }
           else if (B.kind === 'drip') { const p = this.itemPoint(it.id, [5, 14, 2.5]); this.fx.spawn(p.x, p.y, p.z, 0, -0.6, 0, 0x9ad8ff, 0.04, 0.5, 4, 0, 0.9); }
-          else { const at = C.steamAt || [4, 8, 4], p = this.itemPoint(it.id, at); this.fx.spawn(p.x + (Math.random() - 0.5) * 0.12, p.y, p.z + (Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.15, 0.5 + Math.random() * 0.3, (Math.random() - 0.5) * 0.15, 0xffffff, 0.1, 1.8, -0.05, 0.3, 0.6); }
+          else if (B.kind === 'sparks' || B.kind === 'magic') { this.emitFx(it, C, B.kind, C.burstAt, C.fxColor); }
+          else if (B.kind === 'bubbles') { this.emitFx(it, C, 'bubbles', C.burstAt, C.fxColor); }
+          else { const at = C.burstAt || C.steamAt || [4, 8, 4], p = this.itemPoint(it.id, at); this.fx.spawn(p.x + (Math.random() - 0.5) * 0.12, p.y, p.z + (Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.15, 0.5 + Math.random() * 0.3, (Math.random() - 0.5) * 0.15, 0xffffff, 0.1, 1.8, -0.05, 0.3, 0.6); }
         }
       }
       if (C.robot && this.pets.get(it.id) && this.pets.get(it.id).state === 'walk' && Math.random() < step * 3) {

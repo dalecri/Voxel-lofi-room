@@ -50,8 +50,9 @@
   Model.prototype.main = function () { this.cur = this.parts.main; return this; };
   Model.prototype.set = function (x, y, z, col, glow) {
     if (typeof col === 'function') col = col(x, y, z);
-    if (col == null) return;
+    if (col == null) return this;
     this.cur.vox.set(KEY(x, y, z), glow ? (col | GLOW) : col);
+    return this;
   };
   Model.prototype.box = function (x0, y0, z0, x1, y1, z1, col, glow) {
     for (let x = x0; x < x1; x++) for (let y = y0; y < y1; y++) for (let z = z0; z < z1; z++) this.set(x, y, z, col, glow);
@@ -733,6 +734,8 @@
     ['furniture', 'Furniture'], ['japan', 'Japanese'], ['scene', 'Streets & scenes'], ['desks', 'Desks & storage'], ['tech', 'Tech & games'], ['kitchen', 'Kitchen & drinks'], ['lights', 'Lights'],
     ['decor', 'Decor'], ['plants', 'Plants'], ['windows', 'Windows'], ['wall', 'Wall art'], ['pets', 'Pets'],
   ];
+  // theme packs add their tabs after the built-in themed ones, ahead of the everyday groups
+  const addGroup = (key, label) => { if (!GROUPS.some(g => g[0] === key)) GROUPS.splice(GROUPS.findIndex(g => g[0] === 'desks'), 0, [key, label]); };
   // height (in voxels) of the surface on top of a piece; some change with state (a standing desk)
   const topOf = it => { const t = CAT[it.t].top; return typeof t === 'function' ? t(it) : t; };
 
@@ -1146,7 +1149,7 @@
   };
 
   const LR = {
-    N, SIZES, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART,
+    N, SIZES, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART, MOMENTS: [], addGroup,
     Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor, topOf,
     def, grain, stripes, WOOD, FABRIC, BOOKS, POTS, GREEN, GREEN_D, GREEN_L, buildRoom: build,
   };
