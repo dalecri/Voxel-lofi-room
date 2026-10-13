@@ -157,7 +157,7 @@
       for (let x = 0; x < 32; x += 2) m.box(x, 2, 11, x + 1, 9, 12, (xx, y) => (y === 4 ? shade(w, 1.2) : shade(w, 0.9)));
       m.box(0, 9, 10, 32, 10, 12, shade(w, 1.15)).box(0, 2, 10, 32, 3, 12, shade(w, 0.9));
       // little brass lamps on the rail posts
-      [8, 24].forEach(x => { m.box(x, 10, 10, x + 1, 12, 11, BRASS); m.box(x - 1, 12, 9, x + 2, 15, 12, s.on ? 0xfff0c8 : 0xd8d0c0, s.on); m.box(x - 1, 15, 9, x + 2, 16, 12, BRASS_D); });
+      [8, 24].forEach(x => { m.box(x, 10, 10, x + 1, 13, 11, BRASS); m.box(x, 13, 10, x + 1, 15, 11, s.on ? 0xfff0c8 : 0xd8d0c0, s.on); m.box(x - 1, 15, 10, x + 2, 16, 11, BRASS_D); });
     },
   });
   def('libladder', {
@@ -550,14 +550,14 @@
         ['libchair', { x: 3, z: 3, c: 0 }], ['libchair', { x: 5, z: 3, c: 0 }],
         ['libchair', { x: 4, z: 6, r: 2, c: 0 }],
         // the right side
-        ['libclock', { x: 9, z: 2, r: 3, c: 0 }],
-        ['libcatalog', { x: 9, z: 3, r: 3, c: 0 }, [['libbanker', { lx: 0, lz: 0, c: 2 }]]],
-        ['libcatalog', { x: 9, z: 4, r: 3, c: 0 }, [['libstack', { lx: 0, lz: 0, c: 0 }]]],
+        ['libclock', { x: 9, z: 2, c: 0 }],
+        ['libcatalog', { x: 9, z: 3, c: 0 }, [['libbanker', { lx: 0, lz: 0, c: 2 }]]],
+        ['libcatalog', { x: 8, z: 3, c: 0 }, [['libstack', { lx: 0, lz: 0, c: 0 }]]],
         ['liblectern', { x: 7, z: 4, c: 0 }],
         ['libglobe', { x: 7, z: 6, c: 0 }],
         ['libfern', { x: 9, z: 6, c: 0 }],
-        ['libdesk', { x: 6, z: 8, r: 2, c: 0 }, [['libbanker', { lx: 0, lz: 0, c: 0 }], ['libstack', { lx: 1, lz: 0, c: 2 }]]],
-        ['libchair', { x: 7, z: 9, r: 2, c: 0 }],
+        ['libdesk', { x: 6, z: 8, c: 0 }, [['libbanker', { lx: 0, lz: 0, c: 0 }], ['libstack', { lx: 1, lz: 0, c: 2 }]]],
+        ['libchair', { x: 7, z: 7, c: 0 }],
         ['libfern', { x: 9, z: 9, c: 1 }],
         ['cat', { x: 0, z: 1, c: 1 }], ['cat', { x: 4, z: 7, c: 2 }],
       ]);
@@ -584,7 +584,7 @@
         ['libtable', { x: 3, z: 7, c: 1 }, [['libbanker', { lx: 0, lz: 0, c: 0 }], ['libstack', { lx: 1, lz: 0, c: 0 }], ['libbanker', { lx: 2, lz: 0, c: 3 }], ['teapot', { lx: 1, lz: 1, c: 0 }], ['libstack', { lx: 2, lz: 1, c: 2 }]]],
         ['libchair', { x: 4, z: 9, r: 2, c: 1 }], ['libchair', { x: 2, z: 7, r: 1, c: 1 }],
         ['liblectern', { x: 8, z: 4, c: 1 }], ['libglobe', { x: 8, z: 6, c: 1 }],
-        ['libcatalog', { x: 9, z: 2, r: 3, c: 0 }, [['libcandelabra', { lx: 0, lz: 0, c: 0 }]]],
+        ['libcatalog', { x: 9, z: 2, c: 0 }, [['libcandelabra', { lx: 0, lz: 0, c: 0 }]]],
         ['libstack', { x: 7, z: 2, c: 0 }],
         ['cat', { x: 5, z: 5, c: 0 }], ['cat', { x: 1, z: 8, c: 4 }],
         ['libwindow', { k: 1, u: 1, e: 2, c: 1 }], ['libsconce', { k: 1, u: 0, e: 3, c: 0 }],
