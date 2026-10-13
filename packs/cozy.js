@@ -7,7 +7,7 @@
   const LR = typeof module !== 'undefined' && module.exports ? require('../room.js') : window.LR;
   const { def, grain, shade, mix, hash3, WOOD, GREEN, GREEN_D } = LR;
   const INK = 0x2a2430, BRASS = 0xd9b25a, PAPER = 0xfbf6ec;
-  const MOOD_COLS = [0x3a3a6a, 0x4a8ab0, 0xf2c14e, 0xe8784a, 0xb8a0e8];   // one sleeve per music mood
+  const MOOD_COLS = [0x3a3a6a, 0x4a8ab0, 0xf2c14e, 0xe8784a, 0x6ab07a, 0xb8a0e8];   // one sleeve per music mood
 
   // ---- a cuckoo clock: the bird pops out when tapped and on the hour ----
   def('cuckoo', {

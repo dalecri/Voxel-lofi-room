@@ -28,6 +28,8 @@
       k: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1] } },
     { name: 'Chillhop bounce', bpm: 88, progs: [0, 2], tape: 3000, bells: 0.25, up: 0, drums: {
       k: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0] } },
+    { name: 'Morning bossa', bpm: 80, progs: [4, 1], tape: 3200, bells: 0.45, up: 0, drums: {
+      k: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1], s: [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], h: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] } },
     { name: 'Dreamy ambient', bpm: 60, progs: [3, 4], tape: 1600, bells: 0.7, up: -5, drums: {
       k: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], h: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] } },
   ];
@@ -83,7 +85,7 @@
       this.purrLfo.connect(pl); pl.connect(this.purrBed.g.gain); this.purrLfo.start();
       this.purrDepth = pl;
 
-      this.prog = 0; this.bar = 0; this.step = 0; this.nextStep = ctx.currentTime + 0.1;
+      this.prog = 0; this.bar = 0; this.step = 0; this.nextStep = ctx.currentTime + 0.1; this.beats = [];
       this.timer = setInterval(() => this.schedule(), 90);
     },
     toggle() {
@@ -102,6 +104,13 @@
       this.crackle.gain.setTargetAtTime(on ? 0.5 : 0, t, 0.5);
       if (on) { this.nextStep = Math.max(this.nextStep, t + 0.05); this.needle(); }
     },
+    // where we are in the current beat, 0 just on it to 1 just before the next; -1 when the band is quiet
+    beat() {
+      if (!this.music || !this.ready() || !this.beats) return -1;
+      const now = this.ctx.currentTime;
+      let b = -1; for (const x of this.beats) if (x <= now && x > b) b = x;
+      return b < 0 ? -1 : Math.min(1, (now - b) / BEAT);
+    },
     // switch to a mood (or the next one); the band picks it up on the next bar
     setMood(i) {
       this.mood = ((i == null ? this.mood + 1 : i) % MOODS.length + MOODS.length) % MOODS.length;
@@ -118,6 +127,7 @@
       while (this.nextStep < ctx.currentTime + 0.3) {
         if (this.music) this.playStep(this.step, this.nextStep);
         // lazy swing: the off 16ths come a touch late
+        if (this.step % 4 === 0) { this.beats.push(this.nextStep); if (this.beats.length > 8) this.beats.shift(); }
         this.nextStep += sixteenth * (this.step % 2 ? 0.84 : 1.16);
         this.step = (this.step + 1) % 16;
         if (this.step === 0) {
@@ -326,6 +336,7 @@
     tweet() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 3; k++) { const o = this.tone(2600 + Math.random() * 600, t + k * 0.11, 0.07, 0.03, 'sine'); o.frequency.exponentialRampToValueAtTime(3600, t + k * 0.11 + 0.06); } },
     crunch() { if (!this.ready()) return; for (let k = 0; k < 4; k++) setTimeout(() => this.burst(0.05, 0.08, 'bandpass', 2200 + Math.random() * 1500), k * 110); },
     plop() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(500 + Math.random() * 300, t + k * 0.13, 0.09, 0.05, 'sine'); o.frequency.exponentialRampToValueAtTime(1400, t + k * 0.13 + 0.08); } },
+    clatter() { if (!this.ready()) return; this.burst(0.08, 0.2, 'bandpass', 2600); setTimeout(() => this.burst(0.06, 0.12, 'bandpass', 1900), 90); setTimeout(() => this.burst(0.05, 0.08, 'bandpass', 3200), 200); },
     tick() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(1600, t, 0.02, 0.04, 'square'); this.burst(0.15, 0.03, 'lowpass', 600); },
     snap() { if (!this.ready()) return; this.burst(0.06, 0.25, 'highpass', 3000); const t = this.ctx.currentTime; this.tone(1500, t + 0.05, 0.08, 0.04, 'square'); },
   };
