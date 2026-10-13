@@ -7,7 +7,7 @@
 <p align="center">
   <img src="docs/study.png" alt="The Lofi Study by day" width="240">
   <img src="docs/night.png" alt="The same room at night" width="240">
-  <img src="docs/den.png" alt="The Gamer Den at night" width="240">
+  <img src="docs/alley.png" alt="The Neon Alley scene at night" width="240">
 </p>
 
 A sibling of [Voxel Worlds](https://github.com/dalecri/voxel-worlds): same Explore and Edit idea, same touch controls, same Android build. Instead of landscapes, you make little rooms.
@@ -26,7 +26,8 @@ Then open http://localhost:5180.
 
 ## What you can do
 
-- **Decorate from scratch.** Over 125 voxel pieces in eleven groups:
+- **Decorate from scratch.** Over 150 voxel pieces in twelve groups:
+  - **Streets and scenes:** road, crosswalk, sidewalk, tram track, grass and canal tiles; shop buildings, apartment blocks, a corner store and brick walk-ups whose windows light up; street lamps, a traffic light that cycles, power poles, benches, a bus shelter, bikes, a ramen stall, little cars with headlights, a scooter, a post box, cones, hydrants, bins, street trees, railings, stairs and a tram that runs along its line.
   - **Japanese:** tatami mats, a kotatsu that warms up, a futon the cats nap on, a low table, zabuton cushions, a step chest, a folding screen, a glowing shoji screen, a waving lucky cat, daruma, ikebana, a kokeshi doll, a matcha set, a steaming bowl of ramen, a sakura tree that drops petals, bamboo, a koi pond, a vending machine, red paper lanterns, an andon lamp, a stone lantern, katakana neon (コーヒー, ラーメン, ネコ), a noren curtain, hanging scrolls, a folding fan and a sliding shoji window. Plus shoji, washi, cedar and wave-paper walls and tatami, engawa and garden stone floors.
   - **Furniture:** bed, sofa, armchair, coffee table, side table, piano, fireplace, beanbag, pouf and four rugs.
   - **Desks and storage, IKEA-style modular:** desk, corner desk, standing desk (tap to raise it), gaming desk with an RGB edge, trestle desk, cube shelves, sideboard, wardrobe with doors that open, bookshelf, dresser, pegboard, wall shelf and wall cubbies.
@@ -64,8 +65,9 @@ Then open http://localhost:5180.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and vinyl crackle, all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. Rain streaks the windows. At night the lamps light the room.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
-- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Tokyo Tea Room, Empty Room) or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **24 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
+- **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates.
+- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Tokyo Tea Room, Empty Room, plus the Neon Alley, Tram Stop and Empty Plot scenes) or tap **Surprise** for a random themed room. Tap the room name to rename it.
+- **26 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 
@@ -104,6 +106,7 @@ npm run apk        # → dist/lofi-rooms.apk
 | File | What it does |
 |---|---|
 | `room.js` | The room model. The original furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. It doesn't draw anything, so it runs in Node too. |
+| `scene.js` | Scene mode: the open plot, outdoor ground, street tiles, buildings, street furniture, the tram and the scene templates. |
 | `japan.js` | The Japanese collection: pieces, wall and floor styles, the Tea Room template and two Japanese themes for Surprise rooms. |
 | `furniture.js` | The expanded catalog: modular desks and storage, tech and games, the kitchen, modern lights, fish tanks, windows, movie posters and the robot vacuum. |
 | `screens.js` | The pixel-art programs that play on screens. |

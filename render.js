@@ -370,6 +370,9 @@
     return m;
   };
   R.buildShell = function (room, mask) {
+    // an open plot (scene mode) has no walls at all, just the floor slab with rounded corners
+    this.noWalls = !!(WALLS[room.wall.style] && WALLS[room.wall.style].none);
+    if (this.noWalls) mask = 0;
     const style = room.wall.style + '|' + room.wall.color + '|' + room.floor.style;
     if (style !== this.shellStyle) { this.shellCache.forEach(g => g.dispose()); this.shellCache.clear(); this.shellStyle = style; }
     let geo = this.shellCache.get(mask);
@@ -993,7 +996,7 @@
     this.zoom += (this.zoomGoal - this.zoom) * k;
     this.pan.lerp(this.panGoal, k);
     this.placeCamera();
-    const mask = this.visibleMask();
+    const mask = this.noWalls ? 0 : this.visibleMask();
     if (mask !== this.mask && this.room) { this.buildShell(this.room, mask); this.applyVisibility(); }
 
     let phaseDirty = false;
@@ -1102,6 +1105,19 @@
       ud.doorA = (ud.doorA || 0) + (goal - (ud.doorA || 0)) * Math.min(1, dt * 6);
       if (ud.parts.door) ud.parts.door.rotation.y = -ud.doorA * 1.9;
       if (ud.parts.door2) ud.parts.door2.rotation.y = ud.doorA * 1.9;
+    }
+    if (C.anim === 'traffic' && ud.parts.red) {
+      const ph = (t + it.id * 1.7) % 7;
+      ud.parts.green.visible = ph < 3; ud.parts.amber.visible = ph >= 3 && ph < 4; ud.parts.red.visible = ph >= 4;
+      if (ud.allRed > t) { ud.parts.green.visible = ud.parts.amber.visible = false; ud.parts.red.visible = true; }
+    }
+    if (C.anim === 'tram' && ud.parts.car) {
+      // ride from one end of the line to the other, waiting at each stop
+      const per = 16, ph = ((t + it.id * 3) % per) / per;
+      const k = ph < 0.2 ? 0 : ph < 0.5 ? (ph - 0.2) / 0.3 : ph < 0.7 ? 1 : 1 - (ph - 0.7) / 0.3;
+      const e = k * k * (3 - 2 * k);
+      ud.parts.car.position.z = e * 20 * S;
+      ud.parts.car.position.y = Math.abs(Math.sin(t * 22)) * 0.004 * (k > 0 && k < 1 ? 1 : 0);
     }
     if (ud.parts.paw) ud.parts.paw.rotation.z = Math.sin(t * (ud.excited > t ? 9 : 3) + it.id) * 0.45;
     if (ud.parts.spin) { ud.spinV = (ud.spinV || 0.3) * Math.exp(-dt * 0.8); ud.parts.spin.rotation.y += Math.max(0.3, ud.spinV) * dt; }

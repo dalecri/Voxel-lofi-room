@@ -296,6 +296,7 @@
     flip() { if (!this.ready()) return; for (let k = 0; k < 3; k++) setTimeout(() => this.burst(0.06, 0.12, 'bandpass', 1800), k * 90); },
     rustle() { if (!this.ready()) return; for (let k = 0; k < 4; k++) setTimeout(() => this.burst(0.15, 0.06, 'highpass', 3000), k * 70); },
     drip() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(900 + Math.random() * 500, t + k * 0.18, 0.08, 0.05); o.frequency.exponentialRampToValueAtTime(1800, t + k * 0.18 + 0.06); } this.burst(0.6, 0.05, 'bandpass', 2500); },
+    bell() { if (!this.ready()) return; const t = this.ctx.currentTime; [0, 0.28].forEach(d => { this.tone(1318.5, t + d, 0.9, 0.06, 'triangle'); this.tone(2637, t + d, 0.5, 0.02, 'sine'); }); },
     puff() { if (!this.ready()) return; this.gurgle(9); this.burst(1, 0.04, 'lowpass', 500); },
     snap() { if (!this.ready()) return; this.burst(0.06, 0.25, 'highpass', 3000); const t = this.ctx.currentTime; this.tone(1500, t + 0.05, 0.08, 0.04, 'square'); },
   };
