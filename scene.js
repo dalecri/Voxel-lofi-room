@@ -375,6 +375,55 @@
       ]);
     },
   };
+  // A whole crossroads on a 20 × 20 plot: four quarters around an intersection,
+  // a tram line, a little park and a canal side.
+  PRESETS.city = {
+    name: 'City Block', blurb: 'A crossroads on a big plot: four corners of shops, a tram line and a park.', scene: true,
+    make(room) {
+      room.wall = { style: 'none', color: 0 }; room.floor = { style: 'asphalt' };
+      const S = [];
+      const at = (t, o, kids) => S.push(kids ? [t, o, kids] : [t, o]);
+      // streets: a road down the middle each way, sidewalks either side, crosswalks at the crossing
+      for (let i = 0; i < 20; i += 2) {
+        const mid = i >= 6 && i <= 10;
+        if (!mid) {
+          at('sidewalk', { x: 6, z: i, r: 1 }); at('road', { x: 8, z: i }); at('sidewalk', { x: 10, z: i, r: 3 });
+          at('sidewalk', { x: i, z: 6 }); at('road', { x: i, z: 8, r: 1 }); at('sidewalk', { x: i, z: 10, r: 2 });
+        }
+      }
+      [[6, 6], [10, 6], [6, 10], [10, 10]].forEach(([x, z]) => at('sidewalk', { x, z }));
+      at('road', { x: 8, z: 8 });
+      at('crosswalk', { x: 8, z: 6 }); at('crosswalk', { x: 8, z: 10 });
+      at('crosswalk', { x: 6, z: 8, r: 1 }); at('crosswalk', { x: 10, z: 8, r: 1 });
+      // north-west: a row of shops with a back alley
+      [['shophouse', 0], ['konbini', 0], ['apartment', 2]].forEach(([t, c], i) => at(t, { x: i * 2, z: 0, c }));
+      at('vending', { x: 0, z: 3, c: 1 }); at('vending', { x: 1, z: 3, c: 0 }); at('bikerack', { x: 3, z: 3, c: 1 });
+      at('yatai', { x: 1, z: 5, r: 2, c: 0 }); at('trashbin', { x: 4, z: 5, c: 0 }); at('powerpole', { x: 5, z: 2 });
+      // north-east: brick walk-ups behind the tram line
+      [['brickblock', 0], ['apartment', 1], ['brickblock', 2], ['shophouse', 3]].forEach(([t, c], i) => at(t, { x: 12 + i * 2, z: 0, c }));
+      at('tram', { x: 13, z: 3, r: 1, c: 0 });
+      at('busstop', { x: 14, z: 4, r: 2, c: 0 }); at('bench', { x: 17, z: 4, r: 2, c: 1 }); at('powerpole', { x: 19, z: 2 });
+      // south-west: canal-side homes
+      [['apartment', 0], ['shophouse', 1], ['brickblock', 1]].forEach(([t, c], i) => at(t, { x: i * 2, z: 18, r: 2, c }));
+      at('canal', { x: 0, z: 14 }); at('canal', { x: 2, z: 14 }); at('canal', { x: 4, z: 14 });
+      at('railing', { x: 0, z: 13, c: 0 }); at('railing', { x: 2, z: 13, c: 0 }); at('railing', { x: 4, z: 13, c: 0 });
+      at('lantern', { x: 1, z: 17 }); at('scooter', { x: 3, z: 16, r: 1, c: 1 }); at('mailbox', { x: 5, z: 17 });
+      // south-east: a pocket park
+      for (let x = 12; x < 20; x += 2) for (let z = 12; z < 20; z += 2) at('grasspatch', { x, z });
+      at('koipond', { x: 15, z: 15 }); at('sakura', { x: 13, z: 13 }); at('sakura', { x: 18, z: 18 });
+      at('streettree', { x: 18, z: 13, c: 1 }); at('streettree', { x: 13, z: 18, c: 0 }); at('toro', { x: 17, z: 14 });
+      at('bench', { x: 15, z: 13, c: 0 }); at('bench', { x: 15, z: 18, r: 2, c: 1 });
+      // street furniture and traffic
+      at('trafficlight', { x: 7, z: 7 }); at('trafficlight', { x: 11, z: 11, r: 2 });
+      at('streetlamp', { x: 6, z: 2 }); at('streetlamp', { x: 11, z: 3 }); at('streetlamp', { x: 3, z: 6 });
+      at('streetlamp', { x: 16, z: 11, r: 2 }); at('streetlamp', { x: 6, z: 16 }); at('streetlamp', { x: 11, z: 17 });
+      at('streettree', { x: 15, z: 6, c: 2 }); at('streettree', { x: 2, z: 11, c: 1 }); at('streettree', { x: 7, z: 13, c: 0 });
+      at('car', { x: 8, z: 2, c: 1, on: true }); at('car', { x: 9, z: 15, r: 2, c: 2, on: true });
+      at('car', { x: 2, z: 9, r: 1, c: 0, on: true }); at('car', { x: 16, z: 8, r: 3, c: 3, on: true });
+      at('cat', { x: 4, z: 3, c: 0 }); at('cat', { x: 14, z: 16, c: 1 });
+      B(room, S, 20);
+    },
+  };
   PRESETS.plot = {
     name: 'Empty Plot', blurb: 'An open plot with no walls. Build a street, a park or a whole block.', scene: true,
     make(room) { room.wall = { style: 'none', color: 0 }; room.floor = { style: 'asphalt' }; B(room, []); },

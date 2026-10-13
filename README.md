@@ -44,7 +44,7 @@ Then open http://localhost:5180.
   - **Add:** tap or drag to place.
   - **Move:** drag pieces around.
   - **Turn:** tap to rotate.
-  - **Paint:** change walls (7 styles, 11 colours) and floors (8 styles), or tap any piece to cycle its colours.
+  - **Paint:** change walls, wall colours, floors and the plot size (10×10 up to 24×24), or tap any piece to cycle its colours.
   - **Remove:** tap to put things away.
   
   Beds, sofas, desks and shelves back up against the nearest wall on their own.
@@ -65,8 +65,9 @@ Then open http://localhost:5180.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and vinyl crackle, all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. Rain streaks the windows. At night the lamps light the room.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
-- **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates.
-- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Tokyo Tea Room, Empty Room, plus the Neon Alley, Tram Stop and Empty Plot scenes) or tap **Surprise** for a random themed room. Tap the room name to rename it.
+- **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
+- **Bigger plots.** In Paint, Plot size, grow any room or scene from the cozy 10×10 to 14×14, 20×20 or 24×24 for multi-block cities. Pieces stay where they are when it grows, and it only shrinks once nothing would fall off the edge.
+- **Several rooms.** Start from a template (Lofi Study, Cat Loft, Reading Nook, Gamer Den, Tokyo Tea Room, Empty Room, plus the Neon Alley, Tram Stop, City Block and Empty Plot scenes) or tap **Surprise** for a random themed room. Tap the room name to rename it.
 - **26 cozy moments** to find, such as *Night owl*, *Golden hour*, *Player one* and *Sweet dreams*.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.

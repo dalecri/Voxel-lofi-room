@@ -4,7 +4,8 @@
 // also runs in Node. Exposes window.LR (or module.exports).
 
 (function (root) {
-  const N = 10;            // the floor is N × N cells
+  const N = 10;            // the default floor is N × N cells
+  const SIZES = [10, 14, 20, 24];   // plot sizes you can pick
   const HC = 7;            // walls are HC cells tall
   const V = 8;             // voxels per cell
   const GLOW = 1 << 24;    // flag on a voxel colour: drawn unlit (screens, bulbs, flames)
@@ -749,6 +750,7 @@
     this.items = [];
     this.next = 1;
     this.seed = 1;
+    this.n = N;          // plot size in cells (scenes can be bigger)
   }
   const RP = Room.prototype;
 
@@ -790,6 +792,7 @@
 
   // is this placement free? `it` carries the candidate fields; ignore is the id being moved
   RP.canPlace = function (it, ignore) {
+    const N = this.n;
     const C = CAT[it.t];
     if (!C) return false;
     const skip = new Set([ignore, ...(ignore ? this.descendants(ignore).map(i => i.id) : [])]);
@@ -824,6 +827,7 @@
 
   // floor cells a cat can walk on (1), plus nap spots (2) and perches
   RP.walkGrid = function () {
+    const N = this.n;
     const g = new Uint8Array(N * N).fill(1);
     for (const o of this.items) {
       const C = CAT[o.t];
@@ -837,7 +841,7 @@
   RP.count = function (pred) { return this.items.filter(pred).length; };
 
   RP.serialize = function () {
-    return { v: 1, name: this.name, wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.map(i => Object.assign({}, i)) };
+    return { v: 1, name: this.name, n: this.n, wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.map(i => Object.assign({}, i)) };
   };
   RP.load = function (d) {
     if (!d || d.v !== 1 || !Array.isArray(d.items)) return false;
@@ -850,6 +854,7 @@
     this.items.forEach(i => { i.c = Math.min(i.c | 0, CAT[i.t].vars.length - 1); });
     this.next = Math.max(d.next || 1, ...this.items.map(i => i.id + 1), 1);
     this.seed = d.seed || 1;
+    this.n = Number.isInteger(d.n) && d.n >= 6 && d.n <= 32 ? d.n : N;
     return true;
   };
   RP.snapshot = function () { return JSON.stringify(this.serialize()); };
@@ -857,8 +862,8 @@
 
   // ---------------------------------------------------------------
   // Hand-made rooms. Items list: [type, fields, children?]
-  function build(room, spec) {
-    room.items = []; room.next = 1;
+  function build(room, spec, n) {
+    room.items = []; room.next = 1; room.n = n || N;
     const add = (t, o, kids) => {
       const it = room.add(room.make(t, o));
       if (!room.canPlace(it, it.id) && typeof console !== 'undefined') console.warn('preset: cannot place', t, o);
@@ -995,6 +1000,7 @@
   const NOUN = ['Nook', 'Hideaway', 'Attic', 'Corner', 'Den', 'Studio', 'Burrow', 'Hideout', 'Room', 'Loft'];
 
   RP.generate = function (seed) {
+    const N = this.n;
     const rnd = mulberry(seed >>> 0);
     const pick = a => a[(rnd() * a.length) | 0];
     const chance = p => rnd() < p;
@@ -1140,7 +1146,7 @@
   };
 
   const LR = {
-    N, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART,
+    N, SIZES, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART,
     Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor, topOf,
     def, grain, stripes, WOOD, FABRIC, BOOKS, POTS, GREEN, GREEN_D, GREEN_L, buildRoom: build,
   };
