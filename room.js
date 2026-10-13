@@ -729,7 +729,7 @@
   });
 
   const GROUPS = [
-    ['furniture', 'Furniture'], ['japan', 'Japanese'], ['desks', 'Desks & storage'], ['tech', 'Tech & games'], ['kitchen', 'Kitchen & drinks'], ['lights', 'Lights'],
+    ['furniture', 'Furniture'], ['japan', 'Japanese'], ['scene', 'Streets & scenes'], ['desks', 'Desks & storage'], ['tech', 'Tech & games'], ['kitchen', 'Kitchen & drinks'], ['lights', 'Lights'],
     ['decor', 'Decor'], ['plants', 'Plants'], ['windows', 'Windows'], ['wall', 'Wall art'], ['pets', 'Pets'],
   ];
   // height (in voxels) of the surface on top of a piece; some change with state (a standing desk)

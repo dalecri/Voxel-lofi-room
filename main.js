@@ -42,6 +42,8 @@ function startLofiRooms() {
     ['golden', 'Golden hour', 'Evening light through an open window'],
     ['hanami', 'Hanami', 'Watched the cherry blossoms fall'],
     ['lucky', 'Lucky cat', 'A maneki-neko waved hello'],
+    ['tram', 'All aboard', 'Rang the tram bell'],
+    ['city', 'City lights', 'An open-air scene after dark'],
     ['photo', 'Snapshot', 'Took a photo of your room'],
   ];
   const found = new Set(store.get('lr.found', []));
@@ -139,6 +141,7 @@ function startLofiRooms() {
     if (meta.painted.wall && meta.painted.floor) discover('design');
     if (view.ph.night > 0.6 && room.items.some(i => CAT[i.t].light && i.on)) discover('nightowl');
     if (meta.phase === 'evening' && room.items.some(i => CAT[i.t].beam && i.on)) discover('golden');
+    if (view.ph.night > 0.6 && WALLS[room.wall.style] && WALLS[room.wall.style].none && room.items.length >= 8) discover('city');
   }
   function updateHeader() {
     $('#roomName').textContent = room.name;
@@ -537,6 +540,9 @@ function startLofiRooms() {
     if (tap === 'robot') { view.petCat(id); Sound.beep(); toast('<span>Beep boop, cleaning!</span>', 1200); return; }
     if (tap === 'flip') { Sound.flip(); toast(`<span>${pickOne(['Rainy Day Beats', 'Midnight Tapes', 'Sunday Jazz', 'Cat Naps Vol. 2'])}</span>`, 1300); return; }
     if (tap === 'rustle') { Sound.rustle(); return; }
+    if (tap === 'building') { it.on = !it.on; changed(); Sound.click(it.on); toast(`<span>${it.on ? 'Lights on upstairs' : 'Everyone’s asleep'}</span>`, 1100); return; }
+    if (tap === 'traffic') { const o = view.objs.get(id); if (o) o.userData.allRed = view.t + 3; Sound.beep(); toast('<span>Walk signal!</span>', 900); return; }
+    if (tap === 'tram') { Sound.bell(); toast('<span>Ding ding! All aboard</span>', 1200); discover('tram'); return; }
     if (tap === 'lucky') { view.excite(id); Sound.coin(); setTimeout(() => Sound.chime(), 200); toast(`<span>${pickOne(['Good luck is on its way!', 'Fortune smiles on you', 'Lucky day!'])}</span>`, 1400); discover('lucky'); return; }
     if (tap === 'wish') { Sound.place(); toast(`<span>${pickOne(['Make a wish…', 'Wishing you a cozy day', 'Fall down seven times, stand up eight'])}</span>`, 1500); return; }
     if (tap === 'slurp') { view.burst(id, 'steam', 2); Sound.sip(); toast('<span>Itadakimasu! 🍜</span>', 1300); discover('tea'); return; }
@@ -873,7 +879,7 @@ function startLofiRooms() {
     const wrap = document.createElement('div'); wrap.className = 'cards';
     Object.entries(PRESETS).forEach(([k, p]) => {
       const b = document.createElement('button'); b.className = 'card ' + k;
-      b.innerHTML = `<div class="art"></div><b>${p.name}</b><span>${p.blurb}</span>`;
+      b.innerHTML = `<div class="art">${p.scene ? '<em class="tag">Scene</em>' : ''}</div><b>${p.name}</b><span>${p.blurb}</span>`;
       b.onclick = () => onPick(k);
       wrap.appendChild(b);
     });
