@@ -1304,9 +1304,9 @@ function startLofiRooms() {
   const isPortal = it => CAT[it.t] && CAT[it.t].tap === 'portal';
   const roomTitle = id => { const r = rooms.find(x => x.id === id); return r ? r.name : 'another room'; };
   // the cell you stand in to go through a door, and the way you face to walk into it
-  function doorFront(it) {
-    const n = room.n;
-    if (CAT[it.t].kind === 'wall') return [[it.u, 0, Math.PI], [0, n - 1 - it.u, -Math.PI / 2], [n - 1 - it.u, n - 1, 0], [n - 1, it.u, Math.PI / 2]][it.k];
+  function doorFront(it, k) {
+    const n = room.n, u = it.u + (k || 0);   // k: which cell along a wide door
+    if (CAT[it.t].kind === 'wall') return [[u, 0, Math.PI], [0, n - 1 - u, -Math.PI / 2], [n - 1 - u, n - 1, 0], [n - 1, u, Math.PI / 2]][it.k];
     const d = [[0, 1], [1, 0], [0, -1], [-1, 0]][(it.r || 0) & 3];   // a doorway faces +z, turned by r
     return [it.x + d[0], it.z + d[1], Math.atan2(-d[0], -d[1])];
   }
@@ -1316,7 +1316,9 @@ function startLofiRooms() {
     const open = WALLS[room.wall.style] && WALLS[room.wall.style].none;
     const tryAdd = d => (room.canPlace(d) ? room.add(d) : null);
     if (!back && !open) {
-      if (hint && hint.k != null) back = tryAdd(room.make('roomdoor', { k: hint.k, u: Math.min(hint.u, room.n - 1), e: 0, link: from }));
+      const t = hint && hint.t && CAT[hint.t] && CAT[hint.t].kind === 'wall' ? hint.t : 'roomdoor', c = hint && hint.t === t ? hint.c || 0 : 0;   // same style as the door you came through
+      if (hint && hint.k != null) back = tryAdd(room.make(t, { k: hint.k, u: Math.min(hint.u, room.n - CAT[t].size[0]), e: 0, c, link: from }));
+      for (let k = 0; !back && k < 2; k++) for (let u = 1; !back && u < room.n - CAT[t].size[0]; u++) back = tryAdd(room.make(t, { k, u, e: 0, c, link: from }));
       for (let k = 0; !back && k < 2; k++) for (let u = 1; !back && u < room.n - 1; u++) back = tryAdd(room.make('roomdoor', { k, u, e: 0, link: from }));
     }
     if (!back) for (let x = 1; !back && x < room.n - 1; x++) for (let z = 0; !back && z < room.n - 2; z++) { const g = room.make('roomgate', { x, z, link: from }); if (view.cellFree(x, z + 1) || !view.walk) back = tryAdd(g); }
@@ -1327,7 +1329,7 @@ function startLofiRooms() {
   function walkThrough(door, to, asCat) {
     if (travelling) return;
     travelling = true;
-    const from = meta.current, hint = CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u } : null;
+    const from = meta.current, hint = CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null;
     view.openDoor(door.id); Sound.creak();
     toast(`<span>Into ${roomTitle(to)}…</span>`, 900, true);
     setTimeout(() => $('#fade').classList.add('on'), 420);
@@ -1354,7 +1356,8 @@ function startLofiRooms() {
     const P = view.pets.get(view.fp.id), me = room.get(view.fp.id);
     if (!P || !me) return;
     const cx = Math.floor(P.x), cz = Math.floor(P.z);
-    const d = room.items.find(i => isPortal(i) && (([x, z]) => x === cx && z === cz)(doorFront(i)));
+    const span = i => (CAT[i.t].kind === 'wall' ? CAT[i.t].size[0] : 1);
+    const d = room.items.find(i => isPortal(i) && Array.from({ length: span(i) }, (_, k) => doorFront(i, k)).some(([x, z]) => x === cx && z === cz));
     if (!d) { doorNear = 0; return; }
     if (doorNear !== d.id) { doorNear = d.id; toast(`<span>${d.link && rooms.some(r => r.id === d.link) ? `Door to ${roomTitle(d.link)}` : 'A door to somewhere new'}</span>`, 1200, true); }
     const face = doorFront(d)[2];
@@ -1385,7 +1388,7 @@ function startLofiRooms() {
       pushUndo(); door.link = id; save(); closeSheets();
       exitCat(true);
       newRoom('blank', id);
-      backDoor(from, CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u } : null);
+      backDoor(from, CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null);
       changed(); save(); discover('openhouse');
     };
     list.appendChild(nb);
@@ -1465,7 +1468,7 @@ function startLofiRooms() {
         });
         row.appendChild(chips); map.appendChild(row);
       });
-      h('p', 'muted small', 'Add a Door to another room (on a wall) or a Doorway (anywhere, even outside) from Windows in Decorate. As a cat, just walk through.');
+      h('p', 'muted small', 'Add a door from the Doors tab in Decorate (the free-standing doorway works anywhere, even outside). As a cat, just walk through.');
     }
     const sh = h('div', 'rowbtns');
     sh.innerHTML = '<button class="chipbtn" id="bShareCode">Share this room as a code</button><button class="chipbtn" id="bImportCode">Open a friend’s code</button>';
