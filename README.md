@@ -110,14 +110,18 @@ Then open http://localhost:5180.
   - The camera rides along as the cat wanders, and you drag to look around.
   - Tap the floor to walk there, and tap things to use them. On a computer, WASD or the arrow keys walk too.
   - **Next cat** hops into another cat's head, and **Back to room** returns to the diorama.
-- **A tiny apartment.** Put a **Door to another room** on a wall (in Windows) and tap it. Pick one of your rooms or a new one, and you walk through. A door on the other side leads back.
+- **A connected house.** Join your saved rooms with doors and walk between them.
+  - **Door to another room** (on a wall) or **Doorway** (free-standing, so streets, gardens and other open scenes can join in), both in Windows.
+  - Tap one and pick a room or a new one. The other side gets a door leading back automatically.
+  - In cat view, just walk into a doorway. You arrive in the next room as the same cat.
+  - The menu's **Your house** map shows every room and where its doors go. Tap a door to travel, or tap **Change** to send it somewhere else.
 - **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** opens one as a new room.
 - **Seasonal decor:**
   - **Halloween:** a jack-o'-lantern, a pumpkin pile, a friendly ghost, a spider web, a bat garland and a candy bowl.
   - **Winter holidays:** a tree, a wreath, stockings, gifts, a snowman and hot cocoa.
   - The set that fits today's date moves to the front of the Add tray, with a one-time hint.
 - **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
-- **54 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
+- **55 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
 - **Today's moment:** one small thing to do each day, the same for everyone that day, with a streak counter in the menu.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.

@@ -541,7 +541,17 @@ function startLofiRooms() {
       if (F.moment) discover(F.moment);
       return;
     }
-    if (tap === 'portal') { const target = it.link && rooms.find(r => r.id === it.link); if (target) walkThrough(it, target.id); else doorPicker(it); return; }
+    if (tap === 'portal') {
+      const target = it.link && rooms.find(r => r.id === it.link);
+      if (view.fp) {   // as a cat: trot over to the doorway, the walk-through check does the rest
+        const [fx, fz] = doorFront(it);
+        if (!view.walkCatTo(view.fp.id, fx, fz)) { const me = room.get(view.fp.id); if (target) walkThrough(it, target.id, me && { c: me.c, name: me.name }); else doorPicker(it); }
+        else toast(`<span>${target ? `To ${target.name}` : 'A door to somewhere new'}</span>`, 1000, true);
+        return;
+      }
+      if (target) walkThrough(it, target.id); else doorPicker(it);
+      return;
+    }
     if (tap === 'cuckoo') { cuckoo(id); return; }
     if (tap === 'read') { Sound.flip(); toast(`<span>${pickOne(C.lines)}</span>`, 2200); return; }
     if (tap === 'calendar') {
@@ -738,6 +748,8 @@ function startLofiRooms() {
   function exitCat(quiet) {
     if (!view.fp) return;
     view.exitCatView(); held.clear();
+    const gone = room.items.filter(i => i.explorer);   // a cat that walked in with you heads back home
+    if (gone.length) { gone.forEach(i => { view.poof(i.id, [0xffffff, 0xffd0e0]); room.remove(i.id); }); changed(); }
     document.body.classList.remove('catcam');
     if (!quiet) Sound.turn();
   }
@@ -1289,29 +1301,78 @@ function startLofiRooms() {
     });
   }
   // linked rooms: a door opens onto another saved room, and the rooms become a tiny apartment
-  function walkThrough(door, to) {
-    const from = meta.current, k = door.k, u = door.u;
+  const isPortal = it => CAT[it.t] && CAT[it.t].tap === 'portal';
+  const roomTitle = id => { const r = rooms.find(x => x.id === id); return r ? r.name : 'another room'; };
+  // the cell you stand in to go through a door, and the way you face to walk into it
+  function doorFront(it) {
+    const n = room.n;
+    if (CAT[it.t].kind === 'wall') return [[it.u, 0, Math.PI], [0, n - 1 - it.u, -Math.PI / 2], [n - 1 - it.u, n - 1, 0], [n - 1, it.u, Math.PI / 2]][it.k];
+    const d = [[0, 1], [1, 0], [0, -1], [-1, 0]][(it.r || 0) & 3];   // a doorway faces +z, turned by r
+    return [it.x + d[0], it.z + d[1], Math.atan2(-d[0], -d[1])];
+  }
+  // make sure the room we just walked into has a door leading back
+  function backDoor(from, hint) {
+    let back = room.items.find(i => isPortal(i) && i.link === from) || room.items.find(i => isPortal(i) && !i.link);
+    const open = WALLS[room.wall.style] && WALLS[room.wall.style].none;
+    const tryAdd = d => (room.canPlace(d) ? room.add(d) : null);
+    if (!back && !open) {
+      if (hint && hint.k != null) back = tryAdd(room.make('roomdoor', { k: hint.k, u: Math.min(hint.u, room.n - 1), e: 0, link: from }));
+      for (let k = 0; !back && k < 2; k++) for (let u = 1; !back && u < room.n - 1; u++) back = tryAdd(room.make('roomdoor', { k, u, e: 0, link: from }));
+    }
+    if (!back) for (let x = 1; !back && x < room.n - 1; x++) for (let z = 0; !back && z < room.n - 2; z++) { const g = room.make('roomgate', { x, z, link: from }); if (view.cellFree(x, z + 1) || !view.walk) back = tryAdd(g); }
+    if (back && !back.link) back.link = from;
+    return back;
+  }
+  let travelling = false;
+  function walkThrough(door, to, asCat) {
+    if (travelling) return;
+    travelling = true;
+    const from = meta.current, hint = CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u } : null;
     view.openDoor(door.id); Sound.creak();
+    toast(`<span>Into ${roomTitle(to)}…</span>`, 900, true);
     setTimeout(() => $('#fade').classList.add('on'), 420);
     setTimeout(() => {
       switchRoom(to, true);
-      // the first unlinked door on the other side leads back, or we add one
-      let back = room.items.find(i => i.t === 'roomdoor' && i.link === from) || room.items.find(i => i.t === 'roomdoor' && !i.link);
-      if (!back) { const d = room.make('roomdoor', { k, u, e: 0, link: from }); if (room.canPlace(d)) back = room.add(d); }
-      if (back && !back.link) back.link = from;
+      const back = backDoor(from, hint);
       changed(); save();
       $('#fade').classList.remove('on');
       if (back) setTimeout(() => view.openDoor(back.id), 200);
       discover('openhouse');
+      // walking as a cat: arrive as that cat in the doorway on the other side
+      if (asCat != null && back) {
+        const [fx, fz, face] = doorFront(back);
+        const cat = room.add(room.make('cat', { x: Math.max(0, Math.min(room.n - 1, fx)), z: Math.max(0, Math.min(room.n - 1, fz)), c: asCat.c, name: asCat.name, visitor: true, explorer: true }));
+        changed();
+        setTimeout(() => { const P = view.pets.get(cat.id); if (P) P.heading = face + Math.PI; enterCat(cat.id); discover('wanderer'); travelling = false; }, 60);
+      } else travelling = false;
     }, 820);
   }
-  function doorPicker(door) {
+  // in cat view, walking into a door's doorway takes you through it
+  let doorNear = 0, doorCool = 0;
+  function catDoors(now) {
+    if (!view.fp || travelling || now < doorCool) return;
+    const P = view.pets.get(view.fp.id), me = room.get(view.fp.id);
+    if (!P || !me) return;
+    const cx = Math.floor(P.x), cz = Math.floor(P.z);
+    const d = room.items.find(i => isPortal(i) && (([x, z]) => x === cx && z === cz)(doorFront(i)));
+    if (!d) { doorNear = 0; return; }
+    if (doorNear !== d.id) { doorNear = d.id; toast(`<span>${d.link && rooms.some(r => r.id === d.link) ? `Door to ${roomTitle(d.link)}` : 'A door to somewhere new'}</span>`, 1200, true); }
+    const face = doorFront(d)[2];
+    let dh = P.heading - face; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
+    if (Math.abs(dh) < 0.8 && (P.manual > view.t || P.state === 'walk')) {
+      doorCool = now + 1500;
+      if (d.link && rooms.some(r => r.id === d.link)) walkThrough(d, d.link, { c: me.c, name: me.name });
+      else doorPicker(d);
+    }
+  }
+  function doorPicker(door, relink) {
     const body = $('#sheetBody'); body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab'); h('h2', '', 'Where does this door go?');
     h('p', 'muted', 'Pick one of your rooms, or start a new one. Walking through brings you back the same way.');
     const list = h('div', 'cards');
-    const link = id => { pushUndo(); door.link = id; changed(); save(); closeSheets(); walkThrough(door, id); };
+    const me = view.fp && room.get(view.fp.id), asCat = me ? { c: me.c, name: me.name } : null;
+    const link = id => { pushUndo(); door.link = id; changed(); save(); closeSheets(); if (relink) toast(`<span>This door now goes to ${roomTitle(id)}</span>`, 1500); else walkThrough(door, id, asCat); };
     rooms.filter(r => r.id !== meta.current).forEach(r => {
       const b = document.createElement('button'); b.className = 'card room';
       b.innerHTML = `<div class="art">🚪</div><b>${r.name}</b><span>${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
@@ -1322,9 +1383,9 @@ function startLofiRooms() {
     nb.onclick = () => {
       const from = meta.current, id = Date.now();
       pushUndo(); door.link = id; save(); closeSheets();
+      exitCat(true);
       newRoom('blank', id);
-      const d = room.make('roomdoor', { k: door.k, u: door.u, e: 0, link: from });
-      if (room.canPlace(d)) room.add(d);
+      backDoor(from, CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u } : null);
       changed(); save(); discover('openhouse');
     };
     list.appendChild(nb);
@@ -1373,6 +1434,39 @@ function startLofiRooms() {
       }
       list.appendChild(b);
     });
+    // the house map: which rooms connect to which, with a tap to travel
+    const links = rooms.map(r => {
+      const d = r.id === meta.current ? room.serialize() : store.get('lr.room.' + r.id, null);
+      const doors = d && Array.isArray(d.items) ? d.items.filter(i => CAT[i.t] && CAT[i.t].tap === 'portal') : [];
+      return { r, doors };
+    });
+    if (links.some(l => l.doors.length)) {
+      h('h2', '', 'Your house');
+      const map = h('div', 'house');
+      links.forEach(({ r, doors }) => {
+        const row = document.createElement('div'); row.className = 'hroom' + (r.id === meta.current ? ' here' : '');
+        row.innerHTML = `<b>${r.name}${r.id === meta.current ? ' <small>you are here</small>' : ''}</b>`;
+        const chips = document.createElement('div'); chips.className = 'hdoors';
+        if (!doors.length) chips.innerHTML = '<span class="muted small">No doors yet</span>';
+        doors.forEach(dd => {
+          const to = rooms.find(x => x.id === dd.link);
+          const c = document.createElement('button'); c.className = 'hdoor';
+          c.textContent = to ? `🚪 ${to.name}` : '🚪 not set';
+          c.onclick = () => {
+            if (r.id === meta.current) { const live = room.get(dd.id); closeSheets(); if (live) { if (to) walkThrough(live, to.id); else doorPicker(live); } return; }
+            closeSheets(); switchRoom(to ? to.id : r.id);
+          };
+          chips.appendChild(c);
+          if (r.id === meta.current) {
+            const e = document.createElement('button'); e.className = 'hdoor edit'; e.textContent = 'Change'; e.title = 'Change where this door goes';
+            e.onclick = () => { const live = room.get(dd.id); if (live) doorPicker(live, true); };
+            chips.appendChild(e);
+          }
+        });
+        row.appendChild(chips); map.appendChild(row);
+      });
+      h('p', 'muted small', 'Add a Door to another room (on a wall) or a Doorway (anywhere, even outside) from Windows in Decorate. As a cat, just walk through.');
+    }
     const sh = h('div', 'rowbtns');
     sh.innerHTML = '<button class="chipbtn" id="bShareCode">Share this room as a code</button><button class="chipbtn" id="bImportCode">Open a friend’s code</button>';
     sh.querySelector('#bShareCode').onclick = () => shareSheet();
@@ -1527,6 +1621,7 @@ function startLofiRooms() {
     }
     saveT += dt;
     if (saveT > 3 && dirty) { save(); saveT = 0; }
+    if (view.fp) catDoors(now);
     if (view.fp && held.size) {
       const f = (held.has('w') || held.has('ArrowUp') ? 1 : 0) - (held.has('s') || held.has('ArrowDown') ? 1 : 0);
       const sd = (held.has('d') ? 1 : 0) - (held.has('a') ? 1 : 0), turn = (held.has('ArrowLeft') ? 1 : 0) - (held.has('ArrowRight') ? 1 : 0);

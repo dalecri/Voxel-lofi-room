@@ -203,6 +203,15 @@
   body.catcam .explorebar, body.catcam .tools, body.catcam #tray, body.catcam #rotL, body.catcam #rotR { display: none !important; }
   body:not(.exploring) #bCat { display: none; }
   body.catcam #bCat { outline: 2px solid currentColor; }
+  .house { display: flex; flex-direction: column; gap: 6px; }
+  .hroom { background: var(--chip); border-radius: 16px; padding: 10px 12px; }
+  .hroom.here { outline: 2px solid currentColor; outline-offset: -2px; }
+  .hroom b { font-family: var(--display); font-weight: 600; font-size: 14px; }
+  .hroom small { font-weight: 600; opacity: .6; margin-left: 6px; }
+  .hdoors { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .hdoor { padding: 6px 10px; border-radius: 12px; background: rgba(255,255,255,.5); font-weight: 700; font-size: 12.5px; }
+  body.night .hdoor { background: rgba(255,255,255,.1); }
+  .hdoor.edit { opacity: .7; font-weight: 600; }
   #fade { position: fixed; inset: 0; background: #1e1428; opacity: 0; pointer-events: none; transition: opacity .35s ease; z-index: 60; }
   #fade.on { opacity: 1; }
   .cards h3 { grid-column: 1 / -1; margin: 6px 2px 0; font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--ink-dim); letter-spacing: .04em; text-transform: uppercase; }
