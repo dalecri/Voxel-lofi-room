@@ -111,8 +111,11 @@ Then open http://localhost:5180.
   - Tap the floor to walk there, and tap things to use them. On a computer, WASD or the arrow keys walk too.
   - **Next cat** hops into another cat's head, and **Back to room** returns to the diorama.
 - **A connected house.** Join your saved rooms with doors and walk between them.
-  - **Door to another room** (on a wall) or **Doorway** (free-standing, so streets, gardens and other open scenes can join in), both in Windows.
-  - Tap one and pick a room or a new one. The other side gets a door leading back automatically.
+  - The **Doors** tab has twelve styles that each open their own way:
+    - panel, cottage, old wooden (arched, with iron straps), glass, French doors, sliding barn, shoji, sliding glass patio
+    - a sci-fi door that slides up, a bead curtain and a stone archway
+    - a free-standing doorway, so streets, gardens and other open scenes can join in
+  - Tap one and pick a room or a new one. The other side gets a matching door leading back automatically.
   - In cat view, just walk into a doorway. You arrive in the next room as the same cat.
   - The menu's **Your house** map shows every room and where its doors go. Tap a door to travel, or tap **Change** to send it somewhere else.
 - **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** opens one as a new room.
