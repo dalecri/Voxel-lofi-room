@@ -109,6 +109,7 @@ function startLofiRooms() {
     },
     lift() { return liftNow; },
   });
+  view.glowOn = meta.glow !== false;
   const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
 
@@ -1240,7 +1241,8 @@ function startLofiRooms() {
     else if (key === '?' || key === 'h') { $('#bMenu').click(); }
     else if (key === 'Escape') {
       if (state.drag) { if (state.drag.kind === 'move') setHidden(0); state.drag = null; view.setGhost(null); }
-      else if (sheet.classList.contains('open') || $('#photo').classList.contains('open')) { closeSheets(); $('#photo').classList.remove('open'); }
+      else if (filming) filmCancel = true;
+      else if (sheet.classList.contains('open') || $('#photo').classList.contains('open')) { closeSheets(); closePhoto(); }
       else if (state.mode === 'edit') setMode('explore');
     }
   });
@@ -1639,6 +1641,7 @@ function startLofiRooms() {
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Tap a record player to tune in.</span>`, 2000, true); renderMenu();
     };
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
+    toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
     toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
     toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
@@ -1685,13 +1688,100 @@ function startLofiRooms() {
       const url = c.toDataURL('image/png');
       $('#photoImg').src = url;
       const dl = $('#photoSave'); if (dl) dl.href = url;
-      $('#photo').classList.add('open');
+      $('#photo').classList.remove('video'); $('#photo').classList.add('open');
       $('#flash').classList.remove('go'); void $('#flash').offsetWidth; $('#flash').classList.add('go');
       Sound.snap(); discover('photo');
     };
     img.src = shot;
   };
-  $('#photoClose').onclick = () => $('#photo').classList.remove('open');
+  $('#photoClose').onclick = () => closePhoto();
+  function closePhoto() {
+    $('#photo').classList.remove('open', 'video');
+    const v = $('#photoVid'); v.pause(); v.removeAttribute('src'); v.load();
+    if (videoUrl) { URL.revokeObjectURL(videoUrl); videoUrl = null; }
+    videoBlob = null;
+    const dl = $('#photoSave'); dl.setAttribute('download', 'lofi-room.png');
+  }
+
+  // ---------------------------------------------------------------
+  // Timelapse: a whole day in your room, morning to night and back, filmed frame by frame and
+  // encoded on the device with Mediabunny (WebCodecs) into a 9:16 video ready for TikTok and Reels.
+  let filming = false, filmCancel = false, videoBlob = null, videoUrl = null;
+  const FILM = { w: 1080, h: 1920, fps: 30, secs: 16 };
+  const STARS = Array.from({ length: 160 }, (_, i) => [((i * 7919) % 1000) / 1000, ((i * 104729) % 997) / 997 * 0.7, 1 + (i % 3)]);
+  function paintFrame(g, W, H) {
+    const [top, bot, night] = view.sky || ['#f8e8d0', '#d8a77e', 0];
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, top); gr.addColorStop(1, bot);
+    g.globalCompositeOperation = 'source-over'; g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    const sa = Math.min(1, Math.max(0, night - 0.4) * 1.6);
+    if (sa > 0) { g.fillStyle = `rgba(255,255,255,${0.75 * sa})`; for (const [x, y, s] of STARS) g.fillRect(x * W, y * H, s * 1.5, s * 1.5); }
+    g.drawImage(view.r.domElement, 0, 0, W, H);
+    const s = W / 400;
+    g.font = `600 ${Math.round(13 * s)}px Fredoka, sans-serif`; g.textAlign = 'center';
+    g.fillStyle = night > 0.5 ? 'rgba(255,255,255,0.8)' : 'rgba(74,53,48,0.7)';
+    g.fillText(room.name + ' · Lofi Rooms', W / 2, H - 40 * s);
+  }
+  async function filmDay() {
+    if (filming) return;
+    if (!('VideoEncoder' in window)) { toast('<span>This browser can’t make videos. Try Chrome, or the Android app.</span>', 2800, true); return; }
+    closePhoto(); closeSheets(); exitCat(true);
+    const { w: W, h: H, fps: FPS, secs } = FILM, F = FPS * secs, seg = F / 4;
+    const ov = $('#filming'), bar = $('#filmBar'), label = $('#filmPct');
+    filming = true; filmCancel = false; ov.classList.add('open'); bar.style.width = '0%'; label.textContent = 'Getting the camera ready…';
+    let out = null, mp4 = true;
+    const phase0 = meta.phase, order = PHASE_ORDER, start = Math.max(0, order.indexOf(phase0));
+    try {
+      const mb = await import('mediabunny');
+      const codec = await mb.getFirstEncodableVideoCodec(['avc', 'vp9', 'vp8'], { width: W, height: H });
+      if (!codec) throw new Error('nocodec');
+      mp4 = codec === 'avc';
+      out = new mb.Output({ format: mp4 ? new mb.Mp4OutputFormat({ fastStart: 'in-memory' }) : new mb.WebMOutputFormat(), target: new mb.BufferTarget() });
+      const frame = document.createElement('canvas'); frame.width = W; frame.height = H;
+      const g = frame.getContext('2d');
+      const src = new mb.CanvasSource(frame, { codec, bitrate: mb.QUALITY_HIGH, keyFrameInterval: 2 });
+      out.addVideoTrack(src, { frameRate: FPS });
+      await out.start();
+      view.beginCapture(W, H);
+      view.setPhase(order[start], true); view.refreshEnv(order[start]);
+      const yaw0 = view.yaw, t0 = t;
+      for (let i = 0; i < F; i++) {
+        if (filmCancel) break;
+        const k = Math.floor(i / seg), lt = (i % seg) / seg, to = order[(start + k + 1) % 4];
+        if (i % seg === 0) view.setPhase(to);
+        if (i % seg === Math.floor(seg / 2)) view.refreshEnv(to);   // windows switch their sky halfway
+        const e = Math.min(1, Math.max(0, (lt - 0.2) / 0.65));     // linger a moment at each time of day
+        view.phaseT = e * e * (3 - 2 * e);
+        view.yaw = view.yawGoal = yaw0 + Math.sin(i / F * Math.PI * 2) * 0.22;   // a slow, gentle sway
+        view.frame(1 / FPS, t0 + i / FPS);
+        paintFrame(g, W, H);
+        await src.add(i / FPS, 1 / FPS);
+        if (i % 6 === 0) {
+          const pct = Math.round(i / F * 100);
+          bar.style.width = pct + '%'; label.textContent = `Filming a day in ${room.name}… ${pct}%`;
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+      if (filmCancel) { await out.cancel(); out = null; }
+      else { label.textContent = 'Developing the film…'; await out.finalize(); }
+    } catch (err) {
+      if (out) try { await out.cancel(); } catch (e) { /* already closed */ }
+      out = null;
+      toast(`<span>${err && err.message === 'nocodec' ? 'This device can’t encode video, sorry' : 'The timelapse didn’t work this time'}</span>`, 2600, true);
+    } finally {
+      view.endCapture();
+      view.setPhase(phase0, true); view.refreshEnv(phase0);
+      filming = false; ov.classList.remove('open');
+    }
+    if (!out) return;
+    videoBlob = new Blob([out.target.buffer], { type: mp4 ? 'video/mp4' : 'video/webm' });
+    videoUrl = URL.createObjectURL(videoBlob);
+    const v = $('#photoVid'); v.src = videoUrl; v.play().catch(() => { /* muted autoplay may still be blocked */ });
+    const dl = $('#photoSave'); dl.href = videoUrl; if (dl.hasAttribute('download')) dl.setAttribute('download', 'lofi-room-day.' + (mp4 ? 'mp4' : 'webm'));
+    $('#photo').classList.add('open', 'video');
+    Sound.chime(); discover('photo');
+  }
+  $('#photoFilm').onclick = () => filmDay();
+  $('#filmCancel').onclick = () => { filmCancel = true; };
   // in the app, hand the picture to Android's share sheet (Instagram, Photos, Messages…)
   const cap = window.Capacitor;
   if (cap && cap.isNativePlatform && cap.isNativePlatform()) {
@@ -1702,7 +1792,12 @@ function startLofiRooms() {
       e.preventDefault();
       try {
         const fsys = cap.registerPlugin('Filesystem'), share = cap.registerPlugin('Share');
-        const file = await fsys.writeFile({ path: `lofi-room-${Date.now()}.png`, data: $('#photoImg').src.split(',')[1], directory: 'CACHE' });
+        let data = $('#photoImg').src.split(',')[1], ext = 'png';
+        if (videoBlob) {
+          data = await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = no; fr.readAsDataURL(videoBlob); });
+          ext = videoBlob.type === 'video/mp4' ? 'mp4' : 'webm';
+        }
+        const file = await fsys.writeFile({ path: `lofi-room-${Date.now()}.${ext}`, data, directory: 'CACHE' });
         await share.share({ title: 'My Lofi Room', files: [file.uri] });
       } catch (err) {
         if (!/cancel/i.test(String(err && err.message))) toast('<span>Couldn’t open the share sheet</span>', 2000);
@@ -1777,7 +1872,7 @@ function startLofiRooms() {
       view.catMove(f, sd, dt);
     }
     view.beat = meta.music && !stream ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
-    view.frame(dt, t);
+    if (!filming) view.frame(dt, t);
     requestAnimationFrame(loop);
   }
 
@@ -1786,7 +1881,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyTask, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { FILM, filmDay, room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyTask, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);

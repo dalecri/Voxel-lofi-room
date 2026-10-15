@@ -130,15 +130,15 @@
     this.aAlpha = new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage);
     g.setAttribute('position', this.aPos); g.setAttribute('pcolor', this.aCol);
     g.setAttribute('psize', this.aSize); g.setAttribute('palpha', this.aAlpha);
-    this.uScale = { value: 10 }; this.uPersp = { value: 0 };
+    this.uScale = { value: 10 }; this.uPersp = { value: 0 }; this.uBoost = { value: 1 };
     const m = new THREE.ShaderMaterial({
-      uniforms: { uScale: this.uScale, uPersp: this.uPersp },
+      uniforms: { uScale: this.uScale, uPersp: this.uPersp, uBoost: this.uBoost },
       vertexShader: `attribute vec3 pcolor; attribute float psize; attribute float palpha; uniform float uScale; uniform float uPersp;
         varying vec3 vC; varying float vA;
         void main(){ vC = pcolor; vA = palpha; vec4 mv = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mv; gl_PointSize = max(1.5, psize * uScale * (uPersp > 0.5 ? 1.0 / max(0.05, -mv.z) : 1.0)); }`,
-      fragmentShader: `varying vec3 vC; varying float vA;
-        void main(){ if (vA < 0.01) discard; gl_FragColor = vec4(vC, vA);
+      fragmentShader: `varying vec3 vC; varying float vA; uniform float uBoost;
+        void main(){ if (vA < 0.01) discard; gl_FragColor = vec4(vC * uBoost, vA);
           #include <colorspace_fragment>
         }`,
       transparent: true, depthWrite: false,
@@ -309,14 +309,43 @@
     this.rainK = 0;
     this.raycaster = new THREE.Raycaster();
     this.applyPhase(1);
+    this.glowOn = true; this.glowK = 0;
+    this.initGlow();
     this.resize();
   }
   const R = Renderer.prototype;
 
+  // ---- night glow: neon, fairy lights, screens and the fire bloom softly after dark ----
+  // Glowing voxels and embers are pushed brighter than white at night and only those cross the bloom
+  // threshold. In daylight the composer is skipped entirely, so the day looks (and costs) as before.
+  R.initGlow = function () {
+    if (!THREE.EffectComposer) return;   // no post-processing available: plain rendering
+    try {
+      const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: this.r.capabilities.isWebGL2 ? 4 : 0 });
+      const c = this.composer = new THREE.EffectComposer(this.r, rt);
+      this.renderPass = new THREE.RenderPass(this.scene, this.cam);
+      this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0, 0.4, 1.05);
+      // the canvas is see-through (the sky is the page behind it): add the glow's light but keep the
+      // room's alpha, so halos spill softly over the sky instead of painting it black
+      Object.assign(this.bloomPass.blendMaterial, { blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor });
+      c.addPass(this.renderPass); c.addPass(this.bloomPass); c.addPass(new THREE.OutputPass());
+    } catch (e) { this.composer = null; }
+  };
+  R.draw = function () {
+    const k = this.glowK;
+    if (this.composer && k > 0.02) {
+      this.renderPass.camera = this.cam;
+      this.bloomPass.strength = 0.75 * k;
+      this.composer.render();
+    } else this.r.render(this.scene, this.cam);
+  };
+
   R.resize = function () {
+    if (this.capturing) return;   // filming a timelapse at a fixed size
     const c = this.r.domElement;
     const w = c.clientWidth || window.innerWidth, h = c.clientHeight || window.innerHeight;
     this.r.setSize(w, h, false);
+    if (this.composer) { this.composer.setPixelRatio(this.r.getPixelRatio()); this.composer.setSize(w, h); }
     this.w = w; this.h = h;
     this.placeCamera();
   };
@@ -341,7 +370,7 @@
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
     const ppu = this.h / viewH;
-    const lift = (this.hooks.lift ? this.hooks.lift() : 0) / ppu;
+    const lift = (this.hooks.lift && !this.capturing ? this.hooks.lift() : 0) / ppu;
     cam.top -= lift; cam.bottom -= lift;
     cam.updateProjectionMatrix();
     this.fx.uScale.value = this.glowFx.uScale.value = ppu * this.r.getPixelRatio();
@@ -352,7 +381,12 @@
   R.setPhase = function (name, instant) {
     if (!PHASES[name]) return;
     this.phase = name;
-    this.phaseFrom = Object.assign({}, this.ph);
+    // start from where the light is now: the numbers mid-blend, the colours of the last time of day
+    // (this.ph only tracks the numbers, so copying it alone restarted every sky from daytime colours)
+    const from = Object.assign({}, this.phaseTo || PHASES.day);
+    for (const k of ['sunI', 'ambI', 'hemiI', 'exp', 'night', 'lamp']) from[k] = this.ph[k];
+    from.dir = this.ph.dir.slice();
+    this.phaseFrom = from;
     this.phaseTo = PHASES[name];
     this.phaseT = instant ? 1 : 0;
     if (instant) this.applyPhase(1);
@@ -375,7 +409,8 @@
       let top = hexMix(a.top, b.top, s), bot = hexMix(a.bot, b.bot, s);
       if (rk) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x1e2236 : 0x9aa4b4), rk * 0.5); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x10121e : 0x6a7486), rk * 0.5); }
       if (storm) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x0c0e18 : 0x4a5262), 0.6); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x080a12 : 0x2e3442), 0.6); }   // heavy storm clouds
-      this.hooks.sky('#' + top.getHexString(), '#' + bot.getHexString(), ph.night);
+      this.sky = ['#' + top.getHexString(), '#' + bot.getHexString(), ph.night];
+      this.hooks.sky(...this.sky);
     }
   };
   // the sun always comes in from the open side of the room
@@ -1264,6 +1299,9 @@
     this.t = t;
     if (this.beat >= 0 && this.lastBeat >= 0 && this.beat < this.lastBeat) this.beatN = (this.beatN || 0) + 1;
     this.lastBeat = this.beat;
+    this.glowK = this.glowOn && this.composer ? Math.max(0, (this.ph.night - 0.2) / 0.8) : 0;   // a hint at dusk, full glow at night
+    this.glowMat.color.setScalar(1 + 0.3 * this.glowK);   // lamp shades and lit windows: a soft halo, not a blob
+    this.glowFx.uBoost.value = 1 + 1.5 * this.glowK;       // embers and sparks
     const k = 1 - Math.exp(-dt * 9);
     this.yaw += (this.yawGoal - this.yaw) * k;
     this.pitch += (this.pitchGoal - this.pitch) * k;
@@ -1307,6 +1345,7 @@
         ud.hands[0].rotation.z = -h / 12 * Math.PI * 2; ud.hands[1].rotation.z = -m / 60 * Math.PI * 2; ud.hands[2].rotation.z = -Math.floor(s) / 60 * Math.PI * 2;
       }
       const groove = this.beat >= 0 && this.music ? Math.pow(1 - this.beat, 3) : 0;   // 1 right on the beat, fading to 0
+      const boost = 1 + 1.2 * this.glowK;   // neon, fairy lights, fire, RGB
       if (ud.glowMat) {
         if (C.anim === 'screen' && it.on) ud.glowMat.color.setHSL((t * 0.05 + id * 0.17) % 1, 0.35, 0.8 + 0.06 * Math.sin(t * 7));
         else if (C.anim === 'twinkle') { const v = (0.82 + 0.18 * Math.sin(t * 2.2 + id)) * (groove ? 0.7 + 0.45 * groove : 1); ud.glowMat.color.setRGB(v, v, v); }
@@ -1314,6 +1353,7 @@
         else if (C.anim === 'rgb') ud.glowMat.color.setHSL((t * 0.08 + id * 0.13 + (groove ? Math.floor(this.beatN || 0) * 0.07 : 0)) % 1, 0.9, groove ? 0.45 + 0.3 * groove : 0.62);
         else if (C.anim === 'lava') { const v = 0.9 + 0.1 * Math.sin(t * 0.7 + id); ud.glowMat.color.setRGB(v, v, v); }
         else if (C.anim === 'buzz') { const off = Math.sin(t * 0.37 + id * 5) > 0.97 && Math.sin(t * 31) > 0; const v = off ? 0.35 : 0.95 + 0.05 * Math.sin(t * 50); ud.glowMat.color.setRGB(v, v, v); }
+        if (boost > 1) ud.glowMat.color.multiplyScalar(boost);
       }
       this.animatePiece(obj, it, C, dt, t);
     }
@@ -1338,7 +1378,7 @@
     }
     this.updateWeather(dt, t);
     if (this.fp) this.updateCatView(dt, t);
-    this.r.render(this.scene, this.cam);
+    this.draw();
   };
 
   // ---- cat view: first person from a cat's eyes ----
@@ -1581,9 +1621,26 @@
     }
   };
 
+  // ---- timelapse: render at a fixed video size, then hand the screen back ----
+  R.beginCapture = function (w, h) {
+    this.capturing = { pr: this.r.getPixelRatio(), zoom: this.zoomGoal, yaw: this.yawGoal };
+    this.r.setPixelRatio(1); this.r.setSize(w, h, false);
+    if (this.composer) { this.composer.setPixelRatio(1); this.composer.setSize(w, h); }
+    this.w = w; this.h = h;
+    this.zoom = this.zoomGoal = Math.min(1, this.zoomGoal);   // the whole room fits the tall frame
+    this.placeCamera();
+  };
+  R.endCapture = function () {
+    const c = this.capturing; if (!c) return;
+    this.capturing = null;
+    this.r.setPixelRatio(c.pr);
+    this.zoom = this.zoomGoal = c.zoom; this.yaw = this.yawGoal = c.yaw;
+    this.resize();
+  };
+
   // ---- photos and catalog thumbnails ----
   R.snapshot = function () {
-    this.r.render(this.scene, this.cam);
+    this.draw();
     return this.r.domElement.toDataURL('image/png');
   };
   R.thumb = function (it) {

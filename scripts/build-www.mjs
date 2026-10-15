@@ -12,11 +12,14 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'vendor', 'fonts'), { recursive: true });
 mkdirSync(join(out, 'assets'), { recursive: true });
 
-for (const f of ['room.js', 'furniture.js', 'japan.js', 'scene.js', 'screens.js', 'sound.js', 'render.js', 'main.js', 'storage.js']) copyFileSync(join(root, f), join(out, f));
+for (const f of ['boot.js', 'room.js', 'furniture.js', 'japan.js', 'scene.js', 'screens.js', 'sound.js', 'render.js', 'main.js', 'storage.js']) copyFileSync(join(root, f), join(out, f));
 cpSync(join(root, 'packs'), join(out, 'packs'), { recursive: true });
 copyFileSync(join(root, 'assets', 'icon.png'), join(out, 'assets', 'icon.png'));
-copyFileSync(nm('three/build/three.min.js'), join(out, 'vendor', 'three.min.js'));
+mkdirSync(join(out, 'vendor', 'three', 'build'), { recursive: true });
+copyFileSync(nm('three/build/three.module.js'), join(out, 'vendor', 'three', 'build', 'three.module.js'));
+for (const d of ['postprocessing', 'shaders']) cpSync(nm('three/examples/jsm/' + d), join(out, 'vendor', 'three', 'examples', 'jsm', d), { recursive: true });
 copyFileSync(nm('@capacitor/core/dist/capacitor.js'), join(out, 'vendor', 'capacitor.js'));
+copyFileSync(nm('mediabunny/dist/bundles/mediabunny.min.mjs'), join(out, 'vendor', 'mediabunny.min.mjs'));   // loaded only when filming a timelapse
 
 // fonts: latin subsets of the weights the app uses
 let css = '';
@@ -39,8 +42,10 @@ const swap = (from, to) => {
   html = html.replace(from, to);
 };
 swap(/<link rel="preconnect"[^>]*>\s*<link rel="preconnect"[^>]*>\s*<link href="https:\/\/fonts\.googleapis\.com[^>]*>/, '<link rel="stylesheet" href="vendor/fonts.css">');
-swap(/<script src="https:\/\/unpkg\.com\/three@0\.160\.0\/build\/three\.min\.js"><\/script>/, '<script src="vendor/three.min.js"></script>');
-swap(/<script src="storage\.js"><\/script>/, '<script src="vendor/capacitor.js"></script>\n<script src="storage.js"></script>');
+swap(/https:\/\/unpkg\.com\/three@0\.160\.0\/build\/three\.module\.js/, './vendor/three/build/three.module.js');
+swap(/https:\/\/unpkg\.com\/three@0\.160\.0\/examples\/jsm\//, './vendor/three/examples/jsm/');
+swap(/https:\/\/unpkg\.com\/mediabunny@[\d.]+\/dist\/bundles\/mediabunny\.min\.mjs/, './vendor/mediabunny.min.mjs');
+swap(/<script defer src="storage\.js"><\/script>/, '<script defer src="vendor/capacitor.js"></script>\n<script defer src="storage.js"></script>');
 writeFileSync(join(out, 'index.html'), html);
 
 console.log('www/ ready');

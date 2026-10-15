@@ -276,6 +276,14 @@
   #photo .row2 { display: flex; gap: 10px; }
   #photo a, #photo button { background: #fffaf3; color: #4a3530; border-radius: 16px; padding: 12px 22px; font-weight: 800; text-decoration: none; font-size: 15px; }
   #photo p { color: #fff; opacity: .8; font-size: 12.5px; margin: 0; }
+  #photo video { display: none; max-width: 100%; max-height: 70vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  #photo.video video { display: block; }
+  #photo.video img, #photo.video p, #photo.video #photoFilm { display: none; }
+  #filming { position: fixed; inset: 0; z-index: 31; background: rgba(30,15,15,.86); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #fff; padding: 0 24px; text-align: center; }
+  #filming.open { display: flex; }
+  #filming .filmtrack { width: min(320px, 80vw); height: 8px; border-radius: 8px; background: rgba(255,255,255,.18); overflow: hidden; }
+  #filming .filmtrack i { display: block; height: 100%; width: 0; background: #ffd27a; border-radius: 8px; transition: width .2s; }
+  #filming button { background: #fffaf3; color: #4a3530; border-radius: 16px; padding: 10px 22px; font-weight: 800; font-size: 14px; }
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 29; }
   #flash.go { animation: flash .5s ease-out; }
   @keyframes flash { from { opacity: .85; } to { opacity: 0; } }
@@ -361,34 +369,37 @@
 
 <div id="photo">
   <img id="photoImg" alt="Snapshot of your room">
+  <video id="photoVid" loop muted playsinline></video>
   <p>Long-press the picture to save it, or</p>
-  <div class="row2"><a id="photoSave" download="lofi-room.png">Download</a><button id="photoClose">Back to room</button></div>
+  <div class="row2"><a id="photoSave" download="lofi-room.png">Download</a><button id="photoFilm">Film a day</button><button id="photoClose">Back to room</button></div>
 </div>
+<div id="filming"><b id="filmPct">Getting the camera ready…</b><div class="filmtrack"><i id="filmBar"></i></div><button id="filmCancel">Cancel</button></div>
 <div id="flash"></div>
 <div id="dream">z z z</div>
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="storage.js"></script>
-<script src="room.js"></script>
-<script src="furniture.js"></script>
-<script src="japan.js"></script>
-<script src="scene.js"></script>
-<script src="screens.js"></script>
-<script src="sound.js"></script>
-<script src="packs/bar.js"></script>
-<script src="packs/library.js"></script>
-<script src="packs/lab.js"></script>
-<script src="packs/space.js"></script>
-<script src="packs/mexico.js"></script>
-<script src="packs/europe.js"></script>
-<script src="packs/medieval.js"></script>
-<script src="packs/cave.js"></script>
-<script src="packs/cyber.js"></script>
-<script src="packs/garden.js"></script>
-<script src="packs/cozy.js"></script>
-<script src="packs/seasonal.js"></script>
-<script src="packs/doors.js"></script>
-<script src="render.js"></script>
-<script src="main.js"></script>
+<script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/", "mediabunny": "https://unpkg.com/mediabunny@1.60.0/dist/bundles/mediabunny.min.mjs" } }</script>
+<script type="module" src="boot.js"></script>
+<script defer src="storage.js"></script>
+<script defer src="room.js"></script>
+<script defer src="furniture.js"></script>
+<script defer src="japan.js"></script>
+<script defer src="scene.js"></script>
+<script defer src="screens.js"></script>
+<script defer src="sound.js"></script>
+<script defer src="packs/bar.js"></script>
+<script defer src="packs/library.js"></script>
+<script defer src="packs/lab.js"></script>
+<script defer src="packs/space.js"></script>
+<script defer src="packs/mexico.js"></script>
+<script defer src="packs/europe.js"></script>
+<script defer src="packs/medieval.js"></script>
+<script defer src="packs/cave.js"></script>
+<script defer src="packs/cyber.js"></script>
+<script defer src="packs/garden.js"></script>
+<script defer src="packs/cozy.js"></script>
+<script defer src="packs/seasonal.js"></script>
+<script defer src="packs/doors.js"></script>
+<script defer src="render.js"></script>
+<script defer src="main.js"></script>
 </body>
 </html>

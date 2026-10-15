@@ -148,6 +148,8 @@ Then open http://localhost:5180.
 - **55 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
 - **Today's moment:** one small thing to do each day, the same for everyone that day, with a streak counter in the menu.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
+- **Film a day.** In photo mode, **Film a day** makes a 16-second timelapse of your room going from the current time of day all the way round, with the camera swaying gently. It's a 1080×1920 vertical video, ready for TikTok and Reels. It's made on your device with [Mediabunny](https://mediabunny.dev) (MP4 where the device supports H.264, WebM otherwise), and there's no sound, so you can add your own track in the app you post to.
+- **Night glow.** After dark, neon signs, fairy lights, screens, the fire and its embers bloom with a soft glow (three.js `UnrealBloomPass`). It fades in at dusk and is off in daylight, so the day looks and runs exactly as before. Switch it off in Settings if your phone runs warm.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 
 ## Controls
@@ -179,7 +181,7 @@ npm install
 npm run apk        # → dist/lofi-rooms.apk
 ```
 
-`npm run build` assembles `www/`, which is the app plus local copies of three.js, the fonts and Capacitor, so the APK works offline. `npm run icons` regenerates the launcher icons from `resources/` (`icon-foreground.png` is the safe zone the launcher shows, so the logo fills about 70% of it) (the isometric block logo on a dark plum background). It also resets the splash screens to a small logo, so afterwards copy the full-size `resources/splash.png` and `splash-dark.png` back into `android/app/src/main/res/drawable*/`, cropped to each size.
+`npm run build` assembles `www/`, which is the app plus local copies of three.js (with its post-processing addons), Mediabunny, the fonts and Capacitor, so the APK works offline. `npm run icons` regenerates the launcher icons from `resources/` (`icon-foreground.png` is the safe zone the launcher shows, so the logo fills about 70% of it) (the isometric block logo on a dark plum background). It also resets the splash screens to a small logo, so afterwards copy the full-size `resources/splash.png` and `splash-dark.png` back into `android/app/src/main/res/drawable*/`, cropped to each size.
 
 ## How it's made
 
@@ -191,8 +193,9 @@ npm run apk        # → dist/lofi-rooms.apk
 | `japan.js` | The Japanese collection: pieces, wall and floor styles, the Tea Room template and two Japanese themes for Surprise rooms. |
 | `furniture.js` | The expanded catalog: modular desks and storage, tech and games, the kitchen, modern lights, fish tanks, windows, movie posters and the robot vacuum. |
 | `screens.js` | The pixel-art programs that play on screens. |
-| `render.js` | The three.js renderer. A voxel mesher with baked ambient occlusion, the cut-away room shell with stepped corners, furniture sync, lamp lights, the day cycle, animated screens, fish, doors, sunbeams, cat and robot behaviour, particles and picking. |
-| `main.js` | Touch and mouse input, the decorating tools, things you can tap, rooms and saving, cozy moments, photo mode and the Android back button. |
+| `boot.js` | Loads three.js as an ES module with the bloom addons and exposes it as `THREE` for the other (deferred) scripts. |
+| `render.js` | The three.js renderer, plus the night glow and the timelapse capture. A voxel mesher with baked ambient occlusion, the cut-away room shell with stepped corners, furniture sync, lamp lights, the day cycle, animated screens, fish, doors, sunbeams, cat and robot behaviour, particles and picking. |
+| `main.js` | Touch and mouse input, the decorating tools, things you can tap, rooms and saving, cozy moments, photo mode, the timelapse export and the Android back button. |
 | `sound.js` | The generative lofi band, ambience and interface sounds, all made with Web Audio. |
 | `storage.js` | Mirrors saves into SQLite inside the app. |
 | `android/` | The Capacitor Android project (app id `com.lofirooms.app`). |
