@@ -35,7 +35,7 @@
   ];
 
   const S = {
-    on: true, ctx: null, music: false, night: 0, mood: 0, moods: MOODS,
+    on: true, ctx: null, music: false, night: 0, crackleOn: true, mood: 0, moods: MOODS,
     init() {
       if (this.ctx || !this.on) return;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -61,11 +61,11 @@
       this.wobAmt = ctx.createGain(); this.wobAmt.gain.value = 4;
       this.wob.connect(this.wobAmt); this.wob.start();
 
-      // vinyl crackle: sparse clicks over a little hiss
-      const cb = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), cd = cb.getChannelData(0);
-      for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() < 0.0006 ? (Math.random() * 2 - 1) * 0.9 : 0) + (Math.random() * 2 - 1) * 0.012;
+      // vinyl crackle: a few soft, warm pops over a whisper of hiss (kept well under the music)
+      const cb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), cd = cb.getChannelData(0);
+      for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() < 0.00012 ? (Math.random() * 2 - 1) * 0.4 : 0) + (Math.random() * 2 - 1) * 0.003;
       const cs = ctx.createBufferSource(); cs.buffer = cb; cs.loop = true;
-      const cf = ctx.createBiquadFilter(); cf.type = 'bandpass'; cf.frequency.value = 3000; cf.Q.value = 0.5;
+      const cf = ctx.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.value = 2000; cf.Q.value = 0.3;
       this.crackle = ctx.createGain(); this.crackle.gain.value = 0;
       cs.connect(cf); cf.connect(this.crackle); this.crackle.connect(this.master); cs.start();
 
@@ -101,7 +101,7 @@
       const t = this.ctx.currentTime;
       this.band.gain.cancelScheduledValues(t);
       this.band.gain.setTargetAtTime(on ? 0.9 : 0, t, on ? 0.6 : 0.4);
-      this.crackle.gain.setTargetAtTime(on ? 0.5 : 0, t, 0.5);
+      this.crackle.gain.setTargetAtTime(on && this.crackleOn ? 0.2 : 0, t, 0.5);
       if (on) { this.nextStep = Math.max(this.nextStep, t + 0.05); this.needle(); }
     },
     // where we are in the current beat, 0 just on it to 1 just before the next; -1 when the band is quiet
@@ -265,7 +265,8 @@
     paint() { if (!this.ready()) return; this.burst(0.12, 0.08, 'bandpass', 2400); const t = this.ctx.currentTime; this.tone(880, t + 0.04, 0.3, 0.04); },
     sip() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 3; k++) { const o = this.tone(500 + k * 80, t + k * 0.09, 0.07, 0.05); o.frequency.exponentialRampToValueAtTime(900, t + k * 0.09 + 0.06); } },
     water() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 5; k++) { const f = 1200 + Math.random() * 1400; const o = this.tone(f, t + k * 0.06, 0.08, 0.035); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + k * 0.06 + 0.05); } },
-    needle() { if (!this.ready()) return; this.burst(0.08, 0.2, 'bandpass', 2500); this.burst(0.4, 0.04, 'highpass', 4000); },
+    needle() { if (!this.ready() || !this.crackleOn) return; this.burst(0.06, 0.06, 'lowpass', 1800); },
+    setCrackle(on) { this.crackleOn = on; if (this.ctx) this.crackle.gain.setTargetAtTime(on && this.music ? 0.2 : 0, this.ctx.currentTime, 0.3); },
     piano() {
       if (!this.ready()) return;
       const t = this.ctx.currentTime, chord = PROGS[this.prog][this.bar % 4];
