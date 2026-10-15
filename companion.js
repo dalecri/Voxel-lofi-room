@@ -1,17 +1,17 @@
 // One companion, outside the room model. Fixed rules, fixed speech, no remote services.
 (function (root) {
-  const ID = 'lampbot', DISPLAY_NAME = 'Lamp-bot'; // Rename the character here.
+  const ID = 'lampbot', DISPLAY_NAME = 'Little bot'; // Rename the character here.
   const SPEECH = {
     morning: ['Morning. I have preheated the optimism.', 'The light is fresh. So are we, approximately.', 'A small beginning still counts.', 'The plants look ready. I respect their confidence.', 'Good morning. No rush has been scheduled.'],
     day: ['An excellent afternoon for existing.', 'The sun is doing most of my job. Fair enough.', 'A little pause would fit nicely here.', 'This room has very good sitting energy.', 'We have enough afternoon to take our time.'],
     evening: ['The room is putting its soft edges on.', 'Evening has arrived without a meeting.', 'Warm light suits this place.', 'The day can put its bags down now.', 'I have switched to my indoor optimism.'],
     night: ['Low power. High regard for you.', 'The night shift mostly involves being cozy.', 'I am resting my very small circuits.', 'Tomorrow can wait outside for a bit.', 'A quiet room is a perfectly good plan.'],
-    rain: ['The window has excellent rain reception.', 'Weather report: comfortably on this side of the glass.', 'I would offer an umbrella, but I am mostly lamp.', 'Rain has a lovely sense of rhythm.'],
+    rain: ['The window has excellent rain reception.', 'Weather report: comfortably on this side of the glass.', 'I would offer an umbrella, but these hands are ornamental.', 'Rain has a lovely sense of rhythm.'],
     snow: ['The world has turned its volume down.', 'Snow. Very ambitious confetti.', 'I am keeping a little warmth in reserve.', 'Every roof is wearing a blanket. Sensible.'],
     clear: ['Clear skies. No further instructions.', 'Nothing urgent in the forecast.', 'A fine day for a small amount of puttering.', 'The light found us. Convenient.'],
     moment: ['That was a good little moment.', 'Noted in the important part of my circuits.', 'A small celebration seems proportionate.', 'I saw that. Very cozy work.', 'This is what the warm light is for.', 'Another reason to like this room.'],
     tap: ['Hello. Still pleasantly here.', 'Oh, hello. A hop felt appropriate.', 'My entire department is happy to see you.', 'I brought a little light. Travel size.', 'Yes, this is my helpful expression.', 'You have reached the warm-light desk.'],
-    idle: ['I have inspected this patch of floor. Quite good.', 'The cat has seniority. I checked.', 'I was going somewhere. It can wait.', 'A room is nicer with a little room left in it.', 'My antenna is mostly for looking interested.', 'Doing very little, with considerable care.'],
+    idle: ['I have inspected this patch of floor. Quite good.', 'The cat has seniority. I checked.', 'I was going somewhere. It can wait.', 'A room is nicer with a little room left in it.', 'The shoulder pads are mostly for moral support.', 'Doing very little, with considerable care.'],
   };
   const nearest = (points, s) => points.reduce((best, p) => !best || Math.hypot(p.x - s.x, p.z - s.z) < Math.hypot(best.x - s.x, best.z - s.z) ? p : best, null);
   const rainy = e => e.weather === 'rain' || e.weather === 'storm';
@@ -101,27 +101,48 @@
   const definition = {
     name: DISPLAY_NAME, kind: 'companion', size: [1, 1], vars: [[]], anim: 'twinkle',
     build(m) {
-      const ivory = 0xe4d9bf, trim = 0x877263, brass = 0xc49a57;
-      m.box(1, 0, 3, 3, 2, 6, trim).box(5, 0, 3, 7, 2, 6, trim);
-      m.blob(4, 3.3, 4, 3.8, 2.5, 3.5, ivory).box(1, 2, 2, 7, 3, 6, ivory);
-      m.box(3, 5, 3, 5, 9, 5, brass).box(2, 8, 3, 6, 9, 5, trim);
-      m.part('head', [4, 11, 4], 'x');
-      m.blob(4, 13, 4, 4.4, 4.4, 2.6, ivory);
-      for (let x = 0; x < 8; x++) for (let y = 9; y < 17; y++) {
-        const d = Math.hypot(x + .5 - 4, y + .5 - 13);
-        if (d < 4) m.set(x, y, 6, d > 3.1 ? 0xffc16b : 0xb56829, true);
+      const armor = 0x34595c, edge = 0x203e43, plate = 0x476d6c, sage = 0x779986;
+      const mint = 0x91d9d0, pale = 0xc9f5ed, dark = 0x173b40;
+      // Little boots, a broad armored body, and a mint heart in its chest.
+      m.box(0, 0, 2, 3, 2, 7, edge).box(5, 0, 2, 8, 2, 7, edge);
+      m.box(0, 1, 4, 3, 3, 7, sage).box(5, 1, 4, 8, 3, 7, sage);
+      m.blob(4, 6, 4, 5.3, 4.6, 3.7, armor);
+      m.box(0, 4, 6, 8, 9, 8, plate).box(1, 3, 7, 7, 4, 8, edge);
+      m.box(0, 7, 8, 8, 8, 9, sage).box(2, 4, 8, 6, 5, 9, armor);
+      m.box(3, 6, 8, 5, 9, 9, edge);
+      m.box(3, 7, 9, 5, 9, 10, mint, true).set(2, 8, 9, pale, true).set(5, 8, 9, pale, true).set(3, 6, 9, mint, true);
+      m.box(-1, 10, 2, 9, 11, 7, edge);
+      // Layered shoulder caps and oversized gauntlets, tucked close to the body.
+      for (const x of [-3, 8]) {
+        m.box(x, 6, 2, x + 3, 10, 6, edge);
+        m.box(x, 8, 2, x + 3, 11, 6, plate).box(x, 10, 3, x + 3, 11, 6, sage);
+        m.box(x, 5, 3, x + 3, 7, 5, sage);
+        m.blob(x + 1.5, 4, 4.5, 2.3, 2.8, 2.8, armor);
+        m.box(x, 2, 6, x + 3, 5, 7, edge).box(x, 4, 6, x + 3, 5, 7, sage);
       }
-      m.box(2, 13, 7, 3, 15, 8, 0xffe9ad, true).box(5, 13, 7, 6, 15, 8, 0xffe9ad, true);
-      m.set(3, 11, 7, 0xffdea0, true).set(4, 11, 7, 0xffdea0, true);
-      m.box(-1, 12, 3, 1, 14, 5, trim).box(7, 12, 3, 9, 14, 5, trim);
-      m.box(3, 17, 3, 5, 18, 5, trim).box(3, 18, 3, 4, 20, 4, brass).set(4, 20, 3, ivory);
+      // The luminous rounded head is one tilting part, with a pale stepped cap.
+      m.part('head', [4, 11, 4], 'x');
+      m.blob(4, 15, 4, 5, 6, 3.6, mint, true);
+      const widths = [8, 10, 10, 10, 10, 10, 8, 6, 4, 2];
+      for (let y = 11; y < 21; y++) {
+        const left = 4 - widths[y - 11] / 2, right = 8 - left;
+        for (let x = left; x < right; x++) {
+          const cap = y >= 18 || (y >= 16 && (x === left || x === right - 1));
+          m.set(x, y, 7, cap ? pale : mint, true);
+        }
+      }
+      // Dark eyes with tiny catchlights and a pixel smile, facing the room.
+      m.box(1, 14, 7, 2, 16, 8, dark, true).box(6, 14, 7, 7, 16, 8, dark, true);
+      m.set(1, 16, 7, pale, true).set(6, 16, 7, pale, true);
+      m.set(2, 13, 7, plate, true).set(5, 13, 7, plate, true).box(3, 12, 7, 5, 13, 8, plate, true);
+      for (let x = 0; x < 8; x++) m.set(x, 11, 7, x % 2 ? pale : mint, true);
       m.main();
     },
   };
   function create({ view, room, environment }) {
     const brain = createBrain(), object = view.makeObject({ t: ID, id: ID, on: true, c: 0 }, null, true, definition);
     object.name = ID; object.scale.setScalar(.52); view.root.add(object);
-    const light = new THREE.PointLight(0xffbd72, .6, 2.5); light.position.set(0, 1.6, 0); object.add(light);
+    const light = new THREE.PointLight(0xa4eee0, .6, 2.5); light.position.set(0, 1.6, 0); object.add(light);
     const bubble = document.createElement('div'); bubble.id = 'lampbotBubble'; bubble.className = 'toast companion-bubble';
     bubble.setAttribute('role', 'status'); bubble.setAttribute('aria-live', 'polite'); bubble.setAttribute('aria-label', DISPLAY_NAME); bubble.hidden = true; document.body.appendChild(bubble);
     let cachedRoom = null, cachedItems = null, refresh = 0, desks = [], windows = [], zTime = 0;

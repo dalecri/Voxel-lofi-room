@@ -194,9 +194,9 @@ Logic regressions run with `node --test tests/*.test.cjs`. For the browser flows
 
 Ritual tests are included in `node --test tests/*.test.cjs`. After `npm run build`, run `python3 tests/rituals-browser.py` to check candle visuals and persistence, exact durations, cancellation, breathing lighting and controls, synchronized cues, mute and reload behavior.
 
-## Lamp-bot companion
+## Little bot companion
 
-A single tiny lamp companion follows the current room without entering the furniture catalog, room saves, placement grid, or cats’ entity map. Its ivory dome, stubby legs, amber bulb face and antenna use the same voxel builder and mesher as the room. The provisional display name lives in one constant, `DISPLAY_NAME` in `companion.js`; its internal id is `lampbot`.
+A single tiny robot companion follows the current room without entering the furniture catalog, room saves, placement grid, or cats’ entity map. Its glowing mint head, pixel smile, dark teal armor, sage shoulder caps, chunky hands and little boots use the same voxel builder and mesher as the room. The provisional display name lives in one constant, `DISPLAY_NAME` in `companion.js`; its internal id is `lampbot`.
 
 It putters and pauses, perches on the nearest desk while decorating, watches the nearest window in rain, and bops to the music’s beat. After 10pm it dims and sleeps until morning, with occasional little “z” particles. Taps and newly discovered cozy moments get a happy hop. Cats and interactive room pieces always get tap priority; decorating never targets the companion.
 
