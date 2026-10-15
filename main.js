@@ -81,8 +81,18 @@ function startLofiRooms() {
     if (d && room.load(d)) { meta.current = id; return true; }
     return false;
   }
+  // Saving is explicit. The room you're in is a working copy: it's stashed in lr.draft every few seconds
+  // (so closing the app never loses anything) but your home (lr.rooms and lr.room.<id>) only changes when
+  // you tap Save. New rooms, surprise rooms and friends' rooms start out unsaved.
+  // An edit is a change to what's built: lamps switched on or a cat wandering don't count.
+  const sig = () => JSON.stringify([room.name, room.n, room.wall, room.floor, room.items.filter(i => !i.visitor).map(i => [i.t, i.x, i.z, i.k, i.u, i.e, i.r | 0, i.c | 0, i.link || 0])]);
+  let baseSig = '';
+  const isSaved = () => rooms.some(r => r.id === meta.current);
+  const isEdited = () => sig() !== baseSig;
   let fresh = false;
-  if (!rooms.length || !loadRoom(meta.current)) {
+  const draft = store.get('lr.draft', null);
+  if (draft && draft.id === meta.current && room.load(draft.data)) baseSig = draft.base || '';
+  else if (!rooms.length || !loadRoom(meta.current)) {
     if (rooms.length && loadRoom(rooms[0].id)) { /* recovered */ }
     else {
       PRESETS.study.make(room); room.name = PRESETS.study.name;
@@ -91,6 +101,8 @@ function startLofiRooms() {
       meta.current = id; fresh = true;
     }
   }
+  if (!baseSig) baseSig = sig();
+  if (!rooms.length) fresh = true;   // your home always keeps at least one saved room
 
   // ---------------------------------------------------------------
   // Renderer
@@ -142,32 +154,73 @@ function startLofiRooms() {
   // Toasts & moments
   const toastQ = [];
   let toastBusy = 0;
-  function toast(html, ms, now) {
+  function toast(html, ms, now, cls) {
     if (now) { toastQ.length = 0; toastBusy = 0; document.querySelectorAll('#toasts .toast').forEach(el => el.remove()); }   // drag hints jump the queue
-    if (performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms]); return; }
+    if (performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms, false, cls]); return; }
     toastBusy = performance.now() + Math.min(ms || 3200, 1500);
     setTimeout(() => { if (toastQ.length) toast(...toastQ.shift()); }, Math.min(ms || 3200, 1500) + 50);
     const el = document.createElement('div');
-    el.className = 'toast'; el.innerHTML = html;
+    el.className = 'toast' + (cls ? ' ' + cls : ''); el.innerHTML = html;
     $('#toasts').appendChild(el);
     requestAnimationFrame(() => el.classList.add('in'));
     setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 400); }, ms || 3200);
   }
-  // one special moment a day: the same task for everyone on a given date
+  // Daily Moment: one special cozy moment a day, the same for everyone on a given date. The local
+  // YYYY-MM-DD is hashed into a seed for room.js's mulberry, which picks from a pool of moments with
+  // recipes you can actually follow. It's per day, not per room: doing it in any room counts.
   const DAILY = [
-    ['tea', 'Make yourself a cup of tea'], ['purr', 'Pet one of the cats'], ['lofi', 'Put a record on'], ['light', 'Switch on a lamp'],
-    ['fish', 'Say hi to the fish'], ['barista', 'Brew a pot of coffee'], ['feast', 'Feed a cat'], ['stargazer', 'Find a constellation'],
-    ['cuckoo', 'Hear the cuckoo clock'], ['photo', 'Take a photo of your room'], ['gamer', 'Play a video game'], ['fire', 'Light the fireplace'], ['piano', 'Play the piano'],
+    ['stormytea', 'Make tea while it rains: tap the cloud for rain, then a mug or the kettle'],
+    ['mixtape', 'Play three different tracks on a jukebox'],
+    ['nightowl', 'Switch on a lamp after dark'],
+    ['golden', 'Open a window in the evening light'],
+    ['tea', 'Sip from a mug or put the kettle on'],
+    ['purr', 'Pet one of the cats'],
+    ['lofi', 'Put a record on'],
+    ['fire', 'Light the fireplace'],
+    ['moonlight', 'Play the piano at night'],
+    ['stormy', 'Rain, a lit fireplace and music, all at once'],
+    ['cinema', 'Roll a film on the projector after dark'],
+    ['catnap', 'Catch a cat napping in its bed'],
   ];
-  const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
-  const dailyTask = () => { const d = new Date(); const n = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5) + d.getFullYear() * 7; return DAILY[n % DAILY.length]; };
+  const dateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = () => dateKey(new Date());
+  const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dateKey(d); };
+  function pickDaily(date) {
+    let h = 2166136261;   // FNV-1a over the date string, then one draw from the seeded generator
+    for (let k = 0; k < date.length; k++) { h ^= date.charCodeAt(k); h = Math.imul(h, 16777619); }
+    return DAILY[Math.floor(LR.mulberry(h >>> 0)() * DAILY.length)][0];
+  }
+  // lr.daily = { date, id, done } re-rolls whenever the stored date isn't today; lr.dailyStreak = { n, last }
+  // counts consecutive completed days and drops to 0 once a day is missed.
+  function ensureDaily() {
+    let D = store.get('lr.daily', null);
+    const t = today();
+    if (!D || D.date !== t) { D = { date: t, id: pickDaily(t), done: false }; store.set('lr.daily', D); }
+    const S = store.get('lr.dailyStreak', { n: 0, last: '' });
+    if (S.n && S.last !== t && S.last !== yesterday()) { S.n = 0; store.set('lr.dailyStreak', S); }
+    return D;
+  }
+  (function migrateDaily() {   // the first version kept a streak in meta.daily (with unpadded dates)
+    const old = meta.daily; if (!old) return;
+    const m = String(old.date || '').match(/^(\d+)-(\d+)-(\d+)$/);
+    if (m && old.streak && !store.get('lr.dailyStreak', null)) store.set('lr.dailyStreak', { n: old.streak, last: `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` });
+    delete meta.daily; saveMeta();
+  })();
+  ensureDaily();
+  const dailyInfo = () => { const D = ensureDaily(); const r = DAILY.find(x => x[0] === D.id) || DAILY[0]; const M = MOMENTS.find(x => x[0] === D.id); return { D, name: M ? M[1] : D.id, hint: r[1] }; };
   function dailyCheck(key) {
-    const D = meta.daily || (meta.daily = {});
-    if (D.date === today() || dailyTask()[0] !== key) return;
-    const y = new Date(); y.setDate(y.getDate() - 1);
-    const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
-    D.streak = D.date === yKey ? (D.streak || 0) + 1 : 1; D.date = today(); saveMeta();
-    setTimeout(() => { toast(`<b>☀ Today's moment</b><span>${dailyTask()[1]}. Streak: ${D.streak} day${D.streak > 1 ? 's' : ''}</span>`, 3200); Sound.arpeggio(); }, 1800);
+    const { D, name } = dailyInfo();
+    if (D.done || D.id !== key) return;
+    D.done = true; store.set('lr.daily', D);
+    const S = store.get('lr.dailyStreak', { n: 0, last: '' });
+    S.n = S.last === yesterday() ? S.n + 1 : S.last === D.date ? S.n : 1; S.last = D.date;
+    store.set('lr.dailyStreak', S);
+    const log = store.get('lr.dailyLog', []);
+    log.unshift({ date: D.date, id: D.id }); store.set('lr.dailyLog', log.slice(0, 60));   // the journal, newest first
+    setTimeout(() => {
+      toast(`<b>☀ Today’s moment: ${name}</b><span>You made today cozy. ${S.n > 1 ? `${S.n} days in a row!` : 'Come back tomorrow for a new one.'}</span>`, 4200, true, 'daily');
+      Sound.arpeggio(); setTimeout(() => Sound.chime(), 450);
+    }, 1800);
   }
   function discover(key) {
     dailyCheck(key);
@@ -197,9 +250,17 @@ function startLofiRooms() {
     if (meta.phase === 'evening' && room.items.some(i => CAT[i.t].beam && i.on)) discover('golden');
     if (view.ph.night > 0.6 && WALLS[room.wall.style] && WALLS[room.wall.style].none && room.items.length >= 8) discover('city');
   }
+  function updateSaveChip() {
+    const saved = isSaved(), edited = isEdited(), b = $('#bSave');
+    b.hidden = saved && !edited;
+    document.body.classList.toggle('unsaved', !b.hidden);
+    b.classList.toggle('new', !saved);
+    b.setAttribute('aria-label', saved ? 'Save changes' : 'Save this room to your home');
+    $('#disc').textContent = !saved ? 'Not saved yet' : edited ? 'Unsaved changes' : `✦ ${found.size} of ${MOMENTS.length} cozy moments`;
+  }
   function updateHeader() {
     $('#roomName').textContent = room.name;
-    $('#disc').textContent = `✦ ${found.size} of ${MOMENTS.length} cozy moments`;
+    updateSaveChip();
     $('#bRain').classList.toggle('on', (meta.weather || 'clear') !== 'clear');
     $('#bMusic').classList.toggle('on', !!meta.music);
     $('#bTime').dataset.phase = meta.phase;
@@ -216,6 +277,7 @@ function startLofiRooms() {
     view.sync(room);
     dirty = true;
     checkRoomMoments();
+    updateSaveChip();
   }
   function doUndo() {
     if (!undo.length) { toast('<span>Nothing to undo</span>', 1200); return; }
@@ -1317,7 +1379,7 @@ function startLofiRooms() {
   sheet.addEventListener('click', e => { if (e.target === sheet) closeSheets(); });
   $('#brand').onclick = () => {
     const name = prompt('Name this room', room.name);
-    if (name && name.trim()) { room.name = name.trim().slice(0, 40); updateHeader(); dirty = true; saveIndex(); }
+    if (name && name.trim()) { room.name = name.trim().slice(0, 40); updateHeader(); dirty = true; }
   };
 
   // template cards, rooms first and open-air scenes after, each under a little heading
@@ -1347,14 +1409,13 @@ function startLofiRooms() {
     else { PRESETS[k].make(room); room.name = PRESETS[k].name; }
   }
   function newRoom(k, forcedId) {
-    save();
     const id = forcedId || Date.now();
     fillRoom(k);
-    rooms.push({ id, name: room.name, n: room.items.length });
-    meta.current = id; undo.length = 0;
+    meta.current = id; undo.length = 0; baseSig = sig();
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
-    changed(); save(); saveIndex(); saveMeta(); updateHeader();
-    toast(`<b>${room.name}</b><span>A fresh room. Your other rooms are in the menu.</span>`, 2400);
+    if (forcedId) commit(true);   // a room built through a door joins the house straight away
+    changed(); save(); saveMeta(); updateHeader();
+    toast(`<b>${room.name}</b><span>${forcedId ? 'A fresh room through the door' : 'A fresh room to play with. Tap Save to keep it.'}</span>`, 2400);
     Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
   }
   // share codes: a room squeezed into a short text a friend can paste in
@@ -1404,7 +1465,7 @@ function startLofiRooms() {
     });
   }
   function importSheet() {
-    codeSheet('Open a friend’s room', 'Paste a room code. It opens as a new room, so nothing of yours is replaced.', h => {
+    codeSheet('Open a friend’s room', 'Paste a room code. You visit it first; nothing of yours is replaced, and you can save it to your home if you like it.', h => {
       const ta = h('textarea', 'code'); ta.rows = 4; ta.placeholder = 'LR1.…';
       const row = h('div', 'rowbtns'); row.innerHTML = '<button class="chipbtn" id="bOpenCode">Open room</button>';
       row.querySelector('#bOpenCode').onclick = async () => {
@@ -1413,14 +1474,15 @@ function startLofiRooms() {
           const probe = new LR.Room();
           if (!probe.load(d)) throw new Error('bad room');
           probe.items = probe.items.filter(i => CAT[i.t]);   // pieces this version doesn't know are skipped
-          save();
-          const id = Date.now();
-          room.load(probe.serialize());
-          rooms.push({ id, name: room.name, n: room.items.length });
-          meta.current = id; undo.length = 0;
-          view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
-          changed(); save(); saveIndex(); saveMeta(); updateHeader(); closeSheets();
-          toast(`<b>${room.name}</b><span>A friend’s room, now in your list</span>`, 2200); Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
+          closeSheets();
+          leaveThen(() => {
+            const id = Date.now();
+            room.load(probe.serialize());
+            meta.current = id; undo.length = 0; baseSig = sig();
+            view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
+            changed(); save(); saveMeta(); updateHeader();
+            toast(`<b>${room.name}</b><span>Visiting a friend’s room. Tap Save to keep it.</span>`, 2600); Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
+          });
         } catch (e) { Sound.nope(); toast('<span>That code doesn’t look right</span>', 1600); }
       };
     });
@@ -1451,8 +1513,9 @@ function startLofiRooms() {
     return back;
   }
   let travelling = false;
-  function walkThrough(door, to, asCat) {
+  function walkThrough(door, to, asCat, asked) {
     if (travelling) return;
+    if (!asked && isEdited()) { leaveThen(() => walkThrough(door, to, asCat, true)); return; }
     travelling = true;
     const from = meta.current, hint = CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null;
     view.openDoor(door.id); Sound.creak();
@@ -1461,7 +1524,9 @@ function startLofiRooms() {
     setTimeout(() => {
       switchRoom(to, true);
       const back = backDoor(from, hint);
-      changed(); save();
+      changed();
+      if (back && isSaved()) { const keep = { ...back }; patchSaved(meta.current, d => { if (!d.items.some(i => i.id === keep.id)) d.items.push(keep); else d.items.forEach(i => { if (i.id === keep.id) i.link = keep.link; }); d.next = Math.max(d.next || 0, room.next); }); baseSig = sig(); }
+      save();
       $('#fade').classList.remove('on');
       if (back) setTimeout(() => view.openDoor(back.id), 200);
       discover('openhouse');
@@ -1500,7 +1565,8 @@ function startLofiRooms() {
     h('p', 'muted', 'Pick one of your rooms, or start a new one. Walking through brings you back the same way.');
     const list = h('div', 'cards');
     const me = view.fp && room.get(view.fp.id), asCat = me ? { c: me.c, name: me.name } : null;
-    const link = id => { pushUndo(); door.link = id; changed(); save(); closeSheets(); if (relink) toast(`<span>This door now goes to ${roomTitle(id)}</span>`, 1500); else walkThrough(door, id, asCat); };
+    const stick = id => { const clean = !isEdited(); door.link = id; if (isSaved()) { patchSaved(meta.current, d => d.items.forEach(i => { if (i.id === door.id) i.link = id; })); if (clean) baseSig = sig(); } };
+    const link = id => { pushUndo(); stick(id); changed(); save(); closeSheets(); if (relink) toast(`<span>This door now goes to ${roomTitle(id)}</span>`, 1500); else walkThrough(door, id, asCat); };
     rooms.filter(r => r.id !== meta.current).forEach(r => {
       const b = document.createElement('button'); b.className = 'card room';
       b.innerHTML = `<div class="art">🚪</div><b>${r.name}</b><span>${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
@@ -1510,21 +1576,24 @@ function startLofiRooms() {
     nb.innerHTML = `<div class="art">✨</div><b>A new room</b><span>An empty room through this door.</span>`;
     nb.onclick = () => {
       const from = meta.current, id = Date.now();
-      pushUndo(); door.link = id; save(); closeSheets();
-      exitCat(true);
-      newRoom('blank', id);
-      backDoor(from, CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null);
-      changed(); save(); discover('openhouse');
+      closeSheets();
+      leaveThen(() => {
+        pushUndo(); stick(id); save();
+        exitCat(true);
+        newRoom('blank', id);
+        backDoor(from, CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null);
+        changed(); commit(true); discover('openhouse');
+      });
     };
     list.appendChild(nb);
     sheet.classList.add('open');
   }
-  function switchRoom(id) {
+  function switchRoom(id, asked) {
     if (id === meta.current) return;
+    if (!asked && isEdited()) { leaveThen(() => switchRoom(id, true)); return; }
     exitCat(true);
-    save();
     if (!loadRoom(id)) { toast('<span>Couldn’t open that room</span>', 1500); return; }
-    undo.length = 0; saveMeta();
+    undo.length = 0; baseSig = sig(); save();
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
     changed(); updateHeader();
     toast(`<b>${room.name}</b>`, 1200); Sound.turn();
@@ -1535,8 +1604,73 @@ function startLofiRooms() {
     if (!confirm(`Delete “${r ? r.name : 'this room'}”? This can’t be undone.`)) return;
     rooms = rooms.filter(x => x.id !== id);
     store.del('lr.room.' + id);
-    if (id === meta.current) { loadRoom(rooms[0].id); undo.length = 0; changed(); updateHeader(); }
+    if (id === meta.current) { loadRoom(rooms[0].id); baseSig = sig(); undo.length = 0; changed(); save(); updateHeader(); }
     saveIndex(); saveMeta(); renderMenu();
+  }
+  // Your home as a stack of isometric slices, one per saved room, newest on top (pure CSS 3D: the
+  // tilt is on .iso, each slice sits at translateZ(i * pitch)). Names live in flat labels beside it.
+  let stackSeen = null;   // which rooms were already shown, so only new ones drop in
+  function roomStack(body) {
+    const cur = meta.current, list = rooms.slice().sort((a, b) => a.id - b.id);   // ids are creation times
+    const data = id => (id === cur ? room.serialize() : store.get('lr.room.' + id, null));
+    const unsaved = !isSaved();
+    const ids = new Set(rooms.map(r => r.id));
+    const doorsOf = d => (d && Array.isArray(d.items) ? d.items.filter(i => CAT[i.t] && CAT[i.t].tap === 'portal' && ids.has(i.link)) : []);
+    const linked = new Set();
+    list.forEach(r => doorsOf(data(r.id)).forEach(dd => { if (dd.link !== r.id) { linked.add(r.id); linked.add(dd.link); } }));
+    const slices = list.map(r => ({ r, d: data(r.id) }));
+    if (unsaved) slices.push({ r: { id: cur, name: room.name, n: room.items.length }, d: room.serialize(), draft: true });
+    const n = slices.length + 1;   // + the ghost slice on top
+    const compact = n > 7, pitch = n > 12 ? 28 : n > 7 ? 34 : 50;
+    const k = compact ? 0.82 : 1;   // a tall stack gets slimmer slices so names keep their room
+    const rise = k * pitch * Math.sin(55 * Math.PI / 180), tile = 92 * k, tileH = tile * Math.SQRT2 * Math.cos(55 * Math.PI / 180);
+    const base = 18 + tileH / 2 + 12;                                       // from the stage bottom to the bottom slice's centre
+    const H = Math.ceil(base + (n - 1) * rise + tileH / 2 + 22);
+    const wrap = document.createElement('div'); wrap.className = 'stackwrap' + (compact ? ' compact' : ''); wrap.style.height = H + 'px';
+    const float = document.createElement('div'); float.className = 'stackfloat';
+    const stage = document.createElement('div'); stage.className = 'isostage';
+    const iso = document.createElement('div'); iso.className = 'iso'; iso.style.bottom = base + 'px'; if (k !== 1) iso.style.transform = `scale(${k}) rotateX(55deg) rotateZ(45deg)`;
+    const labels = document.createElement('div'); labels.className = 'stacklabels';
+    const fresh = stackSeen ? slices.filter(x => !stackSeen.has(x.r.id)).map(x => x.r.id) : [];
+    const go = (r, draft) => () => { if (draft || r.id === cur) { closeSheets(); return; } closeSheets(); switchRoom(r.id); };
+    slices.forEach(({ r, d, draft }, i) => {
+      const here = r.id === cur, link = linked.has(r.id);
+      const s = document.createElement('button');
+      s.className = 'slice' + (here ? ' here' : '') + (link ? ' linked' : '') + (draft ? ' draft' : '') + (fresh.includes(r.id) ? ' drop' : '');
+      s.style.setProperty('--z', (i * pitch + (here ? 8 : 0)) + 'px');
+      s.style.zIndex = i + 1;
+      if (d) {
+        s.style.setProperty('--a', LR.hex(WALLS[d.wall.style] ? WALLS[d.wall.style].fn((WALL_COLORS[d.wall.color] || WALL_COLORS[0])[1], 70, 30) : 0xf2e6d0));
+        s.style.setProperty('--b', LR.hex(FLOORS[d.floor.style] ? FLOORS[d.floor.style].fn(70, 70) : 0xd8b48a));
+      }
+      s.setAttribute('aria-label', `${r.name}${here ? ', you are here' : ''}`);
+      s.onclick = go(r, draft);
+      iso.appendChild(s);
+      const L = document.createElement('div');
+      L.className = 'slabel' + (here ? ' here' : '') + (compact ? ' compact' : '');
+      L.style.top = (H - base - i * rise) + 'px';
+      const count = `${r.n} thing${r.n === 1 ? '' : 's'}`;
+      L.innerHTML = `<button class="sname"><b>${link ? '<i class="door" title="Linked by a door">🚪</i>' : ''}${r.name.replace(/</g, '&lt;')}</b>${compact ? `<span>${count}</span>` : `<span>${count}${draft ? ' · not saved' : ''}</span>`}</button>${here && !compact ? '<em>you are here</em>' : ''}`;
+      L.querySelector('.sname').onclick = go(r, draft);
+      if (draft) {
+        const sv = document.createElement('button'); sv.className = 'chipbtn mini'; sv.textContent = 'Save';
+        sv.onclick = () => { commit(); renderMenu(); }; L.appendChild(sv);
+      } else if (rooms.length > 1) {
+        const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.setAttribute('aria-label', `Delete ${r.name}`);
+        x.onclick = ev => { ev.stopPropagation(); deleteRoom(r.id); };
+        L.appendChild(x);
+      }
+      labels.appendChild(L);
+    });
+    // the ghost slice: tap to start a new room
+    const g = document.createElement('button'); g.className = 'slice ghost'; g.style.setProperty('--z', ((n - 1) * pitch) + 'px'); g.style.zIndex = n;
+    g.setAttribute('aria-label', 'Start a new room');
+    const newFlow = () => { const sec = [...$('#sheetBody').querySelectorAll('h2')].find(e => /Start a new room/.test(e.textContent)); if (sec) { sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash'); } Sound.blip(); };
+    g.onclick = newFlow; iso.appendChild(g);
+    const GL = document.createElement('div'); GL.className = 'slabel ghostlabel'; GL.style.top = (H - base - (n - 1) * rise) + 'px';
+    GL.innerHTML = '<button class="sname"><b>＋ New room</b></button>'; GL.querySelector('.sname').onclick = newFlow; labels.appendChild(GL);
+    stage.appendChild(iso); float.append(stage, labels); wrap.appendChild(float); body.appendChild(wrap);
+    stackSeen = new Set(slices.map(x => x.r.id));
   }
   function renderMenu() {
     saveIndex();
@@ -1544,24 +1678,13 @@ function startLofiRooms() {
     body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
-    h('h2', '', `Your rooms <small>${rooms.length}</small>`);
-    const list = h('div', 'cards');
-    rooms.forEach(r => {
-      const b = document.createElement('button'); b.className = 'card room' + (r.id === meta.current ? ' cur' : '');
-      const d = r.id === meta.current ? room.serialize() : store.get('lr.room.' + r.id, null);
-      if (d) {
-        b.style.setProperty('--a', LR.hex(WALLS[d.wall.style] ? WALLS[d.wall.style].fn((WALL_COLORS[d.wall.color] || WALL_COLORS[0])[1], 70, 30) : 0xf2e6d0));
-        b.style.setProperty('--b', LR.hex(FLOORS[d.floor.style] ? FLOORS[d.floor.style].fn(70, 70) : 0xd8b48a));
-      }
-      b.innerHTML = `<div class="art"></div><b>${r.name}</b><span>${r.id === meta.current ? 'Open now · ' : ''}${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
-      b.onclick = () => { closeSheets(); switchRoom(r.id); };
-      if (rooms.length > 1) {
-        const x = document.createElement('i'); x.className = 'x'; x.textContent = '✕'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Delete room');
-        x.onclick = ev => { ev.stopPropagation(); deleteRoom(r.id); };
-        b.appendChild(x);
-      }
-      list.appendChild(b);
-    });
+    const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
+    h('h2', '', `Today <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
+    h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`);
+    const log = store.get('lr.dailyLog', []).slice(0, 5);
+    if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'));
+    h('h2', '', `Your home <small>${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
+    roomStack(body);
     // the house map: which rooms connect to which, with a tap to travel
     const links = rooms.map(r => {
       const d = r.id === meta.current ? room.serialize() : store.get('lr.room.' + r.id, null);
@@ -1600,11 +1723,8 @@ function startLofiRooms() {
     sh.querySelector('#bShareCode').onclick = () => shareSheet();
     sh.querySelector('#bImportCode').onclick = () => importSheet();
     h('h2', '', 'Start a new room');
-    h('p', 'muted', 'Your current room is saved and stays in the list above.');
-    body.appendChild(presetCards(k => { closeSheets(); newRoom(k); }));
-    const D = meta.daily || {}, doneToday = D.date === today();
-    h('h2', '', `Today's moment <small>${D.streak ? `${D.streak} day streak` : ''}</small>`);
-    h('div', 'disc', `<div class="d${doneToday ? ' got' : ''}"><i>${doneToday ? '✦' : '☀'}</i><div><b>${dailyTask()[1]}</b><span>${doneToday ? 'Done for today. See you tomorrow!' : 'A new one every day'}</span></div></div>`);
+    h('p', 'muted', 'New rooms start unsaved, so you can play around. Tap Save to keep one.');
+    body.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }));
     h('h2', '', `Cozy moments <small>${found.size}/${MOMENTS.length}</small>`);
     const dl = h('div', 'disc');
     MOMENTS.forEach(([k, name, desc]) => {
@@ -1654,9 +1774,9 @@ function startLofiRooms() {
     const cards = $('#introRooms'); cards.innerHTML = '';
     cards.appendChild(presetCards(k => {
       fillRoom(k);
-      rooms = [{ id: meta.current, name: room.name, n: room.items.length }];
+      rooms = [];
       undo.length = 0; store.set('lr.intro', true);
-      changed(); save(); saveIndex(); saveMeta(); updateHeader();
+      commit(true); changed(); saveMeta(); updateHeader();
       intro.classList.remove('open'); Sound.init(); Sound.chime();
     }));
   }
@@ -1810,17 +1930,41 @@ function startLofiRooms() {
   // Save
   let dirty = fresh;
   function saveMeta() { store.set('lr.meta', meta); }
-  function saveIndex() {
-    const r = rooms.find(x => x.id === meta.current);
-    if (r) { r.name = room.name; r.n = room.items.length; }
-    store.set('lr.rooms', rooms);
-  }
+  function saveIndex() { store.set('lr.rooms', rooms); }
+  // stash the working copy (not your home): survives the app closing
   function save() {
-    try { put('lr.room.' + meta.current, JSON.stringify(room.serialize())); } catch (e) { /* quota */ }
-    saveIndex(); saveMeta();
+    try { put('lr.draft', JSON.stringify({ id: meta.current, base: baseSig, data: room.serialize() })); } catch (e) { /* quota */ }
+    saveMeta();
     dirty = false;
   }
-  if (fresh) save();
+  // put this room in your home, or update it there
+  function commit(quiet) {
+    try { put('lr.room.' + meta.current, JSON.stringify(room.serialize())); } catch (e) { /* quota */ }
+    const isNew = !isSaved();
+    const r = rooms.find(x => x.id === meta.current) || (rooms.push({ id: meta.current }), rooms[rooms.length - 1]);
+    r.name = room.name; r.n = room.items.length;
+    baseSig = sig(); save(); saveIndex(); updateHeader();
+    if (!quiet) { toast(`<b>${isNew ? 'Saved to your home' : 'Changes saved'}</b><span>${room.name}</span>`, 1600, true); Sound.stamp(); }
+  }
+  // house keeping that should stick without asking (door links, the door back): patch the saved copy only
+  function patchSaved(id, fn) {
+    const d = store.get('lr.room.' + id, null); if (!d) return;
+    fn(d); try { put('lr.room.' + id, JSON.stringify(d)); } catch (e) { /* quota */ }
+  }
+  // leaving a room with edits asks first; an untouched room (a friend's you only looked at) just goes
+  function leaveThen(next) {
+    if (!isEdited()) { next(); return; }
+    const saved = isSaved();
+    codeSheet(saved ? 'Keep your changes?' : `Keep “${room.name}”?`, saved ? `“${room.name}” has changes that aren’t saved yet.` : 'This room isn’t in your home yet. Save it, or let it go.', h => {
+      const row = h('div', 'rowbtns');
+      row.innerHTML = `<button class="chipbtn primary" id="lvSave">${saved ? 'Save changes' : 'Save to my home'}</button><button class="chipbtn" id="lvDrop">${saved ? 'Don’t save' : 'Let it go'}</button><button class="chipbtn" id="lvStay">Stay here</button>`;
+      row.querySelector('#lvSave').onclick = () => { closeSheets(); commit(true); next(); };
+      row.querySelector('#lvDrop').onclick = () => { closeSheets(); next(); };
+      row.querySelector('#lvStay').onclick = () => closeSheets();
+    });
+  }
+  $('#bSave').onclick = () => { Sound.init(); commit(); };
+  if (fresh) commit(true);
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   window.addEventListener('pagehide', save);
 
@@ -1881,7 +2025,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { FILM, filmDay, room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyTask, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { FILM, filmDay, room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);

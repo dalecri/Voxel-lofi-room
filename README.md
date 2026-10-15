@@ -139,14 +139,16 @@ Then open http://localhost:5180.
   - Tap one and pick a room or a new one. The other side gets a matching door leading back automatically.
   - In cat view, just walk into a doorway. You arrive in the next room as the same cat.
   - The menu's **Your house** map shows every room and where its doors go. Tap a door to travel, or tap **Change** to send it somewhere else.
-- **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** opens one as a new room.
+- **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** lets you visit theirs. Visiting doesn't add it to your home unless you save it.
+- **Save when you mean it.** Your home only changes when you tap **Save**, the pill that appears under the room name whenever something isn't saved. New rooms, Surprise rooms and friends' rooms start unsaved, so you can mess around freely. If you leave a room with edits, it asks: save, don't save, or stay. Leaving a room you only looked at doesn't ask. Switching lamps on or a cat wandering around doesn't count as an edit. Your work in progress is kept safe even if the app closes. Door links and the door back into a room are saved without asking.
+- **Your home as a stack.** The menu shows your saved rooms as a stack of little isometric slices, tinted with each room's walls and floor, newest on top. The room you're in glows and sits slightly raised, and rooms joined by doors get a dashed edge and a 🚪. Tap a slice or its name to go there, or tap the dashed slice on top to start a new room.
 - **Seasonal decor:**
   - **Halloween:** a jack-o'-lantern, a pumpkin pile, a friendly ghost, a spider web, a bat garland and a candy bowl.
   - **Winter holidays:** a tree, a wreath, stockings, gifts, a snowman and hot cocoa.
   - The set that fits today's date moves to the front of the Add tray, with a one-time hint.
 - **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
 - **55 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
-- **Today's moment:** one small thing to do each day, the same for everyone that day, with a streak counter in the menu.
+- **Daily Moment:** each day picks one special cozy moment from a pool of 12, the same for everyone on that date. Examples include Stormy tea (make tea while it rains), Mixtape, Night owl and Golden hour. The **Today** card at the top of the menu shows the moment, its recipe and a checkmark once it's done. Pulling it off in any room counts, imported ones included, and gets a bigger celebration than a normal moment plus a dated line in your journal. Consecutive days build a streak, and missing a day resets it.
 - **Photo mode** crops to a 4:5 portrait that's ready for Instagram. In the app, **Share** sends it straight to other apps.
 - **Film a day.** In photo mode, **Film a day** makes a 16-second timelapse of your room going from the current time of day all the way round, with the camera swaying gently. It's a 1080×1920 vertical video, ready for TikTok and Reels. It's made on your device with [Mediabunny](https://mediabunny.dev) (MP4 where the device supports H.264, WebM otherwise), and there's no sound, so you can add your own track in the app you post to.
 - **Night glow.** After dark, neon signs, fairy lights, screens, the fire and its embers bloom with a soft glow (three.js `UnrealBloomPass`). It fades in at dusk and is off in daylight, so the day looks and runs exactly as before. Switch it off in Settings if your phone runs warm.
