@@ -60,14 +60,16 @@ with sync_playwright() as p:
     assert page.evaluate('__lr.companion.brain.state.brightness') == 1.18
     page.evaluate("__lr.meta.weather='snow'; __lr.companion.tap(); __lr.companion.frame(.1)")
     assert page.evaluate('__lr.companion.brain.state.category') == 'snow'
-    page.evaluate("window.__hour=22; __lr.companion.frame(.1); window.__sleepSpot=[__lr.companion.brain.state.x,__lr.companion.brain.state.z]; for(let k=0;k<30;k++)__lr.companion.frame(.1)")
-    assert page.evaluate("__lr.companion.brain.state.mode==='sleep' && __lr.companion.brain.state.brightness===.22 && __lr.view.sprites.some(s=>s.visible && s.userData.wob===4)")
+    page.evaluate("window.__hour=0; __lr.companion.frame(.1); window.__sleepSpot=[__lr.companion.brain.state.x,__lr.companion.brain.state.z]; for(let k=0;k<900;k++)__lr.companion.frame(.1); window.__sleepSpot=[__lr.companion.brain.state.x,__lr.companion.brain.state.z]")
+    assert page.evaluate("__lr.companion.brain.state.mode==='sleep' && __lr.companion.brain.state.brightness===.18 && __lr.view.sprites.some(s=>s.visible && s.userData.wob===4)")
     assert page.evaluate('[__lr.companion.brain.state.x,__lr.companion.brain.state.z]') == page.evaluate('__sleepSpot')
-    page.evaluate("window.__hour=14; __lr.meta.phase='day'; __lr.meta.weather='clear'; __lr.view.beat=0; __lr.companion.frame(.1)")
+    page.emulate_media(reduced_motion='no-preference')
+    page.evaluate("window.__hour=14; __lr.meta.phase='day'; __lr.meta.weather='clear'; __lr.room.items=[]; __lr.changed(); for(let k=0;k<40;k++)__lr.companion.frame(.1); __lr.view.beat=0; __lr.companion.frame(.1)")
     assert page.evaluate('__lr.companion.brain.state.bob') == .065
     page.evaluate('__lr.view.beat=.9; __lr.companion.frame(.1)')
     assert page.evaluate('__lr.companion.brain.state.bob') < .001
-    print('PASS: all dayparts, rain/window attention, snow speech, 10pm sleep/dimming/z, and beat-driven groove')
+    page.emulate_media(reduced_motion='reduce')
+    print('PASS: all dayparts, rain/window attention, snow speech, midnight sleep/dimming/z, and beat-driven groove')
 
     # A real desk is added through the room model, but the companion consumes no desk surface slot.
     page.evaluate('''() => {

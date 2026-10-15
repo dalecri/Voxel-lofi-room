@@ -222,11 +222,15 @@ After `npm run build`, run `python3 tests/widgets-interactive-browser.py` for th
 
 A single tiny robot companion follows the current room without entering the furniture catalog, room saves, placement grid, or cats’ entity map. Its glowing mint head, pixel smile, dark teal armor, sage shoulder caps, chunky hands and little boots use the same voxel builder and mesher as the room. The provisional display name lives in one constant, `DISPLAY_NAME` in `companion.js`; its internal id is `lampbot`.
 
-It putters and pauses, perches on the nearest desk while decorating, watches the nearest window in rain, and bops to the music’s beat. After 10pm it dims and sleeps until morning, with occasional little “z” particles. Taps and newly discovered cozy moments get a happy hop. Cats and interactive room pieces always get tap priority; decorating never targets the companion.
+It putters and pauses, perches on the nearest desk while decorating, watches the nearest window in rain, and bops to the music’s beat. After midnight it dims and sleeps until morning, with occasional little “z” particles. Taps and newly discovered cozy moments get a happy hop. Cats and interactive room pieces always get tap priority; decorating never targets the companion.
+
+Its activity loop uses cardinal grid paths to reachable free tiles next to furniture. It faces the actual piece before settling. Desks and computers invite seated typing on a little fold-out stool; bookshelves invite a book pickup followed by reading on a clear sofa or armchair, or on the floor. Seats invite lounging and occasional nearby-mug sips. Playing record players or jukeboxes invite beat-driven bopping; windows and tea areas get morning preference. Seating and bed hops land above the surface and do not consume placement cells or modify decor.
+
+Activities last at least three minutes in daytime and six minutes at other times, with quiet pauses between them. From 6pm onward, a reachable computer gets the first choice and work sessions last 60–180 minutes of active room time. Midnight or dream mode interrupts work for a bed or a reachable corner; morning wakes it. Hidden tabs and quiet rituals pause the activity clock. Removing or blocking furniture releases the activity safely. An empty daytime room keeps the old wandering behavior. Reduced-motion preferences suppress idle shifts, blinks, typing fidgets and page-turn animation.
 
 Its 50 fixed lines respond to the existing dayparts, rain, snow, clear skies, taps and moments, with rare idle remarks. Speech lasts about four seconds and automatic bubbles are spaced at least 45 seconds apart. Taps and moments can bypass that cooldown. Quiet rituals suppress chatter. Movement and line selection are deterministic; there are no network calls, generated text, tasks or external integrations.
 
-Run `node --test tests/*.test.cjs` and, after `npm run build`, `python3 tests/companion-browser.py` for the companion checks, including mobile layouts and input priority.
+Run `node --test tests/*.test.cjs` and, after `npm run build`, `python3 tests/companion-browser.py` for the companion checks, including mobile layouts and input priority. `python3 tests/companion-activities-browser.py` checks all four furniture rotations, seated poses, five-minute stability, long work commitments, sleep, reduced motion and fallback behavior using accelerated room time.
 
 ## Controls
 

@@ -38,16 +38,16 @@ test('edit mode hops to the nearest desk, follows desk height, and leaves when e
   e.editing = false; advance(b, e, 3); assert.equal(b.state.y, 0); assert.equal(b.state.perch, null);
 });
 
-test('rain faces the nearest window, snow has its own speech, and sleep wins after 10pm', () => {
+test('rain faces the nearest window, snow has its own speech, and sleep wins after midnight', () => {
   const b = createBrain(), e = env({ weather: 'rain', windows: [{ x: 8, z: 5.5 }, { x: 0, z: 0 }] });
   b.step(.1, e); assert.equal(b.state.mode, 'rain'); assert.equal(b.state.brightness, 1.18);
   assert.equal(b.state.heading, Math.atan2(8 - b.state.x, 5.5 - b.state.z));
   for (const [phase, hour] of [['morning', 8], ['day', 14], ['evening', 19], ['night', 21]]) assert.equal(category(env({ phase, hour }), 'context', 1), phase);
   assert.equal(category(env({ weather: 'snow' }), 'tap', 0), 'snow');
-  e.hour = 22; e.editing = true; e.desks = [{ id: 2, x: 3, z: 3, y: 2 }];
+  e.hour = 0; e.editing = true; e.desks = [{ id: 2, x: 3, z: 3, y: 2 }];
   b.step(.1, e); const spot = [b.state.x, b.state.y, b.state.z];
-  advance(b, e, 10); assert.equal(b.state.mode, 'sleep'); assert.equal(b.state.brightness, .22 * 1.18);
-  assert.deepEqual([b.state.x, b.state.y, b.state.z], spot);
+  advance(b, e, 10); assert.equal(b.state.mode, 'sleep'); assert.equal(b.state.pose,'powerdown'); assert.equal(b.state.brightness,.22*1.18);
+  assert.deepEqual([b.state.x,b.state.y,b.state.z],spot);
   e.hour = 5; e.editing = false; e.weather = 'clear'; b.step(.1, e); assert.notEqual(b.state.mode, 'sleep');
 });
 

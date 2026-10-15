@@ -2519,7 +2519,7 @@ function startLofiRooms() {
   }
 
   window.addEventListener('resize', () => view.resize());
-  companion = LRCompanion.create({ view, room, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  companion = LRCompanion.create({ view, room, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
   widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => filming || document.hidden || $('#photo').classList.contains('open') });
   updateHeader();
