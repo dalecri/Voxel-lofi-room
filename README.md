@@ -204,6 +204,18 @@ Decorating shows a small **private** badge on widget furniture. Shared LR0/LR1 c
 
 Run `node --test tests/*.test.cjs`; after `npm run build`, run `python3 tests/widgets-browser.py` for physical surfaces, midnight rotation, hourly caching, safe reading links, mobile layouts and actual LR0/LR1 fresh-session import checks. CBC success and failure responses in this test are controlled fixtures.
 
+## Outbound dashboard widgets
+
+**TwoStoryTails corkboard** is in Wall art. Tap it to read the local posting cadence, pillars and next-post hint, or open the Instagram and TikTok profiles. Edit the JSON-shaped `TST_CONTENT` block at the top of `widgets.js` to change the plan and links together. There is no CMS, authentication or posting API.
+
+**Pomodoro portal candle** is in Lights. Its flame responds to a tap before opening the owner's Pomodoro Terrarium in a new tab. `POMODORO_URL`, at the top of `widgets.js`, is the single URL setting. This launcher has no countdown and is separate from the existing Focus ritual candle.
+
+The standard **TV**, **Bookshelf**, **Desk** and **Arcade** are app portals with a subtle mint shimmer. Their `PORTALS` list is next to the other widget config. Each row contains `furnitureId`, `label` and `url`; add another row for the same piece to offer a small destination picker. All destination links use a separate tab with no opener. Portfolio, Pomodoro and the QR generator use owner-supplied URLs. Games currently opens the collection page, and the suggested YouTube channel still needs verification; every portal row carries an owner verification comment.
+
+These widgets store their static content snapshots and destination state only in `lr.widgets`. Decor, placement, saving and LR0/LR1 sharing carry none of that data. All widget furniture shows a private badge when decorating. CBC remains the only automatic widget network request. Tasks and Calendar remain deferred.
+
+After `npm run build`, run `python3 tests/widgets-interactive-browser.py` for the posting plan, exact social links, actual candle tap and flame feedback, portal tabs, multi-destination picker, mobile widths and a share/import round trip with all five widget types active. Outbound pages and RSS use controlled fixtures in tests.
+
 ## Little bot companion
 
 A single tiny robot companion follows the current room without entering the furniture catalog, room saves, placement grid, or cats’ entity map. Its glowing mint head, pixel smile, dark teal armor, sage shoulder caps, chunky hands and little boots use the same voxel builder and mesher as the room. The provisional display name lives in one constant, `DISPLAY_NAME` in `companion.js`; its internal id is `lampbot`.

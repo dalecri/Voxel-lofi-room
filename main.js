@@ -640,6 +640,7 @@ function startLofiRooms() {
     const C = CAT[it.t];
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
+    if (widgetAction(it)) return;
     const tap = C.tap;
     if (tap === 'focus') {
       if (rituals.focus(meta.current, id).active) focusSheet(it);
@@ -1781,6 +1782,37 @@ function startLofiRooms() {
     h('div', 'grab'); h('h2', '', title); h('p', 'muted', sub);
     build(h); sheet.classList.add('open');
   }
+  function widgetLinks(panel, links, id) {
+    links.forEach(row => {
+      const a = document.createElement('a'); a.textContent = row.label;
+      a.href = row.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.onclick = () => { if (widgetView) widgetView.feedback(id); };
+      panel.appendChild(a);
+    });
+  }
+  function widgetAction(it) {
+    const def = LRWidgets.attached(it.t);
+    if (!def || !['tst-corkboard', 'pomodoro-candle', 'app-portals'].includes(def.id)) return false;
+    widgets.refresh([it.t]);
+    const data = widgets.data(def.id), links = widgets.destinations(it.t);
+    if (def.id === 'tst-corkboard') {
+      codeSheet(data.title, 'TwoStoryTails posting plan', h => {
+        h('p').textContent = `Posting cadence: ${data.cadence}`;
+        h('p').textContent = `Content pillars: ${data.pillars.join(' · ')}`;
+        h('p').textContent = `Next post: ${data.nextPost}`;
+        widgetLinks(h('div', 'widget-news'), links, it.id);
+      });
+    } else if (links.length > 1) {
+      codeSheet('Choose a destination', CAT[it.t].name, h => widgetLinks(h('div', 'widget-news'), links, it.id));
+    } else if (links.length) {
+      // Start the visual feedback before opening, keeping navigation in the tap
+      // gesture so mobile browsers can open a tab without a blocked async popup.
+      if (widgetView) widgetView.feedback(it.id);
+      if (def.id === 'pomodoro-candle') Sound.matchStrike();
+      window.open(links[0].url, '_blank', 'noopener,noreferrer');
+    } else toast('<span>That doorway is quiet for now.</span>', 1600);
+    return true;
+  }
   function fridgeNoteSheet() {
     widgets.refresh(['minifridge']);
     const data = widgets.data('fridge-note');
@@ -2489,7 +2521,7 @@ function startLofiRooms() {
   window.addEventListener('resize', () => view.resize());
   companion = LRCompanion.create({ view, room, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
-  widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => filming || document.hidden || $('#photo').classList.contains('open'), open: newspaperSheet });
+  widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => filming || document.hidden || $('#photo').classList.contains('open') });
   updateHeader();
   setMode(state.mode, true);
   updateRituals();

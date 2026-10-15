@@ -65,3 +65,30 @@ test('share boundary retains decor, strips private root, item and nested metadat
   assert.equal(shared.items.length, 2); assert.ok(imported.load(shared));
   assert.equal(imported.get(f.id).t, 'minifridge'); assert.ok(r.get(f.id).widgets);
 });
+
+test('phase 2 static content and destinations stay in private storage with no extra fetches', async () => {
+  W.register(LR);
+  const s = store(), w = W.create({ store: s, fetchRSS: () => { throw Error('Unexpected fetch'); } });
+  const types = ['tstcorkboard', 'pomodorocandle', ...W.PORTALS.map(p => p.furnitureId)];
+  await w.refresh(types);
+  for (const id of ['tst-corkboard', 'pomodoro-candle', 'app-portals']) assert.ok(s.values['lr.widgets'][id]);
+  assert.equal(w.data('tst-corkboard').cadence, 'twice weekly');
+  assert.deepEqual(w.destinations('tstcorkboard').map(l => l.url), W.TST_CONTENT.links.map(l => l.url));
+  assert.equal(w.destinations('pomodorocandle')[0].url, W.POMODORO_URL);
+  for (const p of W.PORTALS) assert.ok(w.destinations(p.furnitureId).some(l => l.url === p.url));
+  const extra = { furnitureId: 'desk', label: 'Second app', url: 'https://example.com/second' };
+  W.PORTALS.push(extra);
+  try { await w.refresh(['desk']); assert.equal(w.destinations('desk').length, 2); }
+  finally { W.PORTALS.pop(); }
+  assert.equal(w.destinations('minifridge').length, 0);
+  assert.ok(!LR.CAT.pomodorocandle.focusRitual);
+  const m = new LR.Model(); LR.CAT.pomodorocandle.build(m, LR.CAT.pomodorocandle.vars[0]);
+  assert.ok(m.parts.portalflame.vox.size > 0);
+  const r = new LR.Room(); r.items = [];
+  types.forEach((t, i) => r.add(r.make(t, { x: i, z: 0 })));
+  const shared = W.shareDecor({ ...r.serialize(), widgets: w.state });
+  assert.ok(!JSON.stringify(shared).includes('twostorytails'));
+  assert.ok(!JSON.stringify(shared).includes('https:'));
+  assert.ok(!JSON.stringify(shared).includes('twice weekly'));
+  assert.deepEqual(Object.keys(s.values), ['lr.widgets']);
+});
