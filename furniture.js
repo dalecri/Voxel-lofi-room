@@ -634,11 +634,11 @@
     },
   });
   def('vinylcrate', {
-    name: 'Record crate', kind: 'small', group: 'decor', size: [1, 1], tap: 'flip',
+    name: 'Record crate', kind: 'small', group: 'decor', size: [1, 1], tap: 'crate',
     vars: [[WOOD.oak], [0xd9584a], [0x3a3842]],
     build(m, [c]) {
       m.box(1, 0, 1, 7, 5, 7, grain(c)); m.box(2, 1, 2, 6, 5, 6, null);
-      [0xd9584a, 0xf2c14e, 0x3f8f8a, 0xf4f0e8, 0x8a5a9a].forEach((col, i) => m.box(2, 1, 2 + i * 0.9 | 0, 6, 6 + (i % 2), (2 + i * 0.9 | 0) + 1, col));
+      [0x4a8ab0, 0x6ab07a, 0xe8784a, 0xf2c14e, 0xe86a8a].forEach((col, i) => m.box(2, 1, 2 + i * 0.9 | 0, 6, 6 + (i % 2), (2 + i * 0.9 | 0) + 1, col));
     },
   });
   def('pampas', {

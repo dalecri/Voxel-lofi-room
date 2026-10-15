@@ -59,8 +59,13 @@ function startLofiRooms() {
     ['culprit', 'Whodunnit', 'A cat knocked something off a table'],
     ['visitor', 'Neighbour cat', 'A cat from next door dropped by'],
     ['catseye', 'Cat’s-eye view', 'Saw the room through a cat’s eyes'],
+    ['dreamer', 'Dream mode', 'Stayed up past midnight as the room drifted'],
+    ['digger', 'Crate digger', 'Flipped through every record in the crate'],
+    ['signed', 'Good guest', 'Signed a friend’s guest book'],
+    ['guestbook', 'Guest book', 'A friend left a note in your room'],
   ].concat(LR.MOMENTS || []);   // theme packs can add their own with LR.MOMENTS.push([key, name, description])
   const found = new Set(store.get('lr.found', []));
+  const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   // ---------------------------------------------------------------
   // Rooms: a list of saved rooms, one open at a time
@@ -254,7 +259,8 @@ function startLofiRooms() {
   function updateSaveChip() {
     const saved = isSaved(), edited = isEdited(), b = $('#bSave');
     b.hidden = saved && !edited;
-    document.body.classList.toggle('unsaved', !b.hidden);
+    const g = $('#bGuest'); g.hidden = !(meta.visit && meta.visit.id === meta.current);
+    document.body.classList.toggle('unsaved', !b.hidden || !g.hidden);
     b.classList.toggle('new', !saved);
     b.setAttribute('aria-label', saved ? 'Save changes' : 'Save this room to your home');
     $('#disc').textContent = !saved ? 'Not saved yet' : edited ? 'Unsaved changes' : `✦ ${found.size} of ${MOMENTS.length} cozy moments`;
@@ -664,6 +670,8 @@ function startLofiRooms() {
       return;
     }
     if (tap === 'treats') { Sound.crunch(); toast('<span>Shake shake! Drop the jar on a cat with Move</span>', 1600); return; }
+    if (tap === 'crate') { openCrate(); return; }
+    if (tap === 'guestnote') { const n = it.note || {}; Sound.flip(); toast(`<b>${['♥', '★', '🐾', '✿', '☕', '♪', '☾', '✦'][it.c | 0] || '✉'} ${esc(n.n || 'A friend')}</b><span>${n.t ? `“${esc(n.t)}”` : 'Left you a sticker'}${n.d ? ` · ${new Date(n.d + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}</span>`, 3600); return; }
     if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.swish(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
     if (tap === 'music') { nextStation(); return; }
     if (tap === 'pet') {
@@ -1024,6 +1032,81 @@ function startLofiRooms() {
     if (stream) { stream.volume = 0.6; clearTimeout(duckT); duckT = setTimeout(() => { if (stream) stream.volume = 1; }, 450); }
   }
 
+  // the record crate: flip through sleeves like a real collection; each record is a mood of the band
+  let crateOpen = false, crateI = 0, crateSeen = new Set();
+  const sleeves = () => Sound.moods.map((M, k) => ({ k, name: M.name, sub: `${M.bpm} bpm`, col: M.col })).concat([{ k: 'auto', name: 'Follow the day', sub: 'changes with the time', col: '#e8dcc4' }]);
+  function layoutCrate() {
+    const els = [...$('#crateBin').querySelectorAll('.sleeve')];
+    els.forEach((el, i) => {
+      const d = i - crateI;
+      el.style.transform = d < 0 ? `translateY(${70 - d * 4}px) translateZ(${-d * 6}px) rotateX(-78deg)`   // already flipped past, lying forward
+        : d === 0 ? 'translateY(-40px) rotateX(-4deg)'                                                    // the one you're looking at, lifted a little
+          : `translateY(${-64 - d * 14}px) translateZ(${-d * 30}px) rotateX(14deg)`;                       // still waiting behind, tops peeking over
+      el.style.zIndex = 100 - Math.abs(d) + (d === 0 ? 50 : 0);
+      el.style.opacity = d < -2 || d > 6 ? 0 : 1;
+      el.style.filter = d > 0 ? `brightness(${1 - d * 0.07})` : '';
+      el.classList.toggle('front', d === 0);
+    });
+    const S = sleeves()[crateI], cur = meta.mood === 'auto' ? 'auto' : meta.mood;
+    $('#crateNow').textContent = meta.music && S.k === cur ? 'Now playing' : 'Tap the record to play it';
+  }
+  function flipCrate(dir) {
+    const n = sleeves().length, j = Math.max(0, Math.min(n - 1, crateI + dir));
+    if (j === crateI) { Sound.nope(); return; }
+    crateI = j; crateSeen.add(j); layoutCrate(); Sound.flip();
+    if (crateSeen.size >= n) discover('digger');
+  }
+  function openCrate() {
+    const bin = $('#crateBin'); bin.innerHTML = '';
+    sleeves().forEach((S, i) => {
+      const el = document.createElement('button'); el.className = 'sleeve'; el.dataset.k = S.k; el.style.setProperty('--c', S.col);
+      el.innerHTML = `<i class="disc"></i><span class="cover"></span><span class="art"></span><b>${S.name}</b><small>${S.sub}</small>`;
+      el.onclick = () => { if (i === crateI) playSleeve(S); else { crateI = i; crateSeen.add(i); layoutCrate(); Sound.flip(); } };
+      bin.appendChild(el);
+    });
+    crateI = Math.max(0, sleeves().findIndex(S => S.k === meta.mood)); crateSeen = new Set([crateI]);
+    $('#crate').classList.add('open'); crateOpen = true; layoutCrate(); Sound.flip();
+  }
+  function closeCrate() { $('#crate').classList.remove('open'); crateOpen = false; }
+  function playSleeve(S) {
+    meta.mood = S.k; meta.moodSet = true;
+    const name = (S.k === 'auto' ? 'Follow the day · ' : '') + applyMood();
+    moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape');
+    if (meta.station !== 0 || !meta.music) playStation(0, true); else saveMeta();
+    Sound.needle(); discover('lofi');
+    const el = $('#crateBin').querySelectorAll('.sleeve')[crateI]; if (el) el.classList.add('pulled');
+    toast(`<span>♪ ${name}</span>`, 1600, true);
+    setTimeout(() => { closeCrate(); if (el) el.classList.remove('pulled'); }, 650);
+  }
+  (function crateInput() {
+    const bin = $('#crateBin'); let sx = 0, sy = 0, moved = false;
+    bin.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; moved = false; });
+    bin.addEventListener('pointerup', e => { const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) > 28) { moved = true; flipCrate(Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? 1 : -1) : (dx < 0 ? 1 : -1)); } });
+    bin.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+    bin.addEventListener('wheel', e => { e.preventDefault(); flipCrate(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+    $('#crate').addEventListener('click', e => { if (e.target.id === 'crate') closeCrate(); });
+    $('#crateClose').onclick = () => closeCrate();
+    $('#cratePrev').onclick = () => flipCrate(-1); $('#crateNext').onclick = () => flipCrate(1);
+    window.addEventListener('keydown', e => {
+      if (!crateOpen) return;
+      const k = e.key;
+      if (k === 'ArrowDown' || k === 'ArrowRight') flipCrate(1); else if (k === 'ArrowUp' || k === 'ArrowLeft') flipCrate(-1);
+      else if (k === 'Enter' || k === ' ') playSleeve(sleeves()[crateI]); else if (k === 'Escape') closeCrate(); else return;
+      e.preventDefault(); e.stopImmediatePropagation();
+    }, true);
+  })();
+
+  // dream mode: after midnight (at night) the room drifts: moon-blue light, floating motes, a slower, softer band
+  let drifting = false;
+  const driftNow = () => meta.dreamy !== false && meta.phase === 'night' && new Date().getHours() < 5;
+  function checkDrift(quiet, force) {
+    const on = force != null ? force : driftNow();
+    if (on === drifting) return;
+    drifting = on; view.driftGoal = on ? 1 : 0; Sound.dreamy = on;
+    document.body.classList.toggle('drift', on);
+    if (on && !quiet) { toast('<b>☾ Dream mode</b><span>It’s past midnight. The room drifts…</span>', 3400); discover('dreamer'); }
+  }
+
   // ---------------------------------------------------------------
   // Input
   const canvas = $('#c');
@@ -1320,6 +1403,7 @@ function startLofiRooms() {
     else if (key === 'Escape') {
       if (state.drag) { if (state.drag.kind === 'move') setHidden(0); state.drag = null; view.setGhost(null); }
       else if (filming) filmCancel = true;
+      else if (crateOpen) closeCrate();
       else if (sheet.classList.contains('open') || $('#photo').classList.contains('open')) { closeSheets(); closePhoto(); }
       else if (state.mode === 'edit') setMode('explore');
     }
@@ -1354,6 +1438,7 @@ function startLofiRooms() {
     meta.phase = p; saveMeta();
     view.setPhase(p); view.refreshEnv(p);
     if (meta.mood === 'auto') applyMood();
+    setTimeout(() => checkDrift(), 50);
     updateHeader();
     if (!quiet) toast(`<span>${PHASE_NAMES[p]}${meta.realtime ? '' : ' · Settings has “Follow the clock”'}</span>`, 1300);
     setTimeout(checkRoomMoments, 2600);
@@ -1443,6 +1528,8 @@ function startLofiRooms() {
   }
   async function roomCode() {
     const d = room.serialize(); delete d.seed;
+    d.items = d.items.filter(i => i.t !== 'guestnote');            // notes friends left you stay private
+    if (isSaved()) d.gid = meta.current;                            // so a guest's note finds its way back to this room
     d.items = d.items.map(i => { const o = Object.assign({}, i); if (!o.c) delete o.c; if (!o.r) delete o.r; if (!o.on) delete o.on; return o; });   // drop the defaults
     const raw = new TextEncoder().encode(JSON.stringify(d));
     if (typeof CompressionStream === 'undefined') return 'LR0.' + b64u(raw);
@@ -1481,10 +1568,11 @@ function startLofiRooms() {
     });
   }
   function importSheet() {
-    codeSheet('Open a friend’s room', 'Paste a room code. You visit it first; nothing of yours is replaced, and you can save it to your home if you like it.', h => {
+    codeSheet('Open a friend’s room', 'Paste a room code to visit a friend’s room (nothing of yours is replaced), or a note code to add their guest book note to your room.', h => {
       const ta = h('textarea', 'code'); ta.rows = 4; ta.placeholder = 'LR1.…';
       const row = h('div', 'rowbtns'); row.innerHTML = '<button class="chipbtn" id="bOpenCode">Open room</button>';
       row.querySelector('#bOpenCode').onclick = async () => {
+        if (/^\s*LRG[01]\./.test(ta.value)) { try { await receiveNote(ta.value); closeSheets(); } catch (e) { Sound.nope(); toast('<span>That note code doesn’t look right</span>', 1600); } return; }
         try {
           const d = await readCode(ta.value);
           const probe = new LR.Room();
@@ -1495,14 +1583,89 @@ function startLofiRooms() {
             const id = Date.now();
             room.load(probe.serialize());
             meta.current = id; undo.length = 0; baseSig = sig();
+            meta.visit = { id, gid: d.gid || null, host: room.name };   // you can sign this room's guest book
             view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
             changed(); save(); saveMeta(); updateHeader();
-            toast(`<b>${room.name}</b><span>Visiting a friend’s room. Tap Save to keep it.</span>`, 2600); Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
+            toast(`<b>${room.name}</b><span>Visiting a friend’s room. Sign their guest book, or tap Save to keep it.</span>`, 3000); Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
           });
         } catch (e) { Sound.nope(); toast('<span>That code doesn’t look right</span>', 1600); }
       };
     });
   }
+  // the guest book: a friend visiting your shared room signs it and gets a reply code; when you paste it,
+  // their note is pinned in that room. No server: the codes carry everything.
+  const STICKER_GLYPHS = ['♥', '★', '🐾', '✿', '☕', '♪', '☾', '✦'];
+  async function noteCode(n) {
+    const raw = new TextEncoder().encode(JSON.stringify(n));
+    if (typeof CompressionStream === 'undefined') return 'LRG0.' + b64u(raw);
+    return 'LRG1.' + b64u(await squeeze(raw, 'in'));
+  }
+  async function readNote(code) {
+    const m = String(code).trim().match(/^LRG([01])\.([A-Za-z0-9_-]+)$/);
+    if (!m) throw new Error('not a note code');
+    const bytes = unb64u(m[2]);
+    const n = JSON.parse(new TextDecoder().decode(m[1] === '1' ? await squeeze(bytes, 'out') : bytes));
+    return { g: n.g || null, r: String(n.r || '').slice(0, 40), n: String(n.n || 'A friend').slice(0, 20), t: String(n.t || '').slice(0, 80), s: Math.max(0, Math.min(7, n.s | 0)), d: /^\d{4}-\d\d-\d\d$/.test(n.d) ? n.d : today() };
+  }
+  function signSheet() {
+    const v = meta.visit || {};
+    let pick = 0;
+    codeSheet('Sign the guest book', `Leave a little note in “${esc(v.host || room.name)}”. You’ll get a reply code to send back to your friend.`, h => {
+      const row = h('div', 'stickers');
+      STICKER_GLYPHS.forEach((g, i) => { const b = document.createElement('button'); b.className = 'stk' + (i === 0 ? ' on' : ''); b.textContent = g; b.setAttribute('aria-label', 'Sticker ' + (i + 1)); b.onclick = () => { pick = i; row.querySelectorAll('.stk').forEach((x, j) => x.classList.toggle('on', j === i)); Sound.blip(); }; row.appendChild(b); });
+      const nm = h('input', 'gbname'); nm.placeholder = 'Your name'; nm.maxLength = 20; nm.value = store.get('lr.guestName', '');
+      const tx = h('textarea', 'code gbnote'); tx.placeholder = 'A tiny note (optional)'; tx.maxLength = 80; tx.rows = 2;
+      const go = h('div', 'rowbtns'); go.innerHTML = '<button class="chipbtn primary" id="gbSign">Sign &amp; get reply code</button>';
+      go.querySelector('#gbSign').onclick = async () => {
+        const name = nm.value.trim().slice(0, 20) || 'A friend'; store.set('lr.guestName', name);
+        const code = await noteCode({ g: v.gid || null, r: v.host || room.name, n: name, t: tx.value.trim().slice(0, 80), s: pick, d: today() });
+        Sound.chime(); discover('signed');
+        codeSheet('Signed! ' + STICKER_GLYPHS[pick], 'Send this code back to your friend. They paste it in “Open a friend’s code” and your note appears in their room.', h2 => {
+          const ta = h2('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 3; ta.onclick = () => ta.select();
+          const r2 = h2('div', 'rowbtns');
+          r2.innerHTML = '<button class="chipbtn" id="gbCopy">Copy</button>' + (cap && cap.isNativePlatform && cap.isNativePlatform() || navigator.share ? '<button class="chipbtn" id="gbSend">Send…</button>' : '');
+          r2.querySelector('#gbCopy').onclick = async () => { try { await navigator.clipboard.writeText(code); } catch (e) { ta.select(); document.execCommand('copy'); } toast('<span>Note code copied</span>', 1200); Sound.chime(); };
+          const send = r2.querySelector('#gbSend');
+          if (send) send.onclick = async () => {
+            try {
+              if (cap && cap.isNativePlatform && cap.isNativePlatform()) await cap.registerPlugin('Share').share({ title: 'I signed your guest book', text: `I left you a note in Lofi Rooms! Paste this in “Open a friend’s code”: ${code}` });
+              else await navigator.share({ title: 'I signed your guest book', text: code });
+            } catch (e) { /* cancelled */ }
+          };
+        });
+      };
+    });
+  }
+  // pin a note on a free spot of a wall (live room, or a saved room's stored copy)
+  function pinNote(R, n) {
+    for (const e of [4, 3, 5, 2, 1]) for (const k of [0, 1]) for (let u = 0; u < R.n; u++) {   // eye level and up first, above the furniture
+      const it = R.make('guestnote', { k, u, e, c: n.s, note: { n: n.n, t: n.t, d: n.d } });
+      if (R.canPlace(it)) return R.add(it);
+    }
+    return null;
+  }
+  async function receiveNote(code) {
+    const n = await readNote(code);
+    const book = store.get('lr.guestbook', []);
+    if (book.some(b => b.n === n.n && b.t === n.t && b.d === n.d && b.g === n.g && b.s === n.s)) { toast('<span>That note is already in your guest book</span>', 1600); return; }
+    const target = n.g && rooms.some(r => r.id === n.g) ? n.g : meta.current;
+    let placed = false;
+    if (target === meta.current) {
+      const clean = !isEdited();
+      placed = !!pinNote(room, n); changed();
+      if (placed && isSaved()) { patchSaved(meta.current, d => { const it = room.items[room.items.length - 1]; d.items.push(Object.assign({}, it)); d.next = Math.max(d.next || 0, room.next); }); if (clean) baseSig = sig(); }
+      save(); updateHeader();
+    } else {
+      const d = store.get('lr.room.' + target, null), R = new LR.Room();
+      if (d && R.load(d)) { placed = !!pinNote(R, n); if (placed) { try { put('lr.room.' + target, JSON.stringify(R.serialize())); } catch (e) { /* quota */ } } }
+    }
+    book.unshift(Object.assign({ room: target }, n)); store.set('lr.guestbook', book.slice(0, 100));
+    const where = target === meta.current ? '' : ` in ${esc(roomTitle(target))}`;
+    toast(`<b>${STICKER_GLYPHS[n.s]} A note from ${esc(n.n)}</b><span>${n.t ? `“${esc(n.t)}”` : 'They left you a sticker'}${placed ? ` · pinned on the wall${where}` : ' · saved in your guest book'}</span>`, 4200, true);
+    Sound.chime(); setTimeout(() => Sound.arpeggio(), 300); discover('guestbook');
+  }
+  $('#bGuest').onclick = () => { Sound.init(); signSheet(); };
+
   // linked rooms: a door opens onto another saved room, and the rooms become a tiny apartment
   const isPortal = it => CAT[it.t] && CAT[it.t].tap === 'portal';
   const roomTitle = id => { const r = rooms.find(x => x.id === id); return r ? r.name : 'another room'; };
@@ -1734,10 +1897,21 @@ function startLofiRooms() {
       });
       h('p', 'muted small', 'Add a door from the Doors tab in Decorate (the free-standing doorway works anywhere, even outside). As a cat, just walk through.');
     }
+    const book = store.get('lr.guestbook', []);
+    if (book.length) {
+      h('h2', '', `Guest book <small>${book.length} note${book.length === 1 ? '' : 's'}</small>`);
+      const gb = h('div', 'guestbook');
+      book.slice(0, 12).forEach(b => {
+        const el = document.createElement('div'); el.className = 'gbentry';
+        el.innerHTML = `<i>${STICKER_GLYPHS[b.s] || '✉'}</i><div><b>${esc(b.n)}</b><span>${b.t ? `“${esc(b.t)}”` : 'Left a sticker'}</span><small>${new Date(b.d + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${rooms.some(r => r.id === b.room) ? ' · ' + esc(roomTitle(b.room)) : ''}</small></div>`;
+        gb.appendChild(el);
+      });
+    }
     const sh = h('div', 'rowbtns');
     sh.innerHTML = '<button class="chipbtn" id="bShareCode">Share this room as a code</button><button class="chipbtn" id="bImportCode">Open a friend’s code</button>';
     sh.querySelector('#bShareCode').onclick = () => shareSheet();
     sh.querySelector('#bImportCode').onclick = () => importSheet();
+    if (meta.visit && meta.visit.id === meta.current) { const gs = h('div', 'rowbtns'); gs.innerHTML = '<button class="chipbtn primary" id="bSignBook">✍ Sign this room’s guest book</button>'; gs.querySelector('#bSignBook').onclick = () => signSheet(); }
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'New rooms start unsaved, so you can play around. Tap Save to keep one.');
     body.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }));
@@ -1777,6 +1951,7 @@ function startLofiRooms() {
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Tap a record player to tune in.</span>`, 2000, true); renderMenu();
     };
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
+    toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
     toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
     toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
@@ -1981,6 +2156,7 @@ function startLofiRooms() {
   }
   $('#bSave').onclick = () => { Sound.init(); commit(); };
   if (fresh) commit(true);
+  setTimeout(() => checkDrift(), 1500);   // after midnight, the app opens already drifting
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   window.addEventListener('pagehide', save);
 
@@ -1991,7 +2167,9 @@ function startLofiRooms() {
     app.addListener('pause', () => { save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
     app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); });
     app.addListener('backButton', () => {
-      if ($('#photo').classList.contains('open')) $('#photo').classList.remove('open');
+      if (filming) filmCancel = true;
+      else if (crateOpen) closeCrate();
+      else if ($('#photo').classList.contains('open')) closePhoto();
       else if (sheet.classList.contains('open')) closeSheets();
       else if (state.mode === 'edit') setMode('explore');
       else { save(); window.Store.flush(); app.minimizeApp(); }
@@ -2008,7 +2186,7 @@ function startLofiRooms() {
     soundT += dt;
     if (soundT > 0.3) { Sound.soundscape(soundState(soundT)); soundT = 0; }
     clockT += dt;
-    if (clockT > 20) { clockT = 0; if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); }
+    if (clockT > 20) { clockT = 0; if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); }
     momentT += dt;
     if (momentT > 2) {
       momentT = 0;
@@ -2041,7 +2219,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { FILM, filmDay, room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);

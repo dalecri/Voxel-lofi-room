@@ -7,7 +7,7 @@
   const LR = typeof module !== 'undefined' && module.exports ? require('../room.js') : window.LR;
   const { def, grain, shade, mix, hash3, WOOD, GREEN, GREEN_D } = LR;
   const INK = 0x2a2430, BRASS = 0xd9b25a, PAPER = 0xfbf6ec;
-  const MOOD_COLS = [0x3a3a6a, 0x4a8ab0, 0xf2c14e, 0xe8784a, 0x6ab07a, 0xb8a0e8];   // one sleeve per music mood
+  const MOOD_COLS = [0x3a3a6a, 0x4a8ab0, 0xf2c14e, 0xe86a8a, 0xe8784a, 0x6ab07a];   // one sleeve per music mood: navy late night, blue jazz, yellow morning, pink chillhop, orange bossa, green ambient
 
   // ---- a cuckoo clock: the bird pops out when tapped and on the hour ----
   def('cuckoo', {
@@ -246,4 +246,24 @@
   });
 
   LR.MOMENTS.push(['wanderer', 'Wanderer', 'Walked through a door as a cat'], ['openhouse', 'Open house', 'Walked through a door into another room'], ['cuckoo', 'Cuckoo!', 'Heard the cuckoo clock call the hour'], ['feast', 'Dinner time', 'A cat came running for food'], ['stargazer', 'Stargazer', 'Found a constellation']);
+  // ---- a guest book note: a friend left it with a reply code (never in the Add tray) ----
+  const STICKERS = [
+    ['.#..#.', '######', '######', '.####.', '..##..', '......'],   // heart
+    ['..##..', '..##..', '######', '.####.', '.#..#.', '#....#'],   // star
+    ['#.##.#', '#.##.#', '......', '.####.', '######', '.####.'],   // paw
+    ['..#...', '.###..', '##.##.', '.###..', '..#...', '..#...'],   // flower
+    ['.#.#..', '......', '####..', '#####.', '####..', '.##...'],   // coffee
+    ['..####', '..#..#', '..#..#', '###.##', '###.##', '......'],   // music
+    ['..###.', '.##...', '##....', '##....', '.##...', '..###.'],   // moon
+    ['..#...', '..#...', '#####.', '..#...', '..#...', '......'],   // sparkle
+  ];
+  def('guestnote', {
+    name: 'Guest note', kind: 'wall', group: 'guest', size: [1, 1], depth: 1, tap: 'guestnote',
+    vars: [[0xfff4dc, 0xe84a6a, 0], [0xfff0f4, 0xe8a030, 1], [0xeef4ff, 0x5a3a2a, 2], [0xf4fff0, 0xe86aa8, 3], [0xfff8e8, 0x7a4a2a, 4], [0xf0f4ff, 0x3c4a78, 5], [0xf4f0ff, 0x6a7ad8, 6], [0xfffbe8, 0xd9a030, 7]],
+    build(m, [paper, ink, k]) {
+      m.box(0, 0, 0, 8, 8, 1, (x, y) => (x === 0 || y === 0 || x === 7 ? shade(paper, 0.94) : paper));
+      STICKERS[k].forEach((row, r) => [...row].forEach((ch, c) => { if (ch === '#') m.set(c + 1, 6 - r, 1, ink); }));
+      m.set(4, 7, 1, 0xd84a4a).set(4, 7, 2, 0xe86a6a);   // a pin
+    },
+  });
 })();
