@@ -522,7 +522,7 @@ function startLofiRooms() {
     const it = room.get(id);
     if (!it) return;
     const C = CAT[it.t];
-    view.boing(id); haptic(5);
+    view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     const tap = C.tap;
     if (tap === 'toggle') {
@@ -579,7 +579,7 @@ function startLofiRooms() {
       meta.moodSet = true;
       const name = (meta.mood === 'auto' ? 'Follow the day · ' : '') + applyMood();
       moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape');
-      if (!meta.music) setMusic(true); else saveMeta();
+      if (meta.station !== 0 || !meta.music) playStation(0, true); else saveMeta();
       view.excite(id); view.sparkle(view.itemPoint(id, [4, 14, 4]), 0xffd27a, 10);
       toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi');
       return;
@@ -601,7 +601,7 @@ function startLofiRooms() {
     }
     if (tap === 'treats') { Sound.crunch(); toast('<span>Shake shake! Drop the jar on a cat with Move</span>', 1600); return; }
     if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.swish(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
-    if (tap === 'music') { setMusic(!meta.music); return; }
+    if (tap === 'music') { nextStation(); return; }
     if (tap === 'pet') {
       const P = CATS[it.c] || CATS[0];
       view.petCat(id); Sound.purr(true); setTimeout(() => Sound.purr(false), 2600);
@@ -898,13 +898,51 @@ function startLofiRooms() {
       }, 900);
     }, 1400);
   }
-  function setMusic(on) {
-    meta.music = on; saveMeta();
-    Sound.init(); Sound.setMusic(on);
-    view.music = on;
-    updateHeader();
-    room.items.forEach(i => { if (i.t === 'record') view.boing(i.id); });
-    if (on) { discover('lofi'); toast('<span>♪ Lofi radio on</span>', 1300); }
+  // the radio: station 1 is the built-in lofi band (offline, always works), then any stream links you've
+  // added in the menu, then off. Tapping a record player steps through them.
+  const stationList = () => [{ name: 'Lofi radio', gen: true }].concat((meta.stations || []).filter(x => x && x.url));
+  let stream = null, duckT = 0, failedAt = -1;   // failedAt: a dead station fell back to Lofi radio, so the next tap moves on past it
+  function stopStream() {
+    if (stream) { stream.onerror = null; try { stream.pause(); } catch (e) { /* already stopped */ } stream.removeAttribute('src'); stream = null; }
+    Sound.setStream(false);
+  }
+  function playStation(i, quiet) {
+    const list = stationList();
+    Sound.init(); failedAt = -1;
+    if (i == null || i < 0 || i >= list.length) {   // off
+      stopStream(); meta.station = -1; meta.music = false;
+      Sound.setMusic(false); view.music = false; saveMeta(); updateHeader();
+      if (!quiet) toast('<span>Radio off</span>', 1000, true);
+      return;
+    }
+    const st = list[i];
+    meta.station = i; meta.lastStation = i; meta.music = true;
+    stopStream();
+    if (st.gen) Sound.setMusic(true);
+    else {
+      Sound.setMusic(false);
+      stream = new Audio(); stream.preload = 'none'; stream.src = st.url;
+      const fail = () => { if (!stream) return; stopStream(); toast(`<span>Can’t reach ${st.name}, back to Lofi radio</span>`, 2400, true); playStation(0, true); failedAt = i; };
+      stream.onerror = fail;
+      const pr = stream.play(); if (pr && pr.catch) pr.catch(fail);
+      Sound.setStream(true); Sound.needle();
+    }
+    view.music = true; saveMeta(); updateHeader();
+    room.items.forEach(x => { if (CAT[x.t].tap === 'music') view.boing(x.id); });
+    discover('lofi');
+    if (!quiet) toast(`<span>♪ ${st.name}</span>`, 1400, true);
+  }
+  function nextStation() {
+    const n = stationList().length, cur = !meta.music ? -1 : failedAt > 0 && meta.station === 0 ? failedAt : meta.station;
+    playStation(cur + 1 >= n ? -1 : cur + 1);
+  }
+  function toggleRadio() { if (meta.music) playStation(-1); else playStation(Math.min(meta.lastStation || 0, stationList().length - 1)); }
+  // the jukebox, vinyl and moods belong to the built-in band
+  function setMusic(on) { playStation(on ? 0 : -1); }
+  // interaction sounds get a little room: the music dips for a moment
+  function duck() {
+    Sound.duck();
+    if (stream) { stream.volume = 0.6; clearTimeout(duckT); duckT = setTimeout(() => { if (stream) stream.volume = 1; }, 450); }
   }
 
   // ---------------------------------------------------------------
@@ -951,7 +989,7 @@ function startLofiRooms() {
     { from: a => CAT[a.t].group === 'plants', to: b => CAT[b.t].tap === 'sink', hint: 'Drop to water it',
       run(a) { Sound.water(); view.burst(a.id, 'drip', 2); view.sparkle(view.itemPoint(a.id, [4, 12, 4]), 0xa8f0a0, 12); toast('<span>Watered! It perks right up</span>', 1400); } },
     { from: a => a.t === 'vinyl', to: b => CAT[b.t].tap === 'mood' || (CAT[b.t].tap === 'music' && CAT[b.t].anim === 'record'), hint: 'Drop to play this record',
-      run(a, b) { const name = Sound.setMood(a.c | 0); meta.mood = Sound.mood; meta.moodSet = true; moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape'); if (!meta.music) setMusic(true); else saveMeta(); Sound.needle(); view.excite(b.id); toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi'); } },
+      run(a, b) { const name = Sound.setMood(a.c | 0); meta.mood = Sound.mood; meta.moodSet = true; moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape'); if (meta.station !== 0 || !meta.music) playStation(0, true); else saveMeta(); Sound.needle(); view.excite(b.id); toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi'); } },
     { from: a => a.t === 'treats', to: b => b.t === 'cat', hint: 'Drop to give a treat',
       run(a, b) { view.feedCat(b.id); Sound.crunch(); Sound.purr(true); setTimeout(() => Sound.purr(false), 2400); toast(`<span>${nameOf(b)} munches happily ♥</span>`, 1500); discover('feast'); } },
     { from: a => a.t === 'blanket', to: b => !!CAT[b.t].nap && !b.p && !b.blanket, hint: 'Drop to tuck it in',
@@ -999,7 +1037,7 @@ function startLofiRooms() {
         const it = room.add(room.make(d.cand.t, d.cand));
         changed();
         view.boing(it.id); view.poof(it.id, [0xffffff, 0xfff0d0]);
-        Sound.place(weightOf(it)); haptic(8);
+        Sound.place(weightOf(it)); duck(); haptic(8);
         if (it.t === 'cat') toast(`<span>Say hi to ${(CATS[it.c] || CATS[0]).name}!</span>`, 1600);
       } else { Sound.nope(); toast('<span>That spot is taken</span>', 1100); }
     } else if (d.kind === 'move' && d.combo) {
@@ -1197,7 +1235,7 @@ function startLofiRooms() {
     else if (key === 'g') surprise();
     else if (key === 'q') rotate(-1);
     else if (key === 'e') rotate(1);
-    else if (key === 'm') setMusic(!meta.music);
+    else if (key === 'm') toggleRadio();
     else if (key === 'u') doUndo();
     else if (key === '?' || key === 'h') { $('#bMenu').click(); }
     else if (key === 'Escape') {
@@ -1267,7 +1305,7 @@ function startLofiRooms() {
     if (meta.weather === 'sakura') discover('hanami');
   }
   $('#bRain').onclick = () => applyWeather(WEATHERS[(WEATHERS.indexOf(meta.weather || 'clear') + 1) % WEATHERS.length]);
-  $('#bMusic').onclick = () => setMusic(!meta.music);
+  $('#bMusic').onclick = () => toggleRadio();
 
   // ---------------------------------------------------------------
   // Rooms list & menu
@@ -1579,6 +1617,27 @@ function startLofiRooms() {
       r.onclick = () => { fn(); renderMenu(); };
     };
     toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
+    h('h2', '', 'Radio stations');
+    h('p', 'muted small', 'Tap a record player to step through: Lofi radio (built in, works offline), then your stations, then off. Add a direct stream link (an .mp3 or Icecast/Shoutcast URL). YouTube links can’t play inside the app.');
+    const sl = h('div', 'stations');
+    (meta.stations || []).forEach((st, i) => {
+      const r = document.createElement('div'); r.className = 'hroom';
+      r.innerHTML = `<b>${st.name.replace(/</g, '&lt;')}</b><div class="muted small" style="word-break:break-all">${st.url.replace(/</g, '&lt;')}</div>`;
+      const row = document.createElement('div'); row.className = 'hdoors';
+      const play = document.createElement('button'); play.className = 'hdoor'; play.textContent = '▶ Play'; play.onclick = () => { closeSheets(); playStation(i + 1); };
+      const del = document.createElement('button'); del.className = 'hdoor edit'; del.textContent = 'Remove';
+      del.onclick = () => { if (meta.station === i + 1) playStation(-1, true); meta.stations.splice(i, 1); saveMeta(); renderMenu(); };
+      row.append(play, del); r.appendChild(row); sl.appendChild(r);
+    });
+    const add = h('div', 'addstation');
+    add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40"><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
+    add.querySelector('#stAdd').onclick = () => {
+      const url = add.querySelector('#stUrl').value.trim(), name = add.querySelector('#stName').value.trim() || 'My station';
+      if (!/^https?:\/\//i.test(url)) { Sound.nope(); toast('<span>Paste a link that starts with http</span>', 1600, true); return; }
+      if (/youtube\.com|youtu\.be/i.test(url)) { Sound.nope(); toast('<span>YouTube can’t play inside the app. Try a direct radio stream link.</span>', 2600, true); return; }
+      (meta.stations || (meta.stations = [])).push({ name, url }); saveMeta(); Sound.chime();
+      toast(`<span>Added ${name.replace(/</g, '&lt;')}. Tap a record player to tune in.</span>`, 2000, true); renderMenu();
+    };
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
     toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
@@ -1717,7 +1776,7 @@ function startLofiRooms() {
       if (turn) view.fp.look += turn * dt * 2.2;
       view.catMove(f, sd, dt);
     }
-    view.beat = meta.music ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
+    view.beat = meta.music && !stream ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
     view.frame(dt, t);
     requestAnimationFrame(loop);
   }

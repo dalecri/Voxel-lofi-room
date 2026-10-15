@@ -212,6 +212,9 @@
   .hdoor { padding: 6px 10px; border-radius: 12px; background: rgba(255,255,255,.5); font-weight: 700; font-size: 12.5px; }
   body.night .hdoor { background: rgba(255,255,255,.1); }
   .hdoor.edit { opacity: .7; font-weight: 600; }
+  .stations { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .addstation { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .addstation input { flex: 1 1 180px; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 0; background: var(--chip); color: inherit; font: inherit; font-size: 13px; }
   #fade { position: fixed; inset: 0; background: #1e1428; opacity: 0; pointer-events: none; transition: opacity .35s ease; z-index: 60; }
   #fade.on { opacity: 1; }
   .cards h3 { grid-column: 1 / -1; margin: 6px 2px 0; font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--ink-dim); letter-spacing: .04em; text-transform: uppercase; }

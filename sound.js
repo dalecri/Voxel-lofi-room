@@ -35,7 +35,7 @@
   ];
 
   const S = {
-    on: true, ctx: null, music: false, night: 0, crackleOn: true, mood: 0, moods: MOODS,
+    on: true, ctx: null, music: false, night: 0, crackleOn: true, streaming: false, tempo: 1, wet: 0, mood: 0, moods: MOODS,
     init() {
       if (this.ctx || !this.on) return;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -118,7 +118,7 @@
       const t = this.ctx.currentTime;
       this.band.gain.cancelScheduledValues(t);
       this.band.gain.setTargetAtTime(on ? 0.9 : 0, t, on ? 0.6 : 0.4);
-      this.crackle.gain.setTargetAtTime(on && this.crackleOn ? 0.2 : 0, t, 0.5);
+      this.crackle.gain.setTargetAtTime(this.crackleLevel(), t, 0.5);
       if (on) { this.nextStep = Math.max(this.nextStep, t + 0.05); this.needle(); }
     },
     // where we are in the current beat, 0 just on it to 1 just before the next; -1 when the band is quiet
@@ -132,7 +132,7 @@
     setMood(i) {
       this.mood = ((i == null ? this.mood + 1 : i) % MOODS.length + MOODS.length) % MOODS.length;
       const M = MOODS[this.mood];
-      BEAT = 60 / M.bpm;
+      BEAT = 60 / (M.bpm * this.tempo);
       this.prog = 0;
       if (this.ctx) this.tape.frequency.setTargetAtTime(M.tape, this.ctx.currentTime, 0.8);
       return M.name;
@@ -259,6 +259,9 @@
       if (st.cats && ev(1 / 240)) this.meow(0.5 + Math.random() * 0.3);
       const tone = MOODS[this.mood].tape;
       this.tape.frequency.setTargetAtTime(this.night > 0.5 ? Math.min(tone, 1700) : tone, t, 2);
+      const tempo = this.night > 0.6 ? 0.92 : 1, wet = st.rain ? (st.rain > 1 ? 1 : 0.6) : 0;
+      if (tempo !== this.tempo) { this.tempo = tempo; BEAT = 60 / (MOODS[this.mood].bpm * tempo); }   // night slows the band a little
+      if (wet !== this.wet) { this.wet = wet; this.crackle.gain.setTargetAtTime(this.crackleLevel(), t, 2); }   // rain adds hiss
     },
     // a noise burst with a gentle attack, optionally delayed
     soft(dur, vol, type, freq, delay, attack) {
@@ -336,9 +339,18 @@
       if (!this.ready()) return;
       this.soft(0.06, 0.05, 'lowpass', 1800);
       const t = this.ctx.currentTime, g = this.crackle.gain;
-      g.cancelScheduledValues(t); g.setValueAtTime(0.3, t + 0.05); g.linearRampToValueAtTime(this.crackleOn && this.music ? 0.2 : 0, t + 2.1);
+      g.cancelScheduledValues(t); g.setValueAtTime(0.3, t + 0.05); g.linearRampToValueAtTime(this.crackleLevel(), t + 2.1);
     },
-    setCrackle(on) { this.crackleOn = on; if (this.ctx) this.crackle.gain.setTargetAtTime(on && this.music ? 0.2 : 0, this.ctx.currentTime, 0.3); },
+    setCrackle(on) { this.crackleOn = on; if (this.ctx) this.crackle.gain.setTargetAtTime(this.crackleLevel(), this.ctx.currentTime, 0.3); },
+    // the crackle sits under whatever is playing, a little more of it when it rains
+    crackleLevel() { return this.crackleOn && (this.music || this.streaming) ? 0.2 + this.wet * 0.12 : 0; },
+    setStream(on) { this.streaming = on; if (this.ctx) this.crackle.gain.setTargetAtTime(this.crackleLevel(), this.ctx.currentTime, 0.4); },
+    // the music dips for a moment under taps and placing things, then comes back
+    duck() {
+      if (!this.ctx || !this.music) return;
+      const t = this.ctx.currentTime, g = this.band.gain;
+      g.cancelScheduledValues(t); g.setTargetAtTime(0.6, t, 0.03); g.setTargetAtTime(0.9, t + 0.3, 0.3);
+    },
     piano() {   // each tap plays the next notes of a gentle tune
       if (!this.ready()) return;
       const TUNE = [64, 67, 72, 71, 67, 69, 64, 62, 64, 67, 74, 72, 71, 69, 67, 64];

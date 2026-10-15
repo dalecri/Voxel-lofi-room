@@ -66,7 +66,7 @@ Then open http://localhost:5180.
   - The fridge and wardrobe doors swing open. The kettle whistles and steams, the coffee maker gurgles, the tea cup steams gently, and the shisha bubbles and puffs smoke.
   - The globe spins, the snow globe snows, the guitar strums, the typewriter clacks and the robot vacuum beeps and zooms off.
   - Lamps, candles, fairy lights, LED strips, RGB lights, the lava lamp and the fireplace switch on and off.
-  - The record player starts the lofi radio.
+  - The record player is a little radio: each tap steps to the next station (Lofi radio, then your own stations, then off) and a small note names it.
   - Windows open and close their curtains.
   - The piano plays a phrase and the clocks tell the real time.
   - Mugs steam, and plants enjoy a watering.
@@ -115,6 +115,7 @@ Then open http://localhost:5180.
     - removing is a papery poof, and invalid spots get a gentle bonk
     - wall paint rolls, floors get brushed, colour swaps click
   - **Cats:** they thump when they jump down, crash and scurry when they knock things over, and sigh when they claim a cat bed.
+- **A record player that's a radio.** Station 1 is the built-in lofi band, which always works offline. It's one layer of the room's mix: the vinyl crackle sits under it, it dips for a moment when you tap or place something, rain adds a little more hiss and late at night it slows down a touch. Add your own stations in Settings by pasting a direct stream link (an .mp3 or an Icecast/Shoutcast URL); they play when you're online, and if one can't be reached the radio says so and goes back to Lofi radio. YouTube links can't play inside the app, so it'll tell you instead.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and a soft vinyl crackle (switch it off in Settings), all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. At night the lamps light the room.
   - Tap the cloud to cycle the weather: **clear**, **rain**, **storm**, **snow** and **sakura**.
@@ -161,7 +162,7 @@ Then open http://localhost:5180.
 | Place a piece | Tap, or drag to position it | A preview follows the mouse, click to place, <kbd>R</kbd> turns it first |
 | Turn / remove a piece | Turn or Remove tool | Hover a piece (it gets an outline), then <kbd>R</kbd> or <kbd>Delete</kbd> |
 | Turn the room | Two-finger twist or the turn buttons | <kbd>Q</kbd> / <kbd>E</kbd> |
-| Lofi radio | Music chip or the record player | <kbd>M</kbd> |
+| Radio on/off | Music chip, or tap a record player to change station | <kbd>M</kbd> |
 | Undo | Undo chip | <kbd>Ctrl</kbd>+<kbd>Z</kbd> or <kbd>U</kbd> |
 | Random room | Surprise | <kbd>G</kbd> |
 | Cat view | Paw button, then drag to look and tap the floor to walk | <kbd>C</kbd>, then WASD or the arrows to walk, drag or <kbd>Q</kbd>/<kbd>E</kbd> to look, <kbd>N</kbd> for the next cat, <kbd>Esc</kbd> to leave |
