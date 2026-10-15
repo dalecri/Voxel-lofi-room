@@ -164,30 +164,33 @@ with sync_playwright() as p:
     clean(c, errors, failed)
     print('PASS: first-session purchase, animation, picker unlock, crowned cat rendering and saved reload at zero balance')
 
-    c, page, errors, failed = boot(browser, balance=2000, mobile=True)
+    c, page, errors, failed = boot(browser, balance=10000, mobile=True)
     # The stall is freely placeable and opens exactly the same shop as the menu.
     page.evaluate("const a=__lr; const stall=a.room.add(a.room.make('marketstall',{x:7,z:7})); a.changed(); a.interact(stall.id)")
-    assert page.locator('#shopBalance').inner_text() == '2000 Fireflies'
+    assert page.locator('#shopBalance').inner_text() == '10000 Fireflies'
     assert page.evaluate("document.querySelector('#sheetBody').scrollWidth <= document.querySelector('#sheetBody').clientWidth")
     page.screenshot(path='/tmp/firefly-shop-mobile.png')
-    for visit in range(3):
+    count=page.evaluate("LRShop.catalog.length")
+    spent=page.evaluate("LRShop.catalog.reduce((sum,c)=>sum+c.price,0)")
+    visits=(count+2)//3
+    for visit in range(visits):
         for item in page.evaluate('__lr.merchant.wares'):
             page.click(f'[data-shop-buy="{item}"]')
-        if visit < 2:
+        if visit < visits-1:
             page.click('#shopClose')
             page.evaluate("__advanceDay(1); __lr.setMode('explore',true); __lr.tickWorld(200); __lr.openShop()")
-    assert page.evaluate("JSON.parse(localStorage.getItem('lr.shopOwned')).length") == 9
-    assert balance(page) == 1010
+    assert page.evaluate("JSON.parse(localStorage.getItem('lr.shopOwned')).length") == count
+    assert balance(page) == 10000-spent
     page.click('#shopClose')
     page.evaluate('''() => {
-      const a=__lr; a.room.items=[];
+      const a=__lr; a.room.items=[]; a.room.n=24;
       const types=LRShop.catalog.filter(c=>c.piece).map(c=>c.piece);
-      types.forEach((t,k)=>a.room.add(a.room.make(t,{x:(k%3)*3,z:Math.floor(k/3)*3,on:LR.CAT[t].on||false})));
+      types.forEach((t,k)=>a.room.add(a.room.make(t,{x:(k%7)*3,z:Math.floor(k/7)*3,on:LR.CAT[t].on||false})));
       a.changed(); a.setPhase('night',true);
       for(const it of a.room.items.filter(i=>LR.CAT[i.t].roomEffect)) a.interact(it.id);
       a.state.group='market'; a.setMode('edit',true);
     }''')
-    assert page.locator('#row .swatch').count() == 8  # seven pieces plus the free stall
+    assert page.locator('#row .swatch').count() == page.evaluate('LRShop.catalog.filter(c=>c.piece).length+1')
     page.wait_for_timeout(1000)
     assert page.evaluate("__lr.room.items.filter(i=>LR.CAT[i.t].roomEffect).every(i=>i.on)")
     # Cosmetic fireplaces retain the base fireplace's moment behavior.
@@ -197,7 +200,7 @@ with sync_playwright() as p:
       localStorage.setItem('lr.daily',JSON.stringify({date:a.ensureDaily().date,id:'fire',done:false}));
       a.interact(fire.id);
     }''')
-    assert balance(page) == 1025
+    assert balance(page) == 10000-spent+15
     page.evaluate("__lr.state.tool='paint'; __lr.state.paintTab='walls'; __lr.setMode('edit',true)")
     page.locator('#row .swatch').filter(has_text='Constellation').click()
     page.get_by_role('button', name='Floor', exact=True).click()

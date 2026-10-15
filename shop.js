@@ -1,5 +1,6 @@
 // Earn-only Fireflies and the merchant's cosmetic collection. No paid currency.
 (function (root) {
+  const extras = typeof module !== 'undefined' && module.exports ? require('./merchant-assets.js') : root.LRMerchantAssets;
   const catalog = [
     { id: 'galaxy', name: 'Galaxy aquarium', price: 120, piece: 'shopgalaxy', icon: '🌌', desc: 'A tiny animated galaxy for your fish. The ordinary aquarium stays free.' },
     { id: 'bluefire', name: 'Blue-flame fireplace', price: 100, piece: 'shopbluefire', icon: '🔥', desc: 'The familiar hearth, glowing icy blue.' },
@@ -10,6 +11,7 @@
     { id: 'starwall', name: 'Constellation wallpaper', price: 140, wall: 'shopstars', icon: '🌠', desc: 'A rare midnight finish. Find it in Paint → Walls.' },
     { id: 'pearlfloor', name: 'Moonstone floor', price: 160, floor: 'shoppearl', icon: '🌙', desc: 'A pearly mosaic. Find it in Paint → Floor.' },
     { id: 'ufo', name: 'Tiny UFO', price: 200, piece: 'shopufo', icon: '🛸', desc: 'A little visitor that hovers above its display stand.' },
+    ...extras.catalog,
   ];
 
   function create({ store, today, notify = () => {} }) {
@@ -115,6 +117,7 @@
         m.box(9, 8, 3, 13, 9, 7, 0xd9ad57).set(10, 9, 5, 0xffd778);
       },
     });
+    extras.register(L);
     // Kept out of the picker and excluded from room saves by its visitor flag.
     def('merchantcat', {
       name: 'Mallow, the traveling merchant', kind: 'pet', group: 'guest', size: [1, 1], tap: 'shop', vars: [[5]],
