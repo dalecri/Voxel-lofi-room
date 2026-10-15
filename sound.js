@@ -84,6 +84,23 @@
       const pl = ctx.createGain(); pl.gain.value = 0;
       this.purrLfo.connect(pl); pl.connect(this.purrBed.g.gain); this.purrLfo.start();
       this.purrDepth = pl;
+      // the soundscape: beds that fade in and out with what's in the room
+      const bl = ctx.sampleRate * 3, bb = ctx.createBuffer(1, bl, ctx.sampleRate), bd = bb.getChannelData(0);
+      let b = 0; for (let i = 0; i < bl; i++) { b = (b + 0.02 * (Math.random() * 2 - 1)) / 1.02; bd[i] = b * 3.5; }   // brown noise: the room tone
+      const bs = ctx.createBufferSource(); bs.buffer = bb; bs.loop = true;
+      const bf = ctx.createBiquadFilter(); bf.type = 'lowpass'; bf.frequency.value = 420;
+      this.toneBed = { g: ctx.createGain() }; this.toneBed.g.gain.value = 0;
+      bs.connect(bf); bf.connect(this.toneBed.g); this.toneBed.g.connect(this.master); bs.start();
+      this.windBed = bed('bandpass', 520, 0.7);
+      const wl = ctx.createOscillator(); wl.frequency.value = 0.09; const wg = ctx.createGain(); wg.gain.value = 260;
+      wl.connect(wg); wg.connect(this.windBed.f.frequency); wl.start();            // gusts
+      this.cityBed = bed('lowpass', 170, 0.9);
+      const hum = ctx.createOscillator(); hum.type = 'sine'; hum.frequency.value = 55; const hg = ctx.createGain(); hg.gain.value = 0.3; hum.connect(hg); hg.connect(this.cityBed.g); hum.start();
+      this.neonBed = { g: ctx.createGain() }; this.neonBed.g.gain.value = 0;
+      const nz = ctx.createOscillator(); nz.type = 'sawtooth'; nz.frequency.value = 120;
+      const nf = ctx.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 520;
+      nz.connect(nf); nf.connect(this.neonBed.g); this.neonBed.g.connect(this.master); nz.start();
+      this.nextTick = 0; this.tickTock = 0;
 
       this.prog = 0; this.bar = 0; this.step = 0; this.nextStep = ctx.currentTime + 0.1; this.beats = [];
       this.timer = setInterval(() => this.schedule(), 90);
@@ -211,19 +228,48 @@
       s.connect(f); f.connect(g); g.connect(this.tape); s.start(t, Math.random()); s.stop(t + 0.06);
     },
 
-    // ---- ambience ----
-    ambience(rain, fire, night) {
+    // ---- the soundscape: the room sounds like itself ----
+    // st: { fire, rain (0 none, 1 rain, 2 storm), wind, crickets, birds, clock, neon, typing, bubbler, steam, city, cats, indoors, night, dt }
+    // beds glide to their levels (no hard cuts on day/night or weather), sparse sounds stay rare
+    soundscape(st) {
       if (!this.ready()) return;
-      const t = this.ctx.currentTime;
-      this.night = night;
-      this.rainBed.g.gain.setTargetAtTime(rain ? 0.05 : 0, t, 1.2);
-      this.rainLow.g.gain.setTargetAtTime(rain ? 0.12 : 0, t, 1.2);
-      this.fireBed.g.gain.setTargetAtTime(fire ? 0.06 : 0, t, 0.8);
-      if (fire && Math.random() < 0.05) this.burst(0.03, 0.14, 'highpass', 2500);       // a pop from the logs
-      if (rain && Math.random() < 0.08) this.burst(0.02, 0.05, 'bandpass', 4000 + Math.random() * 2000);   // a drop on the glass
+      const t = this.ctx.currentTime, dt = st.dt || 0.3, ev = r => Math.random() < r * dt;
+      this.night = st.night;
+      const glide = (bed, v, tc) => bed.g.gain.setTargetAtTime(v, t, tc || 1.8);
+      glide(this.toneBed, 0.012);
+      glide(this.rainBed, st.rain ? (st.rain > 1 ? 0.085 : 0.04) : 0, 2.2);
+      glide(this.rainLow, st.rain ? (st.rain > 1 ? 0.2 : 0.09) : 0, 2.2);
+      glide(this.fireBed, 0.075 * (st.fire || 0), 1.2);
+      glide(this.windBed, 0.045 * (st.wind || 0), 2.5);
+      glide(this.cityBed, 0.035 * (st.city || 0), 2.5);
+      glide(this.neonBed, 0.0045 * (st.neon || 0), 0.5);
+      if (st.fire && ev(1.5 * st.fire)) this.soft(0.03, 0.1 * st.fire, 'highpass', 2200 + Math.random() * 1500);     // pops from the logs
+      if (st.rain && ev(st.rain > 1 ? 4 : 2)) this.soft(0.02, 0.035, 'bandpass', 4000 + Math.random() * 2500);      // drops on the glass
+      if (st.rain > 1 && ev(0.04)) this.thunder(false, 0.5);                                                        // distant thunder
+      if (st.crickets && ev(0.9 * st.crickets)) { const f = 4300 + Math.random() * 600; for (let k = 0; k < 3; k++) this.tone(f, t + k * 0.06, 0.04, 0.008 * st.crickets, 'sine'); }
+      if (st.birds && ev(0.18 * st.birds)) this.tweet(0.35);
+      if (st.clock) {   // tick, tock, once a second
+        if (this.nextTick < t) this.nextTick = Math.ceil(t);
+        while (this.nextTick < t + dt + 0.05) { const tt = this.nextTick; this.tickTock ^= 1; this.tone(this.tickTock ? 2400 : 1900, tt, 0.02, 0.009 * st.clock, 'square'); this.nextTick += 1; }
+      }
+      if (st.typing && ev(0.5 * st.typing)) { const n0 = 3 + (Math.random() * 5 | 0); for (let k = 0; k < n0; k++) this.soft(0.025, 0.02 * st.typing, 'bandpass', 2600 + Math.random() * 1200, 0.07 * k + Math.random() * 0.03); }
+      if (st.bubbler && ev(2.2 * st.bubbler)) { const f = 500 + Math.random() * 500, o = this.tone(f, t, 0.06, 0.008 * st.bubbler, 'sine'); o.frequency.exponentialRampToValueAtTime(f * 2, t + 0.05); }
+      if (st.steam && ev(0.04 * st.steam)) this.soft(0.9, 0.012, 'bandpass', 3200, 0, 0.25);                          // a soft hiss from a hot mug
+      if (st.indoors && ev(1 / 160)) this.houseCreak();
+      if (st.cats && ev(1 / 240)) this.meow(0.5 + Math.random() * 0.3);
       const tone = MOODS[this.mood].tape;
-      this.tape.frequency.setTargetAtTime(night > 0.5 ? Math.min(tone, 1700) : tone, t, 2);
+      this.tape.frequency.setTargetAtTime(this.night > 0.5 ? Math.min(tone, 1700) : tone, t, 2);
     },
+    // a noise burst with a gentle attack, optionally delayed
+    soft(dur, vol, type, freq, delay, attack) {
+      const ctx = this.ctx, t0 = ctx.currentTime + (delay || 0);
+      const s = ctx.createBufferSource(); s.buffer = this.noise;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + (attack || 0.004)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      s.connect(f); f.connect(g); g.connect(this.master); s.start(t0, Math.random()); s.stop(t0 + dur + 0.05);
+      return f;
+    },
+    ambience(rain, fire, night) { this.soundscape({ rain: rain ? 1 : 0, fire: fire ? 1 : 0, night }); },
     purr(on) {
       if (!this.ready()) return;
       const t = this.ctx.currentTime;
@@ -251,34 +297,64 @@
       s.connect(f); f.connect(g); g.connect(this.master);
       s.start(t0, Math.random()); s.stop(t0 + dur + 0.05);
     },
-    place() {     // a soft wooden knock
+    place(w) {     // weight-matched: a mug clinks down, a wardrobe lands with a deep thud
       if (!this.ready()) return;
-      const t = this.ctx.currentTime, o = this.tone(260 + Math.random() * 60, t, 0.12, 0.18, 'triangle');
-      o.frequency.exponentialRampToValueAtTime(140, t + 0.1);
-      this.burst(0.05, 0.08, 'bandpass', 1200);
+      const wt = w == null ? 0.4 : Math.max(0, Math.min(1, w)), t = this.ctx.currentTime;
+      const o = this.tone(320 - wt * 220 + Math.random() * 30, t, 0.1 + wt * 0.18, 0.12 + wt * 0.12, wt > 0.5 ? 'sine' : 'triangle');
+      o.frequency.exponentialRampToValueAtTime(Math.max(40, 160 - wt * 110), t + 0.08 + wt * 0.12);
+      this.soft(0.04 + wt * 0.12, 0.05 + wt * 0.08, 'lowpass', 1400 - wt * 1000);
+      if (wt < 0.25) this.tone(1800 + Math.random() * 400, t, 0.05, 0.02, 'sine');   // small things clink
     },
+    thump(w) { if (!this.ready()) return; const t = this.ctx.currentTime, o = this.tone(110, t, 0.14, 0.05 * (w || 1), 'sine'); o.frequency.exponentialRampToValueAtTime(55, t + 0.12); this.soft(0.06, 0.03 * (w || 1), 'lowpass', 500); },
+    scurry() { if (!this.ready()) return; for (let k = 0; k < 7; k++) this.soft(0.025, 0.035, 'bandpass', 1800 + Math.random() * 900, 0.18 + k * 0.055 + Math.random() * 0.02); },
+    sigh() { if (!this.ready()) return; this.soft(0.9, 0.025, 'bandpass', 700, 0, 0.3); const t = this.ctx.currentTime, o = this.tone(180, t + 0.1, 0.8, 0.012, 'sine', 0.3); o.frequency.linearRampToValueAtTime(140, t + 0.9); },
+    houseCreak() { if (!this.ready()) return; const t = this.ctx.currentTime, f = 140 + Math.random() * 80, o = this.tone(f, t, 0.5, 0.012, 'sawtooth', 0.15); o.frequency.linearRampToValueAtTime(f * 1.25, t + 0.45); },
+    cushion() { if (!this.ready()) return; this.soft(0.35, 0.09, 'lowpass', 700, 0, 0.03); const t = this.ctx.currentTime, o = this.tone(150, t, 0.25, 0.04, 'sine'); o.frequency.exponentialRampToValueAtTime(80, t + 0.2); },
+    chairRoll() { if (!this.ready()) return; this.soft(0.5, 0.03, 'bandpass', 900, 0, 0.1); const t = this.ctx.currentTime, o = this.tone(1100, t + 0.1, 0.25, 0.015, 'sine', 0.05); o.frequency.linearRampToValueAtTime(1500, t + 0.3); },
+    blanket() { if (!this.ready()) return; this.soft(0.6, 0.06, 'lowpass', 1200, 0, 0.12); this.soft(0.3, 0.04, 'lowpass', 500, 0.45, 0.05); },
+    swish() { if (!this.ready()) return; const f = this.soft(0.45, 0.06, 'bandpass', 900, 0, 0.12); f.frequency.linearRampToValueAtTime(2600, this.ctx.currentTime + 0.4); },
+    matchStrike() { if (!this.ready()) return; this.soft(0.12, 0.12, 'highpass', 2500); this.soft(0.6, 0.05, 'bandpass', 1200, 0.1, 0.05); },
+    ignite(big) { if (!this.ready()) return; const f = this.soft(big ? 1.6 : 0.9, big ? 0.22 : 0.13, 'lowpass', 300, 0, 0.15); f.frequency.linearRampToValueAtTime(big ? 2000 : 1200, this.ctx.currentTime + 0.5); if (big) this.soft(0.4, 0.1, 'highpass', 2000, 0.3); },
+    neonOn() { if (!this.ready()) return; for (let k = 0; k < 4; k++) this.soft(0.04, 0.05, 'bandpass', 3000 + k * 400, k * 0.07 + Math.random() * 0.04); const t = this.ctx.currentTime; this.tone(120, t + 0.3, 0.4, 0.02, 'sawtooth'); },
+    lampClick(on, p) { if (!this.ready()) return; const t = this.ctx.currentTime, k = p || 1; this.tone((on ? 1700 : 1250) * k, t, 0.025, 0.07, 'square'); this.tone((on ? 850 : 650) * k, t + 0.025, 0.04, 0.04, 'triangle'); },
+    roller() { if (!this.ready()) return; const f = this.soft(0.5, 0.06, 'bandpass', 600, 0, 0.08); f.frequency.linearRampToValueAtTime(1400, this.ctx.currentTime + 0.45); },
+    brush() { if (!this.ready()) return; for (let k = 0; k < 3; k++) this.soft(0.12, 0.05, 'highpass', 2500 + k * 300, k * 0.13, 0.03); },
+    tick2() { if (!this.ready()) return; this.tone(2200, this.ctx.currentTime, 0.02, 0.05, 'square'); },
+    slide(open) { if (!this.ready()) return; const f = this.soft(0.22, 0.04, 'bandpass', open ? 700 : 1600, 0, 0.05); f.frequency.linearRampToValueAtTime(open ? 1600 : 700, this.ctx.currentTime + 0.2); },
+    blip() { if (!this.ready()) return; this.tone(900, this.ctx.currentTime, 0.06, 0.04, 'sine'); },
+    stamp() { if (!this.ready()) return; this.thump(1.4); this.soft(0.08, 0.06, 'bandpass', 1500, 0.02); },
+    hourChime() { if (!this.ready()) return; const t = this.ctx.currentTime; [659.3, 523.3].forEach((f, k) => { this.tone(f, t + k * 0.6, 1.8, 0.035); this.tone(f * 2, t + k * 0.6, 1, 0.01); }); },
     lift() { if (!this.ready()) return; const t = this.ctx.currentTime, o = this.tone(300, t, 0.14, 0.08, 'sine'); o.frequency.exponentialRampToValueAtTime(620, t + 0.12); },
-    poof() { if (!this.ready()) return; this.burst(0.25, 0.18, 'lowpass', 900); const t = this.ctx.currentTime, o = this.tone(500, t, 0.18, 0.06); o.frequency.exponentialRampToValueAtTime(160, t + 0.16); },
+    poof() { if (!this.ready()) return; this.soft(0.22, 0.1, 'bandpass', 1800, 0, 0.02); this.soft(0.3, 0.06, 'lowpass', 700, 0.03); },   // a papery poof
     click(on) { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(on ? 1800 : 1300, t, 0.03, 0.08, 'square'); this.tone(on ? 900 : 700, t + 0.03, 0.05, 0.05, 'triangle'); },
-    nope() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(220, t, 0.12, 0.08, 'triangle'); this.tone(180, t + 0.1, 0.14, 0.08, 'triangle'); },
+    nope() { if (!this.ready()) return; const t = this.ctx.currentTime, o = this.tone(200, t, 0.16, 0.08, 'sine'); o.frequency.exponentialRampToValueAtTime(120, t + 0.14); this.soft(0.05, 0.04, 'lowpass', 400); },   // a gentle bonk
     turn() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(520, t, 0.08, 0.06, 'triangle'); this.tone(700, t + 0.05, 0.08, 0.05, 'triangle'); },
     paint() { if (!this.ready()) return; this.burst(0.12, 0.08, 'bandpass', 2400); const t = this.ctx.currentTime; this.tone(880, t + 0.04, 0.3, 0.04); },
-    sip() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 3; k++) { const o = this.tone(500 + k * 80, t + k * 0.09, 0.07, 0.05); o.frequency.exponentialRampToValueAtTime(900, t + k * 0.09 + 0.06); } },
-    water() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 5; k++) { const f = 1200 + Math.random() * 1400; const o = this.tone(f, t + k * 0.06, 0.08, 0.035); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + k * 0.06 + 0.05); } },
-    needle() { if (!this.ready() || !this.crackleOn) return; this.burst(0.06, 0.06, 'lowpass', 1800); },
-    setCrackle(on) { this.crackleOn = on; if (this.ctx) this.crackle.gain.setTargetAtTime(on && this.music ? 0.2 : 0, this.ctx.currentTime, 0.3); },
-    piano() {
+    sip() { if (!this.ready()) return; this.soft(0.18, 0.04, 'bandpass', 1400, 0, 0.04); this.soft(0.12, 0.025, 'bandpass', 900, 0.22, 0.03); },   // subtle, not cartoonish
+    water() { if (!this.ready()) return; this.soft(1.1, 0.05, 'bandpass', 2600, 0, 0.15); const t = this.ctx.currentTime; for (let k = 0; k < 8; k++) { const f = 1400 + Math.random() * 1200, o = this.tone(f, t + 0.1 + k * 0.1, 0.06, 0.015); o.frequency.exponentialRampToValueAtTime(f * 1.4, t + 0.15 + k * 0.1); } },   // a trickle
+    needle() {   // the needle drops: a soft thump, then a little crackle that fades out over two seconds
       if (!this.ready()) return;
-      const t = this.ctx.currentTime, chord = PROGS[this.prog][this.bar % 4];
-      [0, 1, 2, 3, 4, 3, 2].forEach((k, i) => this.tone(n(chord[k] + 12), t + i * 0.13, 1.4, 0.07, 'triangle'));
+      this.soft(0.06, 0.05, 'lowpass', 1800);
+      const t = this.ctx.currentTime, g = this.crackle.gain;
+      g.cancelScheduledValues(t); g.setValueAtTime(0.3, t + 0.05); g.linearRampToValueAtTime(this.crackleOn && this.music ? 0.2 : 0, t + 2.1);
     },
-    meow() {
+    setCrackle(on) { this.crackleOn = on; if (this.ctx) this.crackle.gain.setTargetAtTime(on && this.music ? 0.2 : 0, this.ctx.currentTime, 0.3); },
+    piano() {   // each tap plays the next notes of a gentle tune
       if (!this.ready()) return;
-      const t = this.ctx.currentTime, o = this.tone(620, t, 0.45, 0.06, 'sawtooth', 0.05);
+      const TUNE = [64, 67, 72, 71, 67, 69, 64, 62, 64, 67, 74, 72, 71, 69, 67, 64];
+      const t = this.ctx.currentTime; this.pianoStep = this.pianoStep || 0;
+      for (let i = 0; i < 2; i++) {
+        const m = TUNE[(this.pianoStep++) % TUNE.length];
+        [[1, 0.07, 'triangle'], [2, 0.015, 'sine']].forEach(([mul, vol, type]) => this.tone(n(m) * mul, t + i * 0.28, 1.6, vol, type));
+      }
+    },
+    meow(vol) {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime, o = this.tone(620, t, 0.45, 0.06, 'sawtooth', 0.05), v = vol || 1, p = 0.85 + Math.random() * 0.35;   // every meow a little different
       const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1300; f.Q.value = 2;
-      o.disconnect(); const g = this.ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      o.disconnect(); const g = this.ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12 * v, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
       o.connect(f); f.connect(g); g.connect(this.master);
-      o.frequency.setValueAtTime(560, t); o.frequency.linearRampToValueAtTime(820, t + 0.12); o.frequency.exponentialRampToValueAtTime(480, t + 0.42);
+      o.frequency.setValueAtTime(560 * p, t); o.frequency.linearRampToValueAtTime(820 * p, t + 0.12); o.frequency.exponentialRampToValueAtTime(480 * p, t + 0.42);
     },
     chime() { if (!this.ready()) return; const t = this.ctx.currentTime; [784, 1174.7, 1568].forEach((f, k) => this.tone(f, t + k * 0.12, 1.4, 0.05)); },
     arpeggio() { if (!this.ready()) return; const t = this.ctx.currentTime; [523.3, 659.3, 784, 987.8, 1174.7].forEach((f, k) => this.tone(f, t + k * 0.08, 0.7, 0.05)); },
@@ -334,15 +410,15 @@
     bell() { if (!this.ready()) return; const t = this.ctx.currentTime; [0, 0.28].forEach(d => { this.tone(1318.5, t + d, 0.9, 0.06, 'triangle'); this.tone(2637, t + d, 0.5, 0.02, 'sine'); }); },
     puff() { if (!this.ready()) return; this.gurgle(9); this.burst(1, 0.04, 'lowpass', 500); },
     cuckoo() { if (!this.ready()) return; const t = this.ctx.currentTime; [0, 0.42].forEach(d => { this.tone(784, t + d, 0.18, 0.07, 'sine', 0.01); this.tone(622, t + d + 0.2, 0.24, 0.07, 'sine', 0.01); }); },
-    tweet() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 3; k++) { const o = this.tone(2600 + Math.random() * 600, t + k * 0.11, 0.07, 0.03, 'sine'); o.frequency.exponentialRampToValueAtTime(3600, t + k * 0.11 + 0.06); } },
+    tweet(v) { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 3; k++) { const o = this.tone(2600 + Math.random() * 600, t + k * 0.11, 0.07, 0.03 * (v || 1), 'sine'); o.frequency.exponentialRampToValueAtTime(3600, t + k * 0.11 + 0.06); } },
     crunch() { if (!this.ready()) return; for (let k = 0; k < 4; k++) setTimeout(() => this.burst(0.05, 0.08, 'bandpass', 2200 + Math.random() * 1500), k * 110); },
     plop() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(500 + Math.random() * 300, t + k * 0.13, 0.09, 0.05, 'sine'); o.frequency.exponentialRampToValueAtTime(1400, t + k * 0.13 + 0.08); } },
     clatter() { if (!this.ready()) return; this.burst(0.08, 0.2, 'bandpass', 2600); setTimeout(() => this.burst(0.06, 0.12, 'bandpass', 1900), 90); setTimeout(() => this.burst(0.05, 0.08, 'bandpass', 3200), 200); },
-    thunder(near) {   // a crack, then a long low rumble
+    thunder(near, v) {   // a crack, then a long low rumble
       if (!this.ready()) return;
       const ctx = this.ctx, t = ctx.currentTime, src = ctx.createBufferSource(); src.buffer = this.noise;
       const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(near ? 900 : 400, t); f.frequency.exponentialRampToValueAtTime(120, t + 2.4);
-      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(near ? 0.5 : 0.3, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 3);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime((near ? 0.5 : 0.3) * (v || 1), t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 3);
       src.connect(f); f.connect(g); g.connect(this.master); src.start(t, Math.random()); src.stop(t + 3.1);
       if (near) this.burst(0.12, 0.2, 'highpass', 1500);
     },

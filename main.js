@@ -98,6 +98,8 @@ function startLofiRooms() {
   let liftNow = 40;
   const view = new LRRender.Renderer($('#c'), {
     catViewEnded() { document.body.classList.remove('catcam'); },
+    catLand() { Sound.thump(0.5); },
+    catSigh() { Sound.sigh(); },
     thunder() { const near = Math.random() < 0.4; setTimeout(() => Sound.thunder(near), near ? 120 : 500 + Math.random() * 900); },
     sky(top, bot, night) {
       bg.style.background = `linear-gradient(180deg, ${top} 0%, ${bot} 100%)`;
@@ -175,7 +177,7 @@ function startLofiRooms() {
     if (!d) return;
     found.add(key); store.set('lr.found', [...found]);
     toast(`<b>✦ ${d[1]}</b><span>${d[2]}</span>`, 3800);
-    Sound.chime();
+    Sound.chime(); if (key === 'cozy') setTimeout(() => Sound.arpeggio(), 600);
     updateHeader();
   }
   function checkRoomMoments() {
@@ -245,7 +247,7 @@ function startLofiRooms() {
     if (!show) return;
     const tab = (label, on, fn) => {
       const b = document.createElement('button'); b.className = 'tab' + (on ? ' on' : ''); b.textContent = label;
-      b.onclick = () => { fn(); renderTray(); Sound.turn(); };
+      b.onclick = () => { fn(); renderTray(); Sound.blip(); };
       tabs.appendChild(b);
     };
     if (state.tool === 'add') {
@@ -277,7 +279,7 @@ function startLofiRooms() {
         WALL_COLORS.forEach(([name, c], i) => {
           const b = document.createElement('button'); b.className = 'dot' + (room.wall.color === i ? ' on' : '');
           b.innerHTML = `<i style="background:${LR.hex(c)}"></i><span>${name}</span>`;
-          b.onclick = () => paintRoom(() => { room.wall.color = i; meta.painted.wall = true; });
+          b.onclick = () => paintRoom(() => { room.wall.color = i; meta.painted.wall = true; }, 'color');
           row.appendChild(b);
         });
       } else if (state.paintTab === 'size') {
@@ -298,7 +300,7 @@ function startLofiRooms() {
           const b = document.createElement('button'); b.className = 'swatch' + (room.floor.style === k ? ' on' : '');
           b.appendChild(swatchCanvas((x, y) => Fl.fn(x + 64, y + 64)));
           b.insertAdjacentHTML('beforeend', `<span>${Fl.label}</span>`);
-          b.onclick = () => paintRoom(() => { room.floor.style = k; meta.painted.floor = true; });
+          b.onclick = () => paintRoom(() => { room.floor.style = k; meta.painted.floor = true; }, 'floor');
           row.appendChild(b);
         });
       }
@@ -391,12 +393,12 @@ function startLofiRooms() {
       });
       if (out.length) { toast(`<span>Move ${out.length} piece${out.length > 1 ? 's' : ''} in from the edges first</span>`, 1800); Sound.turn(); return; }
     }
-    paintRoom(() => { room.n = n; });
+    paintRoom(() => { room.n = n; }, 'size');
     toast(`<span>Plot is now ${n}×${n}</span>`, 1100);
   }
-  function paintRoom(fn) {
+  function paintRoom(fn, kind) {
     pushUndo(); fn(); saveMeta(); changed(); renderTray();
-    Sound.paint(); haptic(6);
+    (kind === 'floor' ? Sound.brush() : kind === 'color' ? Sound.tick2() : kind === 'size' ? Sound.place(0.9) : Sound.roller()); haptic(6);
   }
 
   document.querySelectorAll('.tools button').forEach(b => {
@@ -521,11 +523,11 @@ function startLofiRooms() {
     if (!it) return;
     const C = CAT[it.t];
     view.boing(id); haptic(5);
-    if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
+    if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     const tap = C.tap;
     if (tap === 'toggle') {
       pushUndo(); it.on = !it.on; changed();
-      Sound.click(it.on);
+      toggleSound(it, C);
       if (it.on && C.light) discover('light');
       if (it.on && it.t === 'fireplace') discover('fire');
       return;
@@ -598,13 +600,13 @@ function startLofiRooms() {
       return;
     }
     if (tap === 'treats') { Sound.crunch(); toast('<span>Shake shake! Drop the jar on a cat with Move</span>', 1600); return; }
-    if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.paint(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
+    if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.swish(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
     if (tap === 'music') { setMusic(!meta.music); return; }
     if (tap === 'pet') {
       const P = CATS[it.c] || CATS[0];
       view.petCat(id); Sound.purr(true); setTimeout(() => Sound.purr(false), 2600);
       follow = { id, until: performance.now() + 9000 };   // for a little while it follows your taps
-      if (Math.random() < 0.35) setTimeout(() => Sound.meow(), 400);
+      if (Math.random() < 0.1) setTimeout(() => Sound.meow(0.8), 500);   // rare, so it stays special
       toast(`<span>${it.name || P.name} purrs ♥</span>`, 1600);
       discover('purr');
       return;
@@ -634,7 +636,7 @@ function startLofiRooms() {
       for (let k = 0; k < 4; k++) setTimeout(() => { const p = view.itemPoint(id, [3 + k * 3, 18, 6]); if (p) view.icon('note', p, { size: 0.3 }); }, k * 200);
       return;
     }
-    if (tap === 'sleep') { sleep(); return; }
+    if (tap === 'sleep') { Sound.blanket(); sleep(); return; }
     if ((tap === 'screen' || tap === 'type') && new Date().getHours() < 5) setTimeout(() => discover('nightshift'), 1200);
     if (tap === 'screen') {
       // off → each channel in turn → off
@@ -707,8 +709,69 @@ function startLofiRooms() {
     if (tap === 'vend') { Sound.coin(); setTimeout(() => Sound.fridge(false), 500); toast(`<span>${pickOne(['Hot canned coffee', 'Melon soda', 'Cold green tea', 'Calpis, nice', 'Royal milk tea'])}</span>`, 1500); return; }
     if (tap === 'shoji') { it.on = !it.on; changed(); Sound.rustle(); toast(`<span>${it.on ? 'Shoji slid open' : 'Shoji closed'}</span>`, 1000); return; }
     Sound.click(true);
+    // nothing special to do: still give it a sound that fits
+    if (!tap) {
+      if (C.seat && /chair|stool/.test(it.t)) Sound.chairRoll();
+      else if (C.seat || /sofa|beanbag|pouf|bed|futon|cushion|zabuton/.test(it.t)) Sound.cushion();
+      else if (/book|libcase|libstack|shelf/.test(it.t)) Sound.flip();
+      else Sound.place(weightOf(it) * 0.6);
+    }
   }
   const pickOne = a => a[(Math.random() * a.length) | 0];
+  // how heavy a piece sounds when it lands: a mug clinks, a wardrobe thuds
+  function weightOf(it) {
+    const C = CAT[it.t]; if (!C) return 0.4;
+    if (C.kind === 'small') return 0.12;
+    if (C.kind === 'rug') return 0.2;
+    if (C.kind === 'pet') return 0.18;
+    if (C.kind === 'wall') return 0.32;
+    const [w, d] = C.size, top = typeof C.top === 'number' ? C.top : 10;
+    return Math.min(1, 0.3 + w * d * 0.1 + top / 60);
+  }
+  const typeHash = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) | 0; return (Math.abs(h) % 100) / 100; };
+  // switching things on and off sounds like the thing: lamps click (each a little different), neon crackles, fires whoosh, candles strike a match
+  function toggleSound(it, C) {
+    if (it.t === 'fireplace' || it.t === 'eukachel' || C.anim === 'fire') {
+      if (!it.on) { Sound.lampClick(false, 0.6); return; }
+      const lit = meta.litRooms || (meta.litRooms = []), first = !lit.includes(meta.current);
+      Sound.ignite(first); if (first) { lit.push(meta.current); saveMeta(); }
+    } else if (C.anim === 'buzz' || /neon/.test(it.t)) { if (it.on) Sound.neonOn(); else Sound.lampClick(false, 1.3); }
+    else if (C.anim === 'flame' || /candle|candel/.test(it.t)) { if (it.on) Sound.matchStrike(); else Sound.soft(0.2, 0.04, 'lowpass', 900); }
+    else Sound.lampClick(it.on, 0.75 + typeHash(it.t) * 0.6);
+  }
+  // the live soundscape, read from the room: what's here, what's on, the weather and the hour
+  function itemSpot(it) {
+    let i = it; for (let k = 0; i && i.p && k < 3; k++) i = room.get(i.p);
+    if (!i) return null;
+    if (CAT[i.t].kind === 'wall') { const n = room.n, u = i.u + 0.5, c = [[u, 0.5], [0.5, n - u], [n - u, n - 0.5], [n - 0.5, u]][i.k]; return { x: c[0], z: c[1] }; }
+    const [w, d] = fp(i); return { x: i.x + w / 2, z: i.z + d / 2 };
+  }
+  function soundState(dt) {
+    const P = view.fp && view.pets.get(view.fp.id), month = new Date().getMonth(), w = meta.weather || 'clear';
+    // in cat view, closer things are louder; from above, everything sits at a gentle level
+    const level = (list, base) => {
+      if (!list.length) return 0;
+      if (!P) return base;
+      let d = Infinity; list.forEach(i => { const p = itemSpot(i); if (p) d = Math.min(d, Math.hypot(p.x - P.x, p.z - P.z)); });
+      return Math.max(0.1, Math.min(1.5, 1.7 - d / 4));
+    };
+    const its = room.items, has = f => its.filter(f);
+    return {
+      dt, night: view.ph.night, indoors: !view.noWalls,
+      fire: level(has(i => (i.t === 'fireplace' || i.t === 'eukachel' || CAT[i.t].anim === 'fire') && i.on), 0.8),
+      clock: level(has(i => CAT[i.t].anim === 'clock' || CAT[i.t].tap === 'time' || i.t === 'cuckoo'), 0.45),
+      neon: level(has(i => (CAT[i.t].anim === 'buzz' || /neon/.test(i.t)) && i.on), 0.6),
+      typing: level(has(i => /laptop|computer|typewriter|cyrig|cydeck/.test(i.t) && i.on), 0.55),
+      bubbler: level(has(i => CAT[i.t].tank && !CAT[i.t].tank.pond && (i.on || CAT[i.t].tank.bowl)), 0.5),
+      steam: its.some(i => CAT[i.t].steam) ? 1 : 0,
+      rain: w === 'storm' ? 2 : w === 'rain' ? 1 : 0,
+      wind: w === 'snow' ? 1 : w === 'storm' ? 0.6 : (w === 'clear' && view.ph.night > 0.6 ? 0.4 : 0),
+      crickets: month >= 5 && month <= 7 && view.ph.night > 0.6 && (w === 'clear' || w === 'sakura') ? (view.noWalls ? 1 : 0.6) : 0,
+      birds: meta.phase === 'morning' && (w === 'clear' || w === 'sakura') ? 1 : 0,
+      city: view.noWalls ? 0.8 : its.some(i => CAT[i.t].anim === 'rgb' || /arcade|console|gaming/.test(i.t)) ? 0.55 : 0,
+      cats: its.some(i => i.t === 'cat') ? 1 : 0,
+    };
+  }
   function cuckoo(id) {
     view.pop(id, 2.6); Sound.cuckoo(); setTimeout(() => Sound.cuckoo(), 900);
     const d = new Date();
@@ -779,7 +842,7 @@ function startLofiRooms() {
       const [x, z] = spots[(Math.random() * spots.length) | 0];
       ['p', 'lx', 'lz'].forEach(k => delete it[k]);
       Object.assign(it, { x, z, r: (Math.random() * 4) | 0, tipped: true });
-      changed(); view.poof(it.id, [0xffffff, 0xd8d0c4]); Sound.clatter(); haptic(12);
+      changed(); view.poof(it.id, [0xffffff, 0xd8d0c4]); Sound.clatter(); Sound.scurry(); haptic(12);
       const cat = room.get(sent.id), who = cat ? catName(cat) : 'Someone';
       toast(`<span>${pickOne([`${who} did it`, `${who} knocked the ${CAT[it.t].name.toLowerCase()} over`, `Crash! ${who} looks innocent`, `${who} is pretending nothing happened`])}</span>`, 2000, true);
       discover('culprit');
@@ -816,6 +879,7 @@ function startLofiRooms() {
     if (h === lastHour) return;
     lastHour = h;
     room.items.filter(i => i.t === 'cuckoo').forEach((i, k) => setTimeout(() => cuckoo(i.id), k * 400));
+    if (room.items.some(i => CAT[i.t].anim === 'clock' || CAT[i.t].tap === 'time')) Sound.hourChime();
   }, 15000);
   const CH_NAMES = {
     code: 'Coding…', game: 'Pixel Run', viz: 'Music visualizer', fish: 'Fish screensaver', cartoon: 'Cartoons', nature: 'Nature channel',
@@ -935,7 +999,7 @@ function startLofiRooms() {
         const it = room.add(room.make(d.cand.t, d.cand));
         changed();
         view.boing(it.id); view.poof(it.id, [0xffffff, 0xfff0d0]);
-        Sound.place(); haptic(8);
+        Sound.place(weightOf(it)); haptic(8);
         if (it.t === 'cat') toast(`<span>Say hi to ${(CATS[it.c] || CATS[0]).name}!</span>`, 1600);
       } else { Sound.nope(); toast('<span>That spot is taken</span>', 1100); }
     } else if (d.kind === 'move' && d.combo) {
@@ -947,7 +1011,7 @@ function startLofiRooms() {
       const it = room.get(d.id);
       if (it && d.cand && room.canPlace(d.cand, d.id)) {
         const same = ['x', 'z', 'k', 'u', 'e', 'p', 'lx', 'lz'].every(k => d.cand[k] === d.base[k] || (d.cand[k] == null && d.base[k] == null));
-        if (!same) { pushUndo(); applyPlacement(it, d.cand); changed(); Sound.place(); view.boing(it.id); haptic(6); }
+        if (!same) { pushUndo(); applyPlacement(it, d.cand); changed(); Sound.place(weightOf(it)); view.boing(it.id); haptic(6); }
       } else if (d.cand) { Sound.nope(); toast('<span>That spot is taken</span>', 1100); }
     }
   }
@@ -964,7 +1028,7 @@ function startLofiRooms() {
     } else if (state.tool === 'paint') {
       pushUndo();
       it.c = ((it.c | 0) + 1) % C.vars.length;
-      changed(); view.boing(id); Sound.paint(); haptic(5);
+      changed(); view.boing(id); Sound.tick2(); haptic(5);
       if (it.t === 'cat') toast(`<span>This is ${(CATS[it.c] || CATS[0]).name}</span>`, 1300);
     } else if (state.tool === 'turn') {
       if (C.kind === 'wall') { toast('<span>Wall pieces stay flat against the wall</span>', 1300); Sound.nope(); return; }
@@ -1208,8 +1272,8 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Rooms list & menu
   const sheet = $('#sheet');
-  function closeSheets() { sheet.classList.remove('open'); }
-  $('#bMenu').onclick = () => { renderMenu(); sheet.classList.add('open'); };
+  function closeSheets() { if (sheet.classList.contains('open')) Sound.slide(false); sheet.classList.remove('open'); }
+  $('#bMenu').onclick = () => { renderMenu(); sheet.classList.add('open'); Sound.slide(true); };
   sheet.addEventListener('click', e => { if (e.target === sheet) closeSheets(); });
   $('#brand').onclick = () => {
     const name = prompt('Name this room', room.name);
@@ -1251,7 +1315,7 @@ function startLofiRooms() {
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
     changed(); save(); saveIndex(); saveMeta(); updateHeader();
     toast(`<b>${room.name}</b><span>A fresh room. Your other rooms are in the menu.</span>`, 2400);
-    Sound.arpeggio();
+    Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
   }
   // share codes: a room squeezed into a short text a friend can paste in
   const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -1288,7 +1352,7 @@ function startLofiRooms() {
       h('p', 'muted small', `${code.length} characters`);
       const row = h('div', 'rowbtns');
       row.innerHTML = '<button class="chipbtn" id="bCopyCode">Copy</button>' + (cap && cap.isNativePlatform && cap.isNativePlatform() || navigator.share ? '<button class="chipbtn" id="bSendCode">Send…</button>' : '');
-      row.querySelector('#bCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(code); toast('<span>Code copied</span>', 1200); } catch (e) { ta.select(); document.execCommand('copy'); toast('<span>Code copied</span>', 1200); } };
+      row.querySelector('#bCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(code); } catch (e) { ta.select(); document.execCommand('copy'); } toast('<span>Code copied</span>', 1200); Sound.chime(); };
       const send = row.querySelector('#bSendCode');
       if (send) send.onclick = async () => {
         try {
@@ -1316,7 +1380,7 @@ function startLofiRooms() {
           meta.current = id; undo.length = 0;
           view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
           changed(); save(); saveIndex(); saveMeta(); updateHeader(); closeSheets();
-          toast(`<b>${room.name}</b><span>A friend’s room, now in your list</span>`, 2200); Sound.arpeggio();
+          toast(`<b>${room.name}</b><span>A friend’s room, now in your list</span>`, 2200); Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
         } catch (e) { Sound.nope(); toast('<span>That code doesn’t look right</span>', 1600); }
       };
     });
@@ -1628,7 +1692,7 @@ function startLofiRooms() {
     const liftGoal = state.mode === 'edit' ? (innerWidth < 760 ? 84 : 60) : (innerWidth < 760 ? 24 : 16);
     liftNow += (liftGoal - liftNow) * Math.min(1, dt * 6);
     soundT += dt;
-    if (soundT > 0.3) { Sound.ambience(!!meta.raining, room.items.some(i => i.t === 'fireplace' && i.on), view.ph.night); soundT = 0; }
+    if (soundT > 0.3) { Sound.soundscape(soundState(soundT)); soundT = 0; }
     clockT += dt;
     if (clockT > 20) { clockT = 0; if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); }
     momentT += dt;

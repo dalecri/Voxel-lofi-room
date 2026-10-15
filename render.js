@@ -388,7 +388,7 @@
   R.setRain = function (on) { this.env.rain = on; this.rainGoal = on ? 1 : 0; };
 
   // ---- weather: voxel rain, storms with lightning, snow and sakura petals ----
-  // In a walled room it all falls outside, around the diorama; on an open plot it falls onto it.
+  // It all falls around the diorama, never over the room, so the room stays easy to see.
   const WEATHER = {
     clear: { n: 0 },
     rain: { n: 520, wind: 0.4, kind: 'rain' },
@@ -415,11 +415,11 @@
     for (let i = 0; i < 90; i++) this.wx.splashes.push({ x: 0, z: 0, k: Math.random() });
   };
   // a spot to (re)start a particle: anywhere around the room, never inside a walled one
-  R.wxSpawn = function (p) {
-    const M = 5, walled = !this.noWalls;
-    for (let k = 0; k < 8; k++) {
+  R.wxSpawn = function (p) {   // always outside the room's footprint, so the room itself stays clear
+    const M = 5;
+    for (let k = 0; k < 12; k++) {
       p.x = -M + Math.random() * (N + 2 * M); p.z = -M + Math.random() * (N + 2 * M);
-      if (!walled || p.x < -0.4 || p.z < -0.4 || p.x > N + 0.4 || p.z > N + 0.4) break;
+      if (p.x < -0.6 || p.z < -0.6 || p.x > N + 0.6 || p.z > N + 0.6) break;
     }
     p.y = 12 + Math.random() * 4; p.fresh = false;
   };
@@ -429,7 +429,7 @@
     const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
     const p = {}; this.wxSpawn(p);
     let x = p.x, z = p.z;
-    for (let y = 14; y > (this.noWalls ? 0.3 : -2.5); y -= 0.9) {
+    for (let y = 14; y > -2.5; y -= 0.9) {
       const seg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.05, 0.18), mat);
       x += (Math.random() - 0.5) * 0.8; z += (Math.random() - 0.5) * 0.8;
       seg.position.set(x, y, z); g.add(seg);
@@ -440,11 +440,11 @@
   R.updateWeather = function (dt, t) {
     const W = WEATHER[this.weather || 'clear'], wx = this.wx;
     if (!wx) { if (W.n) this.initWeather(); else return; }
-    const d = wx.dummy, M = 5, walled = !this.noWalls, floorY = this.noWalls ? 0.06 : -3;
+    const d = wx.dummy, M = 5, floorY = -3;
     const scale = Math.min(1.6, (N + 2 * M) * (N + 2 * M) / 400);   // bigger plots get more
     const n = Math.min(wx.parts.length, Math.round(W.n * scale));
     ['rain', 'snow', 'petal'].forEach(k => { wx[k].count = W.kind === k ? n : 0; });
-    wx.splash.count = W.kind === 'rain' && this.noWalls ? wx.splashes.length : 0;
+    wx.splash.count = 0;   // nothing lands in the room, so no splashes on its floor
     if (W.n) {
       const mesh = wx[W.kind], boost = W.boost || 1, wind = W.wind;
       for (let i = 0; i < n; i++) {
@@ -453,7 +453,7 @@
         if (W.kind === 'rain') { p.y -= (14 + p.v * 6) * boost * dt; p.x += wind * 4.5 * dt; }
         else if (W.kind === 'snow') { p.y -= (1.5 + p.v * 1.2) * dt; p.x += (wind * 1.4 + Math.sin(t * 2 + p.ph) * 0.5) * dt; p.z += Math.cos(t * 1.6 + p.ph) * 0.35 * dt; }
         else { p.y -= (1.1 + p.v * 0.8) * dt; p.x += (wind * 2 + Math.sin(t * 2.5 + p.ph) * 0.9) * dt; p.z += Math.cos(t * 2 + p.ph) * 0.6 * dt; }
-        const inside = walled && p.x > -0.3 && p.z > -0.3 && p.x < N + 0.3 && p.z < N + 0.3 && p.y < 7.6;
+        const inside = p.x > -0.4 && p.z > -0.4 && p.x < N + 0.4 && p.z < N + 0.4;   // drifted over the room: start again outside
         if (p.y < floorY || inside || p.x < -M - 1 || p.x > N + M + 1) this.wxSpawn(p);
         d.position.set(p.x, p.y, p.z);
         if (W.kind === 'rain') { d.rotation.set(0, 0, -wind * 0.22); const l = 0.55 * boost; d.scale.set(0.045, l, 0.045); }
@@ -1017,7 +1017,7 @@
         P.x = h.x0 + (h.x1 - h.x0) * k; P.z = h.z0 + (h.z1 - h.z0) * k;
         P.y = h.y0 + (h.y1 - h.y0) * k + Math.sin(k * Math.PI) * (0.5 + Math.abs(h.y1 - h.y0) * 0.35);
         squash = 1 + Math.sin(k * Math.PI) * 0.12;
-        if (k >= 1) { P.hop = null; P.y = h.y1; P.state = h.then; P.timer = h.stay; }
+        if (k >= 1) { P.hop = null; P.y = h.y1; P.state = h.then; P.timer = h.stay; if (h.y1 < h.y0 - 0.2 && this.hooks.catLand && !P.robot) this.hooks.catLand(); }
       } else if (P.state === 'walk' && P.path && P.path.length) {
         const [tx, tz] = P.path[0];
         const dx = tx - P.x, dz = tz - P.z, d = Math.hypot(dx, dz);
@@ -1035,7 +1035,9 @@
           else if (P.watch != null) { P.heading = P.watch; P.watch = null; P.state = 'sit'; P.timer = 10 + Math.random() * 14; }   // watching the rain
           else {
             const rainy = this.env.rain ? 1.8 : 1;   // rainy days are for naps
-            P.state = !P.robot && (Math.random() < 0.3 * rainy || this.blanketAt(P)) ? 'nap' : 'sit';
+            P.state = !P.robot && (Math.random() < 0.3 * rainy || this.blanketAt(P) || (P.bed && Math.random() < 0.8)) ? 'nap' : 'sit';
+            if (P.state === 'nap' && P.bed && this.walk && this.walk[Math.floor(P.z) * N + Math.floor(P.x)] === 2 && this.hooks.catSigh) this.hooks.catSigh();   // claims the cat bed
+            P.bed = false;
             P.timer = P.state === 'nap' ? (8 + Math.random() * 10) * (this.blanketAt(P) ? 3 : 1) * (this.env.rain ? 1.5 : 1) : P.robot ? 0.5 + Math.random() * 2 : 2 + Math.random() * 4;
           }
         }

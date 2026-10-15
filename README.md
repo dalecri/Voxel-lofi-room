@@ -101,6 +101,20 @@ Then open http://localhost:5180.
 - **Music that follows your day.** The radio picks a mood for the time of day: morning bossa, afternoon chillhop, evening lofi, night ambient, and jazz when it rains. Jukeboxes cycle through the moods, or back to following the day, and vinyl records pick one.
   - While it plays, fairy lights, LED strips and RGB pieces pulse on the beat.
   - The ultrawide and the computer have a visualizer channel that dances to it.
+- **A room that sounds like itself.** There are no ambience switches; the mix comes from what's in the room, and every layer fades in and out smoothly.
+  - **From the furniture and things that are on:** a crackling fire, a clock ticking, faint neon buzz, keyboard clacks when a computer is on, the fish tank bubbler, the odd hiss from a hot mug.
+  - **From the weather:** rain on the glass, a heavy storm with distant thunder, soft wind for snow and clear nights, crickets on summer nights, birds in the morning.
+  - **Always there:** a barely-there room tone, rare house creaks, a distant city hum in scenes and gamer setups, and the rare soft meow.
+  - **In cat view:** sounds are louder the closer you are, so the fire gets louder as you walk up to it.
+  - **Taps sound like the thing:**
+    - lamps click (each style a little different), neon crackles on, fires whoosh (bigger the first time in a room), candles strike a match
+    - sofas poof, desk chairs squeak, beds rustle, books flip, curtains swish, mugs sip softly, plants get a trickle
+    - the piano plays the next notes of a tune, and wall clocks chime on the hour
+  - **Decorating:**
+    - placing lands with a weight-matched thud: a mug clinks, a wardrobe thuds
+    - removing is a papery poof, and invalid spots get a gentle bonk
+    - wall paint rolls, floors get brushed, colour swaps click
+  - **Cats:** they thump when they jump down, crash and scurry when they knock things over, and sigh when they claim a cat bed.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and a soft vinyl crackle (switch it off in Settings), all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. At night the lamps light the room.
   - Tap the cloud to cycle the weather: **clear**, **rain**, **storm**, **snow** and **sakura**.
