@@ -432,6 +432,9 @@
     .brand { padding: 8px 10px 9px; }
     .tips { grid-template-columns: 1fr; }
   }
+  .widget-private { position: fixed; z-index: 4; pointer-events: none; transform: translate(-50%, -100%); border: 1px solid var(--line); border-radius: 7px; padding: 2px 6px; background: var(--panel-solid); color: var(--ink); font: 700 10px var(--font); }
+  .widget-news a { display: flex; flex-direction: column; gap: 6px; padding: 16px 12px; margin: 8px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--chip); color: var(--ink); text-decoration: none; }
+  .widget-news a span { font-size: 12px; color: var(--ink-dim); }
 </style>
 </head>
 <body class="exploring">
@@ -548,6 +551,7 @@
 <script defer src="life.js"></script>
 <script defer src="rituals.js"></script>
 <script defer src="companion.js"></script>
+<script defer src="widgets.js"></script>
 <script defer src="render.js"></script>
 <script defer src="care.js"></script>
 <script defer src="main.js"></script>

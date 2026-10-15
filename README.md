@@ -194,6 +194,16 @@ Logic regressions run with `node --test tests/*.test.cjs`. For the browser flows
 
 Ritual tests are included in `node --test tests/*.test.cjs`. After `npm run build`, run `python3 tests/rituals-browser.py` to check candle visuals and persistence, exact durations, cancellation, breathing lighting and controls, synchronized cues, mute and reload behavior.
 
+## Private ambient widgets
+
+Place a **Mini fridge** and **Newspaper** from Kitchen & drinks. The fridge carries a French word, English translation and example sentence from 30 built-in entries. It changes at local midnight without a network request; tap the fridge to read the note. The newspaper shows CBC News Top Stories; tap it for a reading sheet with article links that open in a new tab.
+
+`widgets.js` owns the `WIDGETS` registry, refresh rules, private surface rendering and `lr.widgets` storage. Widgets attach automatically to their furniture, and never write data into room items. Newspaper requests go directly to CBC at most once per hour, including failed attempts and reloads. Last good headlines persist with their timestamp and a “cached” label when stale or offline. With no cache, the sheet quietly says there are no cached headlines yet. Browser CORS or network policy can prevent a live CBC fetch; there is no proxy or second network source.
+
+Decorating shows a small **private** badge on widget furniture. Shared LR0/LR1 codes retain the ordinary furniture but exclude widget content, caches and timestamps. Sharing projects only existing decor fields, including furniture seeds, while retaining the existing compression and import format. The room-level seed and guest notes stay excluded. A recipient gets their own local word and newspaper cache. There are no widget settings, write actions, Tasks or Calendar integrations.
+
+Run `node --test tests/*.test.cjs`; after `npm run build`, run `python3 tests/widgets-browser.py` for physical surfaces, midnight rotation, hourly caching, safe reading links, mobile layouts and actual LR0/LR1 fresh-session import checks. CBC success and failure responses in this test are controlled fixtures.
+
 ## Little bot companion
 
 A single tiny robot companion follows the current room without entering the furniture catalog, room saves, placement grid, or cats’ entity map. Its glowing mint head, pixel smile, dark teal armor, sage shoulder caps, chunky hands and little boots use the same voxel builder and mesher as the room. The provisional display name lives in one constant, `DISPLAY_NAME` in `companion.js`; its internal id is `lampbot`.

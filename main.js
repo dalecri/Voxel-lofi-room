@@ -18,7 +18,8 @@ function startLofiRooms() {
   const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); } });
   const rituals = LRRituals.create({ store });
   let breathCamera = null;
-  let companion = null;
+  let companion = null, widgetView = null;
+  const widgets = LRWidgets.create({ store });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -645,6 +646,7 @@ function startLofiRooms() {
       else { rituals.light(meta.current, id); Sound.matchStrike(); updateRituals(); toast('<span>A little flame for 25 quiet minutes. Tap it again to snuff it whenever you like.</span>', 3200); }
       return;
     }
+    if (tap === 'newspaper') { newspaperSheet(); return; }
     if (tap === 'shop') { openShop(id); return; }
     if (tap === 'crown') { crownSheet(); return; }
     if (care) setTimeout(() => care.tick(0), 60);   // reflect a caring tap right away
@@ -810,7 +812,7 @@ function startLofiRooms() {
     }
     if (tap === 'door') {
       view.openDoor(id);
-      if (it.t === 'minifridge') { Sound.fridge(true); setTimeout(() => Sound.fridge(false), 2700); toast(`<span>${pickOne(['Grabbed a cold soda', 'Just looking…', 'Midnight snack time', 'Oat milk, nice'])}</span>`, 1500); }
+      if (it.t === 'minifridge') { Sound.fridge(true); setTimeout(() => Sound.fridge(false), 2700); fridgeNoteSheet(); }
       else { Sound.creak(); setTimeout(() => Sound.creak(), 2600); toast(`<span>${pickOne(['What to wear…', 'So many sweaters', 'Found a lost sock'])}</span>`, 1500); }
       return;
     }
@@ -1758,8 +1760,7 @@ function startLofiRooms() {
     return new Uint8Array(await new Response(stream).arrayBuffer());
   }
   async function roomCode() {
-    const d = room.serialize(); delete d.seed;
-    d.items = d.items.filter(i => i.t !== 'guestnote');            // notes friends left you stay private
+    const d = LRWidgets.shareDecor(room.serialize());
     if (isSaved()) d.gid = meta.current;                            // so a guest's note finds its way back to this room
     d.items = d.items.map(i => { const o = Object.assign({}, i); if (!o.c) delete o.c; if (!o.r) delete o.r; if (!o.on) delete o.on; return o; });   // drop the defaults
     const raw = new TextEncoder().encode(JSON.stringify(d));
@@ -1779,6 +1780,32 @@ function startLofiRooms() {
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab'); h('h2', '', title); h('p', 'muted', sub);
     build(h); sheet.classList.add('open');
+  }
+  function fridgeNoteSheet() {
+    widgets.refresh(['minifridge']);
+    const data = widgets.data('fridge-note');
+    codeSheet('Un mot par jour', 'A little French, on the fridge.', h => {
+      h('h2').textContent = data.word;
+      h('p').textContent = data.translation;
+      h('p', 'muted').textContent = data.example;
+    });
+  }
+  function newspaperSheet() {
+    codeSheet('The newspaper', 'CBC News · Top stories', h => {
+      const panel = h('div', 'widget-news');
+      function render() {
+        const data = widgets.data('newspaper'); panel.replaceChildren();
+        const note = document.createElement('p'); note.className = 'muted';
+        note.textContent = data.cached ? 'cached · Last good headlines' : data.headlines.length ? 'Your quiet catch-up.' : 'No headlines cached yet. CBC will be checked again later.';
+        panel.appendChild(note);
+        data.headlines.forEach(row => {
+          const link = document.createElement('a'); link.href = row.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+          const title = document.createElement('b'), source = document.createElement('span');
+          title.textContent = row.title; source.textContent = row.source; link.append(title, source); panel.appendChild(link);
+        });
+      }
+      render(); widgets.refresh(['newspaper']).then(() => { if (panel.isConnected) render(); });
+    });
   }
   async function shareSheet() {
     const code = await roomCode();
@@ -2455,19 +2482,22 @@ function startLofiRooms() {
       view.catMove(f, sd, dt);
     }
     view.beat = meta.music && !stream ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
-    if (!filming) view.frame(dt, t);
+    if (!filming) { view.frame(dt, t); if (widgetView) widgetView.frame(); }
     requestAnimationFrame(loop);
   }
 
   window.addEventListener('resize', () => view.resize());
   companion = LRCompanion.create({ view, room, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
+  widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => filming || document.hidden || $('#photo').classList.contains('open'), open: newspaperSheet });
   updateHeader();
   setMode(state.mode, true);
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
-(window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);
+// Module dependencies can finish after classic deferred scripts on a cold load.
+const rendererReady = window.THREE ? Promise.resolve() : new Promise(resolve => window.addEventListener('lofi-renderer-ready', resolve, { once: true }));
+Promise.all([rendererReady, window.Store ? window.Store.ready : Promise.resolve()]).then(startLofiRooms);

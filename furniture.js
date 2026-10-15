@@ -373,6 +373,15 @@
       m.part('door', [0, 1, 7], 'y').box(0, 1, 7, 8, 14, 8, shade(c, 0.97)).box(6, 6, 8, 7, 11, 9, CHROME);
     },
   });
+  def('newspaper', {
+    name: 'Newspaper', kind: 'small', group: 'kitchen', size: [1, 1], tap: 'newspaper', vars: [[]],
+    build(m) {
+      m.box(0, 0, 0, 8, 1, 8, 0xeee6d7);
+      m.box(1, 1, 1, 7, 2, 2, 0x55504c);
+      m.box(1, 1, 3, 3, 2, 6, 0xb8b3a8);
+      for (let z = 3; z < 7; z += 2) m.box(4, 1, z, 7, 2, z + 1, 0x999387);
+    },
+  });
   def('teacup', {
     name: 'Tea cup', kind: 'small', group: 'kitchen', size: [1, 1], tap: 'sip', steam: [4, 4, 4], steamRate: 0.9,
     vars: [[0xf4f0e8, 0x7ab0d8], [0xf0b4c0, 0xffffff], [0x9ad0c8, 0xf4f0e8], [0xf2c14e, 0xffffff]],
