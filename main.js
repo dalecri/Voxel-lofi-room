@@ -987,10 +987,23 @@ function startLofiRooms() {
     if (st.gen) Sound.setMusic(true);
     else {
       Sound.setMusic(false);
-      stream = new Audio(); stream.preload = 'none'; stream.src = st.url;
-      const fail = () => { if (!stream) return; stopStream(); toast(`<span>Can’t reach ${st.name}, back to Lofi radio</span>`, 2400, true); playStation(0, true); failedAt = i; };
-      stream.onerror = fail;
-      const pr = stream.play(); if (pr && pr.catch) pr.catch(fail);
+      // try the link as pasted, then once over the other scheme: plenty of Icecast servers only answer on
+      // one of them, or redirect a secure link to a plain one (which Android's WebView won't follow)
+      const urls = [st.url, st.url.replace(/^https?:/i, m => (m.toLowerCase() === 'https:' ? 'http:' : 'https:'))];
+      const why = e => { const code = stream && stream.error && stream.error.code; return code === 2 ? 'network error' : code === 4 ? 'no stream at that link' : e && e.name === 'NotAllowedError' ? 'playback blocked' : 'no answer'; };
+      const tryUrl = k => {
+        stream = new Audio(); stream.preload = 'none'; stream.src = urls[k];
+        const me = stream;
+        const fail = e => {
+          if (stream !== me) return;
+          if (k + 1 < urls.length && (!e || e.name !== 'NotAllowedError')) { me.onerror = null; try { me.pause(); } catch (x) { /* already stopped */ } tryUrl(k + 1); return; }
+          const reason = why(e);
+          stopStream(); toast(`<span>Can’t reach ${st.name} (${reason}), back to Lofi radio</span>`, 2600, true); playStation(0, true); failedAt = i;
+        };
+        me.onerror = () => fail(null);
+        const pr = me.play(); if (pr && pr.catch) pr.catch(fail);
+      };
+      tryUrl(0);
       Sound.setStream(true); Sound.needle();
     }
     view.music = true; saveMeta(); updateHeader();
