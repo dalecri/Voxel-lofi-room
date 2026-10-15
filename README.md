@@ -168,6 +168,42 @@ Then open http://localhost:5180.
 - **Night glow.** After dark, neon signs, fairy lights, screens, the fire and its embers bloom with a soft glow (three.js `UnrealBloomPass`). It fades in at dusk and is off in daylight, so the day looks and runs exactly as before. Switch it off in Settings if your phone runs warm.
 - **Undo** for everything. Rooms save automatically, and in the app they live in an on-device SQLite database.
 
+## Fireflies and the traveling merchant
+
+Fireflies are earned through cozy play, with no money purchases or ads. Everyone starts with a one-time 30-Firefly purse. A new cozy moment earns 5, the Daily Moment earns 15, and watering earns 2 per plant per local calendar day (including watering at a sink). Regular earnings stop at 50 per day; every seventh consecutive Daily Moment adds a full 25 bonus outside that allowance. Repeated discoveries and repeated watering of the same plant do not pay again.
+
+**Mallow, the traveling merchant cat**, wanders in with three random cosmetic wares from the 40–200 Firefly collection. He has a hat and purple satchels: tap him to browse, or use **Traveling merchant** in the menu. Cozier rooms welcome him a little sooner. His offers stay the same across reloads, and he lingers while you browse. Once he heads out, he can return on another local calendar day. There are no countdowns, sales, or permanently missable wares. The Visitors setting also controls merchant visits. Existing night-market stalls remain decorative and show his current visit status when tapped.
+
+Purchases unlock permanently in the normal picker; rare finishes appear under Paint. All existing functional pieces stay free. Existing Firefly balances, crowns, finishes, and other purchases carry over. Visits use `lr.merchant`, separate from your room saves, and the visiting merchant never gets saved as furniture.
+
+The cat crown is a placeable collectible: tap it to equip or remove crowns, or use Move to drop it onto a cat. Save the room to keep their outfits. The petal keepsake and firefly lantern toggle room-wide cosmetic particles when tapped. Fireflies and permanent ownership use the existing Store (`lr.fireflies`, `lr.shopOwned`); the local-day allowance and watering credits use `lr.fireflyDay`.
+
+## The cats’ version, and life outside
+
+The menu’s **Room journal** has two feeds: the existing cozy moments and **The cats’ version**. Cats write timestamped first-person notes when they knock things over, nap in a sunbeam, watch rain, accept pets, forgive you, eat, or notice Mallow. Their diary is saved as `lr.catJournal`, holds the latest 120 entries, and spaces out repeated entries from the same activity. It never changes your moment discoveries or earns extra Fireflies.
+
+During quiet Explore play, ambient events happen on their own: a butterfly visits a window on a clear morning or day, a distant train passes with a low rumble, or leaves skitter outside the room. They add no prompts or rewards. Editing, menus, photo capture and hidden tabs pause new events; Sound controls their audio. The short-lived visuals clean themselves up and never enter a saved room.
+
+Logic regressions run with `node --test tests/*.test.cjs`. For the browser flows, run `npm run build`, then `python3 tests/shop-browser.py` and `python3 tests/life-browser.py` (Python Playwright and Chromium required; set `CHROMIUM_PATH` if Chromium is not at `/usr/bin/chromium`). These check the economy, purchases and permanent unlocks, merchant visits and returns, cat journal persistence, ambient visuals and cleanup, sound muting, and reload behavior.
+
+## Quiet rituals
+
+**Focus ritual candle** is a free piece in Decorate → Lights. Place it in your room and tap to light it for 25 minutes. The wax and flame slowly lower, it gutters for the last 30 seconds, then goes out with a soft chime. Tap a burning candle to snuff it early. Relighting begins a fresh session. Timing is stored through Store in `lr.focusRituals`, separately from the room, and survives reloads and time away. Ordinary candles keep their existing three-hour care cycle. A browser or app suspended in the background catches up when it returns; a finished session is acknowledged only once.
+
+**Breathing room** is in the main menu. Settle in for ten minutes of moon-blue light, a circle floating in the center of your room, and a gentle tone that follows it. The cycle is four seconds in and six out, with no holds; follow at your own pace. Back to my room, Escape, or Android Back ends it early. Completion restores the room too. The mode leaves your room, weather, clock settings and dream mode intact. Sound settings apply to the tone and completion chimes. New visitor, mischief and ambient events pause during the session. Reload returns to the ordinary room without restarting audio.
+
+Ritual tests are included in `node --test tests/*.test.cjs`. After `npm run build`, run `python3 tests/rituals-browser.py` to check candle visuals and persistence, exact durations, cancellation, breathing lighting and controls, synchronized cues, mute and reload behavior.
+
+## Lamp-bot companion
+
+A single tiny lamp companion follows the current room without entering the furniture catalog, room saves, placement grid, or cats’ entity map. Its ivory dome, stubby legs, amber bulb face and antenna use the same voxel builder and mesher as the room. The provisional display name lives in one constant, `DISPLAY_NAME` in `companion.js`; its internal id is `lampbot`.
+
+It putters and pauses, perches on the nearest desk while decorating, watches the nearest window in rain, and bops to the music’s beat. After 10pm it dims and sleeps until morning, with occasional little “z” particles. Taps and newly discovered cozy moments get a happy hop. Cats and interactive room pieces always get tap priority; decorating never targets the companion.
+
+Its 50 fixed lines respond to the existing dayparts, rain, snow, clear skies, taps and moments, with rare idle remarks. Speech lasts about four seconds and automatic bubbles are spaced at least 45 seconds apart. Taps and moments can bypass that cooldown. Quiet rituals suppress chatter. Movement and line selection are deterministic; there are no network calls, generated text, tasks or external integrations.
+
+Run `node --test tests/*.test.cjs` and, after `npm run build`, `python3 tests/companion-browser.py` for the companion checks, including mobile layouts and input priority.
+
 ## Controls
 
 | | Phone | Computer |

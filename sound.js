@@ -114,6 +114,31 @@
       if (this.on) { this.init(); this.ctx && this.ctx.resume(); } else if (this.ctx) this.ctx.suspend();
     },
     ready() { return this.on && this.ctx && this.ctx.state === 'running'; },
+    ritualChime() {
+      if (!this.ready()) return;
+      const t = this.ctx.currentTime;
+      this.tone(523.25, t, 2.4, 0.028, 'sine', 0.15);
+      this.tone(659.25, t + 0.18, 2.2, 0.016, 'sine', 0.2);
+    },
+    breathTone(level, enabled) {
+      if (!enabled || !this.ready()) {
+        if (this.breathVoice) {
+          const { oscillator, gain } = this.breathVoice, t = this.ctx.currentTime;
+          gain.gain.cancelScheduledValues(t); gain.gain.setTargetAtTime(0, t, 0.08);
+          oscillator.stop(t + 0.4); oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+          this.breathVoice = null;
+        }
+        return;
+      }
+      if (!this.breathVoice) {
+        const oscillator = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        oscillator.type = 'sine'; gain.gain.value = 0;
+        oscillator.connect(gain); gain.connect(this.master); oscillator.start(); this.breathVoice = { oscillator, gain };
+      }
+      const t = this.ctx.currentTime;
+      this.breathVoice.oscillator.frequency.setTargetAtTime(174 + level * 22, t, 0.08);
+      this.breathVoice.gain.gain.setTargetAtTime(0.012 + level * 0.013, t, 0.08);
+    },
 
     // ---- the band ----
     setMusic(on) {
@@ -427,6 +452,15 @@
     beep() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(1200, t, 0.08, 0.05, 'square'); this.tone(1600, t + 0.1, 0.1, 0.05, 'square'); },
     flip() { if (!this.ready()) return; for (let k = 0; k < 3; k++) setTimeout(() => this.burst(0.06, 0.12, 'bandpass', 1800), k * 90); },
     rustle() { if (!this.ready()) return; for (let k = 0; k < 4; k++) setTimeout(() => this.burst(0.15, 0.06, 'highpass', 3000), k * 70); },
+    ambientEvent(kind) {
+      if (!this.ready() || kind === 'butterfly') return;
+      if (kind === 'leaves') { this.soft(1.5, 0.018, 'highpass', 2200, 0, 0.4); return; }
+      if (kind !== 'train') return;
+      const ctx = this.ctx, t = ctx.currentTime, src = ctx.createBufferSource(); src.buffer = this.noise; src.loop = true;
+      const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 180;
+      const gain = ctx.createGain(); gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(0.065, t + 2.5); gain.gain.exponentialRampToValueAtTime(0.0001, t + 8);
+      src.connect(filter); filter.connect(gain); gain.connect(this.master); src.start(t); src.stop(t + 8.1);
+    },
     drip() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(900 + Math.random() * 500, t + k * 0.18, 0.08, 0.05); o.frequency.exponentialRampToValueAtTime(1800, t + k * 0.18 + 0.06); } this.burst(0.6, 0.05, 'bandpass', 2500); },
     bell() { if (!this.ready()) return; const t = this.ctx.currentTime; [0, 0.28].forEach(d => { this.tone(1318.5, t + d, 0.9, 0.06, 'triangle'); this.tone(2637, t + d, 0.5, 0.02, 'sine'); }); },
     puff() { if (!this.ready()) return; this.gurgle(9); this.burst(1, 0.04, 'lowpass', 500); },

@@ -15,6 +15,10 @@ function startLofiRooms() {
     set(k, v) { put(k, JSON.stringify(v)); },
     del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
   };
+  const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); } });
+  const rituals = LRRituals.create({ store });
+  let breathCamera = null;
+  let companion = null;
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -102,7 +106,7 @@ function startLofiRooms() {
   // (so closing the app never loses anything) but your home (lr.rooms and lr.room.<id>) only changes when
   // you tap Save. New rooms, surprise rooms and friends' rooms start out unsaved.
   // An edit is a change to what's built: lamps switched on or a cat wandering don't count.
-  const sig = () => JSON.stringify([room.name, room.n, room.wall, room.floor, room.items.filter(i => !i.visitor).map(i => [i.t, i.x, i.z, i.k, i.u, i.e, i.r | 0, i.c | 0, i.link || 0])]);
+  const sig = () => JSON.stringify([room.name, room.n, room.wall, room.floor, room.items.filter(i => !i.visitor).map(i => [i.t, i.x, i.z, i.k, i.u, i.e, i.r | 0, i.c | 0, i.link || 0, ...(i.crown ? ['crown'] : [])])]);
   let baseSig = '';
   const isSaved = () => rooms.some(r => r.id === meta.current);
   const isEdited = () => sig() !== baseSig;
@@ -126,6 +130,7 @@ function startLofiRooms() {
   const bg = $('#bg'), stars = $('#stars');
   let liftNow = 40;
   const view = new LRRender.Renderer($('#c'), {
+    catActivity(id, kind) { recordCat(room.get(id), kind); },
     catViewEnded() { document.body.classList.remove('catcam'); },
     catLand() { Sound.thump(0.5); },
     catSigh() { Sound.sigh(); },
@@ -140,7 +145,7 @@ function startLofiRooms() {
   });
   view.glowOn = meta.glow !== false;
   // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
-  const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
+  const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), watered: it => shop.earn('water', `${meta.current}:${it.id}`), changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
   const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
 
@@ -175,7 +180,7 @@ function startLofiRooms() {
   let toastBusy = 0;
   function toast(html, ms, now, cls) {
     if (now) { toastQ.length = 0; toastBusy = 0; document.querySelectorAll('#toasts .toast').forEach(el => el.remove()); }   // drag hints jump the queue
-    if (performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms, false, cls]); return; }
+    if (cls !== 'firefly' && performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms, false, cls]); return; }
     toastBusy = performance.now() + Math.min(ms || 3200, 1500);
     setTimeout(() => { if (toastQ.length) toast(...toastQ.shift()); }, Math.min(ms || 3200, 1500) + 50);
     const el = document.createElement('div');
@@ -229,6 +234,14 @@ function startLofiRooms() {
     delete meta.daily; saveMeta();
   })();
   ensureDaily();
+  const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog });
+  const catJournal = LRLife.journal({ store });
+  const ambientLife = LRLife.ambience({ random: () => Math.random() });
+  let merchantCat = null, journalFeed = 'moments';
+  function recordCat(cat, kind, thing) {
+    if (!cat || cat.t !== 'cat' || cat.visitor) return;
+    if (catJournal.write({ ...cat, name: catName(cat) }, kind, meta.current, thing) && $('#catDiary')) renderJournal();
+  }
   const dailyInfo = () => { const D = ensureDaily(); const r = DAILY.find(x => x[0] === D.id) || DAILY[0]; const M = MOMENTS.find(x => x[0] === D.id); return { D, name: M ? M[1] : D.id, hint: r[1] }; };
   function dailyCheck(key) {
     const { D, name } = dailyInfo();
@@ -237,6 +250,8 @@ function startLofiRooms() {
     const S = store.get('lr.dailyStreak', { n: 0, last: '' });
     S.n = S.last === yesterday() ? S.n + 1 : S.last === D.date ? S.n : 1; S.last = D.date;
     store.set('lr.dailyStreak', S);
+    shop.earn('daily');
+    if (S.n > 0 && S.n % 7 === 0) shop.earn('streak');
     const log = store.get('lr.dailyLog', []);
     log.unshift({ date: D.date, id: D.id }); store.set('lr.dailyLog', log.slice(0, 60));   // the journal, newest first
     setTimeout(() => {
@@ -252,6 +267,8 @@ function startLofiRooms() {
     const d = MOMENTS.find(x => x[0] === key);
     if (!d) return;
     found.add(key); store.set('lr.found', [...found]);
+    if (companion) companion.celebrate(key);
+    shop.earn('moment');
     toast(`<b>✦ ${d[1]}</b><span>${d[2]}</span>`, 3800);
     Sound.chime(); if (key === 'cozy') setTimeout(() => Sound.arpeggio(), 600);
     updateHeader();
@@ -338,7 +355,7 @@ function startLofiRooms() {
     };
     if (state.tool === 'add') {
       GROUPS.forEach(([k, label]) => tab(label, state.group === k, () => { state.group = k; }));
-      Object.values(CAT).filter(C => C.group === state.group).forEach(C => {
+      Object.values(CAT).filter(C => C.group === state.group && shop.available(C)).forEach(C => {
         const b = document.createElement('button');
         b.className = 'swatch' + (state.add === C.key ? ' on' : '');
         const name = C.kind === 'pet' ? 'Cats' : C.name;
@@ -355,7 +372,7 @@ function startLofiRooms() {
       tab('Window view', state.paintTab === 'view', () => { state.paintTab = 'view'; });
       const wc = (WALL_COLORS[room.wall.color] || WALL_COLORS[0])[1];
       if (state.paintTab === 'walls') {
-        Object.entries(WALLS).forEach(([k, W]) => {
+        Object.entries(WALLS).filter(([, W]) => shop.available(W)).forEach(([k, W]) => {
           const b = document.createElement('button'); b.className = 'swatch' + (room.wall.style === k ? ' on' : '');
           b.appendChild(swatchCanvas((x, y) => W.fn(wc, x + 64, y + 2)));
           b.insertAdjacentHTML('beforeend', `<span>${W.label}</span>`);
@@ -392,7 +409,7 @@ function startLofiRooms() {
           row.appendChild(b);
         });
       } else {
-        Object.entries(FLOORS).forEach(([k, Fl]) => {
+        Object.entries(FLOORS).filter(([, Fl]) => shop.available(Fl)).forEach(([k, Fl]) => {
           const b = document.createElement('button'); b.className = 'swatch' + (room.floor.style === k ? ' on' : '');
           b.appendChild(swatchCanvas((x, y) => Fl.fn(x + 64, y + 64)));
           b.insertAdjacentHTML('beforeend', `<span>${Fl.label}</span>`);
@@ -410,6 +427,7 @@ function startLofiRooms() {
   }
   function pickAdd(key, fromTray) {
     const C = CAT[key];
+    if (!C || !shop.available(C)) return;
     state.add = key; state.addR = null;
     renderTray(); Sound.turn(); refreshGhost();
     if (fromTray || !FINE) toast(`<span>${FINE ? 'Click' : 'Tap'} the room to place ${C.kind === 'pet' ? 'a cat' : 'the ' + C.name.toLowerCase()}</span>`, 1400);
@@ -453,7 +471,8 @@ function startLofiRooms() {
   // keyboard: step through the tray (←/→) and its tabs (↑/↓)
   function stepTray(dir) {
     if (state.tool === 'add') {
-      const list = Object.values(CAT).filter(C => C.group === state.group);
+      const list = Object.values(CAT).filter(C => C.group === state.group && shop.available(C));
+      if (!list.length) return;
       const i = list.findIndex(C => C.key === state.add);
       pickAdd(list[(i + dir + list.length) % list.length].key);
     } else {
@@ -467,7 +486,7 @@ function startLofiRooms() {
     if (state.tool === 'add') {
       const i = GROUPS.findIndex(g => g[0] === state.group);
       state.group = GROUPS[(i + dir + GROUPS.length) % GROUPS.length][0];
-      const first = Object.values(CAT).find(C => C.group === state.group);
+      const first = Object.values(CAT).find(C => C.group === state.group && shop.available(C));
       if (first) state.add = first.key;
       state.addR = null;
     } else {
@@ -621,13 +640,21 @@ function startLofiRooms() {
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     const tap = C.tap;
+    if (tap === 'focus') {
+      if (rituals.focus(meta.current, id).active) focusSheet(it);
+      else { rituals.light(meta.current, id); Sound.matchStrike(); updateRituals(); toast('<span>A little flame for 25 quiet minutes. Tap it again to snuff it whenever you like.</span>', 3200); }
+      return;
+    }
+    if (tap === 'shop') { openShop(id); return; }
+    if (tap === 'crown') { crownSheet(); return; }
     if (care) setTimeout(() => care.tick(0), 60);   // reflect a caring tap right away
     if (care && care.tap(it, id)) return;
     if (tap === 'toggle') {
       pushUndo(); it.on = !it.on; changed();
+      if (C.roomEffect) { toast(`<span>${C.name}: ${it.on ? 'on' : 'off'}</span>`, 1400); return; }
       toggleSound(it, C);
       if (it.on && C.light) discover('light');
-      if (it.on && it.t === 'fireplace') discover('fire');
+      if (it.on && C.anim === 'fire') discover('fire');
       return;
     }
     // a declarative tap any piece can describe with fx: { toggle, say, sayOn, sayOff, burst, secs, sfx, sparkle, excite, spin, door, moment }
@@ -704,6 +731,7 @@ function startLofiRooms() {
     if (tap === 'music') { nextStation(); return; }
     if (tap === 'pet') {
       const P = CATS[it.c] || CATS[0], nm = it.name || P.name, mood = care ? care.petCat(it) : 'content';
+      recordCat(it, mood === 'ignore' || mood === 'ignore2' ? 'ignore' : mood === 'forgive' ? 'forgive' : 'pet');
       if (mood === 'ignore' || mood === 'ignore2') {   // neglected cats don't suffer, they get dramatic
         view.excite(id);
         toast(`<span>${mood === 'ignore' ? pickOne([`${nm} pointedly ignores you`, `${nm} turns away with a flick of the tail`, `${nm} stares at the wall instead`]) : pickOne([`${nm} is still thinking about it`, `${nm} allows one ear to swivel your way`])}</span>`, 1600);
@@ -935,7 +963,7 @@ function startLofiRooms() {
   const catName = it => it.name || (CATS[it.c] || CATS[0]).name;
   // mischief: now and then a cat wanders over and knocks something off a table
   function mischief() {
-    if (meta.mischief === false || state.mode !== 'explore' || state.drag || !room.items.some(i => i.t === 'cat' && !i.visitor)) return;
+    if (rituals.breath.active || meta.mischief === false || state.mode !== 'explore' || state.drag || !room.items.some(i => i.t === 'cat' && !i.visitor)) return;
     const pick = room.items.filter(i => {
       const C = CAT[i.t], o = i.p && room.get(i.p);
       return o && !i.tipped && CAT[o.t].kind !== 'wall' && CAT[o.t].kind !== 'small' && (typeof CAT[o.t].top !== 'function' ? CAT[o.t].top : 12) <= 22 && C.size[0] === 1 && !C.light && !C.tank && !C.screen && !room.descendants(i.id).length;
@@ -945,7 +973,7 @@ function startLofiRooms() {
     const sent = view.sendCat(view.spotsAround(owner));
     if (!sent) return;
     const knock = P => {
-      if (!room.get(it.id) || it.p !== owner.id) return;
+      if (!room.items.includes(it) || it.p !== owner.id) return;
       const spots = view.spotsAround(owner).filter(([x, z]) => !(Math.floor(P.x) === x && Math.floor(P.z) === z) && room.canPlace({ t: it.t, x, z, r: 0, id: -1 }));
       if (!spots.length) return;
       const [x, z] = spots[(Math.random() * spots.length) | 0];
@@ -953,6 +981,7 @@ function startLofiRooms() {
       Object.assign(it, { x, z, r: (Math.random() * 4) | 0, tipped: true });
       changed(); view.poof(it.id, [0xffffff, 0xd8d0c4]); Sound.clatter(); Sound.scurry(); haptic(12);
       const cat = room.get(sent.id), who = cat ? catName(cat) : 'Someone';
+      recordCat(cat, 'mischief', CAT[it.t].name.toLowerCase());
       toast(`<span>${pickOne([`${who} did it`, `${who} knocked the ${CAT[it.t].name.toLowerCase()} over`, `Crash! ${who} looks innocent`, `${who} is pretending nothing happened`])}</span>`, 2000, true);
       discover('culprit');
     };
@@ -962,7 +991,7 @@ function startLofiRooms() {
   // a neighbour's cat wanders in now and then, hangs out and goes home
   let visitor = null;
   function visit() {
-    if (visitor || state.mode !== 'explore' || meta.visitors === false) return;
+    if (rituals.breath.active || visitor || state.mode !== 'explore' || meta.visitors === false) return;
     const n = room.n, edge = [];
     for (let k = 0; k < n; k++) edge.push([k, 0], [0, k], [k, n - 1], [n - 1, k]);
     const free = edge.filter(([x, z]) => view.cellFree(x, z) && room.canPlace({ t: 'cat', x, z, r: 0, id: -1 }));
@@ -972,7 +1001,7 @@ function startLofiRooms() {
     visitor = it.id; changed();
     toast(`<span>Biscuit from next door wandered in 🐾</span>`, 2200, true); Sound.meow(); discover('visitor');
     setTimeout(() => {
-      const v = room.get(visitor);
+      const v = room.items.includes(it) ? it : null;
       visitor = null;
       if (!v) return;
       view.poof(v.id, [0xe8a050, 0xffffff]);
@@ -981,6 +1010,29 @@ function startLofiRooms() {
     }, 45000 + Math.random() * 30000);
   }
   setInterval(() => { if (Math.random() < 0.15 * (care ? care.magicBoost() : 1)) visit(); }, 60000);   // cozy rooms get more visitors
+  function merchantHere() { return merchant.active && merchantCat && room.items.includes(merchantCat) && meta.visitors !== false; }
+  function tickWorld(dt) {
+    const idle = !rituals.breath.active && !document.hidden && state.mode === 'explore' && !state.drag && !view.fp && !filming && !$('#photo').classList.contains('open') && !$('#intro').classList.contains('open');
+    if (merchantHere() && sheet.classList.contains('open') && $('#sheetBody').dataset.merchant === 'here') merchant.linger();
+    const edges = [];
+    for (let k = 0; k < room.n; k++) edges.push([k, 0], [0, k], [k, room.n - 1], [room.n - 1, k]);
+    const free = edges.filter(([x, z]) => view.cellFree(x, z) && room.canPlace({ t: 'merchantcat', x, z, r: 0, id: -1 }));
+    merchant.tick(dt, idle && !sheet.classList.contains('open') && meta.visitors !== false && free.length > 0, view.cozy);
+    if (merchantCat && (!merchant.active || !room.items.includes(merchantCat) || meta.visitors === false)) {
+      if (room.items.includes(merchantCat)) { view.poof(merchantCat.id, [0x756094, 0xffe39a]); room.remove(merchantCat.id); changed(); }
+      merchantCat = null;
+      if ($('#sheetBody').dataset.merchant === 'here' && sheet.classList.contains('open')) openShop();
+    }
+    if (merchant.active && !merchantCat && idle && meta.visitors !== false && free.length) {
+      const [x, z] = free[Math.floor(Math.random() * free.length)];
+      merchantCat = room.add(room.make('merchantcat', { x, z, visitor: true, name: 'Mallow' }));
+      changed(); Sound.meow(0.5);
+      toast('<span>Mallow wandered in with a few little treasures. Tap his satchel 🐾</span>', 3200);
+      room.items.filter(i => i.t === 'cat' && !i.visitor).slice(0, 1).forEach(cat => recordCat(cat, 'merchant'));
+    }
+    const event = ambientLife.tick(dt, idle && !sheet.classList.contains('open'), { window: room.items.some(i => CAT[i.t].beam), rain: meta.raining, day: meta.phase === 'day' || meta.phase === 'morning' });
+    if (event && view.ambientEvent(event)) Sound.ambientEvent(event);
+  }
   // cuckoo clocks call the hour on their own, like the wall clock tells real time
   let lastHour = new Date().getHours();
   setInterval(() => {
@@ -1181,10 +1233,12 @@ function startLofiRooms() {
   // Item-to-item: drop one thing onto another with Move and they do something together
   const nameOf = it => it.t === 'cat' ? (it.name || (CATS[it.c] || CATS[0]).name) : CAT[it.t].name.toLowerCase();
   const COMBOS = [
+    { from: a => a.t === 'shopcrown' && shop.owns('crown'), to: b => b.t === 'cat' && !b.visitor, hint: 'Drop to put on or take off the crown',
+      run(a, b) { dressCat(b); } },
     { from: a => ['mug', 'teacup', 'barlatte'].includes(a.t), to: b => CAT[b.t].tap === 'brew', hint: 'Drop to fill it up',
       run(a, b) { view.burst(b.id, 'steam', 3.5); Sound.gurgle(8); setTimeout(() => Sound.pour(), 500); view.burst(a.id, 'steam', 4); toast('<span>Fresh cup, still steaming ☕</span>', 1500); discover('barista'); } },
     { from: a => CAT[a.t].group === 'plants', to: b => CAT[b.t].tap === 'sink', hint: 'Drop to water it',
-      run(a) { Sound.water(); view.burst(a.id, 'drip', 2); view.sparkle(view.itemPoint(a.id, [4, 12, 4]), 0xa8f0a0, 12); toast('<span>Watered! It perks right up</span>', 1400); } },
+      run(a) { if (care) care.tap(a, a.id); Sound.water(); view.burst(a.id, 'drip', 2); view.sparkle(view.itemPoint(a.id, [4, 12, 4]), 0xa8f0a0, 12); toast('<span>Watered! It perks right up</span>', 1400); } },
     { from: a => a.t === 'vinyl', to: b => CAT[b.t].tap === 'mood' || (CAT[b.t].tap === 'music' && CAT[b.t].anim === 'record'), hint: 'Drop to play this record',
       run(a, b) { const name = Sound.setMood(a.c | 0); meta.mood = Sound.mood; meta.moodSet = true; moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape'); if (meta.station !== 0 || !meta.music) playStation(0, true); else saveMeta(); Sound.needle(); view.excite(b.id); toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi'); } },
     { from: a => a.t === 'treats', to: b => b.t === 'cat', hint: 'Drop to give a treat',
@@ -1258,6 +1312,7 @@ function startLofiRooms() {
       pushUndo();
       view.poof(id, [0xf4e6d0, 0xffffff, 0xd8c8b8]);
       const gone = room.remove(id);
+      gone.filter(i => CAT[i.t].focusRitual).forEach(i => rituals.snuff(meta.current, i.id));
       changed(); Sound.poof(); haptic(8);
       if (gone.length > 1) toast(`<span>Put away ${C.name.toLowerCase()} and ${gone.length - 1} thing${gone.length > 2 ? 's' : ''} on it</span>`, 1600);
     } else if (state.tool === 'paint') {
@@ -1303,7 +1358,9 @@ function startLofiRooms() {
     if (e.button === 2 || e.button === 1 || e.altKey) { orbit = { x: e.clientX, y: e.clientY, pan: e.button === 1 }; return; }
     if (state.mode === 'explore') {
       const hit = view.pickItem(e.clientX, e.clientY);
-      startOrbit(e, hit && !hit.behindWall ? hit.id : 0);
+      const botTap = companion && companion.hit(e.clientX, e.clientY);
+      startOrbit(e, !botTap && hit && !hit.behindWall ? hit.id : 0);
+      if (botTap) orbit.companion = true;
       return;
     }
     beginEdit(e);
@@ -1358,7 +1415,7 @@ function startLofiRooms() {
     } else {
       view.setHover(0);
       const it = id && room.get(id);
-      canvas.style.cursor = it && CAT[it.t].tap ? 'pointer' : 'grab';
+      canvas.style.cursor = (it && CAT[it.t].tap) || (companion && companion.hit(mouse.x, mouse.y)) ? 'pointer' : 'grab';
     }
   }
   const up = e => {
@@ -1367,6 +1424,12 @@ function startLofiRooms() {
     if (orbit && orbit.t0 && e.type === 'pointerup' && pointers.size === 0 && !orbit.moved && performance.now() - orbit.t0 < 450) {
       if (orbit.tapId) {
         if (state.mode === 'explore') interact(orbit.tapId); else tapEdit(orbit.tapId);
+        lastTap = null;
+      } else if (orbit.companion && companion) {
+        const hit = view.pickItem(e.clientX, e.clientY);
+        const it = hit && room.get(hit.id);
+        if (hit && !hit.behindWall && it && (CAT[it.t].tap || CAT[it.t].kind === 'pet')) interact(hit.id);
+        else if (companion.hit(e.clientX, e.clientY)) companion.tap();
         lastTap = null;
       } else if (state.mode === 'explore' && view.fp) {
         const p = view.pickFloor(e.clientX, e.clientY);
@@ -1408,6 +1471,7 @@ function startLofiRooms() {
   }
 
   window.addEventListener('keydown', e => {
+    if (rituals.breath.active) { if (e.key === 'Escape') stopBreathing(); return; }
     if (e.target.tagName === 'INPUT') return;
     if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // leave browser shortcuts like Ctrl+R alone
@@ -1510,7 +1574,139 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Rooms list & menu
   const sheet = $('#sheet');
-  function closeSheets() { if (sheet.classList.contains('open')) Sound.slide(false); sheet.classList.remove('open'); }
+  function closeSheets() { if (sheet.classList.contains('open')) Sound.slide(false); sheet.classList.remove('open'); $('#sheetBody').dataset.merchant = ''; }
+  function focusSheet(it) {
+    const body = $('#sheetBody'); body.dataset.merchant = '';
+    const minutes = Math.ceil(rituals.focus(meta.current, it.id).remaining / 60000);
+    body.innerHTML = `<div class="grab"></div><h2>A little time to focus</h2><p class="muted">Your candle has about ${minutes} minute${minutes === 1 ? '' : 's'} left. It will gutter out with a soft chime. Nothing to finish, nothing to earn.</p><div class="rowbtns"><button class="chipbtn" id="focusSnuff">Snuff the candle</button><button class="chipbtn primary" id="focusContinue">Let it glow</button></div>`;
+    $('#focusSnuff').onclick = () => { rituals.snuff(meta.current, it.id); updateRituals(); closeSheets(); };
+    $('#focusContinue').onclick = closeSheets; sheet.classList.add('open');
+  }
+  function breathingSheet() {
+    const body = $('#sheetBody'); body.dataset.merchant = '';
+    body.innerHTML = '<div class="grab"></div><h2>Ten minutes in your room</h2><p class="muted">Moon-blue light, a slow circle, a gentle tone. Breathe in as it opens, out as it softens. Four seconds in, six out, or simply follow at your own pace. Keep your eyes open. Leave whenever you like.</p><div class="rowbtns"><button class="chipbtn primary" id="breathStart">Settle in</button><button class="chipbtn" id="breathNotNow">Back</button></div>';
+    $('#breathStart').onclick = startBreathing; $('#breathNotNow').onclick = closeSheets; sheet.classList.add('open');
+  }
+  function startBreathing() {
+    if (rituals.breath.active) return;
+    closeSheets(); closePhoto(); exitCat(true); setMode('explore', true);
+    breathCamera = { pan: view.panGoal.clone(), zoom: view.zoomGoal };
+    view.panGoal.set(0, 0, 0); view.zoomGoal = 1; held.clear(); view.setHover(0); view.clearLifeEvents();
+    if (Sound.on) { Sound.init(); if (Sound.ctx) Sound.ctx.resume(); }
+    rituals.startBreathing(); document.body.classList.add('breathing');
+    document.querySelectorAll('header, .rot, .explorebar, .tools, #tray').forEach(el => { el.inert = true; });
+    $('#breathingHud').hidden = false; $('#breathStop').focus(); updateRituals();
+  }
+  function stopBreathing(completed) {
+    rituals.stopBreathing(); view.breathing = false; Sound.breathTone(0, false);
+    if (view.breathCircle) view.breathCircle.visible = false;
+    document.body.classList.remove('breathing'); $('#breathingHud').hidden = true;
+    document.querySelectorAll('header, .rot, .explorebar, .tools, #tray').forEach(el => { el.inert = false; });
+    if (breathCamera) { view.panGoal.copy(breathCamera.pan); view.zoomGoal = breathCamera.zoom; breathCamera = null; }
+    $('#bMenu').focus();
+    if (completed) { Sound.ritualChime(); toast('<span>Ten quiet minutes. Welcome back to your room.</span>', 3200); }
+  }
+  function updateRituals() {
+    const result = rituals.tick();
+    let touched = false;
+    view.focusRituals = new Map();
+    for (const it of room.items.filter(i => CAT[i.t].focusRitual)) {
+      const f = rituals.focus(meta.current, it.id); view.focusRituals.set(it.id, f);
+      if (!!it.on !== f.active) { it.on = f.active; touched = true; }
+    }
+    if (touched) { view.sync(room); dirty = true; }
+    if (result.finished.length) { Sound.ritualChime(); toast('<span>Your focus candle has finished its 25 minutes. A little space to rest.</span>', 3500); }
+    if (result.breathFinished) stopBreathing(true);
+    const breath = rituals.breath;
+    view.breathing = breath.active; view.breathLevel = breath.level;
+    if (breath.active && $('#breathCue').textContent !== breath.phase) $('#breathCue').textContent = breath.phase;
+    Sound.breathTone(breath.level, breath.active && !document.hidden);
+  }
+  $('#breathStop').onclick = () => stopBreathing();
+  document.addEventListener('visibilitychange', () => { if (document.hidden) Sound.breathTone(0, false); else updateRituals(); });
+  function updateShopBalance() {
+    const el = $('#shopBalance');
+    if (el) el.textContent = `${shop.balance} Fireflies`;
+    document.querySelectorAll('[data-shop-buy]').forEach(b => {
+      const item = LRShop.catalog.find(c => c.id === b.dataset.shopBuy);
+      b.disabled = !merchantHere() || !merchant.offers(item.id) || shop.owns(item.id) || shop.balance < item.price;
+    });
+  }
+  function openShop(stall, purchased) {
+    const body = $('#sheetBody');
+    const here = merchantHere();
+    body.dataset.merchant = here ? 'here' : 'away';
+    body.innerHTML = `<div class="grab"></div><div class="rowbtns"><button class="chipbtn" id="shopBack">Menu</button><button class="chipbtn" id="shopClose">Close</button></div>
+      <h2>Mallow’s traveling treasures</h2><p id="shopBalance" role="status" aria-live="polite"></p>
+      <p class="muted">${here ? 'Three little finds in a well-traveled satchel. Anything you take home is yours forever.' : 'Mallow is out wandering. He drops by cozy rooms from time to time. Missed him? He’ll come back another day. Your Fireflies and treasures are safe.'}</p>
+      <p class="muted small">${here ? 'Nothing is gone forever. There’s always another visit. ' : ''}Fireflies come from cozy play. No money purchases, no ads.</p>
+      <div class="shop-grid"></div>`;
+    $('#shopBack').onclick = () => { body.dataset.merchant = ''; renderMenu(); };
+    $('#shopClose').onclick = closeSheets;
+    const grid = body.querySelector('.shop-grid');
+    LRShop.catalog.filter(item => here && merchant.offers(item.id)).forEach(item => {
+      const owned = shop.owns(item.id), card = document.createElement('div');
+      card.className = 'shop-card' + (purchased === item.id ? ' purchased' : '');
+      card.dataset.shopItem = item.id;
+      card.innerHTML = `${item.piece ? `<img alt="" src="${thumbOf(item.piece)}">` : `<div class="shop-icon" aria-hidden="true">${item.icon}</div>`}
+        <b>${item.name}</b><p>${item.desc}</p><span>${item.price} Fireflies</span>
+        <button class="chipbtn ${owned ? '' : 'primary'}" data-shop-buy="${item.id}" aria-label="${owned ? 'Owned: ' : 'Buy '}${item.name}${owned ? '' : ' for ' + item.price + ' Fireflies'}">${owned ? '✓ Owned' : 'Buy'}</button>`;
+      card.querySelector('button').onclick = () => {
+        if (!merchantHere() || !merchant.offers(item.id)) { openShop(); return; }
+        if (!shop.buy(item.id)) return;
+        const anchor = merchantCat || room.get(stall) || room.items[0];
+        if (anchor) { view.burst(anchor.id, 'magic', 1.4); view.sparkle(view.itemPoint(anchor.id, [4, 10, 4]), 0xffe39a, 24); }
+        Sound.arpeggio(); renderTray(); openShop(stall, item.id);
+      };
+      grid.appendChild(card);
+    });
+    updateShopBalance();
+    sheet.classList.add('open');
+  }
+  function dressCat(cat) {
+    if (!shop.owns('crown') || cat.visitor || cat.t !== 'cat') return;
+    pushUndo(); cat.crown = !cat.crown; changed();
+    view.sparkle(view.itemPoint(cat.id, [4, 10, 6]), 0xffd778, 12); Sound.chime();
+    toast(`<span>${nameOf(cat)} ${cat.crown ? 'wears the crown' : 'takes a crown break'}</span>`, 1500);
+  }
+  function crownSheet() {
+    if (!shop.owns('crown')) { openShop(); return; }
+    const body = $('#sheetBody');
+    body.dataset.merchant = '';
+    body.innerHTML = '<div class="grab"></div><h2>A crown for a cozy cat</h2><p class="muted">Tap a cat’s name to put on or take off their crown. Save the room to keep their outfit.</p><div class="rowbtns" id="crownCats"></div><button class="chipbtn" id="crownClose">Done</button>';
+    const cats = room.items.filter(i => i.t === 'cat' && !i.visitor);
+    cats.forEach(cat => {
+      const b = document.createElement('button'); b.className = 'chipbtn';
+      b.textContent = `${cat.crown ? '👑 ' : ''}${nameOf(cat)}`;
+      b.setAttribute('aria-pressed', String(!!cat.crown));
+      b.onclick = () => { dressCat(cat); crownSheet(); };
+      $('#crownCats').appendChild(b);
+    });
+    if (!cats.length) $('#crownCats').textContent = 'Add a cat from the Pets tab first.';
+    $('#crownClose').onclick = closeSheets; sheet.classList.add('open');
+  }
+  function renderJournal() {
+    const feed = $('#journalFeed'); if (!feed) return;
+    feed.innerHTML = '';
+    ['moments', 'cats'].forEach(k => {
+      const b = $(k === 'cats' ? '#bCatDiary' : '#bMomentDiary');
+      if (b) { b.classList.toggle('primary', journalFeed === k); b.setAttribute('aria-pressed', String(journalFeed === k)); }
+    });
+    if (journalFeed === 'cats') {
+      feed.id = 'journalFeed';
+      const list = document.createElement('div'); list.id = 'catDiary'; feed.appendChild(list);
+      if (!catJournal.entries.length) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'The cats haven’t put paw to paper yet. A nap, a cuddle, a small crime against a mug… they’ll have opinions.'; list.appendChild(p); }
+      catJournal.entries.forEach(entry => {
+        const el = document.createElement('div'); el.className = 'd got';
+        const when = new Date(entry.time), time = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        el.innerHTML = `<i>🐾</i><div><b>${esc(entry.name || (CATS[entry.coat] || CATS[0]).name)} <small>${esc(when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }))}</small></b><span>${esc(time)}: ${esc(entry.text)}</span></div>`;
+        list.appendChild(el);
+      });
+    } else MOMENTS.forEach(([k, name, desc]) => {
+      const got = found.has(k), el = document.createElement('div'); el.className = 'd' + (got ? ' got' : '');
+      el.innerHTML = `<i>${got ? '✦' : '?'}</i><div><b>${got ? name : '???'}</b><span>${got ? desc : 'Keep exploring…'}</span></div>`; feed.appendChild(el);
+    });
+  }
   $('#bMenu').onclick = () => { renderMenu(); sheet.classList.add('open'); Sound.slide(true); };
   sheet.addEventListener('click', e => { if (e.target === sheet) closeSheets(); });
   $('#brand').onclick = () => {
@@ -1890,9 +2086,16 @@ function startLofiRooms() {
   function renderMenu() {
     saveIndex();
     const body = $('#sheetBody');
+    body.dataset.merchant = '';
     body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
+    const quiet = h('div', 'rowbtns');
+    quiet.innerHTML = '<button class="chipbtn" id="bBreathing">☾ Breathing room · 10 minutes</button>';
+    $('#bBreathing').onclick = breathingSheet;
+    const market = h('div', 'rowbtns');
+    const marketButton = document.createElement('button'); marketButton.className = 'chipbtn'; marketButton.id = 'bShop';
+    marketButton.textContent = `🐾 Traveling merchant · ${shop.balance} Fireflies${merchantHere() ? ' · visiting' : ''}`; marketButton.onclick = () => openShop(); market.appendChild(marketButton);
     const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
     h('h2', '', `Today <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
     h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`);
@@ -1951,14 +2154,14 @@ function startLofiRooms() {
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'New rooms start unsaved, so you can play around. Tap Save to keep one.');
     body.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }));
-    h('h2', '', `Cozy moments <small>${found.size}/${MOMENTS.length}</small>`);
-    const dl = h('div', 'disc');
-    MOMENTS.forEach(([k, name, desc]) => {
-      const got = found.has(k);
-      const el = document.createElement('div'); el.className = 'd' + (got ? ' got' : '');
-      el.innerHTML = `<i>${got ? '✦' : '?'}</i><div><b>${got ? name : '???'}</b><span>${got ? desc : 'Keep exploring…'}</span></div>`;
-      dl.appendChild(el);
+    h('h2', '', 'Room journal');
+    const feeds = h('div', 'rowbtns');
+    ['moments', 'cats'].forEach(feed => {
+      const b = document.createElement('button'); b.className = 'chipbtn'; b.id = feed === 'cats' ? 'bCatDiary' : 'bMomentDiary';
+      b.textContent = feed === 'cats' ? 'The cats’ version' : `Cozy moments · ${found.size}/${MOMENTS.length}`;
+      b.onclick = () => { journalFeed = feed; renderJournal(); }; feeds.appendChild(b);
     });
+    h('div', 'disc').id = 'journalFeed'; renderJournal();
     h('h2', '', 'Settings');
     const toggle = (label, on, fn) => {
       const r = h('button', 'toggle' + (on ? ' on' : ''), `<span>${label}</span><i></i>`);
@@ -2205,7 +2408,8 @@ function startLofiRooms() {
     app.addListener('pause', () => { save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
     app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); });
     app.addListener('backButton', () => {
-      if (filming) filmCancel = true;
+      if (rituals.breath.active) stopBreathing();
+      else if (filming) filmCancel = true;
       else if (crateOpen) closeCrate();
       else if ($('#photo').classList.contains('open')) closePhoto();
       else if (sheet.classList.contains('open')) closeSheets();
@@ -2216,9 +2420,10 @@ function startLofiRooms() {
 
   // ---------------------------------------------------------------
   // Main loop
-  let last = performance.now(), t = 0, soundT = 0, saveT = 0, clockT = 0, momentT = 0;
+  let last = performance.now(), t = 0, soundT = 0, saveT = 0, clockT = 0, momentT = 0, worldT = 0;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
+    updateRituals();
     const liftGoal = state.mode === 'edit' ? (innerWidth < 760 ? 84 : 60) : (innerWidth < 760 ? 24 : 16);
     liftNow += (liftGoal - liftNow) * Math.min(1, dt * 6);
     soundT += dt;
@@ -2226,10 +2431,12 @@ function startLofiRooms() {
     clockT += dt;
     if (clockT > 20) { clockT = 0; if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); }
     momentT += dt;
+    worldT += dt;
+    if (worldT >= 1) { tickWorld(worldT); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
-      const fire = room.items.some(i => (i.t === 'fireplace' || i.t === 'eukachel') && i.on);
+      const fire = room.items.some(i => CAT[i.t].anim === 'fire' && i.on);
       if (meta.raining && fire && meta.music) discover('stormy');
       if (meta.raining && fire && meta.phase === 'night') discover('snowedin');
       if (meta.phase === 'day' && !meta.raining) {
@@ -2253,11 +2460,14 @@ function startLofiRooms() {
   }
 
   window.addEventListener('resize', () => view.resize());
+  companion = LRCompanion.create({ view, room, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  view.companion = companion;
   updateHeader();
   setMode(state.mode, true);
+  updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);

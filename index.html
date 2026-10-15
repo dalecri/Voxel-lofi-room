@@ -223,10 +223,26 @@
     transform: translateY(-10px) scale(.96); opacity: 0; transition: transform .35s cubic-bezier(.2,1.4,.4,1), opacity .3s;
   }
   .toast.in { transform: none; opacity: 1; }
+  .companion-bubble { position: fixed; z-index: 6; width: max-content; max-width: min(240px, calc(100vw - 24px)); padding: 9px 13px; font-size: 13px; line-height: 1.4; pointer-events: none; opacity: 1; transform: translate(-50%, -100%); }
+  .companion-bubble[hidden] { display: none; }
+  .companion-bubble::after { content: ''; position: absolute; left: calc(50% - 5px); bottom: -5px; width: 10px; height: 10px; background: var(--panel-solid); transform: rotate(45deg); }
   .toast b { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--accent); }
   .toast span { font-size: 13px; font-weight: 600; }
   .toast.daily { background: linear-gradient(135deg, #fff3d6, #ffe0c2); color: #4a3530; padding: 12px 20px; box-shadow: 0 10px 34px rgba(242,160,80,.45); }
   .toast.daily b { font-size: 17px; color: #d9773a; }
+  .toast.firefly { padding: 6px 12px; border-radius: 24px; animation: firefly-rise 1.7s ease-out forwards; }
+  @keyframes firefly-rise { from { transform: translateY(8px); } to { transform: translateY(-22px); } }
+  .shop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .shop-card { background: var(--chip); border: 1px solid var(--line); border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 7px; }
+  .shop-card img { width: 100%; height: 104px; object-fit: contain; }
+  .shop-icon { height: 104px; display: grid; place-items: center; font-size: 42px; }
+  .shop-card b { font-family: var(--display); font-size: 16px; }
+  .shop-card p { flex: 1; margin: 0; font-size: 12px; color: var(--ink-dim); line-height: 1.4; }
+  .shop-card button { width: 100%; }
+  .shop-card button:disabled { opacity: .55; cursor: default; }
+  .shop-card.purchased { animation: shop-sparkle .7s ease-out; }
+  @keyframes shop-sparkle { 35% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 24px #eac77e99; } }
+  @media (prefers-reduced-motion: reduce) { .shop-card.purchased, .toast.firefly { animation: none; } }
 
   /* bottom sheet */
   .sheet { position: fixed; inset: 0; background: rgba(40, 20, 20, 0); pointer-events: none; transition: background .3s; z-index: 10; }
@@ -341,6 +357,10 @@
   .card.add .art { background: var(--line); }
 
   .disc { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #catDiary { grid-column: 1 / -1; display: grid; gap: 8px; }
+  #catDiary .d { align-items: flex-start; }
+  #catDiary .d span { font-size: 13px; line-height: 1.45; margin-top: 3px; }
+  #catDiary small { font-size: 11px; color: var(--ink-dim); font-weight: 500; margin-left: 5px; }
   .d { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 14px; background: var(--chip); opacity: .6; }
   .d.got { opacity: 1; }
   .d i { font-style: normal; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; background: var(--line); font-weight: 800; flex: none; }
@@ -394,6 +414,12 @@
   @keyframes flash { from { opacity: .85; } to { opacity: 0; } }
   #dream { position: fixed; inset: 0; background: #141733; opacity: 0; pointer-events: none; z-index: 25; transition: opacity 1.2s; display: grid; place-items: center; color: #d8e4ff; font-family: var(--display); font-size: 28px; }
   #dream.on { opacity: 1; pointer-events: auto; }
+  #breathingHud { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; padding: 30px 20px calc(var(--sab) + 32px); color: #e2e9ff; text-align: center; }
+  #breathingHud[hidden] { display: none; }
+  #breathCue { font: 500 24px var(--display); text-shadow: 0 2px 18px #101938; }
+  #breathingHud p { margin: 0 0 8px; font-size: 13px; }
+  #breathStop { background: #dee7ff24; color: #e2e9ff; border: 1px solid #dee7ff55; }
+  body.breathing header, body.breathing .rot, body.breathing .explorebar, body.breathing .tools, body.breathing #tray, body.breathing #toasts { visibility: hidden; }
 
   @media (min-width: 760px) {
     .rot, body:not(.exploring) .rot { bottom: 50%; transform: translateY(50%); }
@@ -489,6 +515,11 @@
 <div id="filming"><b id="filmPct">Getting the camera ready…</b><div class="filmtrack"><i id="filmBar"></i></div><button id="filmCancel">Cancel</button></div>
 <div id="flash"></div>
 <div id="dream">z z z</div>
+<div id="breathingHud" hidden aria-label="Breathing room">
+  <b id="breathCue" role="status" aria-live="polite">Breathe in</b>
+  <p>Here in your room. Follow the circle at your own pace.</p>
+  <button class="chipbtn" id="breathStop">Back to my room</button>
+</div>
 
 <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/", "mediabunny": "https://unpkg.com/mediabunny@1.60.0/dist/bundles/mediabunny.min.mjs" } }</script>
 <script type="module" src="boot.js"></script>
@@ -513,6 +544,10 @@
 <script defer src="packs/seasonal.js"></script>
 <script defer src="packs/doors.js"></script>
 <script defer src="packs/homey.js"></script>
+<script defer src="shop.js"></script>
+<script defer src="life.js"></script>
+<script defer src="rituals.js"></script>
+<script defer src="companion.js"></script>
 <script defer src="render.js"></script>
 <script defer src="care.js"></script>
 <script defer src="main.js"></script>

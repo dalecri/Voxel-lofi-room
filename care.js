@@ -110,9 +110,11 @@
         A.discover('harvest'); return true;
       }
       if (e.k === 'plant' || e.k === 'herb') {
+        if (A.watered) A.watered(it);
         const was = wilted(e), stage0 = stageOf(e);
-        if (e.wd !== today) { e.days++; e.wd = today; e.w = t; dirty = true; A.discover('watered'); }
+        if (e.wd !== today) { e.days++; e.wd = today; e.w = t; dirty = true; }
         else { e.w = t; dirty = true; }
+        A.discover('watered');
         const st = stageOf(e);
         setTimeout(() => {
           if (was) A.toast('<span>It perks right back up</span>', 1500);

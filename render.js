@@ -80,9 +80,9 @@
 
   // build (and cache) the geometry of one catalog piece in one state
   const GEO = new Map();
-  function itemKey(it, env) {
-    const C = CAT[it.t];
-    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') + (env.view || '') : '', it.blanket ? 'b' : ''].join('|');
+  function itemKey(it, env, definition) {
+    const C = definition || CAT[it.t];
+    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') + (env.view || '') : '', it.blanket ? 'b' : '', it.t === 'cat' && it.crown ? 'crown' : ''].join('|');
   }
   // a little plaid throw laid over the top of a bed (dropped there with Move)
   function drapeBlanket(m, C) {
@@ -96,13 +96,19 @@
       m.set(x, y + 1, z, plaid ? 0xc8484a : ((x + z) % 2 ? 0xf4e8d4 : 0xe8d8c0));
     }
   }
-  function itemGeo(it, env) {
-    const key = itemKey(it, env);
+  function itemGeo(it, env, definition) {
+    const key = itemKey(it, env, definition);
     let g = GEO.get(key);
     if (g) return g;
-    const C = CAT[it.t];
+    const C = definition || CAT[it.t];
     const m = new Model();
     C.build(m, C.vars[Math.min(it.c | 0, C.vars.length - 1)], { on: !!it.on, phase: env.phase, rain: env.rain, seed: it.seed || 1, blanket: !!it.blanket });
+    if (it.t === 'cat' && it.crown) {
+      m.main();
+      m.box(1, 9, 4, 7, 10, 8, 0xd9ad57).clear(2, 9, 5, 6, 10, 7);
+      [1, 3, 6].forEach(x => m.box(x, 10, 7, x + 1, 12, 8, 0xffd778));
+      m.set(3, 9, 8, 0xc898ff, true);
+    }
     if (it.blanket) drapeBlanket(m, C);
     g = {};
     for (const name in m.parts) {
@@ -311,6 +317,7 @@
     this.applyPhase(1);
     this.glowOn = true; this.glowK = 0;
     this.drift = 0; this.driftGoal = 0;   // dream mode: after midnight the room drifts moon-blue
+    this.breathDim = 0; this.breathing = false;
     this.initGlow();
     this.resize();
   }
@@ -404,15 +411,19 @@
     this.amb.color.copy(hexMix(a.amb, b.amb, s)).lerp(new THREE.Color(0xa8b4d0), rk * 0.4);
     this.amb.intensity = this.amb.userData.base = ph.ambI * (1 - rk * 0.15) * (this.weather === 'storm' ? 0.82 : 1);
     this.hemi.color.copy(hexMix(a.sky, b.sky, s)); this.hemi.groundColor.copy(hexMix(a.ground, b.ground, s)); this.hemi.intensity = ph.hemiI * (storm ? 0.7 : 1);
-    const dr = this.drift || 0;
+    const dr = Math.max(this.drift || 0, this.breathDim || 0);
     if (dr > 0.001) { const moon = new THREE.Color(0x8ea4ff); this.sun.color.lerp(moon, 0.85 * dr); this.amb.color.lerp(new THREE.Color(0x5a6ae8), 0.8 * dr); this.hemi.color.lerp(moon, 0.75 * dr); this.hemi.groundColor.lerp(new THREE.Color(0x2a2e70), 0.6 * dr); this.sun.intensity *= 1 + 0.25 * dr; this.amb.intensity *= 1 + 0.2 * dr; }
-    this.r.toneMappingExposure = ph.exp;
+    const breathing = this.breathDim || 0;
+    this.sun.intensity *= 1 - 0.75 * breathing;
+    this.amb.intensity *= 1 - 0.35 * breathing;
+    this.hemi.intensity *= 1 - 0.45 * breathing;
+    this.r.toneMappingExposure = ph.exp * (1 - 0.2 * breathing);
     this.placeSun();
     if (this.hooks.sky) {
       let top = hexMix(a.top, b.top, s), bot = hexMix(a.bot, b.bot, s);
       if (rk) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x1e2236 : 0x9aa4b4), rk * 0.5); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x10121e : 0x6a7486), rk * 0.5); }
       if (storm) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x0c0e18 : 0x4a5262), 0.6); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x080a12 : 0x2e3442), 0.6); }   // heavy storm clouds
-      if (dr > 0.001) { top.lerp(new THREE.Color(0x1c2468), 0.55 * dr); bot.lerp(new THREE.Color(0x0a0e2e), 0.55 * dr); }
+      if (dr > 0.001) { top.lerp(new THREE.Color(0x1c2468), (0.55 + 0.35 * breathing) * dr); bot.lerp(new THREE.Color(0x0a0e2e), (0.55 + 0.35 * breathing) * dr); }
       this.sky = ['#' + top.getHexString(), '#' + bot.getHexString(), ph.night];
       this.hooks.sky(...this.sky);
     }
@@ -597,15 +608,15 @@
   };
 
   // ---- furniture ----
-  R.makeObject = function (it, ghost, bare) {
-    const C = CAT[it.t];
-    const g = itemGeo(it, this.env);
+  R.makeObject = function (it, ghost, bare, definition) {
+    const C = definition || CAT[it.t];
+    const g = itemGeo(it, this.env, definition);
     const obj = new THREE.Group(), inner = new THREE.Group();
     obj.add(inner);
     const [w, d] = C.size;
     if (C.kind === 'wall') inner.position.set(-w / 2, 0, 0);
     else inner.position.set(-w / 2, 0, -d / 2);
-    obj.userData = { id: it.id, key: itemKey(it, this.env), inner, parts: {}, meshes: [], boing: 0, glowMat: null };
+    obj.userData = { id: it.id, key: itemKey(it, this.env, definition), inner, parts: {}, meshes: [], boing: 0, glowMat: null };
     let glowMat = this.glowMat;
     if (!ghost && ['twinkle', 'fire', 'flame', 'rgb', 'lava', 'buzz'].includes(C.anim)) glowMat = obj.userData.glowMat = this.glowMat.clone();
     for (const name in g) {
@@ -778,6 +789,8 @@
   R.size = function () { return N; };
 
   R.sync = function (room) {
+    if (this.lifeItems && this.lifeItems !== room.items) this.clearLifeEvents();
+    this.lifeItems = room.items;
     this.room = room;
     this.env.view = LR.viewNow = room.view || 'city';   // what the windows look out on
     this.setSize(room.n || LR.N);
@@ -958,7 +971,8 @@
     s.scale.set(size * I.aspect, size, 1);
     s.position.copy(p);
     s.visible = true;
-    s.userData = { life: (opts && opts.life) || 1.6, max: (opts && opts.life) || 1.6, vx: (opts && opts.vx) || (Math.random() - 0.5) * 0.3, vy: (opts && opts.vy) || 0.7, wob: Math.random() * 6 };
+    const seeded = opts && opts.seed != null;
+    s.userData = { life: (opts && opts.life) || 1.6, max: (opts && opts.life) || 1.6, vx: (opts && opts.vx) || (seeded ? .03 : (Math.random() - 0.5) * 0.3), vy: (opts && opts.vy) || 0.7, wob: seeded ? opts.seed : Math.random() * 6 };
   };
   R.poof = function (id, cols) {
     const obj = this.objs.get(id);
@@ -1072,7 +1086,7 @@
           if (P.next) { const n = P.next; P.next = null; this.startHop(P, n); }
           else if (P.eat) this.startEating(P);
           else if (P.onArrive) { const cb = P.onArrive; P.onArrive = null; P.state = 'sit'; P.timer = 2.5; cb(P); }
-          else if (P.watch != null) { P.heading = P.watch; P.watch = null; P.state = 'sit'; P.timer = 10 + Math.random() * 14; }   // watching the rain
+          else if (P.watch != null) { P.heading = P.watch; P.watch = null; P.state = 'sit'; P.timer = 10 + Math.random() * 14; if (this.hooks.catActivity) this.hooks.catActivity(id, 'rain'); }   // watching the rain
           else {
             const rainy = this.env.rain ? 1.8 : 1;   // rainy days are for naps
             P.state = !P.robot && (Math.random() < 0.3 * rainy || this.blanketAt(P) || (P.bed && Math.random() < 0.8)) ? 'nap' : 'sit';
@@ -1088,6 +1102,16 @@
         this.decidePet(P, cx, cz);
       } else if ((P.state === 'pet' || P.state === 'eat') && P.timer <= 0) {
         P.state = 'sit'; P.timer = 2;
+      }
+      if (P.state !== P.reportState) {
+        if (this.hooks.catActivity && !P.robot) {
+          if (P.state === 'eat') this.hooks.catActivity(id, 'eat');
+          if (P.state === 'nap') {
+            const sun = !this.env.rain && (this.env.phase === 'day' || this.env.phase === 'morning') && this.windowSpots().some(w => Math.hypot(w.x + 0.5 - P.x, w.z + 0.5 - P.z) < 3);
+            this.hooks.catActivity(id, sun ? 'sunbeam' : 'nap');
+          }
+        }
+        P.reportState = P.state;
       }
       if (P.state === 'eat') {
         squash = 0.9 + Math.abs(Math.sin(t * 8)) * 0.06;
@@ -1145,7 +1169,7 @@
       if (spots.length) {
         const w = spots[(Math.random() * spots.length) | 0];
         const path = cx === w.x && cz === w.z ? [] : this.path(cx, cz, w.x, w.z);
-        if (path) { P.watch = w.heading; if (path.length) { P.path = path; P.state = 'walk'; } else { P.heading = w.heading; P.watch = null; P.state = 'sit'; P.timer = 12; } return; }
+        if (path) { P.watch = w.heading; if (path.length) { P.path = path; P.state = 'walk'; } else { P.heading = w.heading; P.watch = null; P.state = 'sit'; P.timer = 12; if (this.hooks.catActivity) this.hooks.catActivity(P.id, 'rain'); } return; }
       }
     }
     const r = Math.random();
@@ -1244,7 +1268,7 @@
   R.sendCat = function (spots, only) {
     let best = null;
     for (const [id, P] of this.pets) {
-      if (P.robot || P.visitorLeaving || P.state === 'hop' || P.perch || (only && id !== only)) continue;
+      if (P.robot || (this.room.get(id) || {}).t === 'merchantcat' || P.visitorLeaving || P.state === 'hop' || P.perch || (only && id !== only)) continue;
       const cx = Math.floor(P.x), cz = Math.floor(P.z);
       for (const [x, z] of spots) {
         const path = cx === x && cz === z ? [] : this.path(cx, cz, x, z);
@@ -1305,7 +1329,7 @@
     if (this.beat >= 0 && this.lastBeat >= 0 && this.beat < this.lastBeat) this.beatN = (this.beatN || 0) + 1;
     this.lastBeat = this.beat;
     this.glowK = this.glowOn && this.composer ? Math.max(0, (this.ph.night - 0.2) / 0.8) : 0;   // a hint at dusk, full glow at night
-    this.glowMat.color.setScalar(1 + 0.3 * this.glowK);   // lamp shades and lit windows: a soft halo, not a blob
+    this.glowMat.color.setScalar((1 + 0.3 * this.glowK) * (1 - 0.6 * this.breathDim));   // lamp shades and lit windows: a soft halo, not a blob
     this.glowFx.uBoost.value = 1 + 1.5 * this.glowK;       // embers and sparks
     const k = 1 - Math.exp(-dt * 9);
     this.yaw += (this.yawGoal - this.yaw) * k;
@@ -1322,14 +1346,17 @@
     if (Math.abs(this.rainK - rg) > 0.001) { this.rainK += (rg - this.rainK) * Math.min(1, dt * 1.5); phaseDirty = true; }
     const dg = this.driftGoal || 0;
     if (Math.abs(this.drift - dg) > 0.002) { this.drift += (dg - this.drift) * Math.min(1, dt * 0.4); phaseDirty = true; }
+    const breatheGoal = this.breathing ? 1 : 0;
+    if (this.breathDim !== breatheGoal) { this.breathDim += (breatheGoal - this.breathDim) * Math.min(1, dt * 1.2); if (Math.abs(this.breathDim - breatheGoal) < 0.001) this.breathDim = breatheGoal; phaseDirty = true; }
     if (phaseDirty) this.applyPhase(this.phaseT); else this.placeSun();
 
     // lamps
-    const lampK = this.ph.lamp * (1 - 0.4 * (this.drift || 0));   // dream mode dims the lamps so the moonlight shows
+    const lampK = this.ph.lamp * (1 - 0.4 * (this.drift || 0)) * (1 - 0.65 * this.breathDim);
     for (const L of this.pool) {
       if (!L.userData.it) continue;
       let i = L.userData.base * lampK;
-      const cv = this.careVis && this.careVis.get(L.userData.it.id);
+      const cv = (this.focusRituals && this.focusRituals.get(L.userData.it.id)) || (this.careVis && this.careVis.get(L.userData.it.id));
+      if (CAT[L.userData.it.t].focusRitual && cv) L.position.copy(this.itemPoint(L.userData.it.id, [4, 4 + 14 * (0.2 + 0.8 * cv.fraction), 4]));
       if (cv && cv.level !== undefined) i *= 0.35 + 0.9 * cv.level;                 // a roaring fire lights the room, embers barely
       if (cv && cv.gutter) i *= 0.55 + 0.3 * Math.sin(t * 9 + L.id) * Math.sin(t * 23);   // a candle guttering
       if (L.userData.flicker) i *= 0.82 + 0.12 * Math.sin(t * 13 + L.id) + 0.08 * Math.sin(t * 31 + L.id * 2);
@@ -1349,7 +1376,12 @@
         ud.boing = Math.max(0, b - dt * 2.4);
         if (!ud.boing && C.kind !== 'pet') ud.inner.scale.set(1, 1, 1);
       }
-      const cv = this.careVis && this.careVis.get(id);
+      const cv = (this.focusRituals && this.focusRituals.get(id)) || (this.careVis && this.careVis.get(id));
+      if (C.focusRitual && cv) {
+        const height = 0.2 + 0.8 * cv.fraction;
+        if (ud.parts.wax) ud.parts.wax.scale.y = height;
+        if (ud.parts.focusflame) ud.parts.focusflame.position.y = (2 + 14 * height) * S;
+      }
       if (cv && cv.s !== undefined) {   // living plants: sprouts are small, forgotten ones droop
         if (!ud.boing) ud.inner.scale.set(cv.s, cv.s * cv.sag, cv.s);
         else ud.inner.scale.multiplyScalar(cv.s);
@@ -1367,6 +1399,7 @@
         }
         if (ud.blooms) ud.blooms.visible = !!cv.bloom;
       }
+      if (ud.screen) ud.screen.mesh.material.color.setScalar(1 - 0.65 * this.breathDim);
       if (ud.parts.nest) ud.parts.nest.visible = !!(cv && cv.nest);
       if (C.anim === 'record' && ud.parts.disc && this.music) ud.parts.disc.rotation.y -= dt * 3.5;
       if (C.anim === 'clock' && ud.hands) {
@@ -1383,6 +1416,7 @@
         else if (C.anim === 'lava') { const v = 0.9 + 0.1 * Math.sin(t * 0.7 + id); ud.glowMat.color.setRGB(v, v, v); }
         else if (C.anim === 'buzz') { const off = Math.sin(t * 0.37 + id * 5) > 0.97 && Math.sin(t * 31) > 0; const v = off ? 0.35 : 0.95 + 0.05 * Math.sin(t * 50); ud.glowMat.color.setRGB(v, v, v); }
         if (boost > 1) ud.glowMat.color.multiplyScalar(boost);
+        ud.glowMat.color.multiplyScalar(1 - 0.6 * this.breathDim);
       }
       this.animatePiece(obj, it, C, dt, t);
     }
@@ -1406,11 +1440,87 @@
       else this.hoverBox.visible = false;
     }
     this.updateWeather(dt, t);
+    this.updateLifeEvents(dt);
+    if (this.companion) this.companion.frame(dt, t);
+    this.updateBreathing();
     if (this.fp) this.updateCatView(dt, t);
     this.draw();
   };
 
   // ---- cat view: first person from a cat's eyes ----
+  R.updateBreathing = function () {
+    if (!this.breathCircle && this.breathing) {
+      this.breathCircle = new THREE.Group();
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.93, 96), new THREE.MeshBasicMaterial({ color: 0xd3e1ff, transparent: true, opacity: 0.8, depthTest: false, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+      const fill = new THREE.Mesh(new THREE.CircleGeometry(0.89, 96), new THREE.MeshBasicMaterial({ color: 0x8ca9ed, transparent: true, opacity: 0.07, depthTest: false, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+      ring.renderOrder = 20; fill.renderOrder = 19; this.breathCircle.add(fill, ring); this.root.add(this.breathCircle);
+    }
+    if (!this.breathCircle) return;
+    this.breathCircle.visible = this.breathing;
+    if (!this.breathing) return;
+    this.breathCircle.position.set(N / 2, 1.4, N / 2);
+    this.breathCircle.quaternion.copy(this.cam.quaternion);
+    this.breathCircle.scale.setScalar(0.8 + 0.5 * (this.breathLevel || 0));
+  };
+  R.clearLifeEvents = function () {
+    for (const event of this.lifeEvents || []) {
+      event.removeFromParent(); event.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    }
+    this.lifeEvents = [];
+  };
+  R.ambientEvent = function (kind) {
+    this.lifeEvents = this.lifeEvents || [];
+    if (this.lifeEvents.length >= 2 || !this.room) return false;
+    const event = new THREE.Group();
+    event.userData = { kind, age: 0, duration: kind === 'butterfly' ? 12 : 8 };
+    const box = (w, h, d, color, x, y, z) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color, transparent: true }));
+      mesh.position.set(x, y, z); event.add(mesh); return mesh;
+    };
+    if (kind === 'butterfly') {
+      const windows = this.room.items.filter(i => CAT[i.t].beam);
+      if (!windows.length) return false;
+      const win = windows[Math.floor(Math.random() * windows.length)];
+      event.position.copy(this.itemPoint(win.id, [CAT[win.t].size[0] * 4, 12, 2]));
+      box(0.025, 0.08, 0.025, 0x70564a, 0, 0, 0);
+      event.userData.wings = [-1, 1].map(side => box(0.13, 0.015, 0.1, side < 0 ? 0xf1ca83 : 0xf5b5bd, side * 0.065, 0.02, 0));
+      event.userData.base = event.position.clone();
+    } else if (kind === 'train') {
+      for (let k = 0; k < 4; k++) {
+        box(1.1, 0.3, 0.3, 0x78798a, -k * 1.25, 0, 0);
+        for (let w = 0; w < 3; w++) box(0.15, 0.09, 0.015, 0xf5d9a2, -k * 1.25 - 0.3 + w * 0.28, 0.03, 0.16);
+      }
+    } else if (kind === 'leaves') {
+      for (let k = 0; k < 9; k++) {
+        const leaf = box(0.1, 0.025, 0.06, [0xb8a568, 0xc58d68, 0x9ca879][k % 3], 0, 0, 0);
+        leaf.userData.offset = Math.random() * 2;
+      }
+    } else return false;
+    this.lifeEvents.push(event); this.root.add(event); return true;
+  };
+  R.updateLifeEvents = function (dt) {
+    const alive = [];
+    for (const event of this.lifeEvents || []) {
+      const u = event.userData; u.age += dt;
+      if (u.age >= u.duration) {
+        event.removeFromParent(); event.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); continue;
+      }
+      const progress = u.age / u.duration, fade = Math.min(1, u.age, u.duration - u.age);
+      event.traverse(o => { if (o.material) o.material.opacity = fade * 0.85; });
+      if (u.kind === 'butterfly') {
+        const flight = u.age < 2 ? 1 - u.age / 2 : u.age > 9 ? (u.age - 9) / 3 : 0;
+        event.position.copy(u.base); event.position.y += flight * 0.7; event.position.x += flight * 0.4;
+        u.wings.forEach((wing, k) => { wing.rotation.z = (k ? 1 : -1) * (0.2 + Math.abs(Math.sin(u.age * (flight ? 18 : 3))) * 1.1); });
+      } else if (u.kind === 'train') event.position.set(-5 + progress * (N + 12), 0.15, N + 2.3);
+      else event.children.forEach((leaf, k) => {
+        leaf.position.set(N + 0.7 + Math.sin(u.age * 1.6 + k) * 0.25, 0.07 + Math.abs(Math.sin(u.age * 3 + k)) * 0.18, -2 + progress * (N + 3) + leaf.userData.offset);
+        leaf.rotation.set(u.age + k, u.age * 2 + k, u.age * 3);
+      });
+      alive.push(event);
+    }
+    this.lifeEvents = alive;
+  };
+
   R.enterCatView = function (id) {
     const P = this.pets.get(id);
     if (!P || P.robot) return false;
@@ -1498,6 +1608,11 @@
       }
       const [ax, ay, az, bx, by, bz] = ud.tank.box, fast = ud.excited > t || (ud.pellets && ud.pellets.length) ? 3 : 1;
       ud.tank.water.material.emissiveIntensity += ((it.on ? 0.55 : 0.08) - ud.tank.water.material.emissiveIntensity) * Math.min(1, dt * 4);
+      if (C.galaxy) {
+        const hue = (0.68 + Math.sin(t * 0.3) * 0.1 + 1) % 1;
+        ud.tank.water.material.color.setHSL(hue, 0.6, 0.45);
+        ud.tank.water.material.emissive.setHSL(hue, 0.7, 0.3);
+      }
       const food = ud.pellets && ud.pellets.length ? ud.pellets : null;
       if (food) {
         ud.pellets = food.filter(p => {
@@ -1601,6 +1716,16 @@
     this.ambT = (this.ambT || 0) + dt;
     if (this.ambT < 0.12) return;
     const step = this.ambT; this.ambT = 0;
+    // Room-wide cosmetics share the existing particle pools. Multiple keepsakes don't multiply the load.
+    const effects = new Set(this.room.items.filter(i => i.on && CAT[i.t].roomEffect).map(i => CAT[i.t].roomEffect));
+    for (const effect of effects) {
+      const count = Math.floor(step * (effect === 'petals' ? 14 : 28) + Math.random());
+      for (let k = 0; k < count; k++) {
+        const x = Math.random() * N, z = Math.random() * N;
+        if (effect === 'petals') this.fx.spawn(x, 3 + Math.random(), z, 0.12, -0.18, 0.08, Math.random() < 0.5 ? 0xf6a8c4 : 0xffdce9, 0.065, 7, 0.01, 0.2, 0.85);
+        else this.glowFx.spawn(x, 0.4 + Math.random() * 2.4, z, (Math.random() - 0.5) * 0.15, 0.06, (Math.random() - 0.5) * 0.15, 0xe8f7a0, 0.035, 3 + Math.random() * 2, 0, 0.2, 0.8);
+      }
+    }
     for (const it of this.room.items) {
       const obj = this.objs.get(it.id);
       if (!obj || !this.isShown(obj)) continue;
@@ -1620,7 +1745,7 @@
       const fcv = this.careVis && this.careVis.get(it.id);
       if (C.anim === 'fire' && it.on && Math.random() < step * 6 * (fcv && fcv.level !== undefined ? 0.2 + fcv.level : 1)) {
         const p = this.itemPoint(it.id, [6 + Math.random() * 4, 5, 4]);
-        this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.2, 0.8 + Math.random() * 0.6, (Math.random() - 0.5) * 0.2, Math.random() < 0.5 ? 0xffa040 : 0xffd060, 0.05, 0.9, -0.2, 0.5);
+        this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.2, 0.8 + Math.random() * 0.6, (Math.random() - 0.5) * 0.2, C.fxColor || (Math.random() < 0.5 ? 0xffa040 : 0xffd060), 0.05, 0.9, -0.2, 0.5);
       }
       const ud = obj.userData;
       if (ud.tank && Math.random() < step * (it.on || C.tank.bowl ? 2 : 0.8) * (ud.excited > this.t ? 4 : 1)) {
