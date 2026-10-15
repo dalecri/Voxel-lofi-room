@@ -247,7 +247,7 @@
     Object.assign(this.sun.shadow.camera, { near: 1, far: 80, left: -11, right: 11, top: 11, bottom: -11 });
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.02;
-    this.amb = new THREE.AmbientLight(0xffffff, 0.7);
+    this.amb = new THREE.AmbientLight(0xffffff, 0.7); this.amb.userData.base = 0.7;
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x666666, 0.6);
     scene.add(this.sun, this.sun.target, this.amb, this.hemi);
 
@@ -364,15 +364,17 @@
     ph.dir = a.dir.map((v, i) => v + (b.dir[i] - v) * s);
     const rk = this.rainK;
     this.sun.color.copy(hexMix(a.sun, b.sun, s)).lerp(new THREE.Color(0xb8c4d8), rk * 0.5);
-    this.sun.intensity = ph.sunI * (1 - rk * 0.55);
+    const storm = this.weather === 'storm';
+    this.sun.intensity = ph.sunI * (1 - rk * 0.55) * (storm ? 0.55 : 1);
     this.amb.color.copy(hexMix(a.amb, b.amb, s)).lerp(new THREE.Color(0xa8b4d0), rk * 0.4);
-    this.amb.intensity = ph.ambI * (1 - rk * 0.15);
-    this.hemi.color.copy(hexMix(a.sky, b.sky, s)); this.hemi.groundColor.copy(hexMix(a.ground, b.ground, s)); this.hemi.intensity = ph.hemiI;
+    this.amb.intensity = this.amb.userData.base = ph.ambI * (1 - rk * 0.15) * (this.weather === 'storm' ? 0.82 : 1);
+    this.hemi.color.copy(hexMix(a.sky, b.sky, s)); this.hemi.groundColor.copy(hexMix(a.ground, b.ground, s)); this.hemi.intensity = ph.hemiI * (storm ? 0.7 : 1);
     this.r.toneMappingExposure = ph.exp;
     this.placeSun();
     if (this.hooks.sky) {
       let top = hexMix(a.top, b.top, s), bot = hexMix(a.bot, b.bot, s);
       if (rk) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x1e2236 : 0x9aa4b4), rk * 0.5); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x10121e : 0x6a7486), rk * 0.5); }
+      if (storm) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x0c0e18 : 0x4a5262), 0.6); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x080a12 : 0x2e3442), 0.6); }   // heavy storm clouds
       this.hooks.sky('#' + top.getHexString(), '#' + bot.getHexString(), ph.night);
     }
   };
@@ -384,6 +386,102 @@
     this.sun.target.position.set(0, 0, 0);
   };
   R.setRain = function (on) { this.env.rain = on; this.rainGoal = on ? 1 : 0; };
+
+  // ---- weather: voxel rain, storms with lightning, snow and sakura petals ----
+  // In a walled room it all falls outside, around the diorama; on an open plot it falls onto it.
+  const WEATHER = {
+    clear: { n: 0 },
+    rain: { n: 520, wind: 0.4, kind: 'rain' },
+    storm: { n: 700, wind: -0.9, kind: 'rain', boost: 1.45 },
+    snow: { n: 420, wind: 0.4, kind: 'snow' },
+    sakura: { n: 260, wind: 0.4, kind: 'petal' },
+  };
+  R.setWeather = function (w) {
+    this.weather = WEATHER[w] ? w : 'clear';
+    if (!this.wx) this.initWeather();
+    this.wx.parts.forEach(p => { p.y = Math.random() * 15; });   // reshuffle so it starts mid-fall
+  };
+  R.initWeather = function () {
+    const box = new THREE.BoxGeometry(1, 1, 1), MAX = 720;
+    const mk = (mat, n) => { const m = new THREE.InstancedMesh(box, mat, n); m.frustumCulled = false; m.count = 0; this.root.add(m); return m; };
+    this.wx = {
+      rain: mk(new THREE.MeshBasicMaterial({ color: 0x7f9fcf, transparent: true, opacity: 0.8, depthWrite: false }), MAX),
+      snow: mk(new THREE.MeshLambertMaterial({ color: 0xf4f6fa }), MAX),
+      petal: mk(new THREE.MeshLambertMaterial({ color: 0xf9a8d4, emissive: 0xf472b6, emissiveIntensity: 0.2 }), MAX),
+      splash: mk(new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.6, depthWrite: false }), 90),
+      parts: [], splashes: [], flash: 0, bolt: null, dummy: new THREE.Object3D(),
+    };
+    for (let i = 0; i < MAX; i++) this.wx.parts.push({ x: 0, y: Math.random() * 15, z: 0, v: Math.random(), ph: Math.random() * Math.PI * 2, s: Math.random(), fresh: true });
+    for (let i = 0; i < 90; i++) this.wx.splashes.push({ x: 0, z: 0, k: Math.random() });
+  };
+  // a spot to (re)start a particle: anywhere around the room, never inside a walled one
+  R.wxSpawn = function (p) {
+    const M = 5, walled = !this.noWalls;
+    for (let k = 0; k < 8; k++) {
+      p.x = -M + Math.random() * (N + 2 * M); p.z = -M + Math.random() * (N + 2 * M);
+      if (!walled || p.x < -0.4 || p.z < -0.4 || p.x > N + 0.4 || p.z > N + 0.4) break;
+    }
+    p.y = 12 + Math.random() * 4; p.fresh = false;
+  };
+  R.strike = function () {
+    const wx = this.wx; if (!wx) return;
+    if (wx.bolt) { this.root.remove(wx.bolt); wx.bolt = null; }
+    const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const p = {}; this.wxSpawn(p);
+    let x = p.x, z = p.z;
+    for (let y = 14; y > (this.noWalls ? 0.3 : -2.5); y -= 0.9) {
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.05, 0.18), mat);
+      x += (Math.random() - 0.5) * 0.8; z += (Math.random() - 0.5) * 0.8;
+      seg.position.set(x, y, z); g.add(seg);
+    }
+    this.root.add(g); wx.bolt = g; wx.flash = 1;
+    if (this.hooks.thunder) this.hooks.thunder();
+  };
+  R.updateWeather = function (dt, t) {
+    const W = WEATHER[this.weather || 'clear'], wx = this.wx;
+    if (!wx) { if (W.n) this.initWeather(); else return; }
+    const d = wx.dummy, M = 5, walled = !this.noWalls, floorY = this.noWalls ? 0.06 : -3;
+    const scale = Math.min(1.6, (N + 2 * M) * (N + 2 * M) / 400);   // bigger plots get more
+    const n = Math.min(wx.parts.length, Math.round(W.n * scale));
+    ['rain', 'snow', 'petal'].forEach(k => { wx[k].count = W.kind === k ? n : 0; });
+    wx.splash.count = W.kind === 'rain' && this.noWalls ? wx.splashes.length : 0;
+    if (W.n) {
+      const mesh = wx[W.kind], boost = W.boost || 1, wind = W.wind;
+      for (let i = 0; i < n; i++) {
+        const p = wx.parts[i];
+        if (p.fresh) { this.wxSpawn(p); p.y = Math.random() * 15; }
+        if (W.kind === 'rain') { p.y -= (14 + p.v * 6) * boost * dt; p.x += wind * 4.5 * dt; }
+        else if (W.kind === 'snow') { p.y -= (1.5 + p.v * 1.2) * dt; p.x += (wind * 1.4 + Math.sin(t * 2 + p.ph) * 0.5) * dt; p.z += Math.cos(t * 1.6 + p.ph) * 0.35 * dt; }
+        else { p.y -= (1.1 + p.v * 0.8) * dt; p.x += (wind * 2 + Math.sin(t * 2.5 + p.ph) * 0.9) * dt; p.z += Math.cos(t * 2 + p.ph) * 0.6 * dt; }
+        const inside = walled && p.x > -0.3 && p.z > -0.3 && p.x < N + 0.3 && p.z < N + 0.3 && p.y < 7.6;
+        if (p.y < floorY || inside || p.x < -M - 1 || p.x > N + M + 1) this.wxSpawn(p);
+        d.position.set(p.x, p.y, p.z);
+        if (W.kind === 'rain') { d.rotation.set(0, 0, -wind * 0.22); const l = 0.55 * boost; d.scale.set(0.045, l, 0.045); }
+        else if (W.kind === 'snow') { const z = 0.08 + p.s * 0.09; d.rotation.set(t + p.ph, t * 0.8, 0); d.scale.set(z, z, z); }
+        else { d.rotation.set(t * (1.5 + p.s * 2.5) + p.ph, t * (1 + p.s * 1.7), Math.sin(t + p.ph)); d.scale.set(0.15, 0.03, 0.11); }
+        d.updateMatrix(); mesh.setMatrixAt(i, d.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      if (wx.splash.count) {
+        wx.splashes.forEach((sp, i) => {
+          sp.k += dt * 3.2;
+          if (sp.k >= 1) { sp.k = 0; sp.x = Math.random() * N; sp.z = Math.random() * N; }
+          const r = Math.sin(sp.k * Math.PI) * 0.3;
+          d.position.set(sp.x, 0.07, sp.z); d.rotation.set(0, 0, 0); d.scale.set(r, 0.04, r);
+          d.updateMatrix(); wx.splash.setMatrixAt(i, d.matrix);
+        });
+        wx.splash.instanceMatrix.needsUpdate = true;
+      }
+      if (this.weather === 'storm' && Math.random() < dt * 0.35) this.strike();
+    }
+    // lightning: a bright flash through the room, then the bolt fades
+    if (wx.flash > 0) {
+      wx.flash = Math.max(0, wx.flash - dt * 3.8);
+      this.amb.intensity = this.amb.userData.base + wx.flash * 2.2;
+      if (wx.flash < 0.25 && wx.bolt) { this.root.remove(wx.bolt); wx.bolt = null; }
+      if (!wx.flash) this.amb.intensity = this.amb.userData.base;
+    }
+  };
 
   // ---- the room shell (floor slab + the walls facing the camera) ----
   R.visibleMask = function () {
@@ -1236,6 +1334,7 @@
       if (o && this.isShown(o)) { const b = this.hoverBox.box.makeEmpty(); o.userData.meshes.forEach(m => b.expandByObject(m)); b.expandByScalar(0.03); this.hoverBox.visible = true; }
       else this.hoverBox.visible = false;
     }
+    this.updateWeather(dt, t);
     if (this.fp) this.updateCatView(dt, t);
     this.r.render(this.scene, this.cam);
   };

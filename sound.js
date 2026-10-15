@@ -338,6 +338,14 @@
     crunch() { if (!this.ready()) return; for (let k = 0; k < 4; k++) setTimeout(() => this.burst(0.05, 0.08, 'bandpass', 2200 + Math.random() * 1500), k * 110); },
     plop() { if (!this.ready()) return; const t = this.ctx.currentTime; for (let k = 0; k < 4; k++) { const o = this.tone(500 + Math.random() * 300, t + k * 0.13, 0.09, 0.05, 'sine'); o.frequency.exponentialRampToValueAtTime(1400, t + k * 0.13 + 0.08); } },
     clatter() { if (!this.ready()) return; this.burst(0.08, 0.2, 'bandpass', 2600); setTimeout(() => this.burst(0.06, 0.12, 'bandpass', 1900), 90); setTimeout(() => this.burst(0.05, 0.08, 'bandpass', 3200), 200); },
+    thunder(near) {   // a crack, then a long low rumble
+      if (!this.ready()) return;
+      const ctx = this.ctx, t = ctx.currentTime, src = ctx.createBufferSource(); src.buffer = this.noise;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(near ? 900 : 400, t); f.frequency.exponentialRampToValueAtTime(120, t + 2.4);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(near ? 0.5 : 0.3, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 3);
+      src.connect(f); f.connect(g); g.connect(this.master); src.start(t, Math.random()); src.stop(t + 3.1);
+      if (near) this.burst(0.12, 0.2, 'highpass', 1500);
+    },
     tick() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(1600, t, 0.02, 0.04, 'square'); this.burst(0.15, 0.03, 'lowpass', 600); },
     snap() { if (!this.ready()) return; this.burst(0.06, 0.25, 'highpass', 3000); const t = this.ctx.currentTime; this.tone(1500, t + 0.05, 0.08, 0.04, 'square'); },
   };
