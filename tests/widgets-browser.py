@@ -52,6 +52,8 @@ with sync_playwright() as p:
     page.wait_for_function('__lr.widgets.data("fridge-note").date==="2026-10-16"')
     assert before != page.evaluate('__lr.widgets.data("fridge-note").word')
     page.evaluate('''() => {__lr.setMode('explore',true); __lr.interact(__lr.room.items.find(i=>i.t==='minifridge').id);}''')
+    page.get_by_role('button',name='French word flashcard',exact=True).click()
+    page.get_by_role('button',name='Reveal translation',exact=True).click()
     assert page.locator('#sheetBody').inner_text().find(page.evaluate('__lr.widgets.data("fridge-note").translation')) >= 0
     page.evaluate('document.querySelector("#sheet").classList.remove("open")')
     page.wait_for_function('document.querySelectorAll(".widget-private:not([hidden])").length===0')

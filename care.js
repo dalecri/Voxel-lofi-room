@@ -85,13 +85,13 @@
     }
 
     // ---- taps: return true when the care system handled it completely ----
-    function tap(it, id) {
+    function tap(it, id, quiet = false) {
       const t = now(), today = A.today();
       if (it.t === 'kettle' || it.t === 'teapot') {
         if (A.meta.herbs > 0) {
           A.meta.herbs--; A.meta.tea = { until: t + 2 * H }; A.saveMeta();
-          view.burst(id, 'steam', 3.5); it.t === 'kettle' ? Sound.whistle() : Sound.pour();
-          A.toast('<b>🍵 Garden tea</b><span>Brewed from herbs you grew. Sip it from a mug.</span>', 2400);
+          if (!quiet) { view.burst(id, 'steam', 3.5); it.t === 'kettle' ? Sound.whistle() : Sound.pour(); }
+          if (!quiet) A.toast('<b>🍵 Garden tea</b><span>Brewed from herbs you grew. Sip it from a mug.</span>', 2400);
           A.discover('tea'); return true;
         }
         return false;

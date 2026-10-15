@@ -622,7 +622,7 @@
     for (const name in g) {
       const P = g[name];
       const holder = name === 'main' ? inner : new THREE.Group();
-      if (name !== 'main') { holder.position.set(P.pivot[0] * S, P.pivot[1] * S, P.pivot[2] * S); inner.add(holder); obj.userData.parts[name] = holder; }
+      if (name !== 'main') { holder.position.set(P.pivot[0] * S, P.pivot[1] * S, P.pivot[2] * S); inner.add(holder); obj.userData.parts[name] = holder; if (name.startsWith('private')) holder.visible = false; }
       if (P.solid) {
         const m = new THREE.Mesh(P.solid, ghost ? ghost : this.solidMat);
         m.castShadow = !ghost && C.kind !== 'rug'; m.receiveShadow = !ghost;
@@ -1797,8 +1797,12 @@
   };
 
   // ---- timelapse: render at a fixed video size, then hand the screen back ----
+  R.hidePrivateToolParts = function () {
+    const parts=[];for(const obj of this.objs.values())for(const [name,part] of Object.entries(obj.userData.parts))if(name.startsWith('private')){parts.push([part,part.visible]);part.visible=false;}
+    return () => parts.forEach(([part,visible])=>{part.visible=visible;});
+  };
   R.beginCapture = function (w, h) {
-    this.capturing = { pr: this.r.getPixelRatio(), zoom: this.zoomGoal, yaw: this.yawGoal };
+    this.capturing = { pr: this.r.getPixelRatio(), zoom: this.zoomGoal, yaw: this.yawGoal, restorePrivate: this.hidePrivateToolParts() };
     this.r.setPixelRatio(1); this.r.setSize(w, h, false);
     if (this.composer) { this.composer.setPixelRatio(1); this.composer.setSize(w, h); }
     this.w = w; this.h = h;
@@ -1807,7 +1811,7 @@
   };
   R.endCapture = function () {
     const c = this.capturing; if (!c) return;
-    this.capturing = null;
+    this.capturing = null;c.restorePrivate();
     this.r.setPixelRatio(c.pr);
     this.zoom = this.zoomGoal = c.zoom; this.yaw = this.yawGoal = c.yaw;
     this.resize();
@@ -1815,8 +1819,9 @@
 
   // ---- photos and catalog thumbnails ----
   R.snapshot = function () {
-    this.draw();
-    return this.r.domElement.toDataURL('image/png');
+    const restore=this.hidePrivateToolParts();
+    try { this.draw(); return this.r.domElement.toDataURL('image/png'); }
+    finally { restore(); }
   };
   R.thumb = function (it, definition, prepare) {
     if (!this.thumbR) {

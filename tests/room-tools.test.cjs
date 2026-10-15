@@ -1,0 +1,41 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const T=require('../room-tools.js'),L=require('../room.js'),W=require('../widgets.js');require('../furniture.js');require('../scene.js');
+function fixture(){const data={};let date=new Date(2026,9,15,14);const store={get:(k,d)=>structuredClone(data[k]??d),set:(k,v)=>data[k]=structuredClone(v)};const reload=()=>T.create({store,now:()=>date,random:()=>.25});return {data,store,reload,model:reload(),at:d=>date=new Date(d),advance:n=>date=new Date(+date+n)};}
+test('future letters validate local dates, stay sealed, arrive once across reload and survive clock rollback',()=>{
+ const f=fixture(),m=f.model;
+ for(const deliverOn of ['2026-02-30','2026-10-15','bad'])assert.throws(()=>m.send({body:'note',deliverOn}));
+ const l=m.send({title:'Private future',body:'PRIVATE_FUTURE',html:'<b>PRIVATE_FUTURE</b>',deliverOn:'2026-10-16'});
+ assert.equal(m.read(l.id),null);assert.equal(f.reload().state.mail[0].status,'sealed');
+ f.at('2026-10-16T00:00:00');assert.deepEqual(m.poll(false),{mail:[],tea:false});assert.equal(m.state.mail[0].status,'arrived');
+ assert.deepEqual(f.reload().poll().mail,[l.id]);assert.deepEqual(f.reload().poll().mail,[]);
+ const read=f.reload().read(l.id);assert.equal(read.html,'<b>PRIVATE_FUTURE</b>');f.at('2026-10-15T14:00:00');assert.ok(f.reload().read(l.id));
+});
+test('grocery items can be checked, reopened, cleared and removed without changing room state',()=>{
+ const f=fixture(),m=f.model;m.addGrocery('  PRIVATE_MILK ');m.addGrocery('Eggs');const [a,b]=m.state.groceries;
+ m.checkGrocery(a.id,true);assert.equal(f.reload().state.groceries[0].done,true);m.clearGroceries();assert.deepEqual(m.state.groceries.map(g=>g.text),['Eggs']);m.remove('groceries',b.id);assert.equal(f.reload().state.groceries.length,0);assert.throws(()=>m.addGrocery(' '));
+ assert.deepEqual(Object.keys(f.data),['lr.tools']);
+});
+test('idea shake handles empty/single jars, avoids repeats, persists selections and never mutates text',()=>{
+ const f=fixture(),m=f.model;assert.equal(m.shake(),null);m.addIdea('PRIVATE_IDEA');assert.equal(m.shake().text,'PRIVATE_IDEA');m.addIdea('Another app');
+ const first=m.shake(),second=m.shake();assert.notEqual(first.id,second.id);assert.equal(f.reload().state.lastIdea,second.id);assert.equal(m.state.ideas.length,2);
+});
+test('tea uses an absolute deadline through reload/background, rings once, and supports cancel/rebrew',()=>{
+ const f=fixture(),m=f.model;assert.throws(()=>m.brew(0));assert.throws(()=>m.brew(31));m.brew(3);f.advance(61000);assert.equal(f.reload().remaining,119000);
+ f.advance(120000);assert.equal(f.reload().poll(false).tea,false);assert.equal(f.reload().tea.status,'ready');assert.equal(f.reload().poll().tea,true);assert.equal(f.reload().poll().tea,false);
+ m.cancelTea();assert.equal(m.poll().tea,false);m.brew(1);f.advance(60000);assert.equal(m.poll().tea,true);m.enjoyTea();assert.equal(f.reload().tea.status,'done');
+});
+test('savings logs exact cents, goal changes retain deposits, removals undo entries and over-goal fill is capped',()=>{
+ const f=fixture(),m=f.model;assert.throws(()=>m.deposit('10'));m.goal('PRIVATE_GOAL','1.00');m.deposit('0.10','PRIVATE_DEPOSIT');m.deposit('0.20');assert.equal(m.total(),30);assert.equal(f.reload().total(),30);assert.equal(m.visual.level,3);
+ m.goal('PRIVATE_GOAL','2.00');assert.equal(m.total(),30);for(const v of ['0','-1','1.005','x','1e5','Infinity'])assert.throws(()=>m.deposit(v));m.deposit('2,00');assert.equal(m.total(),230);assert.equal(m.visual.level,8);
+ m.remove('deposits',m.state.deposits[0].id);assert.equal(m.total(),30);assert.equal(T.amount(m.total()),'0.30');assert.equal(T.cents('000.01'),1);
+});
+test('normalized sketch strokes survive reload; undo, clear and invalid coordinates are handled',()=>{
+ const f=fixture(),m=f.model;const s={color:'#443c34',points:[[0,0],[.5,.5],[1,1]]};m.stroke(s);assert.deepEqual(f.reload().strokes,[s]);s.points[0][0]=.8;assert.equal(m.strokes[0].points[0][0],0);
+ assert.throws(()=>m.stroke({color:'red',points:[[0,0]]}));assert.throws(()=>m.stroke({color:'#443c34',points:[[1.1,0]]}));m.undoStroke();assert.equal(m.strokes.length,0);m.stroke(s);m.clearSketch();assert.equal(f.reload().strokes.length,0);
+});
+test('free furniture definitions, inherited fridge skins, and share privacy remain separate from tools',()=>{
+ T.register(L);for(const type of ['letterbox','ideajar','savingsjar','sketchbook']){const C=L.CAT[type],m=new L.Model();C.build(m,C.vars[0]);assert.ok(Object.values(m.parts).some(p=>p.vox.size));assert.equal(C.shop,undefined);}
+ assert.equal(T.kind({t:'shopicebox'},{tap:'door',name:'Sage tall icebox'}),'groceries');
+ const f=fixture();f.model.addIdea('PRIVATE_IDEA');f.model.stroke({color:'#443c34',points:[[.1,.1]]});
+ const d=W.shareDecor({name:'Tools',n:10,tools:f.model.state,letters:{body:'PRIVATE_MAIL'},items:[{id:1,t:'savingsjar',x:2,z:2,tools:f.model.state,amount:'PRIVATE_AMOUNT'}]});assert.equal(d.items[0].t,'savingsjar');assert.ok(!JSON.stringify(d).includes('PRIVATE'));assert.ok(!('tools' in d));
+});

@@ -23,6 +23,7 @@ function startLofiRooms() {
   let companion = null, widgetView = null;
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
+  const roomTools = LRRoomTools.create({ store });
   const letters = LRLetters.createView({ store, sound: Sound, roomName: () => room.name, beforeOpen: () => { closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; } });
 
   // ---------------------------------------------------------------
@@ -153,6 +154,14 @@ function startLofiRooms() {
   const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), watered: it => shop.earn('water', `${meta.current}:${it.id}`), changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
   const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
+  const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
+    editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
+    letters, word: () => { widgets.refresh(['minifridge']); return widgets.data('fridge-note'); }, sound: Sound,
+    notice: text => toast(`<span>${text}</span>`, 3200), onBrew: id => {
+      const it=room.get(id); if (it) { if (care) care.tap(it,id,true); view.burst(id,'steam',3.5); }
+      discover('tea');
+    } });
+
 
   (function starsBg() {
     const c = document.createElement('canvas'); c.width = 600; c.height = 900;
@@ -646,6 +655,11 @@ function startLofiRooms() {
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     if (C.tap !== 'arcade' && widgetAction(it)) return;   // native games take priority over outbound portals
     const tap = C.tap;
+    const privateTool = LRRoomTools.kind(it,C);
+    if (privateTool) {
+      if (privateTool === 'groceries') { view.openDoor(id); Sound.fridge(true); setTimeout(() => Sound.fridge(false),2700); }
+      roomToolsUI.open(privateTool,id); return;
+    }
     if (tap === 'wardrobe') { wardrobeSheet(); return; }
     if (tap === 'focus') {
       if (rituals.focus(meta.current, id).active) focusSheet(it);
@@ -1590,6 +1604,7 @@ function startLofiRooms() {
   // Rooms list & menu
   const sheet = $('#sheet');
   function closeSheets() {
+    roomToolsUI.close();
     const open = sheet.classList.contains('open');
     sheet.classList.remove('open'); $('#sheetBody').dataset.merchant = '';
     if (sheet.contains(document.activeElement)) document.activeElement.blur();
@@ -1824,6 +1839,7 @@ function startLofiRooms() {
     return d;
   }
   function codeSheet(title, sub, build) {
+    roomToolsUI.close();
     const body = $('#sheetBody'); body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
@@ -1862,15 +1878,7 @@ function startLofiRooms() {
     } else toast('<span>That doorway is quiet for now.</span>', 1600);
     return true;
   }
-  function fridgeNoteSheet() {
-    widgets.refresh(['minifridge']);
-    const data = widgets.data('fridge-note');
-    codeSheet('Un mot par jour', 'A little French, on the fridge.', h => {
-      h('h2').textContent = data.word;
-      h('p').textContent = data.translation;
-      h('p', 'muted').textContent = data.example;
-    });
-  }
+  function fridgeNoteSheet() { roomToolsUI.flashcard(); }
   function newspaperSheet() {
     codeSheet('The newspaper', 'CBC News · Top stories', h => {
       const panel = h('div', 'widget-news');
@@ -2192,6 +2200,7 @@ function startLofiRooms() {
     stackSeen = new Set(slices.map(x => x.r.id));
   }
   function renderMenu() {
+    roomToolsUI.close();
     saveIndex();
     const body = $('#sheetBody');
     body.dataset.merchant = '';
@@ -2514,7 +2523,7 @@ function startLofiRooms() {
   // Android: back button closes overlays first, pausing saves to disk
   const app = window.Store && window.Store.app;
   if (app) {
-    app.addListener('pause', () => { letters.flush(); save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
+    app.addListener('pause', () => { roomToolsUI.flush(); letters.flush(); save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
     app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); });
     app.addListener('backButton', () => {
       if (letters.active) letters.close();
@@ -2542,7 +2551,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { tickWorld(worldT); worldT = 0; }
+    if (worldT >= 1) { tickWorld(worldT); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
@@ -2565,7 +2574,7 @@ function startLofiRooms() {
       view.catMove(f, sd, dt);
     }
     view.beat = meta.music && !stream ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
-    if (!filming) { view.frame(dt, t); if (widgetView) widgetView.frame(); }
+    if (!filming) { view.frame(dt, t); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); }
     requestAnimationFrame(loop);
   }
 
@@ -2578,7 +2587,7 @@ function startLofiRooms() {
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
