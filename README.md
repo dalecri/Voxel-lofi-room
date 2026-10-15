@@ -102,7 +102,13 @@ Then open http://localhost:5180.
   - While it plays, fairy lights, LED strips and RGB pieces pulse on the beat.
   - The ultrawide and the computer have a visualizer channel that dances to it.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and a soft vinyl crackle (switch it off in Settings), all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
-- **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. Rain streaks the windows. At night the lamps light the room.
+- **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. At night the lamps light the room.
+  - Tap the cloud to cycle the weather: **clear**, **rain**, **storm**, **snow** and **sakura**.
+  - **Rain:** falls in slanted voxel streaks.
+  - **Storm:** heavier rain blown hard by the wind, a darker sky, lightning bolts with a flash and thunder.
+  - **Snow:** tumbling flakes.
+  - **Sakura:** fluttering pink petals.
+  - In a walled room the weather falls outside, around the diorama, so you're cozy indoors. On an open plot it falls right onto the scene, and rain leaves little splash rings.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
 - **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
 - **Bigger plots.** In Paint, Plot size, grow any room or scene from the cozy 10×10 to 14×14, 20×20 or 24×24 for multi-block cities. Pieces stay where they are when it grows, and it only shrinks once nothing would fall off the edge.
