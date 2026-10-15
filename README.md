@@ -139,7 +139,9 @@ Then open http://localhost:5180.
   - Tap one and pick a room or a new one. The other side gets a matching door leading back automatically.
   - In cat view, just walk into a doorway. You arrive in the next room as the same cat.
   - The menu's **Your house** map shows every room and where its doors go. Tap a door to travel, or tap **Change** to send it somewhere else.
-- **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** opens one as a new room.
+- **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** lets you visit theirs. Visiting doesn't add it to your home unless you save it.
+- **Save when you mean it.** Your home only changes when you tap **Save**, the pill that appears under the room name whenever something isn't saved. New rooms, Surprise rooms and friends' rooms start unsaved, so you can mess around freely. If you leave a room with edits, it asks: save, don't save, or stay. Leaving a room you only looked at doesn't ask. Switching lamps on or a cat wandering around doesn't count as an edit. Your work in progress is kept safe even if the app closes. Door links and the door back into a room are saved without asking.
+- **Your home as a stack.** The menu shows your saved rooms as a stack of little isometric slices, tinted with each room's walls and floor, newest on top. The room you're in glows and sits slightly raised, and rooms joined by doors get a dashed edge and a 🚪. Tap a slice or its name to go there, or tap the dashed slice on top to start a new room.
 - **Seasonal decor:**
   - **Halloween:** a jack-o'-lantern, a pumpkin pile, a friendly ghost, a spider web, a bat garland and a candy bowl.
   - **Winter holidays:** a tree, a wreath, stockings, gifts, a snowman and hot cocoa.
