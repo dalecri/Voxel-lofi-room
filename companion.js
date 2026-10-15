@@ -1,17 +1,17 @@
 // One companion, outside the room model. Fixed rules, fixed speech, no remote services.
 (function (root) {
-  const ID = 'lampbot', DISPLAY_NAME = 'Little bot'; // Rename the character here.
+  const ID = 'lampbot', DISPLAY_NAME = 'Little dude'; // Rename the character here.
   const SPEECH = {
     morning: ['Morning. I have preheated the optimism.', 'The light is fresh. So are we, approximately.', 'A small beginning still counts.', 'The plants look ready. I respect their confidence.', 'Good morning. No rush has been scheduled.'],
     day: ['An excellent afternoon for existing.', 'The sun is doing most of my job. Fair enough.', 'A little pause would fit nicely here.', 'This room has very good sitting energy.', 'We have enough afternoon to take our time.'],
     evening: ['The room is putting its soft edges on.', 'Evening has arrived without a meeting.', 'Warm light suits this place.', 'The day can put its bags down now.', 'I have switched to my indoor optimism.'],
-    night: ['Low power. High regard for you.', 'The night shift mostly involves being cozy.', 'I am resting my very small circuits.', 'Tomorrow can wait outside for a bit.', 'A quiet room is a perfectly good plan.'],
+    night: ['Low power. High regard for you.', 'The night shift mostly involves being cozy.', 'I am resting my very small thoughts.', 'Tomorrow can wait outside for a bit.', 'A quiet room is a perfectly good plan.'],
     rain: ['The window has excellent rain reception.', 'Weather report: comfortably on this side of the glass.', 'I would offer an umbrella, but these hands are ornamental.', 'Rain has a lovely sense of rhythm.'],
     snow: ['The world has turned its volume down.', 'Snow. Very ambitious confetti.', 'I am keeping a little warmth in reserve.', 'Every roof is wearing a blanket. Sensible.'],
     clear: ['Clear skies. No further instructions.', 'Nothing urgent in the forecast.', 'A fine day for a small amount of puttering.', 'The light found us. Convenient.'],
-    moment: ['That was a good little moment.', 'Noted in the important part of my circuits.', 'A small celebration seems proportionate.', 'I saw that. Very cozy work.', 'This is what the warm light is for.', 'Another reason to like this room.'],
+    moment: ['That was a good little moment.', 'Noted in the important part of my notebook.', 'A small celebration seems proportionate.', 'I saw that. Very cozy work.', 'This is what the warm light is for.', 'Another reason to like this room.'],
     tap: ['Hello. Still pleasantly here.', 'Oh, hello. A hop felt appropriate.', 'My entire department is happy to see you.', 'I brought a little light. Travel size.', 'Yes, this is my helpful expression.', 'You have reached the warm-light desk.'],
-    idle: ['I have inspected this patch of floor. Quite good.', 'The cat has seniority. I checked.', 'I was going somewhere. It can wait.', 'A room is nicer with a little room left in it.', 'The shoulder pads are mostly for moral support.', 'Doing very little, with considerable care.'],
+    idle: ['I have inspected this patch of floor. Quite good.', 'The cat has seniority. I checked.', 'I was going somewhere. It can wait.', 'A room is nicer with a little room left in it.', 'These pajamas are mostly for moral support.', 'Doing very little, with considerable care.'],
   };
   const nearest = (points, s) => points.reduce((best, p) => !best || Math.hypot(p.x - s.x, p.z - s.z) < Math.hypot(best.x - s.x, best.z - s.z) ? p : best, null);
   const rainy = e => e.weather === 'rain' || e.weather === 'storm';
@@ -243,57 +243,79 @@
     }
     return { state: s, step, speak, celebrate, tap(e) { celebrate(e, 'tap'); } };
   }
-  const definition = {
-    name: DISPLAY_NAME, kind: 'companion', size: [1, 1], vars: [[]], anim: 'twinkle',
-    build(m) {
-      const armor = 0x34595c, edge = 0x203e43, plate = 0x476d6c, sage = 0x779986;
-      const mint = 0x91d9d0, pale = 0xc9f5ed, dark = 0x173b40;
-      // Little boots, a broad armored body, and a mint heart in its chest.
-      m.part('legs', [4, 3, 4], 'x');
-      m.box(0, 0, 2, 3, 2, 7, edge).box(5, 0, 2, 8, 2, 7, edge);
-      m.box(0, 1, 4, 3, 3, 7, sage).box(5, 1, 4, 8, 3, 7, sage);
-      m.main();
-      m.blob(4, 6, 4, 5.3, 4.6, 3.7, armor);
-      m.box(0, 4, 6, 8, 9, 8, plate).box(1, 3, 7, 7, 4, 8, edge);
-      m.box(0, 7, 8, 8, 8, 9, sage).box(2, 4, 8, 6, 5, 9, armor);
-      m.box(3, 6, 8, 5, 9, 9, edge);
-      m.box(3, 7, 9, 5, 9, 10, mint, true).set(2, 8, 9, pale, true).set(5, 8, 9, pale, true).set(3, 6, 9, mint, true);
-      m.box(-1, 10, 2, 9, 11, 7, edge);
-      // Layered shoulder caps and oversized gauntlets, tucked close to the body.
-      for (const x of [-3, 8]) {
-        m.part(x < 0 ? 'leftarm' : 'rightarm', [x + 1.5, 8, 4], 'x');
-        m.box(x, 6, 2, x + 3, 10, 6, edge);
-        m.box(x, 8, 2, x + 3, 11, 6, plate).box(x, 10, 3, x + 3, 11, 6, sage);
-        m.box(x, 5, 3, x + 3, 7, 5, sage);
-        m.blob(x + 1.5, 4, 4.5, 2.3, 2.8, 2.8, armor);
-        m.box(x, 2, 6, x + 3, 5, 7, edge).box(x, 4, 6, x + 3, 5, 7, sage);
-      }
-      m.main();
-      // The luminous rounded head is one tilting part, with a pale stepped cap.
-      m.part('head', [4, 11, 4], 'x');
-      m.blob(4, 15, 4, 5, 6, 3.6, mint, true);
-      const widths = [8, 10, 10, 10, 10, 10, 8, 6, 4, 2];
-      for (let y = 11; y < 21; y++) {
-        const left = 4 - widths[y - 11] / 2, right = 8 - left;
-        for (let x = left; x < right; x++) {
-          const cap = y >= 18 || (y >= 16 && (x === left || x === right - 1));
-          m.set(x, y, 7, cap ? pale : mint, true);
-        }
-      }
-      // Dark eyes with tiny catchlights and a pixel smile, facing the room.
-      m.box(1, 14, 7, 2, 16, 8, dark, true).box(6, 14, 7, 7, 16, 8, dark, true);
-      m.set(1, 16, 7, pale, true).set(6, 16, 7, pale, true);
-      m.set(2, 13, 7, plate, true).set(5, 13, 7, plate, true).box(3, 12, 7, 5, 13, 8, plate, true);
-      for (let x = 0; x < 8; x++) m.set(x, 11, 7, x % 2 ? pale : mint, true);
-      m.part('lids', [4, 11, 4], 'x');
-      m.box(1, 14, 8, 2, 16, 9, mint, true).box(6, 14, 8, 7, 16, 9, mint, true);
-      m.part('book', [4, 6, 8]);
-      m.box(0, 5, 7, 8, 6, 11, 0x8b7757).box(0, 6, 7, 4, 7, 11, 0xf2e5c4).box(4, 6, 7, 8, 7, 11, 0xe2d7b6);
-      m.part('page', [4, 7, 9], 'z');m.box(4, 7, 7, 8, 8, 11, 0xf2e5c4);
-      m.part('cup', [8, 7, 7]);m.box(7, 6, 7, 10, 9, 10, 0xd7b28d).set(10, 7, 8, 0xd7b28d).box(7, 9, 7, 10, 10, 10, 0x6e5140);
-      m.main();
-    },
-  };
+  const costumes = typeof module !== 'undefined' && module.exports ? require('./costumes.js') : root.LRCostumes;
+  // One shared rig. Costumes merge their voxels into these parts, never into room decor.
+  const RIG = { legs: [4,3,4], leftleg: [1.5,3,4], rightleg: [6.5,3,4], leftarm: [-.5,9,4], rightarm: [8.5,9,4], head: [4,11,4], eyes: [4,11,4], lids: [4,11,4], book: [4,6,8], page: [4,7,9], cup: [8,7,7] };
+  function buildDude(m, costume) {
+    const layers = costume.layers || {}, skin = layers.hood?.faceColor || 0xf1c6a3;
+    const cloth = layers.suit?.color || 0xe6d9b7, trim = layers.suit?.trim || 0xfff4dc, ink = 0x3a303a;
+    m.part('legs', RIG.legs, 'x');
+    for (const [part,x] of [['leftleg',0],['rightleg',5]]) {
+      m.part(part,RIG[part],'x');m.box(x,0,3,x+3,3,7,cloth).box(x,0,6,x+3,1,7,trim);
+    }
+    m.main();m.blob(4,6.5,4,4.5,4.5,3.8,cloth);
+    m.box(1,4,6,7,10,8,cloth).box(2,5,7,6,9,8,trim).box(2,10,3,6,12,6,skin);
+    for (const [part,x] of [['leftarm',-2],['rightarm',7]]) {
+      m.part(part,RIG[part],'x');m.box(x,6,3,x+3,10,6,cloth).box(x,4,3,x+3,6,6,skin);
+    }
+    m.part('head',RIG.head,'x');m.blob(4,15,4,5,5.5,3.6,skin).box(0,12,6,8,18,8,skin);
+    // Same readable face under every hood. Robot tribute changes only its skin colour.
+    m.clear(1,14,7,2,16,8).clear(6,14,7,7,16,8);
+    m.set(2,12,7,ink).set(5,12,7,ink).box(3,11,7,5,12,8,ink);
+    m.set(0,13,7,0xe8a49a).set(7,13,7,0xe8a49a);
+    if (layers.hood) {
+      // Open-faced ellipsoid shell; it cannot overwrite the face or leave a gap at the neck.
+      m.blob(4,15,4,6,6.5,4.5,(x,y,z) => z>=7 && x>=0 && x<8 && y>=11 && y<18 ? null : layers.hood.color);
+    }
+    // Two mutually exclusive eye surfaces occupy the same sockets, so lids never protrude.
+    m.part('eyes',RIG.eyes,'x');m.box(1,14,7,2,16,8,ink).box(6,14,7,7,16,8,ink);
+    m.part('lids',RIG.lids,'x');m.box(1,14,7,2,16,8,skin).box(6,14,7,7,16,8,skin).set(1,14,7,ink).set(6,14,7,ink);
+    m.part('book',RIG.book);m.box(0,5,7,8,6,11,0x8b7757).box(0,6,7,4,7,11,0xf2e5c4).box(4,6,7,8,7,11,0xe2d7b6);
+    m.part('page',RIG.page,'z');m.box(4,7,7,8,8,11,0xf2e5c4);
+    m.part('cup',RIG.cup);m.box(7,6,7,10,9,10,0xd7b28d).set(10,7,8,0xd7b28d).box(7,9,7,10,10,10,0x6e5140);
+    // Generic data interpreter. The four layers use the same rig in every activity.
+    for (const [slot,layer] of Object.entries(layers)) for (const shape of layer.shapes || []) {
+      const part = slot === 'hood' ? 'head' : slot === 'badge' ? 'main' : shape.part || 'main';
+      if (!m.parts[part]) continue;
+      m.cur=m.parts[part];const [x,y,z]=shape.at,[a,b,c]=shape.size;
+      if (shape.shape === 'blob') m.blob(x,y,z,a,b,c,shape.color,shape.glow);
+      else if (shape.shape === 'box') m.box(x,y,z,x+a,y+b,z+c,shape.color,shape.glow);
+    }
+    m.main();
+  }
+  function definitionFor(id = 'plain', preview = false) {
+    const costume = costumes.find(id) || costumes.find('plain');
+    return { name: DISPLAY_NAME, kind: 'companion', size: [1,1], vars: [[]], anim: 'twinkle', build(m) { buildDude(m,costume); if(preview) for(const name of ['book','page','cup']) m.parts[name].vox.clear(); } };
+  }
+  const definition = definitionFor();
+  function attachRig(object) {
+    const p=object.userData.parts;
+    p.head.add(p.eyes,p.lids);p.eyes.position.set(0,0,0);p.lids.position.set(0,0,0);
+    for(const name of ['leftleg','rightleg']) {p.legs.add(p[name]);p[name].position.sub(p.legs.position);}
+  }
+  // Shared pose set: activity names map onto four silhouettes plus the existing hand gestures.
+  function applyPose(object, pose, s, reduced) {
+    const p=object.userData.parts,seated=['sit','type','read','lounge'].includes(s.pose),sleep=s.pose==='sleep';
+    const walk=s.mode==='wander' || ['move','fetch','to-seat'].includes(s.activityStage);
+    const stride=!reduced && walk ? Math.sin(s.elapsed*3.6)*.28 : 0;
+    object.scale.setScalar(sleep ? .36 : .4);
+    pose.rotation.x=sleep ? -Math.PI/2 : 0;pose.rotation.z=s.weight || 0;
+    pose.position.set(0,sleep ? .55 : seated ? -.125 : 0,sleep ? 1.3125 : 0);
+    if (walk) pose.position.y+=Math.abs(stride)*.35;
+    p.head.rotation.x=s.tilt;p.lids.visible=!!s.blink || sleep;p.eyes.visible=!p.lids.visible;
+    p.legs.rotation.x=seated ? -Math.PI/2 : 0;p.leftleg.rotation.x=stride;p.rightleg.rotation.x=-stride;
+    const read=s.pose==='read' || s.activity?.kind==='read' && s.activity.stage==='to-seat';
+    const type=s.pose==='type',fidget=type && !reduced ? Math.sin(s.elapsed*5)*.06 : 0;
+    p.leftarm.rotation.x=type ? -1.3+fidget : read ? -.45 : -stride;
+    p.rightarm.rotation.x=type ? -1.3-fidget : s.sipping ? -.9 : read ? -.45 : stride;
+    p.leftarm.position.z=p.rightarm.position.z=(4+(type ? 1 : 0))/8;
+    p.book.visible=p.page.visible=read;p.page.rotation.z=reduced ? 0 : s.pageTurn*Math.PI;
+    p.cup.visible=!!s.sipping;p.cup.position.y=(s.sipping ? 13 : 7)/8;
+    // A tiny breath in idle, with no ambient motion when reduced motion is requested.
+    const breath=!reduced && !sleep && !walk && !seated ? Math.sin(s.elapsed*1.2)*.012 : 0;
+    p.head.position.y=RIG.head[1]/8+breath;
+    object.userData.pose=sleep ? 'sleep' : seated ? 'sit' : walk ? 'walk' : 'idle';
+  }
   function scanActivities(room, view) {
     const activities = [], seats = [], desks = [], windows = [];
     const point = (it, x, y, z) => view.itemPoint(it.id, [x, y, z]);
@@ -342,12 +364,22 @@
     }
     return {activities,seats,desks,windows};
   }
-  function create({ view, room, environment }) {
+  function create({ view, room, environment, costume = 'plain', onWardrobe = () => {} }) {
     const brain = createBrain(), object = view.makeObject({ t: ID, id: ID, on: true, c: 0 }, null, true, definition);
     object.name = ID; object.scale.setScalar(.4); view.root.add(object);
-    const pose = new THREE.Group(); object.add(pose); pose.add(object.userData.inner);
+    const pose = new THREE.Group(); object.add(pose); pose.add(object.userData.inner); attachRig(object);
+    let currentCostume = 'plain';
+    function setCostume(id) {
+      if (!costumes.find(id)) return false;
+      if (id === currentCostume) return true;
+      const fresh = view.makeObject({t: ID + ':' + id, id: ID, on: true, c: 0},null,true,definitionFor(id));
+      pose.remove(object.userData.inner);object.userData.glowMat.dispose();
+      object.userData=fresh.userData;pose.add(object.userData.inner);attachRig(object);
+      currentCostume=id;object.userData.costume=id;return true;
+    }
+    object.userData.costume='plain';setCostume(costume);
     const stool = view.makeObject({t:'botstool',id:'botstool'}, null, true, {kind:'companion',size:[1,1],vars:[[]],build(m){m.box(1,0,1,7,1,7,0x34595c).box(3,1,3,5,9,5,0x779986).box(0,9,0,8,10,8,0x34595c);}}); object.add(stool);stool.visible=false;
-    const light = new THREE.PointLight(0xa4eee0, .6, 2.5); light.position.set(0, 1.6, 0); object.add(light);
+    const light = new THREE.PointLight(0xffe4c0, .6, 2.5); light.position.set(0, 1.6, 0); object.add(light);
     const bubble = document.createElement('div'); bubble.id = 'lampbotBubble'; bubble.className = 'toast companion-bubble';
     bubble.setAttribute('role', 'status'); bubble.setAttribute('aria-live', 'polite'); bubble.setAttribute('aria-label', DISPLAY_NAME); bubble.hidden = true; document.body.appendChild(bubble);
     let cachedRoom = null, cachedItems = null, refresh = 0, desks = [], windows = [], activities = [], seats = [], zTime = 0, lastSip = false;
@@ -359,24 +391,13 @@
       if (cachedRoom !== e.roomId || cachedItems !== room.items || refresh <= 0) { scan(); cachedRoom = e.roomId; cachedItems = room.items; refresh = .5; }
       const s = brain.step(dt, env());
       object.position.set(s.x, s.y + s.hop + s.bob, s.z); object.rotation.y = s.heading;
-      const parts=object.userData.parts, seated=['type','read','lounge'].includes(s.pose), sleepingPose=s.pose==='sleep';
-      object.scale.setScalar(sleepingPose ? .36 : .4);
-      pose.rotation.x=sleepingPose ? -Math.PI/2 : 0;pose.rotation.z=s.weight || 0;
-      pose.position.set(0,sleepingPose ? .55 : seated ? -.125 : 0,sleepingPose ? 1.3125 : 0);
-      parts.head.rotation.x = s.tilt;parts.lids.rotation.x=s.tilt;parts.lids.visible=s.blink;
-      parts.legs.rotation.x=seated ? -Math.PI/2 : 0;
-      const reading=s.pose==='read' || s.activity?.kind==='read' && s.activity.stage==='to-seat';
-      const typing=s.pose==='type', fidget=typing && !reduced.matches ? Math.sin(s.elapsed*5)*.06 : 0;
-      parts.leftarm.rotation.x=typing ? -1.3+fidget : reading ? -.45 : 0;
+      applyPose(object,pose,s,reduced.matches);
+      const parts=object.userData.parts, typing=s.pose==='type';
       const stretch=s.mode==='window' && e.phase==='morning' && !reduced.matches && s.activity?.time<5 ? Math.sin(s.activity.time/5*Math.PI)*.35 : 0;
       parts.leftarm.rotation.z=stretch;parts.rightarm.rotation.z=-stretch;
-      parts.rightarm.rotation.x=typing ? -1.3-fidget : s.sipping ? -.9 : reading ? -.45 : 0;
-      parts.leftarm.position.z=(4+(typing ? 1 : 0))/8;parts.rightarm.position.z=(4+(typing ? 1 : 0))/8;
-      parts.book.visible=reading;parts.page.visible=reading;parts.page.rotation.z=reduced.matches ? 0 : s.pageTurn*Math.PI;
-      parts.cup.visible=!!s.sipping;parts.cup.position.y=(s.sipping ? 13 : 7)/8;
       stool.visible=typing;stool.position.y=-s.y/.4;stool.scale.y=s.y/(.4*1.25);
       if(s.sipping && !lastSip && !e.quiet) LofiSound.sip();lastSip=!!s.sipping;
-      light.color.setHex(typing ? 0xb7d5ff : 0xa4eee0);
+      light.color.setHex(typing ? 0xb7d5ff : currentCostume === 'automata' ? 0xa4eee0 : 0xffe4c0);
       const dim = 1 - .6 * (view.breathDim || 0);
       object.userData.glowMat.color.setScalar(s.brightness * dim); light.intensity = .6 * s.brightness * dim;
       object.visible = !view.fp;
@@ -400,9 +421,9 @@
       const hits = view.raycaster.intersectObjects(object.userData.meshes, false), wall = view.pickWall(x, y);
       return !!hits.length && (!item || hits[0].distance < item.dist) && (!wall || hits[0].distance <= wall.t + .05);
     }
-    return { id: ID, object, brain, bubble, frame, hit, tap() { brain.tap(env()); }, celebrate() { brain.celebrate(env()); }, get name() { return DISPLAY_NAME; } };
+    return { id: ID, object, brain, bubble, frame, hit, setCostume, get costume() { return currentCostume; }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, get name() { return DISPLAY_NAME; } };
   }
-  const api = { scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
+  const api = { RIG, buildDude, definitionFor, attachRig, applyPose, scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.LRCompanion = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -66,7 +66,7 @@ test('purchases are affordable, permanent, and cannot be charged twice', () => {
 });
 
 test('the fixed cosmetic catalog has unique ids and prices in range', () => {
-  assert.equal(catalog.length, 33);
+  assert.equal(catalog.length, 36);
   assert.equal(new Set(catalog.map(c => c.id)).size, catalog.length);
-  assert.ok(catalog.every(c => c.price >= 40 && c.price <= 200 && (c.piece || c.wall || c.floor)));
+  assert.ok(catalog.every(c => c.price >= 40 && c.price <= 200 && (c.piece || c.wall || c.floor || c.costume)));
 });

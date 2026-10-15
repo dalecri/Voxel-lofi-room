@@ -1,7 +1,9 @@
 // Earn-only Fireflies and the merchant's cosmetic collection. No paid currency.
 (function (root) {
   const extras = typeof module !== 'undefined' && module.exports ? require('./merchant-assets.js') : root.LRMerchantAssets;
+  const costumes = typeof module !== 'undefined' && module.exports ? require('./costumes.js') : root.LRCostumes;
   const catalog = [
+    ...costumes.catalog(),
     { id: 'galaxy', name: 'Galaxy aquarium', price: 120, piece: 'shopgalaxy', icon: '🌌', desc: 'A tiny animated galaxy for your fish. The ordinary aquarium stays free.' },
     { id: 'bluefire', name: 'Blue-flame fireplace', price: 100, piece: 'shopbluefire', icon: '🔥', desc: 'The familiar hearth, glowing icy blue.' },
     { id: 'blossom', name: 'Moonlit cherry blossom', price: 80, piece: 'shopblossom', icon: '🌸', desc: 'Pearl-pink blossoms and golden leaves.' },
@@ -14,7 +16,7 @@
     ...extras.catalog,
   ];
 
-  function create({ store, today, notify = () => {} }) {
+  function create({ store, today, notify = () => {}, onPurchase = () => {} }) {
     let balance = store.get('lr.fireflies', null);
     if (balance === null) { balance = 30; store.set('lr.fireflies', balance); }
     if (!Number.isSafeInteger(balance) || balance < 0) balance = 0;
@@ -43,6 +45,7 @@
       if (!item || owned.has(id) || balance < item.price) return false;
       balance -= item.price; owned.add(id);
       store.set('lr.fireflies', balance); store.set('lr.shopOwned', [...owned]);
+      onPurchase(item);
       return true;
     }
     return { earn, buy, owns: id => owned.has(id), available: C => !C.shop || owned.has(C.shop), get balance() { return balance; }, get earnedToday() { return day().earned; } };

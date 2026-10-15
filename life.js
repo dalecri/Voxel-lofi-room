@@ -9,7 +9,9 @@
       wait -= Math.max(0, dt) * (0.8 + Math.max(0, Math.min(1, cozy)) * 0.4);
       if (wait > 0) return false;
       const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-      const wares = [...shuffle(catalog.filter(c => !owns(c.id))), ...shuffle(catalog.filter(c => owns(c.id)))].slice(0, 3).map(c => c.id);
+      const unowned = shuffle(catalog.filter(c => !owns(c.id))), outfit = unowned.find(c => c.costume);
+      // An outfit leads the satchel while any remain; the visit still has exactly three wares.
+      const wares = [...(outfit ? [outfit] : []), ...unowned.filter(c => c !== outfit), ...shuffle(catalog.filter(c => owns(c.id)))].slice(0, 3).map(c => c.id);
       trip = { date: today(), wares, until: now() + 180000 };
       store.set('lr.merchant', trip);
       return true;

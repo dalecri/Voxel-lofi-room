@@ -1818,7 +1818,7 @@
     this.draw();
     return this.r.domElement.toDataURL('image/png');
   };
-  R.thumb = function (it) {
+  R.thumb = function (it, definition, prepare) {
     if (!this.thumbR) {
       const c = document.createElement('canvas'); c.width = c.height = 120;
       this.thumbR = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -1829,9 +1829,10 @@
       this.thumbS.add(d, new THREE.AmbientLight(0xffffff, 1.1), new THREE.HemisphereLight(0xffffff, 0x8a7a7a, 0.6));
       this.thumbC = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     }
-    const obj = this.makeObject(Object.assign({ id: -1 }, it), null, true);
+    const obj = this.makeObject(Object.assign({ id: -1 }, it), null, true, definition);
     this.thumbS.add(obj);
-    obj.rotation.y = CAT[it.t].kind === 'wall' ? 0.55 : 0;
+    obj.rotation.y = (definition || CAT[it.t]).kind === 'wall' ? 0.55 : 0;
+    if (prepare) prepare(obj);
     obj.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(obj), c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
     const r = Math.max(size.x, size.y, size.z) * 0.62 + 0.05;
@@ -1841,6 +1842,7 @@
     this.thumbR.render(this.thumbS, cam);
     const url = this.thumbR.domElement.toDataURL('image/png');
     this.thumbS.remove(obj);
+    if (definition && obj.userData.glowMat) obj.userData.glowMat.dispose();
     return url;
   };
   R.dropThumbs = function () {

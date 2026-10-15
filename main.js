@@ -15,11 +15,14 @@ function startLofiRooms() {
     set(k, v) { put(k, JSON.stringify(v)); },
     del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
   };
-  const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); } });
+  const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); }, onPurchase: item => {
+    if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setCostume(item.costume); companion.frame(0); } }
+  } });
   const rituals = LRRituals.create({ store });
   let breathCamera = null;
   let companion = null, widgetView = null;
   const widgets = LRWidgets.create({ store });
+  const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -250,7 +253,7 @@ function startLofiRooms() {
     D.done = true; store.set('lr.daily', D);
     const S = store.get('lr.dailyStreak', { n: 0, last: '' });
     S.n = S.last === yesterday() ? S.n + 1 : S.last === D.date ? S.n : 1; S.last = D.date;
-    store.set('lr.dailyStreak', S);
+    store.set('lr.dailyStreak', S); wardrobe.sync();
     shop.earn('daily');
     if (S.n > 0 && S.n % 7 === 0) shop.earn('streak');
     const log = store.get('lr.dailyLog', []);
@@ -642,6 +645,7 @@ function startLofiRooms() {
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     if (C.tap !== 'arcade' && widgetAction(it)) return;   // native games take priority over outbound portals
     const tap = C.tap;
+    if (tap === 'wardrobe') { wardrobeSheet(); return; }
     if (tap === 'focus') {
       if (rituals.focus(meta.current, id).active) focusSheet(it);
       else { rituals.light(meta.current, id); Sound.matchStrike(); updateRituals(); toast('<span>A little flame for 25 quiet minutes. Tap it again to snuff it whenever you like.</span>', 3200); }
@@ -1664,7 +1668,7 @@ function startLofiRooms() {
       const owned = shop.owns(item.id), card = document.createElement('div');
       card.className = 'shop-card' + (purchased === item.id ? ' purchased' : '');
       card.dataset.shopItem = item.id;
-      card.innerHTML = `${item.piece ? `<img alt="" src="${thumbOf(item.piece)}">` : `<div class="shop-icon" aria-hidden="true">${item.icon}</div>`}
+      card.innerHTML = `${item.costume ? `<img alt="" src="${costumeThumb(item.costume)}">` : item.piece ? `<img alt="" src="${thumbOf(item.piece)}">` : `<div class="shop-icon" aria-hidden="true">${item.icon}</div>`}
         <b>${item.name}</b><p>${item.desc}</p><span>${item.price} Fireflies</span>
         <button class="chipbtn ${owned ? '' : 'primary'}" data-shop-buy="${item.id}" aria-label="${owned ? 'Owned: ' : 'Buy '}${item.name}${owned ? '' : ' for ' + item.price + ' Fireflies'}">${owned ? '✓ Owned' : 'Buy'}</button>`;
       card.querySelector('button').onclick = () => {
@@ -1678,6 +1682,35 @@ function startLofiRooms() {
     });
     updateShopBalance();
     sheet.classList.add('open');
+  }
+  function wardrobeSheet() {
+    wardrobe.sync();
+    codeSheet('A little wardrobe', 'Outfits stay on this device. Your roommate and wardrobe choices never travel in shared room codes.', h => {
+      $('#sheetBody').dataset.merchant = '';
+      const grid = h('div', 'shop-grid wardrobe-grid');
+      for (const c of LRCostumes.COSTUMES) {
+        const owned = wardrobe.owns(c.id), card = document.createElement('div');
+        card.className = 'shop-card wardrobe-card'; card.dataset.costume = c.id;
+        const image = document.createElement('img'); image.alt = ''; image.src = costumeThumb(c.id); card.appendChild(image);
+        const name = document.createElement('b'); name.textContent = c.name; card.appendChild(name);
+        const note = document.createElement('p'); note.textContent = owned ? 'Yours forever' : LRCostumes.condition(c); card.appendChild(note);
+        const button = document.createElement('button'); button.className = 'chipbtn' + (owned ? ' primary' : '');
+        button.textContent = wardrobe.selected === c.id ? 'Wearing' : owned ? 'Wear' : 'Locked';
+        button.disabled = !owned || wardrobe.selected === c.id;
+        button.setAttribute('aria-label', owned ? 'Wear ' + c.name : c.name + ': ' + LRCostumes.condition(c));
+        button.onclick = () => {
+          if (!wardrobe.equip(c.id)) return;
+          companion.setCostume(c.id); companion.frame(0); Sound.chime(); wardrobeSheet();
+        };
+        card.appendChild(button); grid.appendChild(card);
+      }
+      const shopButton = h('button','chipbtn','Visit Mallow’s shop'); shopButton.onclick = () => openShop();
+    });
+  }
+  const costumeThumbs = new Map();
+  function costumeThumb(id) {
+    if (!costumeThumbs.has(id)) costumeThumbs.set(id, view.thumb({t:'companion-preview:' + id,c:0,on:true}, LRCompanion.definitionFor(id,true), obj => { obj.userData.parts.lids.visible = false; }));
+    return costumeThumbs.get(id);
   }
   function dressCat(cat) {
     if (!shop.owns('crown') || cat.visitor || cat.t !== 'cat') return;
@@ -2169,6 +2202,7 @@ function startLofiRooms() {
     $('#bBreathing').onclick = breathingSheet;
     const market = h('div', 'rowbtns');
     const marketButton = document.createElement('button'); marketButton.className = 'chipbtn'; marketButton.id = 'bShop';
+    const wardrobeButton = document.createElement('button'); wardrobeButton.className = 'chipbtn'; wardrobeButton.id = 'bWardrobe'; wardrobeButton.textContent = 'Wardrobe'; wardrobeButton.onclick = wardrobeSheet; market.appendChild(wardrobeButton);
     marketButton.textContent = `🐾 Traveling merchant · ${shop.balance} Fireflies${merchantHere() ? ' · visiting' : ''}`; marketButton.onclick = () => openShop(); market.appendChild(marketButton);
     const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
     h('h2', '', `Today <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
@@ -2503,7 +2537,7 @@ function startLofiRooms() {
     soundT += dt;
     if (soundT > 0.3) { Sound.soundscape(soundState(soundT)); soundT = 0; }
     clockT += dt;
-    if (clockT > 20) { clockT = 0; if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); }
+    if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); }
     momentT += dt;
     worldT += dt;
     if (worldT >= 1) { tickWorld(worldT); worldT = 0; }
@@ -2534,7 +2568,7 @@ function startLofiRooms() {
   }
 
   window.addEventListener('resize', () => view.resize());
-  companion = LRCompanion.create({ view, room, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
   widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => filming || document.hidden || $('#photo').classList.contains('open') });
   updateHeader();
@@ -2542,7 +2576,7 @@ function startLofiRooms() {
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

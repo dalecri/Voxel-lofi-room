@@ -60,14 +60,13 @@ with sync_playwright() as p:
     assert page.evaluate('__lr.companion.brain.state.brightness') == 1.18
     page.evaluate("__lr.meta.weather='snow'; __lr.companion.tap(); __lr.companion.frame(.1)")
     assert page.evaluate('__lr.companion.brain.state.category') == 'snow'
+    page.keyboard.press('Escape')
     page.evaluate("window.__hour=0; __lr.companion.frame(.1); window.__sleepSpot=[__lr.companion.brain.state.x,__lr.companion.brain.state.z]; for(let k=0;k<900;k++)__lr.companion.frame(.1); window.__sleepSpot=[__lr.companion.brain.state.x,__lr.companion.brain.state.z]")
     assert page.evaluate("__lr.companion.brain.state.mode==='sleep' && __lr.companion.brain.state.brightness===.18 && __lr.view.sprites.some(s=>s.visible && s.userData.wob===4)")
     assert page.evaluate('[__lr.companion.brain.state.x,__lr.companion.brain.state.z]') == page.evaluate('__sleepSpot')
     page.emulate_media(reduced_motion='no-preference')
-    page.evaluate("window.__hour=14; __lr.meta.phase='day'; __lr.meta.weather='clear'; __lr.room.items=[]; __lr.changed(); for(let k=0;k<40;k++)__lr.companion.frame(.1); __lr.view.beat=0; __lr.companion.frame(.1)")
-    assert page.evaluate('__lr.companion.brain.state.bob') == .065
-    page.evaluate('__lr.view.beat=.9; __lr.companion.frame(.1)')
-    assert page.evaluate('__lr.companion.brain.state.bob') < .001
+    assert page.evaluate("() => {window.__hour=14; __lr.meta.phase='day'; __lr.meta.weather='clear'; __lr.room.items=[]; __lr.changed(); for(let k=0;k<40;k++)__lr.companion.frame(.1); __lr.view.beat=0; __lr.companion.frame(.1);return __lr.companion.brain.state.bob;}") == .065
+    assert page.evaluate('() => {__lr.view.beat=.9; __lr.companion.frame(.1);return __lr.companion.brain.state.bob;}') < .001
     page.emulate_media(reduced_motion='reduce')
     print('PASS: all dayparts, rain/window attention, snow speech, midnight sleep/dimming/z, and beat-driven groove')
 
@@ -103,9 +102,12 @@ with sync_playwright() as p:
     page.wait_for_function('!document.querySelector("#lampbotBubble").hidden')
     assert page.evaluate('__lr.companion.brain.state.hop') > 0
     assert page.locator('#lampbotBubble').inner_text()
+    assert page.locator('.wardrobe-card').count() == 8
+    page.keyboard.press('Escape')
     for width in (320, 390, 1280):
         page.set_viewport_size({'width': width, 'height': 844})
         page.evaluate('__lr.view.resize(); __lr.companion.tap(); __lr.companion.frame(.1)')
+        page.keyboard.press('Escape')
         bounds = page.locator('#lampbotBubble').bounding_box()
         assert bounds and bounds['x'] >= 10 and bounds['x'] + bounds['width'] <= width - 10, bounds
         page.screenshot(path=f'/tmp/lampbot-{width}.png')

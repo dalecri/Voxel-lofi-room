@@ -11,7 +11,7 @@ test('24 distinct merchant models keep functional bases free and have correct pi
   const before = bases.map(id => L.CAT[id]);
   extras.register(L);
   assert.equal(extras.catalog.length, 24);
-  assert.equal(shop.catalog.length, 33);
+  assert.equal(shop.catalog.length, 36);
   const hashes = new Set();
   for (const item of extras.catalog) {
     const C = L.CAT[item.piece], m = new L.Model(); C.build(m, C.vars[0], { on: true });

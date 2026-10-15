@@ -9,7 +9,9 @@ test('lampbot uses voxel primitives without becoming catalog furniture', () => {
   const m = new LR.Model(); definition.build(m);
   assert.equal(ID, 'lampbot'); assert.equal(LR.CAT.lampbot, undefined);
   assert.ok(m.parts.main.vox.size > 0 && m.parts.head.vox.size > 0);
-  assert.ok([...m.parts.head.vox.values()].some(v => v & LR.GLOW));
+  assert.ok(![...m.parts.head.vox.values()].some(v => v & LR.GLOW)); // plain dude has no robot glow
+  const tribute = new LR.Model(); require('../companion.js').definitionFor('automata').build(tribute);
+  assert.ok([...tribute.parts.head.vox.values()].some(v => v & LR.GLOW));
   assert.equal(Object.values(SPEECH).flat().length, 50);
   assert.ok(Object.values(SPEECH).flat().every(line => !line.includes('—')));
 });
