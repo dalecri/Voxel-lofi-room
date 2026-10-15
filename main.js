@@ -67,6 +67,7 @@ function startLofiRooms() {
   let rooms = store.get('lr.rooms', []);
   const meta = Object.assign({ current: 0, realtime: true, phase: 'day', raining: false, music: false, sound: true, painted: {} }, store.get('lr.meta', {}));
   Sound.on = meta.sound;
+  Sound.crackleOn = meta.crackle !== false;
   // music mood: 'auto' follows the time of day (morning bossa, afternoon chill, evening lofi, night ambient; jazz when it rains)
   if (meta.mood == null || meta.mood === 0 && !meta.moodSet) meta.mood = 'auto';
   const MOOD_BY = { morning: 4, day: 3, evening: 0, night: 5 };
@@ -1494,6 +1495,7 @@ function startLofiRooms() {
       r.onclick = () => { fn(); renderMenu(); };
     };
     toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
+    toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
     toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
     toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });

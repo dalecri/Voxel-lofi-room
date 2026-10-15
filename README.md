@@ -101,7 +101,7 @@ Then open http://localhost:5180.
 - **Music that follows your day.** The radio picks a mood for the time of day: morning bossa, afternoon chillhop, evening lofi, night ambient, and jazz when it rains. Jukeboxes cycle through the moods, or back to following the day, and vinyl records pick one.
   - While it plays, fairy lights, LED strips and RGB pieces pulse on the beat.
   - The ultrawide and the computer have a visualizer channel that dances to it.
-- **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and vinyl crackle, all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
+- **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and a soft vinyl crackle (switch it off in Settings), all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. Rain streaks the windows. At night the lamps light the room.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
 - **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
