@@ -173,6 +173,8 @@
   .toast.in { transform: none; opacity: 1; }
   .toast b { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--accent); }
   .toast span { font-size: 13px; font-weight: 600; }
+  .toast.daily { background: linear-gradient(135deg, #fff3d6, #ffe0c2); color: #4a3530; padding: 12px 20px; box-shadow: 0 10px 34px rgba(242,160,80,.45); }
+  .toast.daily b { font-size: 17px; color: #d9773a; }
 
   /* bottom sheet */
   .sheet { position: fixed; inset: 0; background: rgba(40, 20, 20, 0); pointer-events: none; transition: background .3s; z-index: 10; }
@@ -245,6 +247,11 @@
   .d.got { opacity: 1; }
   .d i { font-style: normal; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; background: var(--line); font-weight: 800; flex: none; }
   .d.got i { background: var(--accent); color: #fff; }
+  .d.today { opacity: 1; padding: 12px 14px; }
+  .d.today i { width: 34px; height: 34px; border-radius: 12px; font-size: 17px; background: #ffd27a; color: #4a3530; }
+  .d.today b { font-size: 15px; }
+  .d.today span { font-size: 12px; }
+  .dailylog { margin: 6px 2px 0; line-height: 1.6; }
   .d b { display: block; font-size: 13px; }
   .d span { font-size: 11px; color: var(--ink-dim); line-height: 1.3; display: block; }
 

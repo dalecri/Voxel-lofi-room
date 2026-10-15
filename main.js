@@ -142,32 +142,73 @@ function startLofiRooms() {
   // Toasts & moments
   const toastQ = [];
   let toastBusy = 0;
-  function toast(html, ms, now) {
+  function toast(html, ms, now, cls) {
     if (now) { toastQ.length = 0; toastBusy = 0; document.querySelectorAll('#toasts .toast').forEach(el => el.remove()); }   // drag hints jump the queue
-    if (performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms]); return; }
+    if (performance.now() < toastBusy) { if (toastQ.length < 4) toastQ.push([html, ms, false, cls]); return; }
     toastBusy = performance.now() + Math.min(ms || 3200, 1500);
     setTimeout(() => { if (toastQ.length) toast(...toastQ.shift()); }, Math.min(ms || 3200, 1500) + 50);
     const el = document.createElement('div');
-    el.className = 'toast'; el.innerHTML = html;
+    el.className = 'toast' + (cls ? ' ' + cls : ''); el.innerHTML = html;
     $('#toasts').appendChild(el);
     requestAnimationFrame(() => el.classList.add('in'));
     setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 400); }, ms || 3200);
   }
-  // one special moment a day: the same task for everyone on a given date
+  // Daily Moment: one special cozy moment a day, the same for everyone on a given date. The local
+  // YYYY-MM-DD is hashed into a seed for room.js's mulberry, which picks from a pool of moments with
+  // recipes you can actually follow. It's per day, not per room: doing it in any room counts.
   const DAILY = [
-    ['tea', 'Make yourself a cup of tea'], ['purr', 'Pet one of the cats'], ['lofi', 'Put a record on'], ['light', 'Switch on a lamp'],
-    ['fish', 'Say hi to the fish'], ['barista', 'Brew a pot of coffee'], ['feast', 'Feed a cat'], ['stargazer', 'Find a constellation'],
-    ['cuckoo', 'Hear the cuckoo clock'], ['photo', 'Take a photo of your room'], ['gamer', 'Play a video game'], ['fire', 'Light the fireplace'], ['piano', 'Play the piano'],
+    ['stormytea', 'Make tea while it rains: tap the cloud for rain, then a mug or the kettle'],
+    ['mixtape', 'Play three different tracks on a jukebox'],
+    ['nightowl', 'Switch on a lamp after dark'],
+    ['golden', 'Open a window in the evening light'],
+    ['tea', 'Sip from a mug or put the kettle on'],
+    ['purr', 'Pet one of the cats'],
+    ['lofi', 'Put a record on'],
+    ['fire', 'Light the fireplace'],
+    ['moonlight', 'Play the piano at night'],
+    ['stormy', 'Rain, a lit fireplace and music, all at once'],
+    ['cinema', 'Roll a film on the projector after dark'],
+    ['catnap', 'Catch a cat napping in its bed'],
   ];
-  const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
-  const dailyTask = () => { const d = new Date(); const n = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5) + d.getFullYear() * 7; return DAILY[n % DAILY.length]; };
+  const dateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = () => dateKey(new Date());
+  const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dateKey(d); };
+  function pickDaily(date) {
+    let h = 2166136261;   // FNV-1a over the date string, then one draw from the seeded generator
+    for (let k = 0; k < date.length; k++) { h ^= date.charCodeAt(k); h = Math.imul(h, 16777619); }
+    return DAILY[Math.floor(LR.mulberry(h >>> 0)() * DAILY.length)][0];
+  }
+  // lr.daily = { date, id, done } re-rolls whenever the stored date isn't today; lr.dailyStreak = { n, last }
+  // counts consecutive completed days and drops to 0 once a day is missed.
+  function ensureDaily() {
+    let D = store.get('lr.daily', null);
+    const t = today();
+    if (!D || D.date !== t) { D = { date: t, id: pickDaily(t), done: false }; store.set('lr.daily', D); }
+    const S = store.get('lr.dailyStreak', { n: 0, last: '' });
+    if (S.n && S.last !== t && S.last !== yesterday()) { S.n = 0; store.set('lr.dailyStreak', S); }
+    return D;
+  }
+  (function migrateDaily() {   // the first version kept a streak in meta.daily (with unpadded dates)
+    const old = meta.daily; if (!old) return;
+    const m = String(old.date || '').match(/^(\d+)-(\d+)-(\d+)$/);
+    if (m && old.streak && !store.get('lr.dailyStreak', null)) store.set('lr.dailyStreak', { n: old.streak, last: `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` });
+    delete meta.daily; saveMeta();
+  })();
+  ensureDaily();
+  const dailyInfo = () => { const D = ensureDaily(); const r = DAILY.find(x => x[0] === D.id) || DAILY[0]; const M = MOMENTS.find(x => x[0] === D.id); return { D, name: M ? M[1] : D.id, hint: r[1] }; };
   function dailyCheck(key) {
-    const D = meta.daily || (meta.daily = {});
-    if (D.date === today() || dailyTask()[0] !== key) return;
-    const y = new Date(); y.setDate(y.getDate() - 1);
-    const yKey = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
-    D.streak = D.date === yKey ? (D.streak || 0) + 1 : 1; D.date = today(); saveMeta();
-    setTimeout(() => { toast(`<b>☀ Today's moment</b><span>${dailyTask()[1]}. Streak: ${D.streak} day${D.streak > 1 ? 's' : ''}</span>`, 3200); Sound.arpeggio(); }, 1800);
+    const { D, name } = dailyInfo();
+    if (D.done || D.id !== key) return;
+    D.done = true; store.set('lr.daily', D);
+    const S = store.get('lr.dailyStreak', { n: 0, last: '' });
+    S.n = S.last === yesterday() ? S.n + 1 : S.last === D.date ? S.n : 1; S.last = D.date;
+    store.set('lr.dailyStreak', S);
+    const log = store.get('lr.dailyLog', []);
+    log.unshift({ date: D.date, id: D.id }); store.set('lr.dailyLog', log.slice(0, 60));   // the journal, newest first
+    setTimeout(() => {
+      toast(`<b>☀ Today’s moment: ${name}</b><span>You made today cozy. ${S.n > 1 ? `${S.n} days in a row!` : 'Come back tomorrow for a new one.'}</span>`, 4200, true, 'daily');
+      Sound.arpeggio(); setTimeout(() => Sound.chime(), 450);
+    }, 1800);
   }
   function discover(key) {
     dailyCheck(key);
@@ -1544,6 +1585,11 @@ function startLofiRooms() {
     body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
+    const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
+    h('h2', '', `Today <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
+    h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`);
+    const log = store.get('lr.dailyLog', []).slice(0, 5);
+    if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'));
     h('h2', '', `Your rooms <small>${rooms.length}</small>`);
     const list = h('div', 'cards');
     rooms.forEach(r => {
@@ -1602,9 +1648,6 @@ function startLofiRooms() {
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'Your current room is saved and stays in the list above.');
     body.appendChild(presetCards(k => { closeSheets(); newRoom(k); }));
-    const D = meta.daily || {}, doneToday = D.date === today();
-    h('h2', '', `Today's moment <small>${D.streak ? `${D.streak} day streak` : ''}</small>`);
-    h('div', 'disc', `<div class="d${doneToday ? ' got' : ''}"><i>${doneToday ? '✦' : '☀'}</i><div><b>${dailyTask()[1]}</b><span>${doneToday ? 'Done for today. See you tomorrow!' : 'A new one every day'}</span></div></div>`);
     h('h2', '', `Cozy moments <small>${found.size}/${MOMENTS.length}</small>`);
     const dl = h('div', 'disc');
     MOMENTS.forEach(([k, name, desc]) => {
@@ -1881,7 +1924,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { FILM, filmDay, room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyTask, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { FILM, filmDay, room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);
