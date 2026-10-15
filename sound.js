@@ -100,6 +100,10 @@
       const nz = ctx.createOscillator(); nz.type = 'sawtooth'; nz.frequency.value = 120;
       const nf = ctx.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 520;
       nz.connect(nf); nf.connect(this.neonBed.g); this.neonBed.g.connect(this.master); nz.start();
+      this.washBed = bed('lowpass', 210, 1.4);   // a washing machine churning
+      const wl2 = ctx.createOscillator(); wl2.frequency.value = 0.7; const wg2 = ctx.createGain(); wg2.gain.value = 90;
+      wl2.connect(wg2); wg2.connect(this.washBed.f.frequency); wl2.start();
+      this.waterBed = bed('bandpass', 2600, 0.5);   // a shower or a bath running
       this.nextTick = 0; this.tickTock = 0;
 
       this.prog = 0; this.bar = 0; this.step = 0; this.nextStep = ctx.currentTime + 0.1; this.beats = [];
@@ -243,6 +247,9 @@
       glide(this.windBed, 0.045 * (st.wind || 0), 2.5);
       glide(this.cityBed, 0.035 * (st.city || 0), 2.5);
       glide(this.neonBed, 0.0045 * (st.neon || 0), 0.5);
+      glide(this.washBed, 0.06 * (st.wash || 0), 1.2);
+      glide(this.waterBed, 0.03 * (st.running || 0), 0.8);
+      if (st.wash && ev(0.25 * st.wash)) this.soft(0.12, 0.05 * st.wash, 'lowpass', 160);                           // a soft thunk as the drum turns
       if (st.fire && ev(1.5 * st.fire)) this.soft(0.03, 0.1 * st.fire, 'highpass', 2200 + Math.random() * 1500);     // pops from the logs
       if (st.rain && ev(st.rain > 1 ? 4 : 2)) this.soft(0.02, 0.035, 'bandpass', 4000 + Math.random() * 2500);      // drops on the glass
       if (st.rain > 1 && ev(0.04)) this.thunder(false, 0.5);                                                        // distant thunder
