@@ -1516,7 +1516,7 @@
     if (ud.parts.swing) ud.parts.swing.rotation.z = Math.sin(t * 1.7 + it.id) * (ud.excited > t ? 0.35 : 0.12);
     if (ud.parts.blink) ud.parts.blink.visible = !!it.on && Math.sin(t * 5 + it.id * 2.3) > -0.2;
     if (ud.parts.spin) {
-      if (C.spinOn) { ud.spinW = (ud.spinW || 0) + ((it.on ? C.spinOn : 0) - (ud.spinW || 0)) * Math.min(1, dt * 1.5); ud.parts.spin.rotation.y += ud.spinW * dt; }   // fans: only while switched on
+      if (C.spinOn) { ud.spinW = (ud.spinW || 0) + ((it.on ? C.spinOn : 0) - (ud.spinW || 0)) * Math.min(1, dt * 1.5); ud.parts.spin.rotation[C.spinAxis || 'y'] += ud.spinW * dt; }   // fans (and washer drums, on z): only while switched on
       else { ud.spinV = (ud.spinV || 0.3) * Math.exp(-dt * 0.8); ud.parts.spin.rotation.y += Math.max(0.3, ud.spinV) * dt; }
     }
     // a part that slides out for a moment (the cuckoo) and birds that visit by day or when fed
@@ -1568,7 +1568,7 @@
       }
       // steady particles a piece gives off: emit { kind, at, rate, color, on }
       if (C.emit) (Array.isArray(C.emit) ? C.emit : [C.emit]).forEach(E => {
-        if ((E.on === false || it.on || E.on === 'always') && Math.random() < step * (E.rate || 2)) this.emitFx(it, C, E.kind, E.at, E.color);
+        if ((E.on === false || it.on || E.on === 'always') && (E.when !== 'rain' || this.rainK > 0.3) && Math.random() < step * (E.rate || 2)) this.emitFx(it, C, E.kind, E.at, E.color);
       });
       if (C.anim === 'record' && this.music && Math.random() < step * 0.9) {
         const p = this.itemPoint(it.id, [4, 4, 4]);

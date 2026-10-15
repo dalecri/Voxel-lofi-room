@@ -181,6 +181,7 @@ function startLofiRooms() {
     ['stormy', 'Rain, a lit fireplace and music, all at once'],
     ['cinema', 'Roll a film on the projector after dark'],
     ['catnap', 'Catch a cat napping in its bed'],
+    ['bathtime', 'Run a bubble bath in the clawfoot tub (Bath & home tab)'],
   ];
   const dateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const today = () => dateKey(new Date());
@@ -833,6 +834,8 @@ function startLofiRooms() {
       birds: meta.phase === 'morning' && (w === 'clear' || w === 'sakura') ? 1 : 0,
       city: view.noWalls ? 0.8 : its.some(i => CAT[i.t].anim === 'rgb' || /arcade|console|gaming/.test(i.t)) ? 0.55 : 0,
       cats: its.some(i => i.t === 'cat') ? 1 : 0,
+      wash: level(has(i => CAT[i.t].rumble && i.on), 0.6),
+      running: level(has(i => CAT[i.t].running && i.on), 0.6),
     };
   }
   function cuckoo(id) {
