@@ -146,7 +146,7 @@
       if (!this.ctx) return;
       const t = this.ctx.currentTime;
       this.band.gain.cancelScheduledValues(t);
-      this.band.gain.setTargetAtTime(on ? 0.9 : 0, t, on ? 0.6 : 0.4);
+      this.band.gain.setTargetAtTime(on ? (this.writing ? 0.32 : 0.9) : 0, t, on ? 0.6 : 0.4);
       this.crackle.gain.setTargetAtTime(this.crackleLevel(), t, 0.5);
       if (on) { this.nextStep = Math.max(this.nextStep, t + 0.05); this.needle(); }
     },
@@ -366,7 +366,8 @@
     duck() {
       if (!this.ctx || !this.music) return;
       const t = this.ctx.currentTime, g = this.band.gain;
-      g.cancelScheduledValues(t); g.setTargetAtTime(0.6, t, 0.03); g.setTargetAtTime(0.9, t + 0.3, 0.3);
+      const level = this.writing ? 0.32 : 0.9;
+      g.cancelScheduledValues(t); g.setTargetAtTime(level * 2 / 3, t, 0.03); g.setTargetAtTime(level, t + 0.3, 0.3);
     },
     piano() {   // each tap plays the next notes of a gentle tune
       if (!this.ready()) return;
@@ -425,11 +426,21 @@
         const o2 = this.tone(n(m) * 2.005, t + k * 0.03, 0.8, 0.015, 'sawtooth'); o2.frequency.value = n(m) * 2.005;
       });
     },
-    clack(k) {
+    setWriting(on) {
+      this.writing = on;
+      if (!this.ctx) return;
+      const t=this.ctx.currentTime;this.band.gain.cancelScheduledValues(t);this.band.gain.setTargetAtTime(this.music ? (on ? .32 : .9) : 0,t,.4);
+    },
+    typeBell(delay = 0) { if (this.ready()) this.tone(2637,this.ctx.currentTime+delay,.55,.025,'sine'); },
+    carriageReturn() {
+      if (!this.ready()) return;
+      const f=this.soft(.28,.045,'bandpass',2200,0,.015);f.frequency.exponentialRampToValueAtTime(650,this.ctx.currentTime+.26);this.typeBell(.07);
+    },
+    clack(k, bell = true) {
       if (!this.ready()) return;
       const t = this.ctx.currentTime;
       for (let i = 0; i < (k || 8); i++) { const at = t + i * (0.08 + Math.random() * 0.06); const s = this.ctx.createBufferSource(); s.buffer = this.noise; const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200 + Math.random() * 800; const g = this.ctx.createGain(); g.gain.setValueAtTime(0.18, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03); s.connect(f); f.connect(g); g.connect(this.master); s.start(at, Math.random()); s.stop(at + 0.04); }
-      this.tone(2637, t + (k || 8) * 0.11, 0.6, 0.04, 'sine');
+      if (bell) this.tone(2637, t + (k || 8) * 0.11, 0.6, 0.04, 'sine');
     },
     squeak() { if (!this.ready()) return; const t = this.ctx.currentTime, o = this.tone(900, t, 0.18, 0.06, 'sine'); o.frequency.exponentialRampToValueAtTime(1500, t + 0.08); o.frequency.exponentialRampToValueAtTime(1000, t + 0.17); },
     beep() { if (!this.ready()) return; const t = this.ctx.currentTime; this.tone(1200, t, 0.08, 0.05, 'square'); this.tone(1600, t + 0.1, 0.1, 0.05, 'square'); },

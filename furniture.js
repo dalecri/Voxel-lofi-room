@@ -358,6 +358,22 @@
   });
 
   // =================================================================
+  def('vintagetypewriter', {
+    name: 'Vintage typewriter', kind: 'small', group: 'tech', size: [2,1], tap: 'type',
+    vars: [[0xe7dcc2],[0x9ab3a0],[0xc3a1a1]],
+    build(m,[cream]) {
+      m.box(1,0,1,15,2,8,BLACK).box(0,1,1,16,3,7,cream).box(1,2,3,15,4,7,cream);
+      m.box(2,3,4,14,4,8,0x766b5e);
+      for(const z of [4.5,6.5])for(let x=2;x<15;x+=2.4)m.blob(x,4.2,z,.85,.65,.85,0xf8f0de);
+      m.box(4,4,7,12,5,8,0xf8f0de); // space bar
+      m.box(0,4,1,16,6,3,0x726958).box(1,6,1,15,7,3,CHROME);
+      m.box(4,6,1,12,15,2,0xfff9e8).box(4,6,2,12,7,3,0xd2c8b0);
+      m.box(5,11,2,11,12,3,0xc5bba4).box(5,9,2,9,10,3,0xc5bba4);
+      m.box(-1,5,2,1,6,5,CHROME).box(-1,6,4,2,7,5,CHROME);
+      m.box(15,4,1,17,6,3,BLACK);
+    },
+  });
+
   // Kitchen & drinks
   def('minifridge', {
     name: 'Mini fridge', kind: 'floor', group: 'kitchen', size: [1, 1], wallish: true, tap: 'door', top: 14,

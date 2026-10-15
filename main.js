@@ -23,6 +23,7 @@ function startLofiRooms() {
   let companion = null, widgetView = null;
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
+  const letters = LRLetters.createView({ store, sound: Sound, roomName: () => room.name, beforeOpen: () => { closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; } });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -834,7 +835,7 @@ function startLofiRooms() {
       for (let k = 0; k < 3; k++) setTimeout(() => { const p = view.itemPoint(id, [4, 14 + k * 3, 6]); if (p) view.icon('note', p, { size: 0.28 }); }, k * 180);
       return;
     }
-    if (tap === 'type') { Sound.clack(9); toast(`<span>${pickOne(['Dear diary…', 'Chapter one.', 'It was a rainy night…', 'Note to self: water plants'])}</span>`, 1500); return; }
+    if (tap === 'type') { letters.open(); return; }
     if (tap === 'snow') { view.burst(id, 'snow', 3); Sound.chime(); return; }
     if (tap === 'mist') { it.on = !it.on; changed(); Sound.whoosh(); toast(`<span>${it.on ? 'Lavender mist on' : 'Diffuser off'}</span>`, 1100); return; }
     if (tap === 'squeak') { Sound.squeak(); const p = view.itemPoint(id, [4, 8, 4]); if (p) view.icon('heart', p, { size: 0.3 }); return; }
@@ -1019,7 +1020,7 @@ function startLofiRooms() {
   setInterval(() => { if (Math.random() < 0.15 * (care ? care.magicBoost() : 1)) visit(); }, 60000);   // cozy rooms get more visitors
   function merchantHere() { return merchant.active && merchantCat && room.items.includes(merchantCat) && meta.visitors !== false; }
   function tickWorld(dt) {
-    const idle = !rituals.breath.active && !document.hidden && state.mode === 'explore' && !state.drag && !view.fp && !filming && !$('#photo').classList.contains('open') && !$('#intro').classList.contains('open');
+    const idle = !letters.active && !rituals.breath.active && !document.hidden && state.mode === 'explore' && !state.drag && !view.fp && !filming && !$('#photo').classList.contains('open') && !$('#intro').classList.contains('open');
     if (merchantHere() && sheet.classList.contains('open') && $('#sheetBody').dataset.merchant === 'here') merchant.linger();
     const edges = [];
     for (let k = 0; k < room.n; k++) edges.push([k, 0], [0, k], [k, room.n - 1], [room.n - 1, k]);
@@ -1094,7 +1095,7 @@ function startLofiRooms() {
       const urls = [st.url, st.url.replace(/^https?:/i, m => (m.toLowerCase() === 'https:' ? 'http:' : 'https:'))];
       const why = e => { const code = stream && stream.error && stream.error.code; return code === 2 ? 'network error' : code === 4 ? 'no stream at that link' : e && e.name === 'NotAllowedError' ? 'playback blocked' : 'no answer'; };
       const tryUrl = k => {
-        stream = new Audio(); stream.preload = 'none'; stream.src = urls[k];
+        stream = new Audio(); stream.volume = letters.active ? .45 : 1; stream.preload = 'none'; stream.src = urls[k];
         const me = stream;
         const fail = e => {
           if (stream !== me) return;
@@ -1123,7 +1124,7 @@ function startLofiRooms() {
   // interaction sounds get a little room: the music dips for a moment
   function duck() {
     Sound.duck();
-    if (stream) { stream.volume = 0.6; clearTimeout(duckT); duckT = setTimeout(() => { if (stream) stream.volume = 1; }, 450); }
+    if (stream) { stream.volume = 0.6; clearTimeout(duckT); duckT = setTimeout(() => { if (stream) stream.volume = letters.active ? .45 : 1; }, 450); }
   }
 
   // the record crate: flip through sleeves like a real collection; each record is a mood of the band
@@ -1188,7 +1189,7 @@ function startLofiRooms() {
     $('#crateClose').onclick = () => closeCrate();
     $('#cratePrev').onclick = () => flipCrate(-1); $('#crateNext').onclick = () => flipCrate(1);
     window.addEventListener('keydown', e => {
-      if (!crateOpen) return;
+      if (!crateOpen || letters.active) return;
       const k = e.key;
       if (k === 'ArrowDown' || k === 'ArrowRight') flipCrate(1); else if (k === 'ArrowUp' || k === 'ArrowLeft') flipCrate(-1);
       else if (k === 'Enter' || k === ' ') playSleeve(sleeves()[crateI]); else if (k === 'Escape') closeCrate(); else return;
@@ -1484,7 +1485,7 @@ function startLofiRooms() {
   }
 
   window.addEventListener('keydown', e => {
-    if (sheet.classList.contains('open')) return;   // sheets own keyboard focus
+    if (letters.active || sheet.classList.contains('open')) return;   // writing and sheets own keyboard focus
     if (rituals.breath.active) { if (e.key === 'Escape') stopBreathing(); return; }
     if (e.target.matches('input, textarea, select') || e.target.isContentEditable) return;
     if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
@@ -2513,10 +2514,11 @@ function startLofiRooms() {
   // Android: back button closes overlays first, pausing saves to disk
   const app = window.Store && window.Store.app;
   if (app) {
-    app.addListener('pause', () => { save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
+    app.addListener('pause', () => { letters.flush(); save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
     app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); });
     app.addListener('backButton', () => {
-      if (rituals.breath.active) stopBreathing();
+      if (letters.active) letters.close();
+      else if (rituals.breath.active) stopBreathing();
       else if (filming) filmCancel = true;
       else if (crateOpen) closeCrate();
       else if ($('#photo').classList.contains('open')) closePhoto();
@@ -2568,15 +2570,15 @@ function startLofiRooms() {
   }
 
   window.addEventListener('resize', () => view.resize());
-  companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
-  widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => filming || document.hidden || $('#photo').classList.contains('open') });
+  widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open') });
   updateHeader();
   setMode(state.mode, true);
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

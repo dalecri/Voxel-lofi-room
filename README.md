@@ -218,6 +218,18 @@ These widgets store their static content snapshots and destination state only in
 
 After `npm run build`, run `python3 tests/widgets-interactive-browser.py` for the posting plan, exact social links, actual candle tap and flame feedback, portal tabs, multi-destination picker, mobile widths and a share/import round trip with all five widget types active. Outbound pages and RSS use controlled fixtures in tests.
 
+## Typewriter letters
+
+Place **Vintage typewriter** from Tech (a freely available cream model with round keys, a carriage and loaded paper), or tap an existing **Typewriter**. Both open the same full-screen cream paper view. Edit the letterhead directly; it starts with the room name and today's date. The floating toolbar offers only bold, italic, underline and a date stamp at the current cursor. Ctrl/Cmd+B, I and U also work. Paper scrolls above the toolbar, which follows the visual viewport above the mobile keyboard. Escape or **← Room** returns to your room; Android Back also closes the writer.
+
+Typing reuses the keyboard clack with a throttle, without a ding on every key. Actual line wraps ring a small carriage bell; opening the paper plays a carriage return. All sounds respect mute. Already-playing lofi or a radio stream keeps playing at a quieter level while you write, then returns to normal when you close the paper. Opening a letter does not switch music on if it was off.
+
+Drafts autosave after a short pause and flush on blur, close, page hide and Android pause. **Letters** opens the private stack: create, open, rename or delete a letter (deletion requires a second click). All titles, letterheads, formatted bodies and current selection use Store under **`lr.letters`**, separate from decor. The stack and its text never enter LR0/LR1 room codes; only the furniture itself travels with a shared room.
+
+**Save as file** exports a standalone UTF-8 `letter-YYYY-MM-DD.html`, with embedded paper styles and the three supported text formats intact. Browsers download it directly. Android opens the system **Create document** picker through the local `LetterFiles` Capacitor plugin, so you can choose where to keep the HTML file without granting broad storage access. Cancelling the picker keeps the draft. Pasted HTML is reduced to text, paragraphs and bold/italic/underline in an inert template, stripping scripts, images, links and remote resources; export is sanitized again and includes a restrictive document CSP. No online editor, fonts or document services are required.
+
+Run `node --test tests/*.test.cjs`, then `npm run build && python3 tests/letters-browser.py`. The browser suite covers a real furniture tap, formatting, editable letterhead, cursor date stamp, clack throttle, actual wrap bells, immediate reload, sanitized paste, a downloaded HTML rendered independently, native export success/cancel/failure contracts, letter-list CRUD, mobile/keyboard-height layout and a fresh-session LR1 import with no letter data. Android's native picker is compiled by the APK workflow; its on-device UI needs an Android device to exercise.
+
 ## Companion and private wardrobe
 
 A single cozy pajama dude follows the current room without entering the furniture catalog, room saves, placement grid, or cats’ entity map. Its plain cream body, big rounded head and stubby limbs use the room's voxel builder. The old mint-headed blue robot is the **Automata** costume. The provisional name lives in `DISPLAY_NAME` in `companion.js`; the internal id remains `lampbot`.
