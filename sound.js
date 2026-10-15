@@ -21,21 +21,21 @@
   };
   // moods the jukebox and records switch between: tempo, chords, groove and tone
   const MOODS = [
-    { name: 'Late night lofi', bpm: 74, progs: [0, 1, 2], drums: DRUMS, tape: 2600, bells: 0.35, up: 0 },
-    { name: 'Rainy day jazz', bpm: 66, progs: [1, 3], tape: 2000, bells: 0.5, up: -3, drums: {
+    { name: 'Late night lofi', col: '#3a3a6a', bpm: 74, progs: [0, 1, 2], drums: DRUMS, tape: 2600, bells: 0.35, up: 0 },
+    { name: 'Rainy day jazz', col: '#4a8ab0', bpm: 66, progs: [1, 3], tape: 2000, bells: 0.5, up: -3, drums: {
       k: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], h: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1] } },
-    { name: 'Sunny morning', bpm: 84, progs: [4, 1], tape: 3600, bells: 0.5, up: 2, drums: {
+    { name: 'Sunny morning', col: '#f2c14e', bpm: 84, progs: [4, 1], tape: 3600, bells: 0.5, up: 2, drums: {
       k: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1] } },
-    { name: 'Chillhop bounce', bpm: 88, progs: [0, 2], tape: 3000, bells: 0.25, up: 0, drums: {
+    { name: 'Chillhop bounce', col: '#e86a8a', bpm: 88, progs: [0, 2], tape: 3000, bells: 0.25, up: 0, drums: {
       k: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0] } },
-    { name: 'Morning bossa', bpm: 80, progs: [4, 1], tape: 3200, bells: 0.45, up: 0, drums: {
+    { name: 'Morning bossa', col: '#e8784a', bpm: 80, progs: [4, 1], tape: 3200, bells: 0.45, up: 0, drums: {
       k: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1], s: [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], h: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] } },
-    { name: 'Dreamy ambient', bpm: 60, progs: [3, 4], tape: 1600, bells: 0.7, up: -5, drums: {
+    { name: 'Dreamy ambient', col: '#6ab07a', bpm: 60, progs: [3, 4], tape: 1600, bells: 0.7, up: -5, drums: {
       k: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], h: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] } },
   ];
 
   const S = {
-    on: true, ctx: null, music: false, night: 0, crackleOn: true, streaming: false, tempo: 1, wet: 0, mood: 0, moods: MOODS,
+    on: true, ctx: null, music: false, night: 0, dreamy: false, crackleOn: true, streaming: false, tempo: 1, wet: 0, mood: 0, moods: MOODS,
     init() {
       if (this.ctx || !this.on) return;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -267,9 +267,9 @@
       if (st.indoors && ev(1 / 160)) this.houseCreak();
       if (st.cats && ev(1 / 240)) this.meow(0.5 + Math.random() * 0.3);
       const tone = MOODS[this.mood].tape;
-      this.tape.frequency.setTargetAtTime(this.night > 0.5 ? Math.min(tone, 1700) : tone, t, 2);
-      const tempo = this.night > 0.6 ? 0.92 : 1, wet = st.rain ? (st.rain > 1 ? 1 : 0.6) : 0;
-      if (tempo !== this.tempo) { this.tempo = tempo; BEAT = 60 / (MOODS[this.mood].bpm * tempo); }   // night slows the band a little
+      this.tape.frequency.setTargetAtTime(this.dreamy ? Math.min(tone, 1100) : this.night > 0.5 ? Math.min(tone, 1700) : tone, t, 3);
+      const tempo = this.dreamy ? 0.8 : this.night > 0.6 ? 0.92 : 1, wet = st.rain ? (st.rain > 1 ? 1 : 0.6) : 0;
+      if (tempo !== this.tempo) { this.tempo = tempo; BEAT = 60 / (MOODS[this.mood].bpm * tempo); }   // night slows the band a little, dream mode more
       if (wet !== this.wet) { this.wet = wet; this.crackle.gain.setTargetAtTime(this.crackleLevel(), t, 2); }   // rain adds hiss
     },
     // a noise burst with a gentle attack, optionally delayed

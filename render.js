@@ -310,6 +310,7 @@
     this.raycaster = new THREE.Raycaster();
     this.applyPhase(1);
     this.glowOn = true; this.glowK = 0;
+    this.drift = 0; this.driftGoal = 0;   // dream mode: after midnight the room drifts moon-blue
     this.initGlow();
     this.resize();
   }
@@ -335,7 +336,7 @@
     const k = this.glowK;
     if (this.composer && k > 0.02) {
       this.renderPass.camera = this.cam;
-      this.bloomPass.strength = 0.75 * k;
+      this.bloomPass.strength = 0.75 * k + 0.25 * (this.drift || 0);
       this.composer.render();
     } else this.r.render(this.scene, this.cam);
   };
@@ -403,12 +404,15 @@
     this.amb.color.copy(hexMix(a.amb, b.amb, s)).lerp(new THREE.Color(0xa8b4d0), rk * 0.4);
     this.amb.intensity = this.amb.userData.base = ph.ambI * (1 - rk * 0.15) * (this.weather === 'storm' ? 0.82 : 1);
     this.hemi.color.copy(hexMix(a.sky, b.sky, s)); this.hemi.groundColor.copy(hexMix(a.ground, b.ground, s)); this.hemi.intensity = ph.hemiI * (storm ? 0.7 : 1);
+    const dr = this.drift || 0;
+    if (dr > 0.001) { const moon = new THREE.Color(0x8ea4ff); this.sun.color.lerp(moon, 0.85 * dr); this.amb.color.lerp(new THREE.Color(0x5a6ae8), 0.8 * dr); this.hemi.color.lerp(moon, 0.75 * dr); this.hemi.groundColor.lerp(new THREE.Color(0x2a2e70), 0.6 * dr); this.sun.intensity *= 1 + 0.25 * dr; this.amb.intensity *= 1 + 0.2 * dr; }
     this.r.toneMappingExposure = ph.exp;
     this.placeSun();
     if (this.hooks.sky) {
       let top = hexMix(a.top, b.top, s), bot = hexMix(a.bot, b.bot, s);
       if (rk) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x1e2236 : 0x9aa4b4), rk * 0.5); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x10121e : 0x6a7486), rk * 0.5); }
       if (storm) { top.lerp(new THREE.Color(ph.night > 0.5 ? 0x0c0e18 : 0x4a5262), 0.6); bot.lerp(new THREE.Color(ph.night > 0.5 ? 0x080a12 : 0x2e3442), 0.6); }   // heavy storm clouds
+      if (dr > 0.001) { top.lerp(new THREE.Color(0x1c2468), 0.55 * dr); bot.lerp(new THREE.Color(0x0a0e2e), 0.55 * dr); }
       this.sky = ['#' + top.getHexString(), '#' + bot.getHexString(), ph.night];
       this.hooks.sky(...this.sky);
     }
@@ -1315,10 +1319,12 @@
     if (this.phaseT < 1) { this.phaseT = Math.min(1, this.phaseT + dt / 2.5); phaseDirty = true; }
     const rg = this.rainGoal || 0;
     if (Math.abs(this.rainK - rg) > 0.001) { this.rainK += (rg - this.rainK) * Math.min(1, dt * 1.5); phaseDirty = true; }
+    const dg = this.driftGoal || 0;
+    if (Math.abs(this.drift - dg) > 0.002) { this.drift += (dg - this.drift) * Math.min(1, dt * 0.4); phaseDirty = true; }
     if (phaseDirty) this.applyPhase(this.phaseT); else this.placeSun();
 
     // lamps
-    const lampK = this.ph.lamp;
+    const lampK = this.ph.lamp * (1 - 0.4 * (this.drift || 0));   // dream mode dims the lamps so the moonlight shows
     for (const L of this.pool) {
       if (!L.userData.it) continue;
       let i = L.userData.base * lampK;
@@ -1615,6 +1621,9 @@
         this.fx.spawn(p.x, p.y, p.z, 0, -1.4, 0, 0xc8e4ff, 0.045, 1.0 + Math.random() * 0.4, 0, 0, 0.7);
       }
     }
+    // dream mode: pale motes float slowly up through the room
+    const dr = this.drift || 0;
+    if (dr > 0.05 && Math.random() < step * 14 * dr) this.glowFx.spawn(0.5 + Math.random() * (N - 1), 0.2 + Math.random() * 1.5, 0.5 + Math.random() * (N - 1), (Math.random() - 0.5) * 0.08, 0.1 + Math.random() * 0.12, (Math.random() - 0.5) * 0.08, Math.random() < 0.6 ? 0xbcd0ff : 0xf0f4ff, 0.04 + Math.random() * 0.035, 6 + Math.random() * 3, -0.004, 0, 0.75);
     // dust motes drifting through the light
     if (this.ph.night < 0.5 && Math.random() < step * 3) {
       this.glowFx.spawn(1 + Math.random() * (N - 2), 0.5 + Math.random() * 4, 1 + Math.random() * (N - 2), (Math.random() - 0.5) * 0.12, 0.05 + Math.random() * 0.06, (Math.random() - 0.5) * 0.12, 0xfff0c8, 0.035, 5, 0, 0, 0.6);

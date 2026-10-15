@@ -49,7 +49,50 @@
     background-image: repeating-linear-gradient(105deg, rgba(255,255,255,0) 0 22px, rgba(255,255,255,.22) 22px 23px, rgba(255,255,255,0) 23px 47px);
     background-size: 300px 300px; animation: rain .5s linear infinite;
   }
-  body.raining #rainfx { opacity: .18; }   /* a faint wash on the glass; the real rain is 3D now */
+  body.raining #rainfx { opacity: .18; }
+  /* dream mode: a moon-blue hush at the edges, brighter stars */
+  #driftfx { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 5s; background: radial-gradient(ellipse at 50% 42%, rgba(120,140,255,.06) 30%, rgba(40,52,150,.4) 100%); }
+  body.drift #driftfx { opacity: 1; }
+  body.drift #stars { opacity: 1 !important; filter: hue-rotate(10deg) brightness(1.2); }
+  /* the record crate */
+  #crate { position: fixed; inset: 0; z-index: 25; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: rgba(24,16,28,.72); padding: calc(var(--sat) + 16px) 16px calc(var(--sab) + 20px); }
+  #crate.open { display: flex; }
+  #crate h3 { position: relative; z-index: 400; margin: 0; color: #fff; font-family: var(--display); font-weight: 600; font-size: 20px; }
+  .cratewrap { position: relative; width: min(78vw, 280px); height: min(98vw, 350px); perspective: 900px; margin-top: 56px; }
+  #crateBin { position: absolute; inset: 0; transform-style: preserve-3d; touch-action: none; }
+  .sleeve { position: absolute; left: 0; right: 0; bottom: 64px; margin: auto; width: 100%; aspect-ratio: 1; border-radius: 6px; transform-origin: 50% 100%; transition: transform .45s cubic-bezier(.2,1,.3,1), opacity .3s, filter .3s; background: none; overflow: visible; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 14px; text-align: left; color: #fff; }
+  .sleeve b { font-family: var(--display); font-weight: 600; font-size: 19px; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.25); position: relative; z-index: 3; }
+  .sleeve small { font-size: 12px; font-weight: 700; opacity: .85; position: relative; z-index: 3; }
+  .sleeve[data-k="auto"] { color: #4a3530; }
+  .sleeve .cover { position: absolute; inset: 0; border-radius: 6px; background: var(--c); z-index: 1; box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12); }
+  .sleeve .art { position: absolute; inset: 0; border-radius: 6px; opacity: .55; z-index: 2; }
+  .sleeve .disc { position: absolute; left: 12%; right: 12%; top: 4%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, var(--c) 0 14%, #111 15% 17%, #1c1a20 18% 100%); box-shadow: inset 0 0 0 6px #141216; z-index: 0; transform: translateY(0); transition: transform .45s cubic-bezier(.2,1,.3,1); }
+  .sleeve.front .disc { transform: translateY(-22%); }
+  .sleeve.pulled .disc { transform: translateY(-80%) rotate(200deg); }
+  .sleeve[data-k="0"] .art { background: radial-gradient(circle at 70% 30%, #fff8d8 0 12%, transparent 13%), radial-gradient(circle at 76% 26%, var(--c) 0 12%, transparent 13%), radial-gradient(circle at 20% 20%, #fff 0 1.5%, transparent 2%), radial-gradient(circle at 40% 55%, #fff 0 1.2%, transparent 2%), radial-gradient(circle at 85% 70%, #fff 0 1.4%, transparent 2%); }
+  .sleeve[data-k="1"] .art { background: repeating-linear-gradient(135deg, rgba(255,255,255,.35) 0 10px, transparent 10px 24px); }
+  .sleeve[data-k="2"] .art { background: radial-gradient(circle at 50% 38%, #fff6c8 0 22%, transparent 23%), repeating-conic-gradient(from 0deg at 50% 38%, rgba(255,255,255,.4) 0 6deg, transparent 6deg 20deg); }
+  .sleeve[data-k="3"] .art { background: radial-gradient(circle, rgba(255,255,255,.5) 0 3px, transparent 4px) 0 0 / 22px 22px; }
+  .sleeve[data-k="4"] .art { background: repeating-radial-gradient(circle at 0 100%, rgba(255,255,255,.4) 0 6px, transparent 6px 18px); }
+  .sleeve[data-k="5"] .art { background: radial-gradient(circle at 30% 35%, rgba(255,255,255,.6), transparent 30%), radial-gradient(circle at 72% 60%, rgba(255,255,255,.45), transparent 35%); }
+  .sleeve[data-k="auto"] .art { background: linear-gradient(90deg, #ffd27a 0 50%, #3a3a6a 50%); opacity: .35; }
+  .cratefront { position: absolute; left: -6%; right: -6%; bottom: 0; height: 108px; border-radius: 10px; z-index: 300; transform: translateZ(60px); pointer-events: none; background: repeating-linear-gradient(0deg, #8a5a34 0 22px, #6e4628 22px 25px); box-shadow: 0 -6px 18px rgba(0,0,0,.35), inset 0 2px 0 rgba(255,255,255,.15); }
+  .cratefront::after { content: ''; position: absolute; left: 50%; top: 28px; width: 70px; height: 16px; margin-left: -35px; border-radius: 8px; background: rgba(0,0,0,.35); }
+  #crateNow { color: #fff; opacity: .8; font-size: 13px; font-weight: 700; margin: 0; }
+  .craterow { display: flex; gap: 10px; }
+  .craterow button { background: #fffaf3; color: #4a3530; border-radius: 16px; padding: 10px 18px; font-weight: 800; font-size: 14px; }
+  @media (prefers-reduced-motion: reduce) { .sleeve, .sleeve .disc { transition: none; } }
+  /* guest book */
+  .stickers { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+  .stk { width: 44px; height: 44px; border-radius: 14px; background: var(--chip); font-size: 22px; }
+  .stk.on { background: var(--accent); color: #fff; box-shadow: 0 0 0 3px rgba(240,122,90,.25); }
+  .gbname { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--ink); font: inherit; margin-bottom: 8px; }
+  .guestbook { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .gbentry { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 14px; background: var(--chip); }
+  .gbentry i { font-style: normal; font-size: 20px; width: 28px; text-align: center; flex: none; }
+  .gbentry b { display: block; font-size: 13px; }
+  .gbentry span { display: block; font-size: 13px; }
+  .gbentry small { font-size: 11px; color: var(--ink-dim); font-weight: 700; }   /* a faint wash on the glass; the real rain is 3D now */
   @keyframes rain { from { background-position: 0 0; } to { background-position: -80px 300px; } }
   #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
@@ -67,7 +110,10 @@
   header > * { pointer-events: auto; }
   .brand { padding: 8px 14px 9px; border-radius: 18px; min-width: 0; flex: 1 1 auto; max-width: 260px; text-align: left; }
   .brand b { font-family: var(--display); font-weight: 600; font-size: 17px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .savechip { position: absolute; left: 16px; top: calc(var(--sat) + 72px); pointer-events: auto; display: flex; align-items: center; gap: 6px; padding: 7px 13px 7px 10px; border-radius: 14px; color: #fff; background: var(--accent); font-weight: 800; font-size: 13px; box-shadow: var(--shadow); animation: savein .35s cubic-bezier(.2,1.4,.4,1); }
+  #pills { position: absolute; left: 16px; top: calc(var(--sat) + 72px); display: flex; gap: 8px; pointer-events: none; }
+  .guestchip { pointer-events: auto; padding: 7px 13px; border-radius: 14px; font-weight: 800; font-size: 13px; color: var(--ink); box-shadow: var(--shadow); }
+  .guestchip[hidden] { display: none; }
+  .savechip { pointer-events: auto; display: flex; align-items: center; gap: 6px; padding: 7px 13px 7px 10px; border-radius: 14px; color: #fff; background: var(--accent); font-weight: 800; font-size: 13px; box-shadow: var(--shadow); animation: savein .35s cubic-bezier(.2,1.4,.4,1); }
   .savechip[hidden] { display: none; }
   .savechip svg { width: 17px; height: 17px; }
   @keyframes savein { from { transform: translateY(-6px) scale(.9); opacity: 0; } }
@@ -365,10 +411,11 @@
 <div id="stars"></div>
 <div id="rainfx"></div>
 <canvas id="c"></canvas>
+<div id="driftfx"></div>
 
 <header>
   <button class="brand panel" id="brand" aria-label="Rename this room"><b id="roomName">Lofi Rooms</b><span id="disc">0 cozy moments</span></button>
-  <button class="panel savechip" id="bSave" aria-label="Save" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg><span>Save</span></button>
+  <div id="pills"><button class="panel savechip" id="bSave" aria-label="Save" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg><span>Save</span></button><button class="panel guestchip" id="bGuest" aria-label="Sign the guest book" hidden><span>✍ Guest book</span></button></div>
   <div class="chips panel">
     <button class="chip" id="bTime" aria-label="Time of day">
       <svg class="sunI" viewBox="0 0 24 24" fill="currentColor"><rect x="8" y="8" width="8" height="8" rx="1.5"/><rect x="11" y="2" width="2" height="3" rx="1"/><rect x="11" y="19" width="2" height="3" rx="1"/><rect x="2" y="11" width="3" height="2" rx="1"/><rect x="19" y="11" width="3" height="2" rx="1"/><rect x="4.5" y="4.5" width="2.5" height="2.5" rx="1"/><rect x="17" y="17" width="2.5" height="2.5" rx="1"/><rect x="17" y="4.5" width="2.5" height="2.5" rx="1"/><rect x="4.5" y="17" width="2.5" height="2.5" rx="1"/></svg>
@@ -425,6 +472,12 @@
   </div>
 </div>
 
+<div id="crate" role="dialog" aria-label="Record crate">
+  <h3>The record crate</h3>
+  <div class="cratewrap"><div id="crateBin"></div><div class="cratefront"></div></div>
+  <p id="crateNow">Tap the record to play it</p>
+  <div class="craterow"><button id="cratePrev" aria-label="Previous record">▲</button><button id="crateClose">Done</button><button id="crateNext" aria-label="Next record">▼</button></div>
+</div>
 <div id="photo">
   <img id="photoImg" alt="Snapshot of your room">
   <video id="photoVid" loop muted playsinline></video>
