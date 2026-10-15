@@ -262,7 +262,9 @@
   .slice::before, .slice::after { content: ''; position: absolute; background: var(--a, #f2e6d0); filter: brightness(.72); }
   .slice::before { left: 0; top: 100%; width: 100%; height: 9px; transform-origin: top; transform: rotateX(-90deg); border-radius: 0 0 4px 4px; }
   .slice::after { left: 100%; top: 0; width: 9px; height: 100%; transform-origin: left; transform: rotateY(90deg); filter: brightness(.86); border-radius: 0 4px 4px 0; }
-  .slice.here { box-shadow: 0 0 0 3px var(--moon-ring), 0 0 26px 8px var(--moon); }
+  .slice { --cozy: 0; }
+  .slice:not(.here):not(.ghost) { box-shadow: inset 0 0 0 1px rgba(74,53,48,.18), 0 0 calc(var(--cozy) * 26px) calc(var(--cozy) * 6px) rgba(255, 196, 90, calc(var(--cozy) * .85)); }   /* a well-loved room glows gold */
+  .slice.here { box-shadow: 0 0 0 3px var(--moon-ring), 0 0 26px 8px var(--moon), 0 0 calc(var(--cozy) * 34px) calc(var(--cozy) * 10px) rgba(255, 196, 90, calc(var(--cozy) * .7)); }
   .slice.linked { outline: 2px dashed rgba(74,53,48,.55); outline-offset: 4px; }
   body.night .slice.linked { outline-color: rgba(242,238,255,.6); }
   .slice.draft { opacity: .78; }
@@ -512,6 +514,7 @@
 <script defer src="packs/doors.js"></script>
 <script defer src="packs/homey.js"></script>
 <script defer src="render.js"></script>
+<script defer src="care.js"></script>
 <script defer src="main.js"></script>
 </body>
 </html>

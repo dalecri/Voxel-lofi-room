@@ -148,6 +148,16 @@ Then open http://localhost:5180.
   - The set that fits today's date moves to the front of the Add tray, with a one-time hint.
 - **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
 - **55 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
+- **The living room.** The room notices being cared for, and nothing ever dies: neglect only means wilted, sleepy, dusty or dramatic, and one caring session brings everything back. Care runs on real time, so it carries on while the app is closed.
+  - **Coziness:** each room has a gentle coziness score that rolls up all of the care below. A cozy room has golden motes drifting in the air, more visitors and magic moments, and a warm golden glow on its slice in your home stack. It's never shown as a number.
+  - **Plants:** tap a plant to water it once a day. New plants start as sprouts, grow bushy after a couple of watered days and burst into bloom after five. Skip two days and they droop; one watering perks them up.
+  - **Cats:** pet them daily and keep the food bowl filled and they're affectionate (purrs, slow blinks, the odd heart). Ignore them and they get dramatic: more mischief, and they pointedly ignore you for a couple of pets before forgiving you.
+  - **Fireplace:** the fire burns down to embers over about three hours, with the light, glow and crackle fading as it goes. Tap a lit fire to toss on a log and it roars back. When it goes out, relighting it is the ritual.
+  - **Herbs to tea:** water the herb planter until it's grown, tap to harvest, tap the kettle or teapot to brew garden tea, then tap a mug to sip it. That's the Garden to cup moment.
+  - **Fish tank:** the water slowly clouds over a few days; tap a cloudy tank to scrub it clear. A well-kept tank now and then gets a rare golden fish visitor.
+  - **Candles and incense:** they burn for about three hours, gutter, then go out. Lighting one in the evening is the Settling in moment.
+  - **Bird feeder:** keep it filled and birds drop by on their own. Fill it three days running and they build a tiny nest on top.
+  - **Window views:** in Decorate → Paint → Window view, choose what the room's windows look out on: city, pine forest, ocean or a snowy cabin. Each changes with the time of day and the weather.
 - **Dream mode.** After midnight, at night, the room drifts: the light turns moon-blue, the lamps dim, pale motes float up through the room and the band slows down and softens. It's for night owls; switch it off in Settings.
 - **Dig through the record crate.** Tap the record crate to flip through its sleeves like a real collection (swipe, scroll, the arrows or the arrow keys). Each record is one of the band's moods: navy late-night lofi, blue jazz, yellow sunny morning, pink chillhop, orange bossa, green ambient, plus "Follow the day". Tap the front record and its disc slides out and starts playing. Flip through all of them for the Crate digger moment.
 - **Guest book.** When a friend opens your room code, a ✍ Guest book button lets them pick a sticker, add their name and a tiny note, and get a short reply code to send back. Paste it in **Open a friend's code** and their note is pinned on a wall of that same room (tap it to read it). The menu keeps a Guest book list. There's no server: the codes carry everything, and notes friends leave you are never included when you share your own room.
@@ -200,6 +210,7 @@ npm run apk        # → dist/lofi-rooms.apk
 | `furniture.js` | The expanded catalog: modular desks and storage, tech and games, the kitchen, modern lights, fish tanks, windows, movie posters and the robot vacuum. |
 | `screens.js` | The pixel-art programs that play on screens. |
 | `boot.js` | Loads three.js as an ES module with the bloom addons and exposes it as `THREE` for the other (deferred) scripts. |
+| `care.js` | The living room: care for plants, cats, fires, candles, tanks and feeders on real time, coziness, and the herb-to-tea loop. Stored in `lr.care`, apart from the rooms. |
 | `render.js` | The three.js renderer, plus the night glow and the timelapse capture. A voxel mesher with baked ambient occlusion, the cut-away room shell with stepped corners, furniture sync, lamp lights, the day cycle, animated screens, fish, doors, sunbeams, cat and robot behaviour, particles and picking. |
 | `main.js` | Touch and mouse input, the decorating tools, things you can tap, rooms and saving, cozy moments, photo mode, the timelapse export and the Android back button. |
 | `sound.js` | The generative lofi band, ambience and interface sounds, all made with Web Audio. |

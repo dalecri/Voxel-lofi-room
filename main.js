@@ -60,6 +60,18 @@ function startLofiRooms() {
     ['visitor', 'Neighbour cat', 'A cat from next door dropped by'],
     ['catseye', 'Cat’s-eye view', 'Saw the room through a cat’s eyes'],
     ['dreamer', 'Dream mode', 'Stayed up past midnight as the room drifted'],
+    ['watered', 'Thirsty no more', 'Gave a plant its daily water'],
+    ['bloom', 'In bloom', 'A plant you watered every day burst into flowers'],
+    ['forgiven', 'Forgiven', 'Won back a dramatic, ignored cat'],
+    ['stoke', 'Stoked', 'Tossed a log on the fire'],
+    ['harvest', 'Harvest', 'Picked herbs you grew yourself'],
+    ['gardentea', 'Garden to cup', 'Sipped tea brewed from your own herbs'],
+    ['clearwater', 'Crystal clear', 'Cleaned a cloudy fish tank'],
+    ['goldfish', 'Golden visitor', 'A rare golden fish visited your tank'],
+    ['settlingin', 'Settling in', 'Lit a candle in the evening'],
+    ['nest', 'Nesting', 'Birds built a nest on your feeder'],
+    ['withaview', 'A room with a view', 'Picked what your windows look out on'],
+    ['cozyhome', 'Cozy home', 'Cared for a room until it glowed'],
     ['digger', 'Crate digger', 'Flipped through every record in the crate'],
     ['signed', 'Good guest', 'Signed a friend’s guest book'],
     ['guestbook', 'Guest book', 'A friend left a note in your room'],
@@ -127,6 +139,8 @@ function startLofiRooms() {
     lift() { return liftNow; },
   });
   view.glowOn = meta.glow !== false;
+  // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
+  const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
   const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
 
@@ -186,6 +200,8 @@ function startLofiRooms() {
     ['stormy', 'Rain, a lit fireplace and music, all at once'],
     ['cinema', 'Roll a film on the projector after dark'],
     ['catnap', 'Catch a cat napping in its bed'],
+    ['watered', 'Water a plant (tap it once a day)'],
+    ['stoke', 'Toss a log on the fire (tap a lit fireplace)'],
     ['bathtime', 'Run a bubble bath in the clawfoot tub (Bath & home tab)'],
   ];
   const dateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -336,6 +352,7 @@ function startLofiRooms() {
       tab('Wall colour', state.paintTab === 'color', () => { state.paintTab = 'color'; });
       tab('Floor', state.paintTab === 'floor', () => { state.paintTab = 'floor'; });
       tab('Plot size', state.paintTab === 'size', () => { state.paintTab = 'size'; });
+      tab('Window view', state.paintTab === 'view', () => { state.paintTab = 'view'; });
       const wc = (WALL_COLORS[room.wall.color] || WALL_COLORS[0])[1];
       if (state.paintTab === 'walls') {
         Object.entries(WALLS).forEach(([k, W]) => {
@@ -350,6 +367,15 @@ function startLofiRooms() {
           const b = document.createElement('button'); b.className = 'dot' + (room.wall.color === i ? ' on' : '');
           b.innerHTML = `<i style="background:${LR.hex(c)}"></i><span>${name}</span>`;
           b.onclick = () => paintRoom(() => { room.wall.color = i; meta.painted.wall = true; }, 'color');
+          row.appendChild(b);
+        });
+      } else if (state.paintTab === 'view') {
+        const names = { city: 'City', forest: 'Pine forest', ocean: 'Ocean', cabin: 'Snowy cabin' };
+        LR.VIEWS.forEach(k => {
+          const b = document.createElement('button'); b.className = 'swatch' + ((room.view || 'city') === k ? ' on' : '');
+          b.appendChild(swatchCanvas((x, y) => LR.skyColor(meta.phase, meta.raining, Math.floor(x * 14 / 24), Math.floor(y * 22 / 24), 7, k) & 0xffffff));
+          b.insertAdjacentHTML('beforeend', `<span>${names[k]}</span>`);
+          b.onclick = () => { paintRoom(() => { room.view = k; }); discover('withaview'); toast(`<span>The windows look out on ${names[k].toLowerCase()} now</span>`, 1400); };
           row.appendChild(b);
         });
       } else if (state.paintTab === 'size') {
@@ -595,6 +621,8 @@ function startLofiRooms() {
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     const tap = C.tap;
+    if (care) setTimeout(() => care.tick(0), 60);   // reflect a caring tap right away
+    if (care && care.tap(it, id)) return;
     if (tap === 'toggle') {
       pushUndo(); it.on = !it.on; changed();
       toggleSound(it, C);
@@ -675,7 +703,14 @@ function startLofiRooms() {
     if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.swish(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
     if (tap === 'music') { nextStation(); return; }
     if (tap === 'pet') {
-      const P = CATS[it.c] || CATS[0];
+      const P = CATS[it.c] || CATS[0], nm = it.name || P.name, mood = care ? care.petCat(it) : 'content';
+      if (mood === 'ignore' || mood === 'ignore2') {   // neglected cats don't suffer, they get dramatic
+        view.excite(id);
+        toast(`<span>${mood === 'ignore' ? pickOne([`${nm} pointedly ignores you`, `${nm} turns away with a flick of the tail`, `${nm} stares at the wall instead`]) : pickOne([`${nm} is still thinking about it`, `${nm} allows one ear to swivel your way`])}</span>`, 1600);
+        return;
+      }
+      if (mood === 'forgive') setTimeout(() => toast(`<span>Fine. ${nm} forgives you ♥</span>`, 1800), 1700);
+      else if (mood === 'affectionate' && Math.random() < 0.4) setTimeout(() => toast(`<span>${nm} gives you a slow blink ♥</span>`, 1600), 1700);
       view.petCat(id); Sound.purr(true); setTimeout(() => Sound.purr(false), 2600);
       follow = { id, until: performance.now() + 9000 };   // for a little while it follows your taps
       if (Math.random() < 0.1) setTimeout(() => Sound.meow(0.8), 500);   // rare, so it stays special
@@ -830,7 +865,7 @@ function startLofiRooms() {
     const its = room.items, has = f => its.filter(f);
     return {
       dt, night: view.ph.night, indoors: !view.noWalls,
-      fire: level(has(i => (i.t === 'fireplace' || i.t === 'eukachel' || CAT[i.t].anim === 'fire') && i.on), 0.8),
+      fire: level(has(i => (i.t === 'fireplace' || i.t === 'eukachel' || CAT[i.t].anim === 'fire') && i.on), 0.8) * (care ? care.fireHeat() : 1),
       clock: level(has(i => CAT[i.t].anim === 'clock' || CAT[i.t].tap === 'time' || i.t === 'cuckoo'), 0.45),
       neon: level(has(i => (CAT[i.t].anim === 'buzz' || /neon/.test(i.t)) && i.on), 0.6),
       typing: level(has(i => /laptop|computer|typewriter|cyrig|cydeck/.test(i.t) && i.on), 0.55),
@@ -923,7 +958,7 @@ function startLofiRooms() {
     };
     if (sent.path.length) sent.P.onArrive = knock; else knock(sent.P);
   }
-  setInterval(() => { if (Math.random() < 0.35) mischief(); }, 40000);
+  setInterval(() => { if (Math.random() < 0.35 * (care ? care.mischiefBoost() : 1)) mischief(); }, 40000);   // ignored cats get naughtier
   // a neighbour's cat wanders in now and then, hangs out and goes home
   let visitor = null;
   function visit() {
@@ -945,7 +980,7 @@ function startLofiRooms() {
       toast('<span>Biscuit heads home</span>', 1500);
     }, 45000 + Math.random() * 30000);
   }
-  setInterval(() => { if (Math.random() < 0.15) visit(); }, 60000);
+  setInterval(() => { if (Math.random() < 0.15 * (care ? care.magicBoost() : 1)) visit(); }, 60000);   // cozy rooms get more visitors
   // cuckoo clocks call the hour on their own, like the wall clock tells real time
   let lastHour = new Date().getHours();
   setInterval(() => {
@@ -1823,6 +1858,7 @@ function startLofiRooms() {
         s.style.setProperty('--b', LR.hex(FLOORS[d.floor.style] ? FLOORS[d.floor.style].fn(70, 70) : 0xd8b48a));
       }
       s.setAttribute('aria-label', `${r.name}${here ? ', you are here' : ''}`);
+      if (care && d) { const cz = care.cozyOf(r.id, d.items); s.style.setProperty('--cozy', Math.max(0, (cz - 0.55) / 0.45).toFixed(2)); }
       s.onclick = go(r, draft);
       iso.appendChild(s);
       const L = document.createElement('div');
@@ -2124,6 +2160,7 @@ function startLofiRooms() {
   function saveIndex() { store.set('lr.rooms', rooms); }
   // stash the working copy (not your home): survives the app closing
   function save() {
+    if (care) care.flush();
     try { put('lr.draft', JSON.stringify({ id: meta.current, base: baseSig, data: room.serialize() })); } catch (e) { /* quota */ }
     saveMeta();
     dirty = false;
@@ -2156,7 +2193,8 @@ function startLofiRooms() {
   }
   $('#bSave').onclick = () => { Sound.init(); commit(); };
   if (fresh) commit(true);
-  setTimeout(() => checkDrift(), 1500);   // after midnight, the app opens already drifting
+  setTimeout(() => checkDrift(), 1500);
+  if (care) { care.prune(new Set(rooms.map(r => r.id).concat(meta.current))); care.tick(0); setInterval(() => care.tick(1), 1000); }   // the living room's heartbeat, on real time   // after midnight, the app opens already drifting
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   window.addEventListener('pagehide', save);
 
@@ -2219,7 +2257,7 @@ function startLofiRooms() {
   setMode(state.mode, true);
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 (window.Store ? window.Store.ready : Promise.resolve()).then(startLofiRooms);
