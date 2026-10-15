@@ -21,16 +21,16 @@
   };
   // moods the jukebox and records switch between: tempo, chords, groove and tone
   const MOODS = [
-    { name: 'Late night lofi', col: '#3a3a6a', bpm: 74, progs: [0, 1, 2], drums: DRUMS, tape: 2600, bells: 0.35, up: 0 },
-    { name: 'Rainy day jazz', col: '#4a8ab0', bpm: 66, progs: [1, 3], tape: 2000, bells: 0.5, up: -3, drums: {
+    { name: 'Late night lofi', col: '#3a3a6a', bpm: 74, progs: [0, 1, 2], drums: DRUMS, tape: 2600, up: 0 },
+    { name: 'Rainy day jazz', col: '#4a8ab0', bpm: 66, progs: [1, 3], tape: 2000, up: -3, drums: {
       k: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], h: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1] } },
-    { name: 'Sunny morning', col: '#f2c14e', bpm: 84, progs: [4, 1], tape: 3600, bells: 0.5, up: 2, drums: {
+    { name: 'Sunny morning', col: '#f2c14e', bpm: 84, progs: [4, 1], tape: 3600, up: 2, drums: {
       k: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1] } },
-    { name: 'Chillhop bounce', col: '#e86a8a', bpm: 88, progs: [0, 2], tape: 3000, bells: 0.25, up: 0, drums: {
+    { name: 'Chillhop bounce', col: '#e86a8a', bpm: 88, progs: [0, 2], tape: 3000, up: 0, drums: {
       k: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], s: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], h: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0] } },
-    { name: 'Morning bossa', col: '#e8784a', bpm: 80, progs: [4, 1], tape: 3200, bells: 0.45, up: 0, drums: {
+    { name: 'Morning bossa', col: '#e8784a', bpm: 80, progs: [4, 1], tape: 3200, up: 0, drums: {
       k: [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1], s: [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], h: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] } },
-    { name: 'Dreamy ambient', col: '#6ab07a', bpm: 60, progs: [3, 4], tape: 1600, bells: 0.7, up: -5, drums: {
+    { name: 'Dreamy ambient', col: '#6ab07a', bpm: 60, progs: [3, 4], tape: 1600, up: -5, drums: {
       k: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], s: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], h: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] } },
   ];
 
@@ -192,11 +192,6 @@
       if (D.k[st]) this.kick(t + hum());
       if (D.s[st]) this.snare(t + hum() + 0.01);
       if (D.h[st] && Math.random() < 0.92) this.hat(t + hum(), st % 4 === 2 ? 0.05 : 0.03);
-      // a sparse lazy melody from the chord's top notes
-      if ((st === 6 || st === 12 || st === 3) && Math.random() < M.bells) {
-        const m = chord[2 + ((Math.random() * 3) | 0)] + (Math.random() < 0.3 ? 2 : 0);
-        this.melody(n(m), t + 0.02);
-      }
     },
     keys(chord, t, vel) {
       const ctx = this.ctx, v = vel || 1;
@@ -222,18 +217,6 @@
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.2, t + 0.03);
       g.gain.exponentialRampToValueAtTime(0.0001, t + BEAT * 1.8);
       o.connect(g); g.connect(this.tape); o.start(t); o.stop(t + BEAT * 2);
-    },
-    // the band's sparse melody: a soft felt-piano note, not a bell (its own name, so the bar bell
-    // further down can never stand in for it)
-    melody(f, t) {
-      const ctx = this.ctx;
-      [[1, 0.022, 0.9], [3, 0.0025, 0.25]].forEach(([mul, vol, len]) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'sine'; o.frequency.value = f * mul;
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.035);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-        o.connect(g); g.connect(this.tape); o.start(t); o.stop(t + len + 0.05);
-      });
     },
     kick(t) {
       const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain();

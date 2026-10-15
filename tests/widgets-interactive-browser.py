@@ -30,7 +30,7 @@ with sync_playwright() as p:
     page.wait_for_function('!!window.__lr?.widgets')
     page.evaluate('''() => {
       const a=__lr;a.room.items=[];a.room.n=10;a.room.name='All widgets';
-      for(const [t,o] of [['minifridge',{x:0,z:0}],['newspaper',{x:3,z:4}],['tstcorkboard',{k:0,u:3,e:3}],['pomodorocandle',{x:5,z:5}],['tv',{x:4,z:0}],['bookshelf',{x:7,z:0}],['desk',{x:0,z:4}],['arcade',{x:7,z:3}]]) a.room.add(a.room.make(t,o));
+      for(const [t,o] of [['minifridge',{x:0,z:0}],['newspaper',{x:3,z:4}],['tstcorkboard',{k:0,u:3,e:3}],['pomodorocandle',{x:5,z:5}],['crt',{x:4,z:0}],['libcase',{x:7,z:0}],['gamingdesk',{x:0,z:4}],['arcade',{x:7,z:3}]]) a.room.add(a.room.make(t,o));
       a.changed();a.setMode('edit',true);
     }''')
     try:
@@ -72,17 +72,25 @@ with sync_playwright() as p:
     launch=page.evaluate('__launches[0]');assert launch['scale']>1.15;assert launch['args']==[url,'_blank','noopener,noreferrer']
     assert page.evaluate('!LR.CAT.pomodorocandle.focusRitual')
     for portal in page.evaluate('LRWidgets.PORTALS'):
+        if portal['furnitureId']=='arcade':continue
         with context.expect_page() as opened:tap(portal['furnitureId'])
         tab=opened.value;tab.wait_for_load_state();assert tab.url==portal['url'];assert tab.evaluate('window.opener===null');tab.close()
-    page.evaluate("LRWidgets.PORTALS.push({furnitureId:'tv',label:'Second channel',url:'https://example.com/second-channel'})")
-    tap('tv');assert body.locator('.widget-news a').count()==2
+    # Native arcade gameplay wins over the configured outbound portal.
+    pages=len(context.pages)
+    tap('arcade')
+    assert len(context.pages)==pages
+    assert page.evaluate('''() => {const a=__lr,it=a.room.items.find(i=>i.t==='arcade');return it.on && a.view.objs.get(it.id).userData.playUntil>a.view.t}''')
+    # Gameplay switches the cabinet on. Only that expected decor change is allowed.
+    before=page.evaluate('before=>{const d=JSON.parse(before);d.items.find(i=>i.t==="arcade").on=true;return JSON.stringify(d)}',before)
+    page.evaluate("LRWidgets.PORTALS.push({furnitureId:'crt',label:'Second channel',url:'https://example.com/second-channel'})")
+    tap('crt');assert body.locator('.widget-news a').count()==2
     assert 'Choose a destination' in body.inner_text()
     for width in [320,390,1280]:
         page.set_viewport_size({'width':width,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     with context.expect_page() as opened:body.get_by_role('link',name='Second channel').click()
     tab=opened.value;tab.wait_for_load_state();assert tab.url=='https://example.com/second-channel';tab.close()
     assert page.evaluate('JSON.stringify(__lr.room.serialize())')==before
-    print('PASS: real candle tap, flame feedback before launch, all four furniture portals, multi-link picker and mobile layout; decor untouched',flush=True)
+    print('PASS: real candle tap, flame feedback before launch, all three retargeted portals and native arcade gameplay, multi-link picker and mobile layout; decor untouched',flush=True)
     # Put unique private text and URLs in the state before exercising the actual encoder.
     page.evaluate("LRWidgets.TST_CONTENT.nextPost='PRIVATE_PHASE2_PLAN';LRWidgets.TST_CONTENT.links.push({label:'Private draft',url:'https://example.com/PRIVATE_PHASE2_LINK'});__lr.widgets.refresh(__lr.room.items.map(i=>i.t))")
     private=page.evaluate('localStorage.getItem("lr.widgets")')

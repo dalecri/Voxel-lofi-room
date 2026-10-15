@@ -16,9 +16,9 @@
   // Add another row with the same furnitureId to get a destination picker.
   const PORTALS = [
     { furnitureId: 'arcade', label: 'HTML games', url: 'https://heycristobal.com/my-collection/' }, // Owner: verify exact games index URL; collection page used until confirmed.
-    { furnitureId: 'tv', label: 'TwoStoryTails on YouTube', url: 'https://www.youtube.com/@twostorytails' }, // Owner: verify channel URL.
-    { furnitureId: 'bookshelf', label: 'Portfolio', url: 'https://heycristobal.com/' }, // Owner: verify portfolio URL when editing; confirmed as heycristobal.com.
-    { furnitureId: 'desk', label: 'QR Code generator', url: 'https://heycristobal.com/QR-Code-generator/' }, // Owner: verify QR app URL when editing; confirmed with this capitalization.
+    { furnitureId: 'crt', label: 'TwoStoryTails on YouTube', url: 'https://www.youtube.com/@twostorytails' }, // Owner: verify channel URL.
+    { furnitureId: 'libcase', label: 'Portfolio', url: 'https://heycristobal.com/' }, // Owner: verify portfolio URL when editing; confirmed as heycristobal.com.
+    { furnitureId: 'gamingdesk', label: 'QR Code generator', url: 'https://heycristobal.com/QR-Code-generator/' }, // Owner: verify QR app URL when editing; confirmed with this capitalization.
   ];
   const KEY = 'lr.widgets', HOUR = 3600000;
   const RSS = 'https://www.cbc.ca/webfeed/rss/rss-topstories';

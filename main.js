@@ -640,7 +640,7 @@ function startLofiRooms() {
     const C = CAT[it.t];
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
-    if (widgetAction(it)) return;
+    if (C.tap !== 'arcade' && widgetAction(it)) return;   // native games take priority over outbound portals
     const tap = C.tap;
     if (tap === 'focus') {
       if (rituals.focus(meta.current, id).active) focusSheet(it);
@@ -1168,6 +1168,12 @@ function startLofiRooms() {
     toast(`<span>♪ ${name}</span>`, 1600, true);
     setTimeout(() => { closeCrate(); if (el) el.classList.remove('pulled'); }, 650);
   }
+  // Handle the top sheet before crate navigation, text fields or cat-view controls.
+  window.addEventListener('keydown', e => {
+    if (!$('#sheet').classList.contains('open')) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeSheets(); }
+    e.stopImmediatePropagation();
+  }, true);
   (function crateInput() {
     const bin = $('#crateBin'); let sx = 0, sy = 0, moved = false;
     bin.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; moved = false; });
@@ -1474,8 +1480,9 @@ function startLofiRooms() {
   }
 
   window.addEventListener('keydown', e => {
+    if (sheet.classList.contains('open')) return;   // sheets own keyboard focus
     if (rituals.breath.active) { if (e.key === 'Escape') stopBreathing(); return; }
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.matches('input, textarea, select') || e.target.isContentEditable) return;
     if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // leave browser shortcuts like Ctrl+R alone
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -1577,7 +1584,13 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Rooms list & menu
   const sheet = $('#sheet');
-  function closeSheets() { if (sheet.classList.contains('open')) Sound.slide(false); sheet.classList.remove('open'); $('#sheetBody').dataset.merchant = ''; }
+  function closeSheets() {
+    const open = sheet.classList.contains('open');
+    sheet.classList.remove('open'); $('#sheetBody').dataset.merchant = '';
+    if (sheet.contains(document.activeElement)) document.activeElement.blur();
+    // Dismissal and the pending room transition must survive an unavailable audio device.
+    if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
+  }
   function focusSheet(it) {
     const body = $('#sheetBody'); body.dataset.merchant = '';
     const minutes = Math.ceil(rituals.focus(meta.current, it.id).remaining / 60000);
@@ -1779,7 +1792,9 @@ function startLofiRooms() {
   function codeSheet(title, sub, build) {
     const body = $('#sheetBody'); body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
-    h('div', 'grab'); h('h2', '', title); h('p', 'muted', sub);
+    h('div', 'grab');
+    const close = h('button', 'chipbtn sheet-close', 'Close'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
+    h('h2', '', title); h('p', 'muted', sub);
     build(h); sheet.classList.add('open');
   }
   function widgetLinks(panel, links, id) {

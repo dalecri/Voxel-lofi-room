@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const W = require('../widgets.js');
 const LR = require('../room.js');
 require('../furniture.js');
+require('../packs/library.js');
 function store(initial = {}) {
   const values = JSON.parse(JSON.stringify(initial));
   return { values, get: (k, d) => values[k] ?? d, set: (k, v) => { values[k] = JSON.parse(JSON.stringify(v)); } };
@@ -76,9 +77,9 @@ test('phase 2 static content and destinations stay in private storage with no ex
   assert.deepEqual(w.destinations('tstcorkboard').map(l => l.url), W.TST_CONTENT.links.map(l => l.url));
   assert.equal(w.destinations('pomodorocandle')[0].url, W.POMODORO_URL);
   for (const p of W.PORTALS) assert.ok(w.destinations(p.furnitureId).some(l => l.url === p.url));
-  const extra = { furnitureId: 'desk', label: 'Second app', url: 'https://example.com/second' };
+  const extra = { furnitureId: 'gamingdesk', label: 'Second app', url: 'https://example.com/second' };
   W.PORTALS.push(extra);
-  try { await w.refresh(['desk']); assert.equal(w.destinations('desk').length, 2); }
+  try { await w.refresh(['gamingdesk']); assert.equal(w.destinations('gamingdesk').length, 2); }
   finally { W.PORTALS.pop(); }
   assert.equal(w.destinations('minifridge').length, 0);
   assert.ok(!LR.CAT.pomodorocandle.focusRitual);
