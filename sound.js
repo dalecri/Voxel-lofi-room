@@ -169,8 +169,8 @@
       if (D.h[st] && Math.random() < 0.92) this.hat(t + hum(), st % 4 === 2 ? 0.05 : 0.03);
       // a sparse lazy melody from the chord's top notes
       if ((st === 6 || st === 12 || st === 3) && Math.random() < M.bells) {
-        const m = chord[2 + ((Math.random() * 3) | 0)] + 12 + (Math.random() < 0.3 ? 2 : 0);
-        this.bell(n(m), t + 0.02);
+        const m = chord[2 + ((Math.random() * 3) | 0)] + (Math.random() < 0.3 ? 2 : 0);
+        this.melody(n(m), t + 0.02);
       }
     },
     keys(chord, t, vel) {
@@ -198,14 +198,16 @@
       g.gain.exponentialRampToValueAtTime(0.0001, t + BEAT * 1.8);
       o.connect(g); g.connect(this.tape); o.start(t); o.stop(t + BEAT * 2);
     },
-    bell(f, t) {
+    // the band's sparse melody: a soft felt-piano note, not a bell (its own name, so the bar bell
+    // further down can never stand in for it)
+    melody(f, t) {
       const ctx = this.ctx;
-      [[1, 0.035], [2.01, 0.008]].forEach(([mul, vol]) => {
+      [[1, 0.022, 0.9], [3, 0.0025, 0.25]].forEach(([mul, vol, len]) => {
         const o = ctx.createOscillator(), g = ctx.createGain();
         o.type = 'sine'; o.frequency.value = f * mul;
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
-        o.connect(g); g.connect(this.tape); o.start(t); o.stop(t + 1.7);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.035);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        o.connect(g); g.connect(this.tape); o.start(t); o.stop(t + len + 0.05);
       });
     },
     kick(t) {
