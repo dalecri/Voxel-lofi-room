@@ -112,6 +112,11 @@
       m.box(2, 4, 4, 6, 5, 5, 0xc8a060);
       m.box(0, 2, 1, 8, 3, 6, shade(w, 0.85));                   // tray
       for (let x = 1; x < 7; x++) if (hash3(x, 2, 1, 4) < 0.6) m.set(x, 3, 5, 0xc8a060);
+      // a tiny nest on the roof, built after a few days of a full feeder (shown by the care system)
+      m.part('nest', [4, 11, 3]);
+      for (let x = 2; x < 6; x++) for (let z = 2; z < 5; z++) if (Math.hypot(x + 0.5 - 4, z + 0.5 - 3.5) < 2) m.set(x, 11, z, (x + z) % 2 ? 0x8a6a3a : 0x6a4a28);
+      [[2, 2], [5, 2], [2, 4], [5, 4]].forEach(([x, z]) => m.set(x, 12, z, 0x7a5a30));
+      m.set(3, 12, 3, 0xbfe0f0).set(4, 12, 3, 0xd8ecf4);   // two little eggs
       // the birds that come and go
       m.part('birds', [4, 3, 3]);
       [[0, 0xe8784a], [6, 0x4a8ad8]].forEach(([x, c]) => {

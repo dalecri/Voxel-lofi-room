@@ -209,11 +209,64 @@
     evening: [0x6a5aa8, 0xe07a8a, 0xffb070],
     night: [0x141a3c, 0x1e2a5a, 0x2e3a70],
   };
-  function skyColor(phase, rain, u, y, wseed) {
+  // window views: what a room's windows look out on (city, forest, ocean, snowy cabin); each one
+  // follows the time of day and the weather. LR.viewNow is the current room's choice.
+  const VIEWS = ['city', 'forest', 'ocean', 'cabin'];
+  function skyColor(phase, rain, u, y, wseed, view) {
     const s = SKY[phase] || SKY.day;
     const t = y / 21;
     let c = t > 0.5 ? mix(s[1], s[0], (t - 0.5) * 2) : mix(s[2], s[1], t * 2);
     if (rain) c = mix(c, phase === 'night' ? 0x202838 : 0x9aa6b4, 0.55);
+    const V = view || (typeof window !== 'undefined' && window.LR && window.LR.viewNow) || 'city', night = phase === 'night', dusk = phase === 'evening';
+    if (V !== 'city') {
+      const sky = c;
+      if (night && !rain && hash3(u, y, wseed, 9) < 0.04 && y > 8) return 0xffffff;                       // stars
+      if (night && !rain && Math.hypot(u - 10, y - 17) < 1.7) return 0xfff4c8;                             // the moon
+      if (!night && !rain && phase !== 'evening' && Math.hypot(u - 3, y - 16) < 1.6) return 0xfff6d0;     // the sun
+      if (dusk && !rain && Math.hypot(u - 4, y - 9) < 2.2) return 0xffb070;                                // a low sun
+      if (V === 'ocean') {
+        if (y < 8) {
+          const deep = night ? 0x0a1430 : dusk ? 0x5a4a78 : rain ? 0x4a5a6a : 0x2a6a9a;
+          let w = mix(deep, mix(sky, 0xffffff, 0.2), y / 10);
+          if ((u * 3 + y * 5 + wseed) % 9 === 0) w = mix(w, night ? 0x5a6aa8 : 0xffffff, night ? 0.25 : 0.35);   // little waves
+          if (!rain && Math.abs(u - (night ? 10 : dusk ? 4 : 3)) < 1.2 - y * 0.05 && (u + y) % 2 === 0) return night ? 0xd8dcff : 0xffe6a0;   // the moon or sun on the water
+          return w;
+        }
+        if (y === 8) return mix(sky, 0xffffff, 0.15);                                                        // the horizon
+        return sky;
+      }
+      // forest and cabin: two layers of pines
+      const snowy = V === 'cabin';
+      const tree = (layer) => {
+        for (let cx = u - 4; cx <= u + 4; cx++) {
+          if (((cx + wseed * 3 + layer * 7) % (layer ? 5 : 4) + 5) % (layer ? 5 : 4) !== 0) continue;
+          const h = (layer ? 5 : 8) + ((hash3(cx, layer, wseed, 41) * (layer ? 4 : 6)) | 0), base = snowy ? 3 : 1;
+          if (y >= base && y < base + h && Math.abs(u - cx) <= (base + h - y) * 0.42) return { cx, h, top: base + h, base };
+        }
+        return null;
+      };
+      const ground = snowy ? 3 : 1;
+      const snow = night ? 0x4a5888 : dusk ? 0xe8d8e8 : 0xf4f6ff;                                          // moonlit snow stays dim at night
+      if (snowy && y < ground) return (u + y) % 3 ? snow : shade(snow, 0.9);                                // snow on the ground
+      if (!snowy && y < ground) return night ? 0x0a140e : 0x2e4a2a;
+      if (snowy) {   // a little cabin with a glowing window
+        if (u >= 2 && u <= 6 && y >= ground && y < ground + 4) {
+          if (u >= 3 && u <= 4 && y === ground + 1 && (night || dusk || rain)) return 0xffc870 | GLOW;
+          return night ? 0x2a1a14 : 0x6a4428;
+        }
+        if (y >= ground + 4 && y < ground + 7 && Math.abs(u - 4) <= ground + 6 - y) return snow;               // snowy roof
+        if (u === 6 && y >= ground + 5 && y < ground + 8) return night ? 0x1a1a22 : 0x5a3a2a;                  // chimney
+      }
+      const near = tree(0), far = near ? null : tree(1);
+      if (near) {
+        if (snowy && (y >= near.top - 2 || (y - near.base) % 3 === 2)) return shade(snow, 0.97);               // snow on the branches
+        if (!snowy && night && hash3(u, y, wseed, 77) < 0.03) return 0xd8ff8a | GLOW;                          // fireflies
+        return night ? 0x0c1a18 : dusk ? 0x2a3a30 : rain ? 0x2e4038 : 0x2e5a3c;
+      }
+      if (far) return mix(sky, night ? 0x101c28 : 0x3a6a54, snowy ? 0.4 : 0.6);
+      if ((snowy || rain) && (u * 7 + y * 3 + wseed) % 11 === 0) return snowy ? (night ? 0x7a88b8 : 0xffffff) : mix(sky, 0xffffff, 0.35);   // falling snow, or rain
+      return sky;
+    }
     // a little skyline along the bottom
     const bh = 2 + ((hash3((u + wseed) >> 1, 0, 0, 21) * 5) | 0);
     if (y < bh) {
@@ -848,11 +901,12 @@
   RP.count = function (pred) { return this.items.filter(pred).length; };
 
   RP.serialize = function () {
-    return { v: 1, name: this.name, n: this.n, wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.filter(i => !i.visitor).map(i => Object.assign({}, i)) };
+    return { v: 1, name: this.name, n: this.n, view: this.view || 'city', wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.filter(i => !i.visitor).map(i => Object.assign({}, i)) };
   };
   RP.load = function (d) {
     if (!d || d.v !== 1 || !Array.isArray(d.items)) return false;
     this.name = d.name || 'My Room';
+    this.view = VIEWS.includes(d.view) ? d.view : 'city';
     this.wall = Object.assign({ style: 'paint', color: 0 }, d.wall);
     if (!WALLS[this.wall.style]) this.wall.style = 'paint';
     this.floor = Object.assign({ style: 'oak' }, d.floor);
@@ -1154,7 +1208,7 @@
 
   const LR = {
     N, SIZES, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART, MOMENTS: [], addGroup,
-    Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor, topOf,
+    Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor, topOf, VIEWS,
     def, grain, stripes, WOOD, FABRIC, BOOKS, POTS, GREEN, GREEN_D, GREEN_L, buildRoom: build,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = LR;

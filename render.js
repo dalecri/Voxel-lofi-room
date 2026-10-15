@@ -82,7 +82,7 @@
   const GEO = new Map();
   function itemKey(it, env) {
     const C = CAT[it.t];
-    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') : '', it.blanket ? 'b' : ''].join('|');
+    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') + (env.view || '') : '', it.blanket ? 'b' : ''].join('|');
   }
   // a little plaid throw laid over the top of a bed (dropped there with Move)
   function drapeBlanket(m, C) {
@@ -779,6 +779,7 @@
 
   R.sync = function (room) {
     this.room = room;
+    this.env.view = LR.viewNow = room.view || 'city';   // what the windows look out on
     this.setSize(room.n || LR.N);
     this.buildShell(room, this.visibleMask());
     const depth = it => { let d = 0, p = it.p; while (p && d < 8) { const o = room.get(p); p = o ? o.p : 0; d++; } return d; };
@@ -1328,6 +1329,9 @@
     for (const L of this.pool) {
       if (!L.userData.it) continue;
       let i = L.userData.base * lampK;
+      const cv = this.careVis && this.careVis.get(L.userData.it.id);
+      if (cv && cv.level !== undefined) i *= 0.35 + 0.9 * cv.level;                 // a roaring fire lights the room, embers barely
+      if (cv && cv.gutter) i *= 0.55 + 0.3 * Math.sin(t * 9 + L.id) * Math.sin(t * 23);   // a candle guttering
       if (L.userData.flicker) i *= 0.82 + 0.12 * Math.sin(t * 13 + L.id) + 0.08 * Math.sin(t * 31 + L.id * 2);
       if (L.userData.rgb) L.color.setHSL((t * 0.08 + L.userData.rgb * 0.13) % 1, 0.9, 0.6);
       L.intensity = i;
@@ -1345,6 +1349,25 @@
         ud.boing = Math.max(0, b - dt * 2.4);
         if (!ud.boing && C.kind !== 'pet') ud.inner.scale.set(1, 1, 1);
       }
+      const cv = this.careVis && this.careVis.get(id);
+      if (cv && cv.s !== undefined) {   // living plants: sprouts are small, forgotten ones droop
+        if (!ud.boing) ud.inner.scale.set(cv.s, cv.s * cv.sag, cv.s);
+        else ud.inner.scale.multiplyScalar(cv.s);
+        ud.inner.rotation.x += ((cv.lean || 0) - ud.inner.rotation.x) * Math.min(1, dt * 2);
+        if (cv.bloom && !ud.blooms) {   // blooming: little blossoms dotted over the top
+          const box = new THREE.Box3(); ud.meshes.forEach(m => box.expandByObject(m));
+          const g = new THREE.Group(), cols = cv.herb ? [0xf4f0d8, 0xb8e0a0] : [0xff8ab0, 0xffd24a, 0xffffff, 0xd8a0ff];
+          const inv = new THREE.Matrix4().copy(ud.inner.matrixWorld).invert();
+          for (let k = 0; k < 11; k++) {
+            const p = new THREE.Vector3(box.min.x + Math.random() * (box.max.x - box.min.x), box.max.y - Math.random() * (box.max.y - box.min.y) * 0.35, box.min.z + Math.random() * (box.max.z - box.min.z)).applyMatrix4(inv);
+            const sz = cv.herb ? 0.06 : 0.085, b = new THREE.Mesh(new THREE.BoxGeometry(sz, sz, sz), new THREE.MeshLambertMaterial({ color: cols[k % cols.length], emissive: cols[k % cols.length], emissiveIntensity: 0.3 }));
+            b.position.copy(p); g.add(b);
+          }
+          ud.inner.add(g); ud.blooms = g;
+        }
+        if (ud.blooms) ud.blooms.visible = !!cv.bloom;
+      }
+      if (ud.parts.nest) ud.parts.nest.visible = !!(cv && cv.nest);
       if (C.anim === 'record' && ud.parts.disc && this.music) ud.parts.disc.rotation.y -= dt * 3.5;
       if (C.anim === 'clock' && ud.hands) {
         const s = now.getSeconds() + now.getMilliseconds() / 1000, m = now.getMinutes() + s / 60, h = (now.getHours() % 12) + m / 60;
@@ -1355,7 +1378,7 @@
       if (ud.glowMat) {
         if (C.anim === 'screen' && it.on) ud.glowMat.color.setHSL((t * 0.05 + id * 0.17) % 1, 0.35, 0.8 + 0.06 * Math.sin(t * 7));
         else if (C.anim === 'twinkle') { const v = (0.82 + 0.18 * Math.sin(t * 2.2 + id)) * (groove ? 0.7 + 0.45 * groove : 1); ud.glowMat.color.setRGB(v, v, v); }
-        else if (C.anim === 'fire' || C.anim === 'flame') { const v = 0.85 + 0.1 * Math.sin(t * 17 + id) + 0.06 * Math.sin(t * 41); ud.glowMat.color.setRGB(v, v * 0.97, v * 0.9); }
+        else if (C.anim === 'fire' || C.anim === 'flame') { let v = 0.85 + 0.1 * Math.sin(t * 17 + id) + 0.06 * Math.sin(t * 41); if (cv && cv.level !== undefined) v *= 0.4 + 0.6 * cv.level; if (cv && cv.gutter) v *= 0.6 + 0.35 * Math.abs(Math.sin(t * 7 + id)); ud.glowMat.color.setRGB(v, v * (cv && cv.level < 0.45 ? 0.75 : 0.97), v * (cv && cv.level < 0.45 ? 0.55 : 0.9)); }
         else if (C.anim === 'rgb') ud.glowMat.color.setHSL((t * 0.08 + id * 0.13 + (groove ? Math.floor(this.beatN || 0) * 0.07 : 0)) % 1, 0.9, groove ? 0.45 + 0.3 * groove : 0.62);
         else if (C.anim === 'lava') { const v = 0.9 + 0.1 * Math.sin(t * 0.7 + id); ud.glowMat.color.setRGB(v, v, v); }
         else if (C.anim === 'buzz') { const off = Math.sin(t * 0.37 + id * 5) > 0.97 && Math.sin(t * 31) > 0; const v = off ? 0.35 : 0.95 + 0.05 * Math.sin(t * 50); ud.glowMat.color.setRGB(v, v, v); }
@@ -1459,6 +1482,20 @@
       }
     } else if (ud.screen) { ud.screen.mesh.visible = false; ud.screen.ch = -1; }
     if (ud.fish) {
+      const tv = this.careVis && this.careVis.get(it.id), murk = tv ? tv.murk || 0 : 0;
+      if (murk > 0.05 && !ud.murk) {
+        const w = ud.tank.water, mm = new THREE.Mesh(w.geometry, new THREE.MeshBasicMaterial({ color: 0x6a7a48, transparent: true, opacity: 0, depthWrite: false }));
+        mm.position.copy(w.position); mm.scale.setScalar(0.98); mm.renderOrder = 3; w.parent.add(mm); ud.murk = mm;
+      }
+      if (ud.murk) ud.murk.material.opacity = murk * 0.55;
+      if (tv && tv.gold && !ud.goldFish) {
+        const f = new THREE.Group(), mat = new THREE.MeshLambertMaterial({ color: 0xffc83a, emissive: 0xffb020, emissiveIntensity: 0.6 });
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.08, 0.055), mat), tail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.02), mat);
+        tail.position.x = -0.09; f.add(body, tail); f.userData.tail = tail;
+        const [ax0, ay0, az0, bx0, by0, bz0] = ud.tank.box;
+        f.position.set((ax0 + bx0) / 2, (ay0 + by0) / 2, (az0 + bz0) / 2); f.userData.goal = f.position.clone(); f.userData.speed = 0.3;
+        ud.fish[0].parent.add(f); ud.fish.push(f); ud.goldFish = f;
+      }
       const [ax, ay, az, bx, by, bz] = ud.tank.box, fast = ud.excited > t || (ud.pellets && ud.pellets.length) ? 3 : 1;
       ud.tank.water.material.emissiveIntensity += ((it.on ? 0.55 : 0.08) - ud.tank.water.material.emissiveIntensity) * Math.min(1, dt * 4);
       const food = ud.pellets && ud.pellets.length ? ud.pellets : null;
@@ -1580,7 +1617,8 @@
         const p = this.itemPoint(it.id, [4, 4, 4]);
         this.icon('note', p, { size: 0.3, life: 2.2, vy: 0.5 });
       }
-      if (C.anim === 'fire' && it.on && Math.random() < step * 6) {
+      const fcv = this.careVis && this.careVis.get(it.id);
+      if (C.anim === 'fire' && it.on && Math.random() < step * 6 * (fcv && fcv.level !== undefined ? 0.2 + fcv.level : 1)) {
         const p = this.itemPoint(it.id, [6 + Math.random() * 4, 5, 4]);
         this.glowFx.spawn(p.x, p.y, p.z, (Math.random() - 0.5) * 0.2, 0.8 + Math.random() * 0.6, (Math.random() - 0.5) * 0.2, Math.random() < 0.5 ? 0xffa040 : 0xffd060, 0.05, 0.9, -0.2, 0.5);
       }
@@ -1621,6 +1659,9 @@
         this.fx.spawn(p.x, p.y, p.z, 0, -1.4, 0, 0xc8e4ff, 0.045, 1.0 + Math.random() * 0.4, 0, 0, 0.7);
       }
     }
+    // a well-loved room: golden motes drift in the air
+    const cz = this.cozy || 0;
+    if (cz > 0.7 && Math.random() < step * 9 * (cz - 0.7) / 0.3) this.glowFx.spawn(0.5 + Math.random() * (N - 1), 0.4 + Math.random() * 2.5, 0.5 + Math.random() * (N - 1), (Math.random() - 0.5) * 0.06, 0.03 + Math.random() * 0.05, (Math.random() - 0.5) * 0.06, Math.random() < 0.7 ? 0xffd27a : 0xfff0b0, 0.035 + Math.random() * 0.02, 7, -0.002, 0, 0.7);
     // dream mode: pale motes float slowly up through the room
     const dr = this.drift || 0;
     if (dr > 0.05 && Math.random() < step * 14 * dr) this.glowFx.spawn(0.5 + Math.random() * (N - 1), 0.2 + Math.random() * 1.5, 0.5 + Math.random() * (N - 1), (Math.random() - 0.5) * 0.08, 0.1 + Math.random() * 0.12, (Math.random() - 0.5) * 0.08, Math.random() < 0.6 ? 0xbcd0ff : 0xf0f4ff, 0.04 + Math.random() * 0.035, 6 + Math.random() * 3, -0.004, 0, 0.75);
