@@ -25,3 +25,13 @@ test('signature behaviors use existing tap, fire, water, screen, music and door 
  if(L.CAT['speakeasy-gramophone']){assert.equal(tap('speakeasy-gramophone'),'mood');assert.equal(L.CAT['speakeasy-gramophone'].musicMood,1);assert.equal(tap('speakeasy-door'),'portal');}
  if(L.CAT['saloon-piano'])assert.equal(tap('saloon-piano'),'piano');
 });
+
+test('declared tap sounds exist and all emitter kinds run through the existing particle path',()=>{
+ const audio={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../sound.js'),'utf8'),audio);const S=audio.window.LofiSound;
+ const r=Object.create(scope.window.LRRender.Renderer.prototype);let spawned=0;
+ const spawn=(...args)=>{assert.ok(args.every(Number.isFinite));spawned++;};
+ Object.assign(r,{t:1,itemPoint:()=>({x:1,y:2,z:3}),fx:{spawn},glowFx:{spawn}});
+ for(const p of packs)for(const id of p.ids){const C=L.CAT[id];for(const s of [].concat(C.fx?.sfx||[]))assert.equal(typeof S[s],'function',id+': '+s);
+ for(const E of [].concat(C.emit||[])){const before=spawned;assert.doesNotThrow(()=>r.emitFx({id:1},C,E.kind,E.at,E.color));assert.equal(spawned,before+1,id);}}
+ assert.ok(spawned>=5);
+});

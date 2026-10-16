@@ -51,6 +51,7 @@ Then open http://localhost:5180.
   - **Windows:** curtains, blinds, a picture window, a round window and an arched window. Each one throws a sunbeam across the floor that changes with the time of day, and closed blinds make it striped.
   - **Wall art:** music posters (13 loose takes on artists' best-known covers), movie posters (7 made-up films), paintings, posters, a framed record, a wall clock and a mirror.
   - **Pets:** cats, cat beds, cat trees and a robot vacuum.
+- **Twenty more furniture themes:** 160 free pieces, with three coordinated palettes per piece. Find each theme as its own group in Decorate → Add: Sugar shack, Laurentian cabin, Pottery studio, Home gym, Observatory, Campsite, Japanese minka, Scandinavian hygge, Moroccan riad, 70s retro lounge, 80s arcade, Art deco speakeasy, Wild west saloon, Viking longhouse, Ancient Egypt, Steampunk workshop, Treehouse, Bakery and patisserie, Music studio, and Finnish sauna. Tap the pottery wheel to spin it, switch the orrery and lamps on or off, play the saloon piano or arcade game, and put jazz on with the gramophone. These use the existing interactions and stay ordinary free furniture.
 - **Small things stack.** Mugs, lamps, plants and records sit on desks, tables, dressers, bookshelves, the piano, the mantel and wall shelves. Move a desk and everything on it comes along.
 - **Five decorating tools:**
   - **Add:** tap or drag to place.
@@ -549,3 +550,7 @@ Verify with `node --test tests/*.test.cjs`, `npm run build`, then
 sources, including cache/opt-out races, offline fallbacks, private ISBNs,
 station add without autoplay, actual gallery image pixels, drink recipes,
 cat bubbles and night aurora at 390px.
+
+### Theme pack checks
+
+`tests/theme-packs.json` lists the twenty new packs in catalog order. Run `node --test tests/themes.test.cjs` to build every variant, validate tap sounds, and exercise spin, lava and particle animations. After `npm run build`, run `python3 tests/themes-browser.py 1` (then `2`, `3`, `4`) with Playwright and Chromium installed. Each batch places and taps three pieces per pack at 390px and renders all forty catalog thumbnails. Screenshots are written to `/tmp/themes-batch-N.png` and `/tmp/theme-GROUP-390.png`.
