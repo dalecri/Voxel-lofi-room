@@ -230,13 +230,17 @@
   // =================================================================
   function Renderer(canvas, hooks) {
     this.hooks = hooks || {};
-    const r = this.r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    r.setPixelRatio(LRPerformance.quality({calm: this.hooks.calmPerformance, width: innerWidth, dpr: window.devicePixelRatio || 1}).pixelRatio);
+    const bootQuality = LRPerformance.quality({calm:!!this.hooks.calmPerformance, width:innerWidth, dpr:window.devicePixelRatio || 1});
+    const r = this.r = new THREE.WebGLRenderer({ canvas, antialias:bootQuality.antialias, powerPreference:bootQuality.powerPreference, alpha:true });
+    r.setPixelRatio(bootQuality.pixelRatio);
     r.setClearColor(0x000000, 0);
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.outputColorSpace = THREE.SRGBColorSpace;
-    r.toneMapping = THREE.ACESFilmicToneMapping;
+    r.toneMapping = bootQuality.toneMapping === 'none' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+    this.shadowChanges = LRPerformance.createVisualTracker({shadows:true});
+    this.shadows = LRPerformance.createShadows({map:r.shadowMap, revision:()=>this.activity?.revision || 0});
+    this.shadows.setCalm(!!this.hooks.calmPerformance);
     r.toneMappingExposure = 1.1;
 
     const scene = this.scene = new THREE.Scene();
@@ -345,6 +349,9 @@
     } catch (e) { this.composer = null; }
   };
   R.draw = function () {
+    // Reuse depth maps through still frames, rain, dust and light flicker. Moving
+    // shadow casters or the sun still invalidate them, including during capture.
+    if (this.calmPerformance) this.shadows.prepare(this.shadowChanges(this.scene));
     const k = this.calmPerformance ? 0 : this.glowK;
     if (this.composer && k > 0.02) {
       this.renderPass.camera = this.cam;
@@ -356,6 +363,8 @@
   R.setCalmPerformance = function (on) {
     this.calmPerformance = !!on;
     const q = LRPerformance.quality({calm:this.calmPerformance,size:N});
+    this.shadows.setCalm(this.calmPerformance);
+    this.r.toneMapping = q.toneMapping === 'none' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
     this.sun.shadow.mapSize.set(q.shadowSize, q.shadowSize);
     if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
     this.sun.shadow.needsUpdate = true;

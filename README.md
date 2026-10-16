@@ -452,3 +452,32 @@ remain below the map. Run `node --test tests/*.test.cjs`, `npm run build`,
 `python3 tests/village-browser.py` and `python3 tests/house-browser.py` to check
 cache invalidation, bridges, layout, lazy rendering, travel, saved-room controls
 and mobile/day/night screenshots.
+
+### Calm performance
+
+Settings → **Calm performance** saves `meta.calmPerformance`. Normal mode keeps
+its original uncapped rendering, automatic shadows, ACES filmic tone mapping,
+pixel ratio up to 2 and night bloom. Calm mode caps submitted frames at 30 fps
+while still handling input and advancing simulation on every animation tick.
+Photos and the existing fixed-rate filming path retain their capture behavior.
+
+Calm uses a pixel ratio capped at 1, 1024px shadows, no bloom and no tone mapping.
+It disables automatic shadow-map updates. The activity tracker's wake revision
+invalidates depth maps on events; a shadow-specific scene comparison also catches
+moving casters, their parents and the sun, including capture frames. Rain, dust,
+non-casting effects and changes to light brightness alone reuse the depth map.
+Still rooms continue to use the existing one-second idle timeout and CPU-only
+maintenance heartbeat without submitting frames.
+
+The persisted toggle is read before WebGL context creation. Booting in Calm
+requests no antialiasing and a low-power GPU preference. Both are WebGL
+context-creation options, so changing either direction takes effect at the next
+app load, as the Settings help explains. Pixel ratio, frame cap, shadow policy,
+tone mapping and bloom restore immediately when Calm is switched off. The
+separate reduced-motion choice is never changed.
+
+Verify with `node --test tests/*.test.cjs`, `npm run build` and
+`python3 tests/performance-browser.py`. Tests include 60/120/144Hz frame budgets,
+continued simulation on skipped frames, shadow-map reuse and invalidation,
+normal-mode restoration, context attributes after reload, capture from idle,
+mobile checks and 1440px day/night screenshot comparisons.

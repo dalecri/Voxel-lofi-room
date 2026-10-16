@@ -2400,6 +2400,7 @@ function startLofiRooms() {
     toggle('Sound', Sound.on, () => setControl('sound',!Sound.on));
     toggle('Rain', meta.weather==='rain' || meta.weather==='storm', () => setControl('rain',!(meta.weather==='rain' || meta.weather==='storm')));
     toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
+    h('p','muted small','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.');
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
     toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
     h('p', 'muted small', 'Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.');
@@ -2707,7 +2708,7 @@ function startLofiRooms() {
   window.addEventListener('blur', () => {activePointers.clear(); wake();});
   for (const type of ['pointermove','wheel','keydown','keyup','input','change','click','visibilitychange']) document.addEventListener(type, wake, {passive:true});
   for (const type of ['resize','focus','storage']) window.addEventListener(type, wake, {passive:true});
-  const renderLoop = LRPerformance.createLoop({activity,step:loop,draw:()=>{if(!filming)view.draw();}});
+  const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
   window.__lr = { activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console

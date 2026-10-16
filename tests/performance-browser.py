@@ -1,5 +1,5 @@
 """npm run build && python3 tests/performance-browser.py"""
-import functools
+import functools,base64
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 from threading import Thread
@@ -17,7 +17,7 @@ with sync_playwright() as p:
  
  const RealDate=Date;window.Date=class extends RealDate{constructor(...a){super(...(a.length?a:[2026,9,16,2,0,0]));}static now(){return new RealDate(2026,9,16,2).getTime();}};""")
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
- page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.set_default_timeout(30000)
+ page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(30000)
  print('loading',flush=True)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.renderLoop');print('loaded',flush=True)
  page.evaluate("""() => {const a=__lr;a.room.items=[];a.meta.realtime=false;a.meta.dreamy=false;a.meta.visitors=false;a.meta.mischief=false;a.meta.weather='clear';a.meta.raining=false;a.setMode('explore',true);a.setPhase('night',true);a.view.setWeather('clear');a.view.setRain(false);a.changed();} """)
@@ -39,16 +39,23 @@ with sync_playwright() as p:
  page.evaluate('__lr.view.fx.spawn(5,1,5,0,.1,0,0xffffff,.06,1,0,0,1)');assert not page.evaluate('__lr.renderLoop.sleeping');page.wait_for_function('__lr.activity.sources.includes("particles")');page.wait_for_function('__lr.renderLoop.sleeping')
  print('camera and particle wake passed',flush=True)
  page.keyboard.press('Escape');page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('button',name='Calm performance',exact=True).click()
- assert page.evaluate('__lr.view.r.getPixelRatio()')<=1.25
+ assert page.evaluate('__lr.view.r.getPixelRatio()')==1
+ assert page.evaluate('__lr.view.r.toneMapping===THREE.NoToneMapping && !__lr.view.r.shadowMap.autoUpdate')
+ assert 'next app load' in page.locator('#menu-settings').inner_text()
  assert page.evaluate('__lr.view.sun.shadow.mapSize.x')==1024
  assert page.evaluate('__lr.view.composer===null')
  assert page.evaluate('__lr.activity.quietMs')==1000
  assert page.evaluate('JSON.parse(localStorage.getItem("lr.meta")).calmPerformance')
  assert page.evaluate('JSON.parse(localStorage.getItem("lr.reducedMotion"))') is True
  print('calm enabled',flush=True)
+ # Count actual depth-map target submissions, not calls that return early from
+ # WebGLShadowMap.render. Repeated still draws must reuse the existing texture.
+ shadows=page.evaluate('''() => {const a=__lr,v=a.view;v.draw();v.draw();let passes=0;const setTarget=v.r.setRenderTarget;v.r.setRenderTarget=function(target,...rest){if(target&&target===v.sun.shadow.map)passes++;return setTarget.call(this,target,...rest);};try{for(let i=0;i<20;i++)v.draw();const still=passes;a.activity.wake();for(let i=0;i<8;i++)v.draw();const event=passes;v.root.position.x+=.1;for(let i=0;i<8;i++)v.draw();const moved=passes;v.root.position.x-=.1;v.draw();passes=0;const intensity=v.sun.intensity;for(let i=0;i<8;i++){v.sun.intensity+=.01;v.draw();}v.sun.intensity=intensity;return {still,event,moved,flicker:passes};}finally{v.r.setRenderTarget=setTarget;}}''')
+ assert shadows=={'still':0,'event':1,'moved':2,'flicker':0},shadows
+ print('static depth maps reuse, wake and moving-caster invalidation passed',flush=True)
  page.evaluate('__lr.room.n=20;__lr.changed()');assert page.evaluate('__lr.view.sun.shadow.mapSize.x')==1024;page.evaluate('__lr.room.n=10;__lr.changed()')
  # Turning it off restores bloom and normal quality without touching motion.
- page.get_by_role('button',name='Calm performance',exact=True).click();assert page.evaluate('__lr.view.r.getPixelRatio()')==2;assert page.evaluate('__lr.view.sun.shadow.mapSize.x')==2048;assert page.evaluate('!!__lr.view.composer')
+ page.get_by_role('button',name='Calm performance',exact=True).click();assert page.evaluate('__lr.view.r.getPixelRatio()')==2;assert page.evaluate('__lr.view.r.shadowMap.autoUpdate && __lr.view.r.toneMapping===THREE.ACESFilmicToneMapping');assert page.evaluate('__lr.view.sun.shadow.mapSize.x')==2048;assert page.evaluate('!!__lr.view.composer')
  page.get_by_role('button',name='Calm performance',exact=True).click();page.keyboard.press('Escape');page.click('#bHome');page.wait_for_function('__lr.renderLoop.sleeping')
  print('quality restore passed',flush=True)
  # Photo capture must produce pixels even from a sleeping render loop.
@@ -57,14 +64,19 @@ with sync_playwright() as p:
  page.wait_for_function('__lr.renderLoop.sleeping');page.keyboard.press('Escape');page.click('#bPhoto');page.wait_for_function('document.querySelector("#photo").classList.contains("open")');assert page.evaluate('!__lr.renderLoop.sleeping');page.keyboard.press('Escape')
  print('capture passed',flush=True)
  # Rain, beat mode and first-person cat view each prohibit sleeping.
- page.evaluate("__lr.view.setWeather('rain')");page.wait_for_timeout(2500);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'weather' in page.evaluate('__lr.activity.sources')
+ page.evaluate("__lr.view.setWeather('rain');window.frameStart=performance.now();window.frameCount=__lr.renderLoop.frames");page.wait_for_timeout(2500);fps=page.evaluate('(__lr.renderLoop.frames-frameCount)*1000/(performance.now()-frameStart)');assert 0<fps<=32,fps;print('active Calm submissions/sec:',round(fps,1),flush=True);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'weather' in page.evaluate('__lr.activity.sources')
  page.evaluate("__lr.view.setWeather('clear');__lr.view.music=true;__lr.meta.music=true;__lr.Sound.beat=()=>.4")
  # Use actual controls for the explicit preference; no Calm override.
  page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('button',name='Reduced motion',exact=True).click();page.keyboard.press('Escape');page.wait_for_timeout(2200);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'beat' in page.evaluate('__lr.activity.sources')
  page.evaluate('''() => {const a=__lr,type=Object.keys(LR.CAT).find(k=>LR.CAT[k].kind==='pet'&&!LR.CAT[k].robot);const it=a.room.add(a.room.make(type,{x:3,z:3}));a.changed();if(!a.view.enterCatView(it.id))throw Error('Cat view did not open');}''');page.wait_for_timeout(2200);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'camera' in page.evaluate('__lr.activity.sources');page.evaluate('__lr.view.exitCatView()')
  # Persisted toggle is applied before the first frame after reload.
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.renderLoop');assert page.evaluate('__lr.meta.calmPerformance');assert page.evaluate('!__lr.view.reducedMotion');assert page.evaluate('__lr.view.composer===null');assert page.evaluate('__lr.view.sun.shadow.mapSize.x')==1024
- page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(1200);page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();assert page.get_by_role('button',name='Calm performance',exact=True).is_visible();page.screenshot(path='/tmp/calm-performance-mobile.png');page.keyboard.press('Escape');assert not errors,errors
+ assert page.evaluate('!__lr.view.r.getContext().getContextAttributes().antialias');assert page.evaluate('__lr.view.r.getContext().getContextAttributes().powerPreference')=='low-power'
+ page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(1200);page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();assert page.get_by_role('button',name='Calm performance',exact=True).is_visible();assert page.evaluate('__lr.view.r.getPixelRatio()')==1;page.screenshot(path='/tmp/calm-performance-mobile.png');page.keyboard.press('Escape');assert not errors,errors
+ page.set_viewport_size({'width':1440,'height':900})
+ pictures=page.evaluate('''() => {const a=__lr,v=a.view;LR.PRESETS.study.make(a.room);a.room.items=a.room.items.filter(i=>LR.CAT[i.t].kind!=='pet');a.changed();a.meta.realtime=false;a.meta.dreamy=false;const shots={};for(const phase of ['day','night']){a.setPhase(phase,true);v.setPhase(phase,true);v.setCalmPerformance(false);a.activity.setCalm(false);v.frame(0,v.t);shots[phase+'-normal']=v.snapshot();v.setCalmPerformance(true);a.activity.setCalm(true);v.frame(0,v.t);shots[phase+'-calm']=v.snapshot();}return shots;}''')
+ for name,data in pictures.items():Path('/tmp/calm2-'+name+'-1440.png').write_bytes(base64.b64decode(data.split(',')[1]))
+ assert not errors,errors
  print('PASS: static scene sleeps without GPU submissions, pointer/camera wake, four quality levers and reload persistence, unchanged motion preference, photo/capture while idle, weather/beat stay active, desktop/mobile without errors',flush=True)
  browser.close()
 server.shutdown()
