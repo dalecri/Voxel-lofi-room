@@ -1681,6 +1681,7 @@ function startLofiRooms() {
   $('#breathStop').onclick = () => stopBreathing();
   document.addEventListener('visibilitychange', () => { if (document.hidden) Sound.breathTone(0, false); else updateRituals(); });
   function updateShopBalance() {
+    updateRitualCards();
     const el = $('#shopBalance');
     if (el) el.textContent = `${shop.balance} Fireflies`;
     document.querySelectorAll('[data-shop-buy]').forEach(b => {
@@ -2219,6 +2220,20 @@ function startLofiRooms() {
     stage.appendChild(iso); float.append(stage, labels); wrap.appendChild(float); body.appendChild(wrap);
     stackSeen = new Set(slices.map(x => x.r.id));
   }
+  function updateRitualCards(force = false) {
+    const today = $('#menu-today');
+    if (!today || !force && (today.hidden || !sheet.classList.contains('open'))) return;
+    const breath = rituals.breath, outfit = LRCostumes.find(wardrobe.selected);
+    const states = {
+      bBreathing: breath.active ? `${Math.ceil(breath.remaining / 60000)} minutes left · ${breath.phase.toLowerCase()}` : '10 minutes · not started',
+      bWardrobe: outfit ? `Wearing ${outfit.name}` : 'Dress the little dude',
+      bShop: `${shop.balance} Fireflies · ${merchantHere() ? 'visiting your room' : 'out wandering, back another day'}`,
+    };
+    for (const [id, text] of Object.entries(states)) {
+      const sub = today.querySelector(`#${id} [data-ritual-state]`);
+      if (sub && sub.textContent !== text) sub.textContent = text;
+    }
+  }
   function renderMenu() {
     roomToolsUI.close();
     saveIndex();
@@ -2228,13 +2243,17 @@ function startLofiRooms() {
     const sections = LRDashboard.menu(body, store, closeSheets);
     let target = sections.Today;
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; target.appendChild(el); return el; };
-    const quiet = h('div', 'rowbtns');
-    quiet.innerHTML = '<button class="chipbtn" id="bBreathing">☾ Breathing room · 10 minutes</button>';
-    $('#bBreathing').onclick = breathingSheet;
-    const market = h('div', 'rowbtns');
-    const marketButton = document.createElement('button'); marketButton.className = 'chipbtn'; marketButton.id = 'bShop';
-    const wardrobeButton = document.createElement('button'); wardrobeButton.className = 'chipbtn'; wardrobeButton.id = 'bWardrobe'; wardrobeButton.textContent = 'Wardrobe'; wardrobeButton.onclick = wardrobeSheet; market.appendChild(wardrobeButton);
-    marketButton.textContent = `🐾 Traveling merchant · ${shop.balance} Fireflies${merchantHere() ? ' · visiting' : ''}`; marketButton.onclick = () => openShop(); market.appendChild(marketButton);
+    h('h2', '', 'Rituals');
+    const ritualsList = h('div', 'ritual-cards');
+    const ritualCard = (id, title, icon, action) => {
+      const b = document.createElement('button'); b.type = 'button'; b.id = id; b.className = 'd today ritual-card';
+      b.innerHTML = `<i aria-hidden="true">${icon}</i><div class="ritual-copy"><b>${title}</b><span data-ritual-state></span></div><svg class="ritual-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m9 5 7 7-7 7"/></svg>`;
+      b.onclick = action; ritualsList.appendChild(b);
+    };
+    ritualCard('bBreathing', 'Breathing room', '☾', breathingSheet);
+    ritualCard('bWardrobe', 'Wardrobe', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6a2 2 0 1 1 3 1.7L12 9v2L3 18a1 1 0 0 0 .6 2h16.8a1 1 0 0 0 .6-2l-9-7"/></svg>', wardrobeSheet);
+    ritualCard('bShop', 'Traveling merchant', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 9h18l-2-6H5L3 9v12h18V9M8 21V12h8v9"/></svg>', () => openShop());
+    updateRitualCards(true);
     const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
     h('h2', '', `Today <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
     h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`);
@@ -2577,7 +2596,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { tickWorld(worldT); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
+    if (worldT >= 1) { tickWorld(worldT); updateRitualCards(); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');

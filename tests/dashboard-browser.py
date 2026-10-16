@@ -21,7 +21,7 @@ with sync_playwright() as p:
  def escape():page.keyboard.press('Escape');assert 'open' not in sheet.get_attribute('class')
  def tap(t):page.evaluate("t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id)",t)
  page.click('#bMenu');assert page.get_by_role('tab').all_text_contents()==['Today','Rooms','Journal','Sound','Settings']
- assert page.locator('#bBreathing').is_visible();assert page.locator('#bShop').is_visible();assert page.locator('#bWardrobe').is_visible();assert page.locator('.today').is_visible()
+ assert page.locator('#bBreathing').is_visible();assert page.locator('#bShop').is_visible();assert page.locator('#bWardrobe').is_visible();assert page.locator('#menu-today > .today').is_visible()
  tab('Rooms');assert page.locator('#bImportCode').is_visible();assert page.locator('#bShareCode').is_visible();assert page.locator('.roomstack').count() or 'Your home' in body.inner_text()
  # Every preset remains present and visible in Rooms.
  expected=page.evaluate('Object.values(LR.PRESETS).map(p=>p.name)')
