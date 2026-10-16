@@ -27,7 +27,7 @@ with sync_playwright() as p:
   page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
  def live():return page.get_by_role('button',name='Live weather',exact=True)
  page.evaluate('() => {window.weatherWind=null;__lr.Sound.soundscape=s=>{window.weatherWind=s.wind};}')
- settings();assert page.locator('#menu-settings .toggle').count()==10
+ settings();assert page.locator('#menu-settings .toggle').count()==11
  assert page.locator('#menu-settings .toggle span').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
  assert page.evaluate("() => {const b=document.createElement('button');b.textContent='Base button alignment';document.querySelector('#menu-settings').appendChild(b);const left=getComputedStyle(b).textAlign==='left';b.remove();return left;}")
  page.screenshot(path='/tmp/live-weather-settings-390.png')

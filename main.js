@@ -93,6 +93,7 @@ function startLofiRooms() {
   // Rooms: a list of saved rooms, one open at a time
   let rooms = store.get('lr.rooms', []);
   const meta = Object.assign({ current: 0, realtime: true, phase: 'day', raining: false, music: false, sound: true, painted: {} }, store.get('lr.meta', {}));
+  const activity = LRPerformance.createActivity({calm:meta.calmPerformance === true});
   // Retire the old blossom weather without changing the tree's petal interaction.
   if (meta.weather === 'sakura') { meta.weather = 'clear'; meta.raining = false; saveMeta(); }
   Sound.on = meta.sound;
@@ -147,6 +148,7 @@ function startLofiRooms() {
   const bg = $('#bg'), stars = $('#stars');
   let liftNow = 40;
   const view = new LRRender.Renderer($('#c'), {
+    calmPerformance: meta.calmPerformance === true,
     catActivity(id, kind) { recordCat(room.get(id), kind); },
     catViewEnded() { document.body.classList.remove('catcam'); },
     catLand() { Sound.thump(0.5); },
@@ -160,6 +162,8 @@ function startLofiRooms() {
     },
     lift() { return liftNow; },
   });
+  view.activity = activity;
+  view.fx.activity = view.glowFx.activity = activity;
   view.glowOn = meta.glow !== false;
   // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
   const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), watered: it => shop.earn('water', `${meta.current}:${it.id}`), changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
@@ -2448,6 +2452,7 @@ function startLofiRooms() {
     toggle('Music', !!meta.music, () => setControl('music',!meta.music));
     toggle('Sound', Sound.on, () => setControl('sound',!Sound.on));
     toggle('Rain', meta.weather==='rain' || meta.weather==='storm', () => setControl('rain',!(meta.weather==='rain' || meta.weather==='storm')));
+    toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
     toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
     h('p', 'muted small', 'Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.');
@@ -2730,8 +2735,11 @@ function startLofiRooms() {
       view.catMove(f, sd, dt);
     }
     view.beat = meta.music && !stream && !view.reducedMotion ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
-    if (!filming) { view.frame(dt, t); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); }
-    requestAnimationFrame(loop);
+    if (!filming) { view.frame(dt, t, false); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); }
+    view.reportActivity();
+    activity.report('filming/photo', filming || $('#photo').classList.contains('open'));
+    activity.report('pointer', activePointers.size > 0);
+    activity.report('room lift', Math.abs(liftGoal-liftNow) > .001);
   }
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) liveWeather.refresh(); });
@@ -2745,9 +2753,17 @@ function startLofiRooms() {
   setMode(state.mode, true);
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
-  requestAnimationFrame(loop);
+  const activePointers = new Set();
+  const wake = () => activity.wake();
+  document.addEventListener('pointerdown', e => { activePointers.add(e.pointerId); wake(); }, {passive:true});
+  for (const type of ['pointerup','pointercancel']) window.addEventListener(type, e => { activePointers.delete(e.pointerId); wake(); }, {passive:true});
+  window.addEventListener('blur', () => {activePointers.clear(); wake();});
+  for (const type of ['pointermove','wheel','keydown','keyup','input','change','click','visibilitychange']) document.addEventListener(type, wake, {passive:true});
+  for (const type of ['resize','focus','storage']) window.addEventListener(type, wake, {passive:true});
+  const renderLoop = LRPerformance.createLoop({activity,step:loop,draw:()=>{if(!filming)view.draw();}});
+  renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

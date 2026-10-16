@@ -156,6 +156,7 @@
   }
   Particles.prototype.spawn = function (x, y, z, vx, vy, vz, col, size, life, grav, drag, alpha) {
     if (this.n >= this.max) return;
+    if (this.activity) this.activity.report('particles');
     const k = this.n++, c = new THREE.Color(col);
     this.pos.set([x, y, z], k * 3); this.vel.set([vx, vy, vz], k * 3); this.col.set([c.r, c.g, c.b], k * 3);
     this.size[k] = this.s0[k] = size; this.life[k] = this.max0[k] = life; this.grav[k] = grav || 0; this.drag[k] = drag || 0;
@@ -230,7 +231,7 @@
   function Renderer(canvas, hooks) {
     this.hooks = hooks || {};
     const r = this.r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    r.setPixelRatio(LRPerformance.quality({calm: this.hooks.calmPerformance, width: innerWidth, dpr: window.devicePixelRatio || 1}).pixelRatio);
     r.setClearColor(0x000000, 0);
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -249,7 +250,8 @@
 
     this.sun = new THREE.DirectionalLight(0xffffff, 2);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    const initialShadow = LRPerformance.quality({calm:this.hooks.calmPerformance}).shadowSize;
+    this.sun.shadow.mapSize.set(initialShadow, initialShadow);
     Object.assign(this.sun.shadow.camera, { near: 1, far: 80, left: -11, right: 11, top: 11, bottom: -11 });
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.02;
@@ -318,6 +320,9 @@
     this.glowOn = true; this.glowK = 0;
     this.drift = 0; this.driftGoal = 0;   // dream mode: after midnight the room drifts moon-blue
     this.breathDim = 0; this.breathing = false;
+    this.calmPerformance = !!this.hooks.calmPerformance;
+    this.composer = null;
+    this.visualChanged = LRPerformance.createVisualTracker();
     this.initGlow();
     this.resize();
   }
@@ -327,7 +332,7 @@
   // Glowing voxels and embers are pushed brighter than white at night and only those cross the bloom
   // threshold. In daylight the composer is skipped entirely, so the day looks (and costs) as before.
   R.initGlow = function () {
-    if (!THREE.EffectComposer) return;   // no post-processing available: plain rendering
+    if (this.calmPerformance || !THREE.EffectComposer) return;   // no post-processing available: plain rendering
     try {
       const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: this.r.capabilities.isWebGL2 ? 4 : 0 });
       const c = this.composer = new THREE.EffectComposer(this.r, rt);
@@ -340,7 +345,7 @@
     } catch (e) { this.composer = null; }
   };
   R.draw = function () {
-    const k = this.glowK;
+    const k = this.calmPerformance ? 0 : this.glowK;
     if (this.composer && k > 0.02) {
       this.renderPass.camera = this.cam;
       this.bloomPass.strength = 0.75 * k + 0.25 * (this.drift || 0);
@@ -348,10 +353,37 @@
     } else this.r.render(this.scene, this.cam);
   };
 
+  R.setCalmPerformance = function (on) {
+    this.calmPerformance = !!on;
+    const q = LRPerformance.quality({calm:this.calmPerformance,size:N});
+    this.sun.shadow.mapSize.set(q.shadowSize, q.shadowSize);
+    if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    this.sun.shadow.needsUpdate = true;
+    if (!q.bloom && this.composer) {
+      for (const pass of this.composer.passes) if (pass.dispose) pass.dispose();
+      this.composer.dispose(); this.composer = null;
+    } else if (q.bloom && !this.composer) this.initGlow();
+    this.resize();
+    if (this.activity) this.activity.wake();
+  };
+  R.reportActivity = function () {
+    const a = this.activity;
+    if (!a) return;
+    a.report('visible animation', this.visualChanged(this.scene, this.cam));
+    a.report('particles', this.fx.n > 0 || this.glowFx.n > 0 || this.sprites.some(s => s.visible));
+    a.report('weather', this.weather !== 'clear' && !!this.weather);
+    a.report('camera', !!this.fp || Math.abs(this.yawGoal-this.yaw)>1e-6 || Math.abs(this.pitchGoal-this.pitch)>1e-6 || Math.abs(this.zoomGoal-this.zoom)>1e-6 || this.pan.distanceTo(this.panGoal)>1e-6);
+    a.report('dream', this.drift > .002 || this.driftGoal > .002);
+    a.report('breathing', !!this.breathing || this.breathDim > .001);
+    a.report('beat', this.music && this.beat >= 0);
+    a.report('capture', !!this.capturing);
+  };
+
   R.resize = function () {
     if (this.capturing) return;   // filming a timelapse at a fixed size
     const c = this.r.domElement;
     const w = c.clientWidth || window.innerWidth, h = c.clientHeight || window.innerHeight;
+    this.r.setPixelRatio(LRPerformance.quality({calm:this.calmPerformance, width:w, dpr:window.devicePixelRatio || 1}).pixelRatio);
     this.r.setSize(w, h, false);
     if (this.composer) { this.composer.setPixelRatio(this.r.getPixelRatio()); this.composer.setSize(w, h); }
     this.w = w; this.h = h;
@@ -777,7 +809,8 @@
     this.under.position.set(N / 2, -1.2, N / 2); this.under.scale.setScalar(N / 10);
     const r = N * 1.1;
     Object.assign(this.sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, far: 80 + N * 4 });
-    this.sun.shadow.mapSize.set(N > 14 ? 4096 : 2048, N > 14 ? 4096 : 2048);
+    const shadowSize = LRPerformance.quality({calm:this.calmPerformance,size:N}).shadowSize;
+    this.sun.shadow.mapSize.set(shadowSize, shadowSize);
     if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
     this.sun.shadow.camera.updateProjectionMatrix();
     this.shellCache.forEach(g => g.dispose()); this.shellCache.clear(); this.shellStyle = ''; this.mask = -1;
@@ -1338,7 +1371,7 @@
   R.petAt = function (id) { const P = this.pets.get(id); return P ? new THREE.Vector3(P.x, P.y, P.z) : null; };
 
   // ---- per frame ----
-  R.frame = function (dt, t) {
+  R.frame = function (dt, t, render = true) {
     this.t = t;
     if (this.beat >= 0 && this.lastBeat >= 0 && this.beat < this.lastBeat) this.beatN = (this.beatN || 0) + 1;
     this.lastBeat = this.beat;
@@ -1459,7 +1492,7 @@
     if (this.cozyLife) this.cozyLife.frame(dt, t);
     this.updateBreathing();
     if (this.fp) this.updateCatView(dt, t);
-    this.draw();
+    if (render) this.draw();
   };
 
   // ---- cat view: first person from a cat's eyes ----
@@ -1876,5 +1909,11 @@
     if (this.room) this.sync(this.room);
   };
 
+  // Mutations may come from delayed events while no RAF is pending.
+  for (const name of ['enterCatView','exitCatView','boing','spin','excite','play','poof','pop','feedFish','feedBirds','walkCatTo','petCat','callCat','feedCat','sync','resize','setPhase','setWeather','setRain','burst','icon','sparkle','openDoor','setGhost','beginCapture','endCapture','snapshot','ambientEvent','refreshEnv']) {
+    const method = R[name];
+    if (!method) continue;
+    R[name] = function (...args) { const result = method.apply(this,args); if(this.activity) this.activity.wake(); return result; };
+  }
   window.LRRender = { Renderer, PHASES };
 })();
