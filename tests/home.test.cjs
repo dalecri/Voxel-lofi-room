@@ -3,7 +3,7 @@ const H=require('../home.js'),W=require('../widgets.js');
 const now=new Date(2026,9,16,14);
 function fixture(values={}){const data=structuredClone({'lr.daily':{date:'2026-10-16',id:'tea',done:false},'lr.dailyStreak':{n:4},...values});return {data,store:{get:(k,d)=>structuredClone(data[k]??d)},now,meta:{phase:'day',weather:'rain',realtime:true},room:{items:[]}};}
 test('Home sections derive local date, phase, weather, daily state and streak from fixture stores',()=>{
- const ctx=fixture(),s=H.snapshot(ctx);assert.deepEqual(s.sections,['Control center','Today','Gentle notifications','Search','Coziness status']);assert.equal(s.today.phase,'Afternoon');assert.equal(s.today.weather,'Rain');assert.equal(s.today.clock,'following the clock');assert.equal(s.today.daily.D.id,'tea');assert.equal(s.today.streak,4);assert.ok(s.today.date.includes('2026'));
+ const ctx=fixture(),s=H.snapshot(ctx);assert.deepEqual(s.sections,['Tools and apps']);assert.equal(s.today.phase,'Afternoon');assert.equal(s.today.weather,'Rain');assert.equal(s.today.clock,'following the clock');assert.equal(s.today.daily.D.id,'tea');assert.equal(s.today.streak,4);assert.ok(s.today.date.includes('2026'));
  ctx.meta={phase:'night',weather:'snow',realtime:false};assert.equal(H.snapshot(ctx).today.clock,'your chosen daypart');assert.equal(H.snapshot(ctx).today.phase,'Night');assert.equal(H.snapshot(ctx).today.weather,'Snow');
 });
 test('gentle notifications derive tea-ready, undone daily, merchant and unread arrivals',()=>{

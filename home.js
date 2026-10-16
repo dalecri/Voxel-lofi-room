@@ -1,6 +1,6 @@
 // Cozy OS Home. Derived device-local data, with navigation delegated to the room's real tools.
 (function(root) {
-  const SECTIONS=['Control center','Today','Gentle notifications','Search','Coziness status'];
+  const SECTIONS=['Tools and apps'];
   const MOTION_KEY='lr.reducedMotion';
   const PHASES={morning:'Morning',day:'Afternoon',evening:'Evening',night:'Night'};
   const day=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -40,16 +40,26 @@
     if(unread)notifications.push({id:'mail',title:unread===1?'A letter has arrived':`${unread} letters have arrived`,sub:'A note from your past self.',target:'mailbox'});
     return {sections:SECTIONS,today:{date:now.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'}),phase:PHASES[meta.phase] || 'Afternoon',clock:meta.realtime?'following the clock':'your chosen daypart',weather:({clear:'Clear',rain:'Rain',storm:'Storm',snow:'Snow'})[meta.weather] || 'Clear',daily,streak:store.get('lr.dailyStreak',{n:0}).n || 0,waiting:[teaLine,merchant?'Traveling merchant · visiting your room':'Traveling merchant · out wandering',unread?`${unread} future-self letter${unread===1?'':'s'} arrived`:'No letters waiting']},notifications,coziness:coziness({...ctx,now})};
   }
-  function createView({context,sources,apps=()=>[],preview=()=>null,previewKey=()=>'',todayPanel=null,actions,beforeOpen=()=>{},onClose=()=>{}}) {
+  function createSearch({sources,navigate}) {
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
-    const view=el('section','home-view');view.id='homeView';view.hidden=true;view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Home');
-    const header=el('header','home-header'),title=el('h1','','Home'),close=el('button','chipbtn','← Room');close.type='button';header.append(title,close);view.appendChild(header);
+    const host=el('section','space-search');host.setAttribute('aria-label','Universal search');
+    const input=el('input','home-search');input.type='search';input.placeholder='Search your space…';input.setAttribute('aria-label','Search furniture, letters, scenes, ideas');
+    const results=el('div','home-results');results.setAttribute('aria-live','polite');host.append(input,results);
+    function searchResults(){const source=sources();results.replaceChildren();const groups=search(input.value,source);
+      if(!input.value.trim()||!groups.length){results.appendChild(el('p','muted',input.value.trim()?'No matches yet. Try another word.':'Furniture, letters, scenes, ideas.'));return;}
+      for(const group of groups){const section=el('section','home-result-group');section.appendChild(el('h3','',group.type));for(const item of group.items.slice(0,30)){const b=el('button','home-row',item.title);b.type='button';b.onclick=()=>navigate(group.type,item);section.appendChild(b);}if(group.items.length>30)section.appendChild(el('p','muted small','Keep typing to narrow these results.'));results.appendChild(section);}
+    }
+    input.oninput=searchResults;
+    searchResults();return host;
+  }
+  function createView({apps=()=>[],preview=()=>null,previewKey=()=>'',actions,beforeOpen=()=>{},onClose=()=>{}}) {
+    const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
+    const view=el('section','home-view');view.id='homeView';view.hidden=true;view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Control Centre');
+    const header=el('header','home-header'),title=el('h1','','Control Centre'),close=el('button','chipbtn','← Room');close.type='button';const controls=el('div','home-header-actions'),settings=el('button','chipbtn','⚙');settings.type='button';settings.setAttribute('aria-label','Settings');settings.onclick=()=>{closeView(false);actions.navigate('settings');};controls.append(settings,close);header.append(title,controls);view.appendChild(header);
     const scroll=el('div','home-scroll'),main=el('main','home-content');scroll.appendChild(main);view.appendChild(scroll);const sections={};
     SECTIONS.forEach(name=>{const section=el('section','home-section'),h=el('h2','',name);h.id='home-'+name.toLowerCase().replaceAll(' ','-');section.setAttribute('aria-labelledby',h.id);section.appendChild(h);main.appendChild(section);sections[name]=section;});
-    const today=sections.Today,date=el('p','home-date'),conditions=el('p','muted'),daily=el('button','d today home-daily'),icon=el('i','','☀'),copy=el('div'),name=el('b'),hint=el('span'),streak=el('p','muted small'),waiting=el('p','muted home-waiting');icon.setAttribute('aria-hidden','true');daily.type='button';copy.append(name,hint);daily.append(icon,copy);if(todayPanel)todayPanel(today);else today.append(date,conditions);today.append(daily,streak,waiting);
-    const noticeList=el('div','home-notifications');sections['Gentle notifications'].appendChild(noticeList);
     const appSearch=el('input','home-search');appSearch.type='search';appSearch.placeholder='Find a tool or app';appSearch.setAttribute('aria-label','Find a tool or app');
-    const appGrid=el('div','home-apps'),appEmpty=el('p','muted');sections['Control center'].append(el('p','muted','Your tools and apps. Color means the furniture is in this room; gray means it is not placed. Every tool still opens here.'),appSearch,appGrid,appEmpty);
+    const appGrid=el('div','home-apps'),appEmpty=el('p','muted');sections['Tools and apps'].append(el('p','muted','Your tools and apps. Color means the furniture is in this room; gray means it is not placed. Every tool still opens here.'),appSearch,appGrid,appEmpty);
     let lastPreviewKey='';
     function updatePreviews(){const key=previewKey();if(key===lastPreviewKey)return;lastPreviewKey=key;const entries=new Map(apps().map(p=>[p.id,p]));for(const b of appGrid.querySelectorAll('[data-app]')){const p=entries.get(b.dataset.app),asset=p&&preview(p);let img=b.querySelector('.home-furniture');if(!asset){img?.remove();b.querySelector('.home-asset-hint')?.remove();continue;}if(!img){img=el('img','home-furniture');img.alt='';img.setAttribute('aria-hidden','true');b.appendChild(img);}if(img.getAttribute('src')!==asset.src)img.src=asset.src;img.classList.toggle('absent',!asset.present);img.dataset.furniture=asset.id;const hint=b.querySelector('.home-asset-hint') || el('small','home-asset-hint muted');hint.textContent=asset.present?'In your room':'Not placed in this room';b.appendChild(hint);}}
     function launchApps(){appGrid.replaceChildren();const q=appSearch.value.trim().toLocaleLowerCase(),rows=apps().filter(p=>(p.label+' '+(p.description || '')).toLocaleLowerCase().includes(q));appEmpty.textContent=rows.length?'':'No matching apps. Try another word.';
@@ -57,28 +67,17 @@
       const add=el('button','home-app');add.type='button';add.textContent='＋ Add your own';add.onclick=()=>{closeView(false);actions.addPortal();};appGrid.appendChild(add);lastPreviewKey=null;updatePreviews();
     }
     appSearch.oninput=launchApps;
-    const input=el('input','home-search');input.type='search';input.placeholder='Search furniture, letters, scenes, ideas.';input.setAttribute('aria-label','Search furniture, letters, scenes, ideas');const results=el('div','home-results');sections.Search.append(input,results);
-    const cozy=el('p','home-coziness');sections['Coziness status'].appendChild(cozy);document.body.appendChild(view);
-    let active=false,signature='',next=0,lastSources='';
-    function navigate(target,item){closeView(false);actions.navigate(target,item);}
-    function searchResults(){const source=sources(),sig=JSON.stringify(source);lastSources=sig;results.replaceChildren();const groups=search(input.value,source);
-      if(!input.value.trim()||!groups.length){results.appendChild(el('p','muted',input.value.trim()?'No matches yet. Try another word.':'Search furniture, letters, scenes, ideas.'));return;}
-      for(const group of groups){const section=el('section','home-result-group');section.appendChild(el('h3','',group.type));for(const item of group.items.slice(0,30)){const b=el('button','home-row',item.title);b.type='button';b.onclick=()=>navigate(group.type,item);section.appendChild(b);}if(group.items.length>30)section.appendChild(el('p','muted small','Keep typing to narrow these results.'));results.appendChild(section);}
-    }
-    input.oninput=searchResults;
-    function refresh(){if(!active)return;const ctx=context(),data=snapshot(ctx);date.textContent=data.today.date;conditions.textContent=`${data.today.phase} · ${data.today.clock} · ${data.today.weather}`;name.textContent=data.today.daily.name;hint.textContent=data.today.daily.D.done?'Done for today. A new moment tomorrow.':data.today.daily.hint;icon.textContent=data.today.daily.D.done?'✓':'☀';streak.textContent=data.today.streak?`${data.today.streak} day streak`:'Start a streak';daily.onclick=()=>navigate('daily');
-      waiting.textContent=data.today.waiting.join(' · ');
-      const sig=JSON.stringify(data.notifications);if(sig!==signature){signature=sig;noticeList.replaceChildren();if(!data.notifications.length)noticeList.appendChild(el('p','muted','All quiet. The room is humming.'));for(const n of data.notifications){const b=el('button','home-row');b.type='button';b.append(el('b','',n.title),el('span','muted small',n.sub));b.onclick=()=>navigate(n.target);noticeList.appendChild(b);}}
-      cozy.textContent=data.coziness.line;
-    }
+    document.body.appendChild(view);
+    let active=false,next=0;
+    function refresh(){if(active)updatePreviews();}
     function viewport(){if(!active)return;view.style.height=(window.visualViewport?.height || innerHeight)+'px';view.style.top=(window.visualViewport?.offsetTop || 0)+'px';}
     window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);window.addEventListener('resize',viewport);
-    function open(){if(active)return;beforeOpen();active=true;view.hidden=false;viewport();signature='initial';scroll.scrollTop=0;refresh();searchResults();appSearch.value='';launchApps();close.focus({preventScroll:true});}
+    function open(){if(active)return;beforeOpen();active=true;view.hidden=false;viewport();scroll.scrollTop=0;appSearch.value='';launchApps();close.focus({preventScroll:true});}
     function closeView(focus=true){if(!active)return;active=false;if(view.contains(document.activeElement))document.activeElement.blur();view.hidden=true;view.style.height='';view.style.top='';if(focus)onClose();}
     close.onclick=()=>closeView();
     window.addEventListener('keydown',e=>{if(!active)return;if(e.key==='Escape'){e.preventDefault();closeView();}else if(e.key==='Tab'){const nodes=[...view.querySelectorAll('button,input,select')].filter(n=>!n.disabled&&n.offsetParent!==null),first=nodes[0],last=nodes.at(-1);if(!view.contains(document.activeElement)){e.preventDefault();(e.shiftKey?last:first).focus();}else if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}e.stopImmediatePropagation();},true);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
-    return {open,close:closeView,refresh,view,get active(){return active;},tick(time){if(!active||time<next)return;next=time+1000;refresh();updatePreviews();if(input.value.trim()&&JSON.stringify(sources())!==lastSources)searchResults();}};
+    return {open,close:closeView,refresh,view,get active(){return active;},tick(time){if(!active||time<next)return;next=time+1000;refresh();updatePreviews();}};
   }
-  const api={SECTIONS,MOTION_KEY,PHASES,day,reducedMotion,search,coziness,snapshot,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRHome=api;
+  const api={SECTIONS,MOTION_KEY,PHASES,day,reducedMotion,search,coziness,snapshot,createSearch,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRHome=api;
 })(typeof window!=='undefined'?window:globalThis);
