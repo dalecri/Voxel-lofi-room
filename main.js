@@ -93,6 +93,8 @@ function startLofiRooms() {
   // Rooms: a list of saved rooms, one open at a time
   let rooms = store.get('lr.rooms', []);
   const meta = Object.assign({ current: 0, realtime: true, phase: 'day', raining: false, music: false, sound: true, painted: {} }, store.get('lr.meta', {}));
+  // Retire the old blossom weather without changing the tree's petal interaction.
+  if (meta.weather === 'sakura') { meta.weather = 'clear'; meta.raining = false; saveMeta(); }
   Sound.on = meta.sound;
   Sound.crackleOn = meta.crackle !== false;
   // music mood: 'auto' follows the time of day (morning bossa, afternoon chill, evening lofi, night ambient; jazz when it rains)
@@ -628,7 +630,7 @@ function startLofiRooms() {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bRain: 'Weather: clear, rain, storm, snow, sakura', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bHome: 'Home', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bRain: 'Weather: clear, rain, storm, snow', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bHome: 'Home', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -985,8 +987,8 @@ function startLofiRooms() {
       steam: its.some(i => CAT[i.t].steam) ? 1 : 0,
       rain: w === 'storm' ? 2 : w === 'rain' ? 1 : 0,
       wind: w === 'snow' ? 1 : w === 'storm' ? 0.6 : (w === 'clear' && view.ph.night > 0.6 ? 0.4 : 0),
-      crickets: month >= 5 && month <= 7 && view.ph.night > 0.6 && (w === 'clear' || w === 'sakura') ? (view.noWalls ? 1 : 0.6) : 0,
-      birds: meta.phase === 'morning' && (w === 'clear' || w === 'sakura') ? 1 : 0,
+      crickets: month >= 5 && month <= 7 && view.ph.night > 0.6 && (w === 'clear') ? (view.noWalls ? 1 : 0.6) : 0,
+      birds: meta.phase === 'morning' && (w === 'clear') ? 1 : 0,
       city: view.noWalls ? 0.8 : its.some(i => CAT[i.t].anim === 'rgb' || /arcade|console|gaming/.test(i.t)) ? 0.55 : 0,
       cats: its.some(i => i.t === 'cat') ? 1 : 0,
       wash: level(has(i => CAT[i.t].rumble && i.on), 0.6),
@@ -1636,16 +1638,15 @@ function startLofiRooms() {
     setTimeout(checkRoomMoments, 2600);
   }
   $('#bTime').onclick = () => { meta.realtime = false; setPhase(PHASE_ORDER[(PHASE_ORDER.indexOf(meta.phase) + 1) % 4]); Sound.turn(); };
-  // weather: tap to cycle clear, rain, storm, snow and sakura
-  const WEATHERS = ['clear', 'rain', 'storm', 'snow', 'sakura'];
+  // weather: tap to cycle clear, rain, storm and snow
+  const WEATHERS = ['clear', 'rain', 'storm', 'snow'];
   const WEATHER_ICON = {
     clear: '<path d="M7 15a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 6.5 4 4 0 0 1 17 15z" fill="currentColor" fill-opacity=".15"/>',
     rain: '<path d="M7 15a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 6.5 4 4 0 0 1 17 15z" fill="currentColor" fill-opacity=".15"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/>',
     storm: '<path d="M7 14a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 5.5 4 4 0 0 1 17 14z" fill="currentColor" fill-opacity=".3"/><path d="M12.5 14l-2 4h3l-2 4" stroke-linejoin="round"/>',
     snow: '<path d="M7 14a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 5.5 4 4 0 0 1 17 14z" fill="currentColor" fill-opacity=".15"/><path d="M8 18v.01M12 20v.01M16 18v.01M10 21.5v.01M14 21.5v.01" stroke-width="2.6"/>',
-    sakura: '<g fill="currentColor" stroke="none"><ellipse cx="12" cy="6.5" rx="2.6" ry="3.6"/><ellipse cx="12" cy="6.5" rx="2.6" ry="3.6" transform="rotate(72 12 12)"/><ellipse cx="12" cy="6.5" rx="2.6" ry="3.6" transform="rotate(144 12 12)"/><ellipse cx="12" cy="6.5" rx="2.6" ry="3.6" transform="rotate(216 12 12)"/><ellipse cx="12" cy="6.5" rx="2.6" ry="3.6" transform="rotate(288 12 12)"/></g><circle cx="12" cy="12" r="1.6" fill="#fff" stroke="none"/>',
   };
-  const WEATHER_SAY = { clear: 'Clear skies', rain: 'Rain on the window…', storm: 'A storm rolls in', snow: 'It’s snowing', sakura: 'Cherry blossoms drifting by' };
+  const WEATHER_SAY = { clear: 'Clear skies', rain: 'Rain on the window…', storm: 'A storm rolls in', snow: 'It’s snowing' };
   function applyWeather(w, quiet) {
     meta.weather = WEATHERS.includes(w) ? w : 'clear';
     meta.raining = meta.weather === 'rain' || meta.weather === 'storm';
@@ -1659,7 +1660,6 @@ function startLofiRooms() {
     toast(`<span>${WEATHER_SAY[meta.weather]}</span>`, 1400, true);
     if (meta.raining) discover('rain');
     if (meta.weather === 'storm') setTimeout(() => view.strike(), 900);
-    if (meta.weather === 'sakura') discover('hanami');
   }
   $('#bRain').onclick = () => applyWeather(WEATHERS[(WEATHERS.indexOf(meta.weather || 'clear') + 1) % WEATHERS.length]);
   $('#bMusic').onclick = () => toggleRadio();

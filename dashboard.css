@@ -2,6 +2,7 @@
 .dashboard-tabs .chipbtn{flex:1;white-space:nowrap;padding:9px 10px;font-size:13px}
 .dashboard-tabs [aria-selected=true]{background:var(--accent);color:var(--panel-solid)}
 .dashboard-panel[hidden]{display:none}
+#menu-settings{text-align:left}
 .dashboard-search,.dashboard-form input{box-sizing:border-box;width:100%;border:1px solid var(--chip);border-radius:12px;background:var(--chip);color:var(--ink);padding:12px;font:inherit;outline-offset:3px}
 .launcher-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
 .launcher-tile{border:0;border-radius:16px;background:var(--chip);color:var(--ink);font:inherit;min-height:100px;padding:14px 8px;cursor:pointer;overflow-wrap:anywhere}

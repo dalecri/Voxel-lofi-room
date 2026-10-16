@@ -437,14 +437,13 @@
   };
   R.setRain = function (on) { this.env.rain = on; this.rainGoal = on ? 1 : 0; };
 
-  // ---- weather: voxel rain, storms with lightning, snow and sakura petals ----
+  // ---- weather: voxel rain, storms with lightning and snow ----
   // It all falls around the diorama, never over the room, so the room stays easy to see.
   const WEATHER = {
     clear: { n: 0 },
     rain: { n: 520, wind: 0.4, kind: 'rain' },
     storm: { n: 700, wind: -0.9, kind: 'rain', boost: 1.45 },
     snow: { n: 420, wind: 0.4, kind: 'snow' },
-    sakura: { n: 260, wind: 0.4, kind: 'petal' },
   };
   R.setWeather = function (w) {
     this.weather = WEATHER[w] ? w : 'clear';
