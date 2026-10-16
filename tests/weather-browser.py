@@ -1,5 +1,5 @@
 """npm run build && python3 tests/weather-browser.py. Weather migration, tree tap and Android Settings."""
-import functools,json
+import functools,json,re
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 from threading import Thread
@@ -22,13 +22,18 @@ with sync_playwright() as p:
  assert page.evaluate('JSON.parse(localStorage.getItem("lr.meta")).weather')=='clear'
  assert not page.evaluate('__lr.meta.raining')
  assert 'hanami' not in page.evaluate('JSON.parse(localStorage.getItem("lr.found") || "[]")')
- # A second boot reads the migrated value, then the real toolbar cycles exactly four states.
+ # A second boot reads the migrated value. Weather remains supported without a toolbar control.
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr')
  assert page.evaluate('__lr.meta.weather')=='clear'
- for expected in ['rain','storm','snow','clear','rain','storm','snow','clear']:
-  page.click('#bRain');assert page.evaluate('__lr.meta.weather')==expected
+ assert page.locator('#bRain').count()==0
+ states=re.search(r"const WEATHERS = (\[[^;]+\]);",(ROOT/'main.js').read_text()).group(1)
+ assert json.loads(states.replace("'",'"'))==['clear','rain','storm','snow']
+ for expected in ['rain','storm','snow','clear']:
+  page.evaluate("w=>{__lr.meta.weather=w;__lr.meta.raining=w==='rain'||w==='storm';localStorage.setItem('lr.meta',JSON.stringify(__lr.meta))}",expected)
+  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr')
+  assert page.evaluate('__lr.meta.weather')==expected
   assert page.evaluate('__lr.view.weather')==expected
-  assert page.get_attribute('#bRain','aria-label')=='Weather: '+expected
+  assert page.locator('#bRain').count()==0
  assert 'hanami' not in page.evaluate('JSON.parse(localStorage.getItem("lr.found") || "[]")')
  page.click('#bHome');assert 'Clear' in page.locator('#homeView').inner_text();page.keyboard.press('Escape')
  # Actual tree interaction still bursts petals and discovers Hanami.
@@ -50,6 +55,6 @@ with sync_playwright() as p:
     b=page.get_by_role('button',name='Cat mischief',exact=False);before=b.get_attribute('class');b.click();assert page.get_by_role('button',name='Cat mischief',exact=False).get_attribute('class')!=before
    page.keyboard.press('Escape');assert not page.locator('#sheet').evaluate("e=>e.classList.contains('open')")
  assert not errors,errors
- print('PASS: persisted sakura migration, four-state weather cycle, Home weather, untouched tree petal burst/Hanami, left-aligned working Settings at Android/mobile/desktop day/night, no console errors',flush=True)
+ print('PASS: persisted sakura migration, four background weather states, no weather toolbar button, Home weather, untouched tree petal burst/Hanami, left-aligned working Settings at Android/mobile/desktop day/night, no console errors',flush=True)
  browser.close()
 server.shutdown()

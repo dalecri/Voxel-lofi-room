@@ -375,7 +375,6 @@ function startLofiRooms() {
   function updateHeader() {
     $('#roomName').textContent = room.name;
     updateSaveChip();
-    $('#bRain').classList.toggle('on', (meta.weather || 'clear') !== 'clear');
     $('#bMusic').classList.toggle('on', !!meta.music);
     $('#bTime').dataset.phase = meta.phase;
   }
@@ -630,7 +629,7 @@ function startLofiRooms() {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bRain: 'Weather: clear, rain, storm, snow', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bHome: 'Home', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bHome: 'Home', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -1638,14 +1637,8 @@ function startLofiRooms() {
     setTimeout(checkRoomMoments, 2600);
   }
   $('#bTime').onclick = () => { meta.realtime = false; setPhase(PHASE_ORDER[(PHASE_ORDER.indexOf(meta.phase) + 1) % 4]); Sound.turn(); };
-  // weather: tap to cycle clear, rain, storm and snow
+  // Background weather supports clear, rain, storm and snow.
   const WEATHERS = ['clear', 'rain', 'storm', 'snow'];
-  const WEATHER_ICON = {
-    clear: '<path d="M7 15a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 6.5 4 4 0 0 1 17 15z" fill="currentColor" fill-opacity=".15"/>',
-    rain: '<path d="M7 15a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 6.5 4 4 0 0 1 17 15z" fill="currentColor" fill-opacity=".15"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/>',
-    storm: '<path d="M7 14a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 5.5 4 4 0 0 1 17 14z" fill="currentColor" fill-opacity=".3"/><path d="M12.5 14l-2 4h3l-2 4" stroke-linejoin="round"/>',
-    snow: '<path d="M7 14a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 5.5 4 4 0 0 1 17 14z" fill="currentColor" fill-opacity=".15"/><path d="M8 18v.01M12 20v.01M16 18v.01M10 21.5v.01M14 21.5v.01" stroke-width="2.6"/>',
-  };
   const WEATHER_SAY = { clear: 'Clear skies', rain: 'Rain on the window…', storm: 'A storm rolls in', snow: 'It’s snowing' };
   function applyWeather(w, quiet) {
     meta.weather = WEATHERS.includes(w) ? w : 'clear';
@@ -1653,15 +1646,12 @@ function startLofiRooms() {
     view.setWeather(meta.weather); view.setRain(meta.raining); view.refreshEnv(meta.phase);
     if (meta.mood === 'auto') applyMood();
     document.body.classList.toggle('raining', meta.raining);
-    $('#bRain svg').innerHTML = WEATHER_ICON[meta.weather];
-    $('#bRain').setAttribute('aria-label', 'Weather: ' + meta.weather);
     if (quiet) return;
     saveMeta(); Sound.init(); updateHeader();
     toast(`<span>${WEATHER_SAY[meta.weather]}</span>`, 1400, true);
     if (meta.raining) discover('rain');
     if (meta.weather === 'storm') setTimeout(() => view.strike(), 900);
   }
-  $('#bRain').onclick = () => applyWeather(WEATHERS[(WEATHERS.indexOf(meta.weather || 'clear') + 1) % WEATHERS.length]);
   $('#bMusic').onclick = () => toggleRadio();
 
   // ---------------------------------------------------------------
