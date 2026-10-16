@@ -514,3 +514,38 @@ Run `node --test tests/*.test.cjs`, `npm run build`, then
 and reserved spots, feeding, scratching, mouse/wheel motion, pet-flap return,
 dog beds, interruption cleanup and mobile/desktop day/night views. Existing
 favorites also have coverage in `python3 tests/cozy-favorites-browser.py`.
+
+## Live extras (Atlas)
+
+`atlas.js` owns seven no-key sources and their soft fallbacks. **Live extras** in
+Settings opts into daily public-domain art (Art Institute of Chicago), NOAA Kp
+and Canadian Nager.Date holidays. AIC failures try The Met's collection search
+and a public-domain object, using the same art display; if both are unavailable,
+the new **Gallery frame** keeps a local voxel landscape. Art metadata lasts 24
+hours, Kp 30 minutes and holidays one year per year. Nighttime Kp of at least 6
+shows three static, subtle ribbons in the existing page sky; no location or
+extra WebGL rendering is involved. Turning the setting off hides the live art
+and aurora and ignores late ambient responses.
+
+Everything else follows a tap, even with Live extras off. **Browse stations** in
+Sound searches Radio Browser's lofi, jazz, ambient and chillout tags, cached for
+one hour. Add saves to the existing private station list without autoplay.
+Bookshelves open an Open Library shelf/search sheet; only ISBNs are saved in
+`lr.bookshelf`, with covers loaded from the cover CDN as needed. The tall
+bookcase retains its portfolio link inside that sheet. Cat taps retain petting
+and show a Cat Facts bubble, with a handful of facts cached for offline use.
+The bar counter opens a CocktailDB recipe and Another button; the offline
+recipe is a citrus spritz. Searches and drinks are not cached.
+
+Caches live in `lr.atlas`, separate from room decor and LR0/LR1 codes. The gallery's
+live texture is also omitted from room captures. The wall calendar has no month
+sheet yet, so holidays ship as `atlas.holidaysFor(year)` for its future view.
+API requests omit credentials and referrers, time out, and fail without error dialogs.
+Ambient failures wait for the next natural cycle or a new opt-in; on-demand
+sources can retry on their next tap.
+
+Verify with `node --test tests/*.test.cjs`, `npm run build`, then
+`python3 tests/atlas-browser.py`. The tests use controlled responses for all
+sources, including cache/opt-out races, offline fallbacks, private ISBNs,
+station add without autoplay, actual gallery image pixels, drink recipes,
+cat bubbles and night aurora at 390px.

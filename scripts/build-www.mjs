@@ -12,7 +12,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'vendor', 'fonts'), { recursive: true });
 mkdirSync(join(out, 'assets'), { recursive: true });
 
-for (const f of ['village.js', 'performance.js', 'weather.js', 'cozy-furniture.js', 'boot.js', 'care.js', 'shop.js', 'merchant-assets.js', 'life.js', 'rituals.js', 'companion.js', 'costumes.js', 'letters.js', 'letters.css', 'room-tools.js', 'room-tools.css', 'dashboard.js', 'dashboard.css', 'today.js', 'launcher.js', 'home.js', 'home.css', 'widgets.js', 'room.js', 'furniture.js', 'japan.js', 'scene.js', 'screens.js', 'sound.js', 'render.js', 'main.js', 'storage.js']) copyFileSync(join(root, f), join(out, f));
+for (const f of ['atlas.js', 'village.js', 'performance.js', 'weather.js', 'cozy-furniture.js', 'boot.js', 'care.js', 'shop.js', 'merchant-assets.js', 'life.js', 'rituals.js', 'companion.js', 'costumes.js', 'letters.js', 'letters.css', 'room-tools.js', 'room-tools.css', 'dashboard.js', 'dashboard.css', 'today.js', 'launcher.js', 'home.js', 'home.css', 'widgets.js', 'room.js', 'furniture.js', 'japan.js', 'scene.js', 'screens.js', 'sound.js', 'render.js', 'main.js', 'storage.js']) copyFileSync(join(root, f), join(out, f));
 cpSync(join(root, 'packs'), join(out, 'packs'), { recursive: true });
 copyFileSync(join(root, 'assets', 'icon.png'), join(out, 'assets', 'icon.png'));
 mkdirSync(join(out, 'vendor', 'three', 'build'), { recursive: true });

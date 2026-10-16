@@ -45,7 +45,7 @@ with sync_playwright() as p:
   page.evaluate('p=>{__lr.meta.realtime=false;__lr.meta.dreamy=false;__lr.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':844});page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
-   assert page.locator('#menu-settings .toggle').count()==11
+   assert page.locator('#menu-settings .toggle').count()==12
    assert page.locator('#menu-settings .toggle span').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
    assert page.locator('#menu-settings p').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')

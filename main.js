@@ -768,6 +768,9 @@ function startLofiRooms() {
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
     if (cozy.tap(it, hit?.part)) return;
+    if (it.t==='galleryframe') { atlasUI.openArt(); return; }
+    if (it.t==='barcounter') { atlasUI.openDrink(); return; }
+    if (LRAtlas.BOOKSHELVES.includes(it.t)) { atlasUI.openBooks(LRWidgets.PORTALS.filter(p=>p.furnitureId===it.t)); return; }
     if (C.tap === 'launcher') { dashboard.launcher(); return; }
     if (C.tap === 'files') { dashboard.files(); return; }
     if (C.tap === 'appportal') { dashboard.portal(it, `${meta.current}:${it.id}`); return; }
@@ -870,6 +873,7 @@ function startLofiRooms() {
     if (tap === 'curtain') { pushUndo(); it.on = !it.on; changed(); Sound.swish(); toast(`<span>${it.on ? 'Curtains open' : 'Curtains drawn'}</span>`, 1100); return; }
     if (tap === 'music') { nextStation(); return; }
     if (tap === 'pet') {
+      if(it.t==='cat')atlasUI.catFact(id);
       const P = CATS[it.c] || CATS[0], nm = it.name || P.name, mood = care ? care.petCat(it) : 'content';
       recordCat(it, mood === 'ignore' || mood === 'ignore2' ? 'ignore' : mood === 'forgive' ? 'forgive' : 'pet');
       if (mood === 'ignore' || mood === 'ignore2') {   // neglected cats don't suffer, they get dramatic
@@ -2442,6 +2446,7 @@ function startLofiRooms() {
       (meta.stations || (meta.stations = [])).push({ name, url, icon:add.querySelector('#stIcon').value }); saveMeta(); Sound.chime();
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Tap a record player to tune in.</span>`, 2000, true); renderMenu();
     };
+    atlasUI.mountRadio(target);
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     target = sections.Settings;
     toggle('Music', !!meta.music, () => setControl('music',!meta.music));
@@ -2450,6 +2455,8 @@ function startLofiRooms() {
     toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
     h('p','muted small','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.');
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
+    toggle('Live extras', meta.liveExtras === true, () => { atlas.setEnabled(meta.liveExtras !== true); });
+    h('p','muted small','Public-domain art, aurora watch and Canadian holidays. Radio browsing, book searches, recipes and cat facts connect only when tapped.');
     toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
     h('p', 'muted small', 'Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.');
     toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
@@ -2704,7 +2711,7 @@ function startLofiRooms() {
   let last = performance.now(), t = 0, soundT = 0, clockT = 0, momentT = 0, worldT = 0;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
-    updateRituals(); home.tick(now); todayUI.tick(now);
+    updateRituals(); home.tick(now); todayUI.tick(now); atlas.tick();
     view.weatherIntensity=liveWeather.intensity;
     const liftGoal = state.mode === 'edit' ? (innerWidth < 760 ? 84 : 60) : (innerWidth < 760 ? 24 : 16);
     liftNow += (liftGoal - liftNow) * Math.min(1, dt * 6);
@@ -2735,7 +2742,7 @@ function startLofiRooms() {
       view.catMove(f, sd, dt);
     }
     view.beat = meta.music && !stream && !view.reducedMotion ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
-    if (!filming) { view.frame(dt, t, false); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); }
+    if (!filming) { view.frame(dt, t, false); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); atlasUI.frame(); }
     view.reportActivity();
     activity.report('filming/photo', filming || $('#photo').classList.contains('open'));
     activity.report('pointer', activePointers.size > 0);
@@ -2750,6 +2757,13 @@ function startLofiRooms() {
   view.cozyLife = cozy;
   view.petLife = LRPets.createView({view,room,CAT});
   widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open') });
+  const atlas = LRAtlas.create({store,meta,save:saveMeta,changed:()=>activity.wake()});
+  const atlasUI = LRAtlas.createView({model:atlas,view,room,sheet:codeSheet,meta,
+    hasStation:url=>(meta.stations || []).some(s=>s.url===url),
+    addStation:station=>{if(!(meta.stations || []).some(s=>s.url===station.url)){(meta.stations || (meta.stations=[])).push(station);saveMeta();}},
+    hidden:()=>letters.active || home.active || filming || view.capturing || document.hidden || $('#photo').classList.contains('open')
+  });
+  atlas.refresh();
   updateHeader();
   setMode(state.mode, true);
   updateRituals();
@@ -2764,7 +2778,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
