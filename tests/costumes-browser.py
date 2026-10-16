@@ -52,7 +52,7 @@ with sync_playwright() as p:
  page.evaluate('''() => {const a=__lr;a.room.add(a.room.make('companionwardrobe',{x:1,z:1}));a.changed();a.interact(a.room.items.find(i=>i.t==='companionwardrobe').id);}''')
  page.locator('.wardrobe-card').first.wait_for()
  assert page.locator('[data-costume="automata"]').get_by_role('button').inner_text()=='Wearing'
- page.keyboard.press('Escape');page.click('#bSave');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.wardrobe')
+ page.keyboard.press('Escape');page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.wardrobe')
  assert page.evaluate('__lr.wardrobe.selected===\'automata\' && __lr.companion.costume===\'automata\'')
  print('PASS: real companion tap, dresser tap, locked conditions, equip, and reload persistence',flush=True)
  # Buy an offered outfit through the actual merchant button, granting and equipping at once.

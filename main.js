@@ -110,9 +110,9 @@ function startLofiRooms() {
     if (d && room.load(d)) { meta.current = id; return true; }
     return false;
   }
-  // Saving is explicit. The room you're in is a working copy: it's stashed in lr.draft every few seconds
-  // (so closing the app never loses anything) but your home (lr.rooms and lr.room.<id>) only changes when
-  // you tap Save. New rooms, surprise rooms and friends' rooms start out unsaved.
+  // Saved house rooms autosave. New rooms and friends' rooms remain drafts until
+  // explicitly kept. A separate pending draft preserves experiments when startup
+  // opens the owner's chosen main bedroom.
   // An edit is a change to what's built: lamps switched on or a cat wandering don't count.
   const sig = () => JSON.stringify([room.name, room.n, room.wall, room.floor, room.items.filter(i => !i.visitor).map(i => [i.t, i.x, i.z, i.k, i.u, i.e, i.r | 0, i.c | 0, i.link || 0, ...(i.crown ? ['crown'] : [])])]);
   let baseSig = '';
@@ -129,6 +129,15 @@ function startLofiRooms() {
       rooms = [{ id, name: room.name, n: room.items.length }];
       meta.current = id; fresh = true;
     }
+  }
+  const mainBedroom = store.get('lr.mainBedroom', null);
+  if (mainBedroom != null && rooms.some(r => r.id === mainBedroom) && meta.current !== mainBedroom && store.get('lr.room.' + mainBedroom, null)) {
+    if (draft && draft.id === meta.current && !isSaved()) store.set('lr.pendingDraft', draft);
+    else if (draft && draft.id === meta.current && isSaved()) {
+      store.set('lr.room.' + draft.id, draft.data);
+      const entry=rooms.find(r=>r.id===draft.id);entry.name=draft.data.name;entry.n=draft.data.items.length;saveIndex();
+    }
+    if(loadRoom(mainBedroom)){baseSig=sig();delete meta.visit;}
   }
   if (!baseSig) baseSig = sig();
   if (!rooms.length) fresh = true;   // your home always keeps at least one saved room
@@ -166,7 +175,7 @@ function startLofiRooms() {
     } });
   const files = LRDashboard.create({store, letters: letters.model});
   let pendingPortal = null;
-  const dashboard = LRDashboard.createView({model:files,CAT,widgets,sheet:codeSheet,close:closeSheets,letters,localDestinations:[{label:'Home',icon:'☀',action:()=>home.open()}],room:()=>room,renderer:()=>view,
+  const dashboard = LRDashboard.createView({model:files,CAT,widgets,sheet:codeSheet,close:closeSheets,letters,localDestinations:()=>[{label:'Home',icon:'☀',action:()=>home.open()},...LRLauncher.TOOLS.map(p=>({...p,action:()=>{closeSheets();launchTool(p);}}))],room:()=>room,renderer:()=>view,
     hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2600,true),
     onLaunch:p=>{const it=room.items.find(it=>it.t===p.furnitureId);if(it && widgetView)widgetView.feedback(it.id);if(p.furnitureId==='pomodorocandle')Sound.matchStrike();},
@@ -191,22 +200,13 @@ function startLofiRooms() {
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
   const home = LRHome.createView({
     context:()=>({store,meta,room,roomId:meta.current,tools:roomTools.homeState,daily:dailyInfo(),merchant:!!merchantHere(),plantsToday:care?.plantsToday,sound:Sound.on,reduced:view.reducedMotion}),
+    apps:()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations),
     sources:()=>({CAT:Object.fromEntries(Object.entries(CAT).map(([id,C])=>[id,{name:C.name}])),letters:letters.model.list().map(l=>({id:l.id,title:l.title})),scenes:files.list('Scenes').map(f=>({id:f.id,title:f.title})),ideas:roomTools.homeState.ideas}),
     beforeOpen:()=>{letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
     onClose:()=>$('#bHome').focus(),
     actions:{
-      toggle:(key,on)=>{
-        if(key==='music') { if(!!meta.music!==on)playStation(on?0:-1); }
-        // Home starts the built-in offline radio; custom streams stay in Sound.
-        else if(key==='sound') { if(Sound.on!==on)Sound.toggle();meta.sound=Sound.on; }
-        else if(key==='rain')liveWeather.manual(()=>applyWeather(on?'rain':'clear'));
-        else if(key==='glow'){meta.glow=on;view.glowOn=on;}
-        else if(key==='dreamy'){meta.dreamy=on;checkDrift(true);}
-        else if(key==='realtime'){meta.realtime=on;if(on)setPhase(realPhase(),true);}
-        else if(key==='reduced'){store.set(LRHome.MOTION_KEY,on);applyMotion();}
-        saveMeta();updateHeader();
-      },
-      phase:p=>{if(!meta.realtime)setPhase(p,true);},
+      launch:launchTool,
+      addPortal:()=>dashboard.addPortal(),
       navigate:(target,item)=>{
         if(target==='daily'){store.set('lr.menuTab','Today');renderMenu();sheet.classList.add('open');}
         else if(target==='merchant')openShop();
@@ -222,6 +222,38 @@ function startLofiRooms() {
       },
     },
   });
+  function setControl(key,on) {
+    if(key==='music') { if(!!meta.music!==on)playStation(on?0:-1); }
+    // Music starts the built-in offline radio; custom streams stay in Sound.
+    else if(key==='sound') { if(Sound.on!==on)Sound.toggle();meta.sound=Sound.on; }
+    else if(key==='rain')liveWeather.manual(()=>applyWeather(on?'rain':'clear'));
+    else if(key==='reduced'){store.set(LRHome.MOTION_KEY,on);applyMotion();}
+    saveMeta();updateHeader();
+  }
+  // These shortcuts delegate to the same models and sheets as furniture taps.
+  // Virtual anchors let room tools work before their decorative piece is placed.
+  function launchTool(p) {
+    if(p.url){dashboard.launch(p);return;}
+    const find=(...types)=>room.items.find(i=>types.includes(i.t));
+    const tools={mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
+    if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
+    if(p.id==='typewriter')letters.open();
+    else if(p.id==='french')roomToolsUI.flashcard();
+    else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
+    else if(p.id==='focus'){
+      const it=find('focuscandle') || {id:'control-center-focus'};
+      if(!rituals.focus(meta.current,it.id).active){rituals.light(meta.current,it.id);Sound.matchStrike();updateRituals();}
+      focusSheet(it);
+    }
+    else if(p.id==='breathing')breathingSheet();
+    else if(p.id==='wardrobe')wardrobeSheet();
+    else if(p.id==='merchant')openShop();
+    else if(['letters','scenes','photos'].includes(p.id))dashboard.files(p.id[0].toUpperCase()+p.id.slice(1));
+    else if(p.id==='camera')$('#bPhoto').click();
+    else if(p.id==='newspaper')newspaperSheet();
+    else if(p.id==='tst')widgetAction(find('tstcorkboard') || {t:'tstcorkboard',id:null});
+    else if(['journal','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id[0].toUpperCase()+p.id.slice(1));renderMenu();sheet.classList.add('open');}
+  }
   $('#bHome').onclick=()=>home.open();
 
   (function starsBg() {
@@ -371,7 +403,7 @@ function startLofiRooms() {
     document.body.classList.toggle('unsaved', !b.hidden || !g.hidden);
     b.classList.toggle('new', !saved);
     b.setAttribute('aria-label', saved ? 'Save changes' : 'Save this room to your home');
-    $('#disc').textContent = !saved ? 'Not saved yet' : edited ? 'Unsaved changes' : `✦ ${found.size} of ${MOMENTS.length} cozy moments`;
+    $('#disc').textContent = !saved ? 'Not saved yet' : edited ? 'Saving changes…' : `✦ ${found.size} of ${MOMENTS.length} cozy moments`;
   }
   function updateHeader() {
     $('#roomName').textContent = room.name;
@@ -1838,23 +1870,29 @@ function startLofiRooms() {
     if (name && name.trim()) { room.name = name.trim().slice(0, 40); updateHeader(); dirty = true; }
   };
 
-  // template cards, rooms first and open-air scenes after, each under a little heading
-  function presetCards(onPick) {
-    const wrap = document.createElement('div'); wrap.className = 'cards';
-    const head = text => { const h = document.createElement('h3'); h.textContent = text; wrap.appendChild(h); };
+  // Templates grouped into native disclosures. New-room lists start collapsed;
+  // first-run onboarding keeps both groups open for exploration.
+  function presetCards(onPick, collapsed = false) {
+    const wrap = document.createElement('div'); wrap.className = 'preset-groups';
+    let grid;
+    const head = text => {
+      const group=document.createElement('details');group.className='preset-group';group.open=!collapsed;
+      const summary=document.createElement('summary');summary.textContent=text;
+      grid=document.createElement('div');grid.className='cards';group.append(summary,grid);wrap.appendChild(group);
+    };
     const card = (k, p) => {
       const b = document.createElement('button'); b.className = 'card ' + k;
       b.innerHTML = `<div class="art">${p.scene ? '<em class="tag">Scene</em>' : ''}</div><b>${p.name}</b><span>${p.blurb}</span>`;
       if (p.art) b.querySelector('.art').style.background = p.art;   // packs give their own card colours
       b.onclick = () => onPick(k);
-      wrap.appendChild(b);
+      grid.appendChild(b);
     };
     const all = Object.entries(PRESETS);
     head('Rooms');
     const rb = document.createElement('button'); rb.className = 'card random';
     rb.innerHTML = `<div class="art">🎲</div><b>Surprise me</b><span>A brand-new random room every time.</span>`;
     rb.onclick = () => onPick('random');
-    wrap.appendChild(rb);
+    grid.appendChild(rb);
     all.filter(([, p]) => !p.scene).forEach(([k, p]) => card(k, p));
     head('Scenes');
     all.filter(([, p]) => p.scene).forEach(([k, p]) => card(k, p));
@@ -2176,7 +2214,7 @@ function startLofiRooms() {
   }
   function switchRoom(id, asked) {
     if (id === meta.current) return;
-    if (!asked && isEdited()) { leaveThen(() => switchRoom(id, true)); return; }
+    if (!asked) { leaveThen(() => switchRoom(id, true)); return; }
     exitCat(true);
     if (!loadRoom(id)) { toast('<span>Couldn’t open that room</span>', 1500); return; }
     undo.length = 0; baseSig = sig(); save();
@@ -2189,6 +2227,7 @@ function startLofiRooms() {
     const r = rooms.find(x => x.id === id);
     if (!confirm(`Delete “${r ? r.name : 'this room'}”? This can’t be undone.`)) return;
     rooms = rooms.filter(x => x.id !== id);
+    if(store.get('lr.mainBedroom',null)===id)store.del('lr.mainBedroom');
     store.del('lr.room.' + id);
     if (id === meta.current) { loadRoom(rooms[0].id); baseSig = sig(); undo.length = 0; changed(); save(); updateHeader(); }
     saveIndex(); saveMeta(); renderMenu();
@@ -2302,6 +2341,19 @@ function startLofiRooms() {
     target = sections.Rooms;
     h('h2', '', `Your home <small>${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomStack(target);
+    h('p','muted small','Rooms in your home save automatically. New rooms ask before you leave.');
+    const bedroom=h('label','settings-phase');bedroom.textContent='Main bedroom';
+    const bedroomSelect=document.createElement('select');bedroomSelect.setAttribute('aria-label','Main bedroom');
+    const last=document.createElement('option');last.value='';last.textContent='Last room visited';bedroomSelect.appendChild(last);
+    rooms.forEach(r=>{const o=document.createElement('option');o.value=String(r.id);o.textContent=r.name;bedroomSelect.appendChild(o);});
+    bedroomSelect.value=String(store.get('lr.mainBedroom',''));bedroomSelect.onchange=()=>{const chosen=rooms.find(r=>String(r.id)===bedroomSelect.value);if(chosen)store.set('lr.mainBedroom',chosen.id);else store.del('lr.mainBedroom');};bedroom.appendChild(bedroomSelect);
+    h('p','muted small','Choose a saved room to wake up in whenever you reopen the app.');
+    const pending=store.get('lr.pendingDraft',null);
+    if(pending && pending.id!==meta.current){
+      const resume=h('button','chipbtn');resume.textContent='Resume unsaved room: '+(pending.data?.name || 'Untitled room');
+      resume.onclick=()=>leaveThen(()=>{const probe=new LR.Room();if(!probe.load(pending.data))return;exitCat(true);room.load(probe.serialize());meta.current=pending.id;baseSig=pending.base || sig();undo.length=0;delete meta.visit;store.del('lr.pendingDraft');closeSheets();changed();save();updateHeader();});
+    }
+
     // the house map: which rooms connect to which, with a tap to travel
     const links = rooms.map(r => {
       const d = r.id === meta.current ? room.serialize() : store.get('lr.room.' + r.id, null);
@@ -2352,7 +2404,7 @@ function startLofiRooms() {
     if (meta.visit && meta.visit.id === meta.current) { const gs = h('div', 'rowbtns'); gs.innerHTML = '<button class="chipbtn primary" id="bSignBook">✍ Sign this room’s guest book</button>'; gs.querySelector('#bSignBook').onclick = () => signSheet(); }
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'New rooms start unsaved, so you can play around. Tap Save to keep one.');
-    target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }));
+    target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }, true));
     target = sections.Journal;
     h('h2', '', 'Room journal');
     const feeds = h('div', 'rowbtns');
@@ -2372,26 +2424,43 @@ function startLofiRooms() {
     h('h2', '', 'Radio stations');
     h('p', 'muted small', 'Tap a record player to step through: Lofi radio (built in, works offline), then your stations, then off. Add a direct stream link (an .mp3 or Icecast/Shoutcast URL). YouTube links can’t play inside the app.');
     const sl = h('div', 'stations');
-    (meta.stations || []).forEach((st, i) => {
-      const r = document.createElement('div'); r.className = 'hroom';
-      r.innerHTML = `<b>${st.name.replace(/</g, '&lt;')}</b><div class="muted small" style="word-break:break-all">${st.url.replace(/</g, '&lt;')}</div>`;
-      const row = document.createElement('div'); row.className = 'hdoors';
-      const play = document.createElement('button'); play.className = 'hdoor'; play.textContent = '▶ Play'; play.onclick = () => { closeSheets(); playStation(i + 1); };
-      const del = document.createElement('button'); del.className = 'hdoor edit'; del.textContent = 'Remove';
-      del.onclick = () => { if (meta.station === i + 1) playStation(-1, true); meta.stations.splice(i, 1); saveMeta(); renderMenu(); };
-      row.append(play, del); r.appendChild(row); sl.appendChild(r);
+    const icons=['📻','🌙','☕','🌧','🌿','🎷','🎹','🌊','🌸','✨','🎧','🔥'];
+    const stationIcons=(select,value='📻')=>{icons.forEach(icon=>{const o=document.createElement('option');o.value=icon;o.textContent=icon;select.appendChild(o);});select.value=icons.includes(value)?value:'📻';};
+    stationList().forEach((st,index)=>{
+      const i=index-1,r=document.createElement('article');r.className='station-card'+(meta.music&&meta.station===index?' playing':'');
+      const face=document.createElement('div');face.className='station-dial';face.textContent=icons.includes(st.icon)?st.icon:'📻';face.setAttribute('aria-hidden','true');
+      const copy=document.createElement('div');copy.className='station-copy';const name=document.createElement('b');name.textContent=st.name;
+      const band=document.createElement('span');band.className='muted small';band.textContent=st.gen?'Built-in lofi · always here':'Your frequency';copy.append(name,band);
+      const grill=document.createElement('div');grill.className='station-grill';grill.setAttribute('aria-hidden','true');
+      const row=document.createElement('div');row.className='rowbtns';
+      const play=document.createElement('button');play.className='chipbtn';play.textContent=meta.music&&meta.station===index?'■ Stop':'▶ Play';play.setAttribute('aria-label',(meta.music&&meta.station===index?'Stop ':'Play ')+st.name);play.onclick=()=>{playStation(meta.music&&meta.station===index?-1:index);renderMenu();};row.appendChild(play);
+      if(!st.gen){
+        const label=document.createElement('label');label.className='station-icon-label';label.textContent='Icon';const select=document.createElement('select');select.setAttribute('aria-label','Icon for '+st.name);
+        stationIcons(select,st.icon);select.onchange=()=>{meta.stations[i].icon=select.value;saveMeta();renderMenu();};label.appendChild(select);row.appendChild(label);
+        const del=document.createElement('button');del.className='chipbtn';del.textContent='Remove';del.onclick=()=>{
+          if(meta.station===index)playStation(-1,true);else if(meta.station>index)meta.station--;
+          if(meta.lastStation===index)meta.lastStation=0;else if(meta.lastStation>index)meta.lastStation--;
+          meta.stations.splice(i,1);saveMeta();renderMenu();
+        };row.appendChild(del);
+      }
+      r.append(face,copy,grill,row);sl.appendChild(r);
     });
     const add = h('div', 'addstation');
-    add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40"><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
+    add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><label class="station-icon-label">Icon<select id="stIcon" aria-label="New station icon"></select></label><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
+    stationIcons(add.querySelector('#stIcon'));
     add.querySelector('#stAdd').onclick = () => {
       const url = add.querySelector('#stUrl').value.trim(), name = add.querySelector('#stName').value.trim() || 'My station';
       if (!/^https?:\/\//i.test(url)) { Sound.nope(); toast('<span>Paste a link that starts with http</span>', 1600, true); return; }
       if (/youtube\.com|youtu\.be/i.test(url)) { Sound.nope(); toast('<span>YouTube can’t play inside the app. Try a direct radio stream link.</span>', 2600, true); return; }
-      (meta.stations || (meta.stations = [])).push({ name, url }); saveMeta(); Sound.chime();
+      (meta.stations || (meta.stations = [])).push({ name, url, icon:add.querySelector('#stIcon').value }); saveMeta(); Sound.chime();
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Tap a record player to tune in.</span>`, 2000, true); renderMenu();
     };
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     target = sections.Settings;
+    toggle('Music', !!meta.music, () => setControl('music',!meta.music));
+    toggle('Sound', Sound.on, () => setControl('sound',!Sound.on));
+    toggle('Rain', meta.weather==='rain' || meta.weather==='storm', () => setControl('rain',!(meta.weather==='rain' || meta.weather==='storm')));
+    toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
     toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
     h('p', 'muted small', 'Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.');
     toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
@@ -2399,6 +2468,12 @@ function startLofiRooms() {
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
     toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
     toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
+    if(!meta.realtime){
+      const label=h('label','settings-phase');label.textContent='Daypart';
+      const select=document.createElement('select');select.setAttribute('aria-label','Daypart');
+      Object.entries(LRHome.PHASES).forEach(([value,text])=>{const o=document.createElement('option');o.value=value;o.textContent=text;select.appendChild(o);});
+      select.value=meta.phase;select.onchange=()=>setPhase(select.value,true);label.appendChild(select);
+    }
     h('p', 'muted small', 'Explore: drag to look around, pinch to zoom, double-tap to zoom in, tap lamps, records, plants and cats. Decorate: Add places things (tap or drag), Move drags them, Turn spins them, Paint changes walls, floors and colours, Remove puts things away. Small things like mugs and lamps sit on desks, tables and shelves. On a computer: left-drag or right-drag spins, the wheel zooms (or scrolls the tray when the mouse is over it), middle-drag pans. Keys: 1–5 tools, ←/→ pick from the tray, ↑/↓ switch tabs, R turns the piece you’re placing or the one under the mouse, Delete removes it, Q/E turn the room, X switches Explore/Decorate, G makes a surprise room, M plays music, Ctrl+Z or U undoes, Esc goes back.');
   }
 
@@ -2563,12 +2638,17 @@ function startLofiRooms() {
 
   // ---------------------------------------------------------------
   // Save
-  let dirty = fresh;
+  let dirty = fresh || (isSaved() && isEdited());
   function saveMeta() { store.set('lr.meta', meta); }
   function saveIndex() { store.set('lr.rooms', rooms); }
-  // stash the working copy (not your home): survives the app closing
+  // Saved every three real seconds; also flushed before travel, on pause and on close.
   function save() {
     if (care) care.flush();
+    if(isSaved()){
+      store.set('lr.room.'+meta.current,room.serialize());
+      const entry=rooms.find(r=>r.id===meta.current);entry.name=room.name;entry.n=room.items.filter(i=>!i.visitor).length;
+      baseSig=sig();saveIndex();updateSaveChip();
+    }
     try { put('lr.draft', JSON.stringify({ id: meta.current, base: baseSig, data: room.serialize() })); } catch (e) { /* quota */ }
     saveMeta();
     dirty = false;
@@ -2587,13 +2667,13 @@ function startLofiRooms() {
     const d = store.get('lr.room.' + id, null); if (!d) return;
     fn(d); try { put('lr.room.' + id, JSON.stringify(d)); } catch (e) { /* quota */ }
   }
-  // leaving a room with edits asks first; an untouched room (a friend's you only looked at) just goes
+  // House rooms save quietly. Only an edited unsaved room asks to be kept.
   function leaveThen(next) {
+    if (isSaved()) { save(); next(); return; }
     if (!isEdited()) { next(); return; }
-    const saved = isSaved();
-    codeSheet(saved ? 'Keep your changes?' : `Keep “${room.name}”?`, saved ? `“${room.name}” has changes that aren’t saved yet.` : 'This room isn’t in your home yet. Save it, or let it go.', h => {
+    codeSheet(`Keep “${room.name}”?`, 'This room isn’t in your home yet. Save it, or let it go.', h => {
       const row = h('div', 'rowbtns');
-      row.innerHTML = `<button class="chipbtn primary" id="lvSave">${saved ? 'Save changes' : 'Save to my home'}</button><button class="chipbtn" id="lvDrop">${saved ? 'Don’t save' : 'Let it go'}</button><button class="chipbtn" id="lvStay">Stay here</button>`;
+      row.innerHTML = `<button class="chipbtn primary" id="lvSave">Save to my home</button><button class="chipbtn" id="lvDrop">Let it go</button><button class="chipbtn" id="lvStay">Stay here</button>`;
       row.querySelector('#lvSave').onclick = () => { closeSheets(); commit(true); next(); };
       row.querySelector('#lvDrop').onclick = () => { closeSheets(); next(); };
       row.querySelector('#lvStay').onclick = () => closeSheets();
@@ -2601,6 +2681,7 @@ function startLofiRooms() {
   }
   $('#bSave').onclick = () => { Sound.init(); commit(); };
   if (fresh) commit(true);
+  setInterval(() => { if (dirty) save(); }, 3000);
   setTimeout(() => checkDrift(), 1500);
   if (care) { care.prune(new Set(rooms.map(r => r.id).concat(meta.current))); care.tick(0); setInterval(() => care.tick(1), 1000); }   // the living room's heartbeat, on real time   // after midnight, the app opens already drifting
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
@@ -2627,7 +2708,7 @@ function startLofiRooms() {
 
   // ---------------------------------------------------------------
   // Main loop
-  let last = performance.now(), t = 0, soundT = 0, saveT = 0, clockT = 0, momentT = 0, worldT = 0;
+  let last = performance.now(), t = 0, soundT = 0, clockT = 0, momentT = 0, worldT = 0;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
     updateRituals(); home.tick(now);
@@ -2652,8 +2733,6 @@ function startLofiRooms() {
       }
       if ([...view.pets.values()].some(P => P.perch && !P.hop)) discover('perch');
     }
-    saveT += dt;
-    if (saveT > 3 && dirty) { save(); saveT = 0; }
     if (view.fp) catDoors(now);
     if (view.fp && held.size) {
       const f = (held.has('w') || held.has('ArrowUp') ? 1 : 0) - (held.has('s') || held.has('ArrowDown') ? 1 : 0);

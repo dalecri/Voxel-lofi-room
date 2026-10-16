@@ -38,7 +38,7 @@ with sync_playwright() as p:
    for width in [390,1280]:
     page.set_viewport_size({'width':width,'height':900});page.wait_for_timeout(300);page.screenshot(path=f'/tmp/loft-{c}-{phase}-{width}.png');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
  # Persist an off lamp and the final colour through the normal room save and reload.
- page.evaluate("__lr.interact(__lr.room.items.find(i=>i.t==='loft').id)");page.click('#bSave');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr')
+ page.evaluate("__lr.interact(__lr.room.items.find(i=>i.t==='loft').id)");page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr')
  assert page.evaluate("__lr.room.items.filter(i=>i.t==='loft').map(i=>[i.c,i.on])")==[[2,False]]
  assert page.evaluate("__lr.view.objs.get(__lr.room.items.find(i=>i.t==='loft').id).userData.meshes.length")==1
  page.evaluate("__lr.interact(__lr.room.items.find(i=>i.t==='loft').id)");assert page.evaluate("__lr.room.items.find(i=>i.t==='loft').on")

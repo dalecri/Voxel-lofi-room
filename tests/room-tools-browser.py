@@ -25,7 +25,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Seal for later',exact=True).click();assert page.get_by_role('button',name='Read letter',exact=True).count()==0
  assert 'Sealed until 2026-10-16' in page.locator('#sheetBody').inner_text();assert 'PRIVATE_FUTURE_LETTER' not in page.locator('#sheetBody').inner_text()
  page.evaluate('__lr.letters.model.update({letterhead:"Changed",body:"Changed after sealing"})')
- page.keyboard.press('Escape');page.click('#bSave');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
+ page.keyboard.press('Escape');page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
  page.evaluate("window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);tapTool('letterbox')")
  assert 'Sealed until' in page.locator('#sheetBody').inner_text();assert page.get_by_role('button',name='Read letter',exact=True).count()==0
  page.keyboard.press('Escape')

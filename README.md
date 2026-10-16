@@ -115,7 +115,7 @@ Then open http://localhost:5180.
     - removing is a papery poof, and invalid spots get a gentle bonk
     - wall paint rolls, floors get brushed, colour swaps click
   - **Cats:** they thump when they jump down, crash and scurry when they knock things over, and sigh when they claim a cat bed.
-- **A record player that's a radio.** Station 1 is the built-in lofi band, which always works offline. It's one layer of the room's mix: the vinyl crackle sits under it, it dips for a moment when you tap or place something, rain adds a little more hiss and late at night it slows down a touch. Add your own stations in Settings by pasting a direct stream link (an .mp3 or an Icecast/Shoutcast URL); they play when you're online, and if one can't be reached the radio says so and goes back to Lofi radio. YouTube links can't play inside the app, so it'll tell you instead.
+- **A record player that's a radio.** Station 1 is the built-in lofi band, which always works offline. It's one layer of the room's mix: the vinyl crackle sits under it, it dips for a moment when you tap or place something, rain adds a little more hiss and late at night it slows down a touch. Add your own stations in the Sound tab by choosing an icon and pasting a direct stream link (an .mp3 or an Icecast/Shoutcast URL); they play when you're online, and if one can't be reached the radio says so and goes back to Lofi radio. YouTube links can't play inside the app, so it'll tell you instead.
 - **Generative lofi music.** Warm 9th chords, a lazy swung beat, a bassline and a soft vinyl crackle (switch it off in Settings), all synthesized live, so there are no audio files. Rain and the fireplace have their own ambience.
 - **Time of day and weather.** Morning, afternoon, evening and night follow your clock, or you can tap the sun to pick one. At night the lamps light the room.
   - Tap the cloud to cycle the weather: **clear**, **rain**, **storm**, **snow** and **sakura**.
@@ -140,13 +140,15 @@ Then open http://localhost:5180.
   - In cat view, just walk into a doorway. You arrive in the next room as the same cat.
   - The menu's **Your house** map shows every room and where its doors go. Tap a door to travel, or tap **Change** to send it somewhere else.
 - **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** lets you visit theirs. Visiting doesn't add it to your home unless you save it.
-- **Save when you mean it.** Your home only changes when you tap **Save**, the pill that appears under the room name whenever something isn't saved. New rooms, Surprise rooms and friends' rooms start unsaved, so you can mess around freely. If you leave a room with edits, it asks: save, don't save, or stay. Leaving a room you only looked at doesn't ask. Switching lamps on or a cat wandering around doesn't count as an edit. Your work in progress is kept safe even if the app closes. Door links and the door back into a room are saved without asking.
+- **A home that saves itself.** Rooms already in Your home autosave every few seconds and before travel, pause or closing. New rooms, Surprise rooms and friends' rooms stay unsaved until you choose to keep them; leaving an edited unsaved room still asks. In Rooms, choose a **Main bedroom** to open whenever the app starts, or keep **Last room visited**. An unsaved experiment is preserved with a **Resume unsaved room** shortcut if startup takes you to your bedroom.
 - **Your home as a stack.** The menu shows your saved rooms as a stack of little isometric slices, tinted with each room's walls and floor, newest on top. The room you're in glows and sits slightly raised, and rooms joined by doors get a dashed edge and a 🚪. Tap a slice or its name to go there, or tap the dashed slice on top to start a new room.
 - **Seasonal decor:**
   - **Halloween:** a jack-o'-lantern, a pumpkin pile, a friendly ghost, a spider web, a bat garland and a candy bowl.
   - **Winter holidays:** a tree, a wreath, stockings, gifts, a snowman and hot cocoa.
   - The set that fits today's date moves to the front of the Add tray, with a one-time hint.
-- **Several rooms.** Start from one of 29 templates, split into Rooms and Scenes in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
+- **Home is your Control center.** The sunrise toolbar button opens a searchable app grid: Typewriter, future-self letters, groceries, ideas, tea, savings, sketchbook, French flashcard, whiteboard, focus candle, wardrobe, files, photos and more. These open their real tools even before you place the furniture. Home and the phone share the same app directory, including portal destinations and private custom links. Room controls live in Settings.
+- **A Talavera casa.** The Talavera catalog category has 15 coordinated pieces in cobalt/sunflower, jade/ochre and terracotta/cobalt palettes: dining and coffee tables, bedside table, garden bench, dining chair, tiled bed, sideboard, display shelf, vase, leafy planter, jarrito, ceramic lamp, wall plates, mirror and woven rug. They match the original Talavera counter and existing tile walls.
+- **Several rooms.** Start from one of 29 templates, split into collapsed Rooms and Scenes groups in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
 - **55 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
 - **The living room.** The room notices being cared for, and nothing ever dies: neglect only means wilted, sleepy, dusty or dramatic, and one caring session brings everything back. Care runs on real time, so it carries on while the app is closed.
   - **Coziness:** each room has a gentle coziness score that rolls up all of the care below. A cozy room has golden motes drifting in the air, more visitors and magic moments, and a warm golden glow on its slice in your home stack. It's never shown as a number.
@@ -322,7 +324,7 @@ node -e "const LR=require('./room.js'); const r=new LR.Room(); r.generate(42); c
 
 ## Menu, launcher and file cabinet
 
-The menu has **Today**, **Rooms**, **Journal**, **Sound** and **Settings** tabs. All previous controls remain in these sections; the last tab is saved through Store as `lr.menuTab`. Tab arrows/Home/End work on a keyboard; Close and Escape dismiss the sheet.
+The menu has **Today**, **Rooms**, **Journal**, **Sound** and **Settings** tabs. Rooms and Scenes templates use closed native disclosure groups under Start a new room. Sound stations have radio cards and an emoji icon saved with each custom station in `lr.meta.stations`. `lr.mainBedroom` is a device-private saved-room ID; `lr.pendingDraft` preserves an unsaved experiment when startup opens that room. All previous controls remain in these sections; the last tab is saved through Store as `lr.menuTab`. Tab arrows/Home/End work on a keyboard; Close and Escape dismiss the sheet.
 
 The free **Phone launcher** is a small Tech piece. Its searchable grid reads the live catalog and widget destination definitions, including the Pomodoro candle and social links. Travel doors stay room doors; the arcade still plays its game on direct tap. **Add your own** saves a name and full HTTP(S) URL under `lr.portals`. The confirmation suggests placing a free **Personal app portal**. A portal's destination assignment is private and scoped to its room and item ID; sharing its decor gives the recipient an unassigned portal.
 
@@ -336,9 +338,9 @@ Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/
 
 The sunrise toolbar button and the phone launcher's **Home** tile open a full-screen, device-local dashboard. Today reads the same daily moment and streak as the menu, plus the current daypart/weather and existing tea, merchant and mailbox state. Gentle notifications are derived from that state; their rows open the existing tools rather than duplicating their interfaces.
 
-Control center uses existing music, sound, weather, glow, dream and clock settings. Starting music here uses the built-in offline radio; custom streams remain in the Sound menu. Turning off Follow the clock exposes the existing four dayparts. Reduced motion defaults to the device preference and saves an explicit override in `lr.reducedMotion`; it reduces UI animations, companion fidgets, groove bobs, item bounce, lamp flicker and new ambient events. The engine has no public volume control, so Home does not add a slider.
+Control center opens first in Home with a searchable grid derived from `launcher.js` plus the live portal definitions and private custom links. The phone uses the same local-tool directory. All tools delegate to existing sheets and models, so the typewriter, mailbox, groceries, ideas, tea, savings and sketchbook work without placing furniture first. Music, sound, manual rain and reduced motion live in Settings alongside the existing glow, dream and clock controls. Turning off Follow the clock exposes the four dayparts. Reduced motion defaults to the device preference and saves an explicit override in `lr.reducedMotion`.
 
-Spotlight searches catalog names, typewriter letter titles, saved scene titles and idea-jar text. Results navigate to the real tools; furniture opens Decorate with that item filtered, with **Show all** to clear the filter. Locked cosmetics open the merchant shop. Home stores no copy of file or tool data and makes no network requests. Its coziness score is visible in `home.js`: this week's completed Daily Moments + resident cats + current-room plants cared for today. The weekly count uses `lr.dailyLog`, since historical discoveries in `lr.found` have no dates.
+Spotlight searches catalog names, typewriter letter titles, saved scene titles and idea-jar text. Results navigate to the real tools; furniture opens Decorate with that item filtered, with **Show all** to clear the filter. Locked cosmetics open the merchant shop. Home stores no copy of file or tool data. Launching Newspaper uses its existing hourly CBC fetch; the directory itself makes no network requests. Its coziness score is visible in `home.js`: this week's completed Daily Moments + resident cats + current-room plants cared for today. The weekly count uses `lr.dailyLog`, since historical discoveries in `lr.found` have no dates.
 
 Run `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/home-browser.py` for fixture derivations, grouped search, notifications, controls, navigation, mobile/day/night layouts, private share payloads and offline behavior. Home also closes with Escape or Android Back.
 
@@ -405,7 +407,7 @@ explanation. Wind uses the existing sound layer, scaled from km/h to 0–1 (40 k
 reaches full level), falling back to the normal weather-derived factor until a
 live fetch succeeds or when disabled.
 
-The cloud toolbar button remains removed, as requested earlier; Home's **Rain**
+The cloud toolbar button remains removed, as requested earlier; Settings' **Rain**
 control is the manual override. Using it disables live weather before changing
 the sky, cancels pending work and shows the override message. Late responses
 cannot overwrite a manual change. Sakura weather remains removed; the sakura
@@ -416,6 +418,6 @@ Verify with `node --test tests/*.test.cjs`, `npm run build`,
 `python3 tests/live-weather-browser.py`, and `python3 tests/weather-browser.py`.
 Tests cover all WMO codes 0–99, opt-in/permission denial, rounded coordinates,
 private persistence, wind, caching/retries, boot/foreground refresh, in-flight
-cancellation and Home manual override. Browser tests mock location and Open-Meteo
+cancellation and Settings manual override. Browser tests mock location and Open-Meteo
 and check Settings alignment at 390px, actual rain application, saved state,
 permission failure feedback, and no application console errors.

@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/live-weather-browser.py. Mocked location/Open-Meteo, real Settings and Home controls."""
+"""npm run build && python3 tests/live-weather-browser.py. Mocked location/Open-Meteo, real Settings controls."""
 import functools,json
 from pathlib import Path
 from urllib.parse import urlparse,parse_qs
@@ -27,7 +27,7 @@ with sync_playwright() as p:
   page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
  def live():return page.get_by_role('button',name='Live weather',exact=True)
  page.evaluate('() => {window.weatherWind=null;__lr.Sound.soundscape=s=>{window.weatherWind=s.wind};}')
- settings();assert page.locator('#menu-settings .toggle').count()==6
+ settings();assert page.locator('#menu-settings .toggle').count()==10
  assert page.locator('#menu-settings .toggle span').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
  assert page.evaluate("() => {const b=document.createElement('button');b.textContent='Base button alignment';document.querySelector('#menu-settings').appendChild(b);const left=getComputedStyle(b).textAlign==='left';b.remove();return left;}")
  page.screenshot(path='/tmp/live-weather-settings-390.png')
@@ -38,9 +38,9 @@ with sync_playwright() as p:
  for value in ['latitude','longitude','43.653226','-79.383184','43.7','-79.4']:assert value not in raw,value
  assert len(requests)==1;page.evaluate('__lr.liveWeather.refresh()');assert len(requests)==1
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function("__lr?.meta.liveWeather && __lr.view.weather==='rain'");page.wait_for_function('__lr.liveWeather.soundWind(0)===.5');assert len(requests)==2;assert page.evaluate('geoCalls')==1
- # Keep the cloud chip removed. Home's existing Rain control supplies manual override.
+ # Keep the cloud chip removed. Settings' Rain control supplies manual override.
  assert page.locator('#bRain').count()==0
- page.click('#bHome');page.get_by_role('checkbox',name='Rain',exact=True).uncheck();assert page.evaluate('__lr.meta.liveWeather') is False;assert page.evaluate('__lr.view.weather')=='clear';assert "Live weather off — you're in charge of the sky now" in page.locator('#toasts').inner_text();page.keyboard.press('Escape')
+ settings();page.locator('#menu-settings').get_by_role('button',name='Rain',exact=True).click();assert page.evaluate('__lr.meta.liveWeather') is False;assert page.evaluate('__lr.view.weather')=='clear';assert "Live weather off — you're in charge of the sky now" in page.locator('#toasts').inner_text();page.keyboard.press('Escape')
  # Failed responses retain the last condition and successful timestamp, silently.
  old=page.evaluate('__lr.meta.weatherFetchedAt');failure=True;settings();live().click();page.wait_for_function('geoCalls===2');page.wait_for_function('n=>performance.getEntriesByType("resource").filter(e=>e.name.startsWith("https://api.open-meteo.com")).length>=n',arg=2)
  page.evaluate('__lr.liveWeather.refresh()');assert page.evaluate('__lr.meta.liveWeather');assert page.evaluate('__lr.meta.weather')=='clear';assert page.evaluate('__lr.meta.weatherFetchedAt')==old
@@ -48,6 +48,6 @@ with sync_playwright() as p:
  # Permission denial updates the actual setting and gives the requested reason.
  denied=browser.new_context(viewport={'width':390,'height':844});denied.add_init_script("localStorage.setItem('lr.intro','true');Object.defineProperty(navigator,'geolocation',{value:{getCurrentPosition(ok,fail){fail({code:1})}}})")
  denied.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort());page=denied.new_page();page.on('pageerror',lambda e:errors.append(e.stack));page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');settings();live().click();page.wait_for_function('__lr.meta.liveWeather===false');assert not live().evaluate("e=>e.classList.contains('on')");assert 'Location denied — live weather stays off' in page.locator('#toasts').inner_text();assert not errors,errors
- print('PASS: base/Settings text aligned at 390px, opt-in real geolocation mock and rounded Open-Meteo request, rain applied, live wind, persistence/boot refresh, silent failure, Home manual override, denial resets toggle, cloud remains removed, no console errors',flush=True)
+ print('PASS: base/Settings text aligned at 390px, opt-in real geolocation mock and rounded Open-Meteo request, rain applied, live wind, persistence/boot refresh, silent failure, Settings manual override, denial resets toggle, cloud remains removed, no console errors',flush=True)
  browser.close()
 server.shutdown()

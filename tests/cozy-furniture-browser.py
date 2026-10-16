@@ -60,7 +60,7 @@ with sync_playwright() as p:
  tap('beadcurtain');assert 'door' in page.locator('#sheetBody').inner_text().lower();escape()
  result=page.evaluate('''() => {const a=__lr,o=a.view.objs.get(ids.beadcurtain),p=a.view.itemPoint(ids.beadcurtain,[4,0,4]);a.companion.object.position.copy(p);a.cozy.frame(.1,a.view.t);return o.userData.brushedUntil>a.view.t;}''');assert result
  # Respect reduced motion for moving decor.
- page.evaluate('''() => {__lr.home.open();}''');page.get_by_role('checkbox',name='Reduced motion',exact=True).check();page.keyboard.press('Escape')
+ page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('button',name='Reduced motion',exact=True).click();page.keyboard.press('Escape')
  assert page.evaluate('''() => {const a=__lr;a.cozy.frame(.1,a.view.t);const b=a.view.objs.get(ids.beadcurtain).userData.parts;return Array.from({length:8},(_,n)=>b['bead'+n].rotation.z).every(x=>x===0);}''')
  # Dreamcatcher boosts an already enabled midnight dream, never turns it on by itself.
  page.evaluate("__lr.meta.dreamy=true;Date.prototype.getHours=()=>2;__lr.setPhase('night',true)");page.wait_for_function('__lr.view.driftGoal===1.25')
@@ -77,7 +77,7 @@ with sync_playwright() as p:
   for width in [390,1280]:
    page.set_viewport_size({'width':width,'height':900});page.wait_for_timeout(300);assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/cozy-furniture-{phase}-{width}.png')
  # Save/reload keeps pins and text, but a fresh share recipient gets only decor.
- page.click('#bSave');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.cozy');page.evaluate('window.ids=Object.fromEntries(__lr.room.items.map(i=>[i.t,i.id]))');tap('whiteboard');assert 'PRIVATE_COZY_THOUGHT' in page.get_by_role('textbox',name='Whiteboard text').input_value();escape()
+ page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.cozy');page.evaluate('window.ids=Object.fromEntries(__lr.room.items.map(i=>[i.t,i.id]))');tap('whiteboard');assert 'PRIVATE_COZY_THOUGHT' in page.get_by_role('textbox',name='Whiteboard text').input_value();escape()
  context.close()
  fresh=browser.new_context();fresh.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort());fresh.add_init_script("localStorage.setItem('lr.intro','true')");recipient=fresh.new_page();recipient.on('pageerror',lambda e:errors.append(e.stack or str(e)));recipient.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');recipient.wait_for_function('!!window.__lr')
  assert recipient.evaluate('async c=>{const loaded=__lr.room.load(await __lr.readCode(c));if(loaded)__lr.changed();return loaded;}',code);assert 'PRIVATE_COZY_THOUGHT' not in recipient.evaluate('localStorage.getItem("lr.cozy") || ""');assert photo_id not in recipient.evaluate('localStorage.getItem("lr.cozy") || ""');assert recipient.evaluate('__lr.files.list("Photos").length')==0

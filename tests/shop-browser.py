@@ -155,7 +155,7 @@ with sync_playwright() as p:
     page.locator('#crownCats button').first.click()
     assert page.locator('#crownCats button[aria-pressed="true"]').count() == 1
     assert page.evaluate("__lr.room.items.some(i=>i.t==='cat' && i.crown && __lr.view.objs.get(i.id).userData.key.includes('crown'))")
-    page.click('#crownClose'); page.click('#bSave')
+    page.click('#crownClose'); page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()")
     page.reload(wait_until='networkidle'); page.wait_for_function('!!window.__lr')
     assert balance(page) == 0
     assert page.evaluate("__lr.shop.owns('crown') && __lr.room.items.some(i=>i.t==='cat' && i.crown)")
@@ -205,7 +205,7 @@ with sync_playwright() as p:
     page.locator('#row .swatch').filter(has_text='Constellation').click()
     page.get_by_role('button', name='Floor', exact=True).click()
     page.locator('#row .swatch').filter(has_text='Moonstone').click()
-    page.click('#bSave')
+    page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()")
     page.reload(wait_until='networkidle'); page.wait_for_function('!!window.__lr')
     assert page.evaluate("__lr.room.wall.style==='shopstars' && __lr.room.floor.style==='shoppearl'")
     assert page.evaluate("__lr.room.items.filter(i=>LR.CAT[i.t].roomEffect).every(i=>i.on)")

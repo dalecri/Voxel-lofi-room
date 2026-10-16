@@ -133,6 +133,66 @@
       [9, 11, 13].forEach((x, k) => { m.box(x, 15, 0, x + 2, 17, 1, k % 2 ? 0xb8643a : 0xd07a48); m.set(x + 2, 16, 0, 0x9a5030); });
     },
   });
+  // ---- A coordinated Talavera casa collection ----
+  // Same six-voxel hand-painted flowers as the original counter. All pieces
+  // share cobalt/sunflower, jade/ochre and terracotta/cobalt variants.
+  LR.addGroup('talavera', 'Talavera');
+  const TAVARS=[[COBALT,GOLD,0x9c633e],[0x277861,0xd8a63d,0x71503b],[TERRA,COBALT,0xc49a65]];
+  const tileTop=(blue,acc)=>(x,y,z)=>talav(x,z,blue,acc);
+  const tileFront=(blue,acc)=>(x,y)=>talav(x,y,blue,acc);
+  function tavLegs(m,w,d,y,wood) {
+    for(const x of [1,w-3])for(const z of [1,d-3])m.box(x,0,z,x+2,y,z+2,grain(wood));
+  }
+  function tavTable(m,w,d,y,[blue,acc,wood]) {
+    tavLegs(m,w,d,y,wood);m.box(0,y-2,0,w,y-1,d,grain(wood));
+    m.box(0,y-1,0,w,y,d,tileTop(blue,acc));
+    for(const z of [0,d-1])m.box(0,y-1,z,w,y,z+1,blue);
+    for(const x of [0,w-1])m.box(x,y-1,0,x+1,y,d,blue);
+  }
+  def('tavtable',{name:'Talavera dining table',kind:'floor',group:'talavera',size:[3,2],top:12,vars:TAVARS,
+    build(m,v){tavTable(m,24,16,12,v);}});
+  def('tavcoffee',{name:'Talavera coffee table',kind:'floor',group:'talavera',size:[2,2],top:6,vars:TAVARS,
+    build(m,v){tavTable(m,16,16,6,v);}});
+  def('tavside',{name:'Talavera bedside table',kind:'floor',group:'talavera',size:[1,1],top:10,vars:TAVARS,
+    build(m,[b,a,w]){tavLegs(m,8,8,9,w);m.box(0,3,0,8,8,7,grain(w)).box(1,4,7,7,8,8,tileFront(b,a));m.set(4,6,7,a);m.box(0,9,0,8,10,8,tileTop(b,a));}});
+  def('tavbench',{name:'Talavera garden bench',kind:'floor',group:'talavera',size:[3,1],seat:7,vars:TAVARS,
+    build(m,[b,a,w]){tavLegs(m,24,8,6,w);m.box(0,5,0,24,7,8,tileTop(b,a));m.box(0,7,0,2,15,2,w).box(22,7,0,24,15,2,w);m.box(2,9,0,22,14,1,tileFront(b,a));m.box(0,14,0,24,15,2,grain(w));}});
+  def('tavchair',{name:'Talavera dining chair',kind:'floor',group:'talavera',size:[1,1],seat:7,vars:TAVARS,
+    build(m,[b,a,w]){tavLegs(m,8,8,6,w);m.box(0,5,0,8,7,8,tileTop(b,a));m.box(0,7,0,1,16,1,w).box(7,7,0,8,16,1,w).box(1,10,0,7,15,1,tileFront(b,a));m.box(0,15,0,8,16,1,w);}});
+  def('tavbed',{name:'Talavera tiled bed',kind:'floor',group:'talavera',size:[2,3],wallish:true,tap:'sleep',seat:9,vars:TAVARS,
+    build(m,[b,a,w]){
+      tavLegs(m,16,24,4,w);m.box(0,3,0,16,5,24,grain(w));
+      m.box(0,0,0,16,16,2,grain(w)).box(1,8,1,15,15,2,tileFront(b,a));
+      m.box(1,5,2,15,8,23,CREAM);m.box(0,7,10,16,9,23,(x,y,z)=>(z%6===0||x%6===0)?a:b);
+      m.box(0,9,10,16,10,13,mix(b,CREAM,.5));m.box(2,8,3,7,10,7,0xfff9eb).box(9,8,3,14,10,7,0xfff9eb);
+      m.box(0,0,23,16,7,24,tileFront(b,a));
+    }});
+  def('tavcabinet',{name:'Talavera sideboard',kind:'floor',group:'talavera',size:[3,1],wallish:true,top:13,vars:TAVARS,
+    build(m,[b,a,w]){tavLegs(m,24,8,3,w);m.box(0,2,0,24,12,8,grain(w));for(const x of [1,9,17]){m.box(x,3,7,x+6,11,8,tileFront(b,a));m.set(x+4,7,7,a);}m.box(0,12,0,24,13,8,tileTop(b,a));}});
+  def('tavshelf',{name:'Talavera display shelf',kind:'floor',group:'talavera',size:[2,1],wallish:true,top:25,vars:TAVARS,
+    build(m,[b,a,w]){
+      m.box(0,0,0,16,25,1,tileFront(b,a));m.box(0,0,0,2,25,8,grain(w)).box(14,0,0,16,25,8,grain(w));
+      for(const y of [0,8,16,24])m.box(0,y,0,16,y+1,8,tileTop(b,a));
+      lathe(m,5,4,1,[1.5,2,2,[1.5,.7]],b);lathe(m,10,4,9,[1.2,2,2,[1.5,.7]],a);
+      m.box(3,17,2,5,23,5,b).box(5,17,2,7,22,5,CREAM).box(8,17,2,10,23,5,a);
+    }});
+  // Rounded ceramics use the same lathe as the pack's original clay ollas.
+  const tavGlaze=(b,a)=>(x,y,z)=>y%6===0?b:talav(x+z,y,b,a);
+  def('tavvase',{name:'Talavera flower vase',kind:'small',group:'talavera',size:[1,1],vars:TAVARS,
+    build(m,[b,a]){lathe(m,4,4,0,[2,2.8,3.2,3.2,2.8,2,1.5,[1.6,.8]],tavGlaze(b,a));m.box(3,7,3,4,11,4,GREEN);m.box(2,9,3,5,10,4,a).set(3,10,3,CREAM).set(4,8,3,GREEN_L);}});
+  def('tavplanter',{name:'Talavera leafy planter',kind:'floor',group:'talavera',size:[1,1],tap:'water',vars:TAVARS,
+    build(m,[b,a]){lathe(m,4,4,0,[2.2,2.5,3,3.2,3.4,[3.8,2.6]],tavGlaze(b,a));lathe(m,4,4,5,[2.5],0x4a3024);m.box(3,6,3,5,13,5,GREEN_D);for(const [x,y,z] of [[1,7,2],[4,9,1],[0,10,4],[4,12,4]])m.box(x,y,z,x+3,y+2,z+3,shade(GREEN,1+y*.015));}});
+  def('tavmug',{name:'Talavera jarrito',kind:'small',group:'talavera',size:[1,1],tap:'sip',steam:[4,5,4],steamRate:.6,vars:TAVARS,
+    build(m,[b,a]){lathe(m,3.5,4,0,[2,2.4,2.6,[2.6,1.6],[2.7,1.7]],tavGlaze(b,a));lathe(m,3.5,4,3,[1.5],0x81502a);m.box(6,1,3,7,4,5,b).box(5,1,3,7,2,5,b).box(5,3,3,7,4,5,b);}});
+  def('tavlamp',{name:'Talavera ceramic lamp',kind:'small',group:'talavera',size:[1,1],tap:'toggle',on:true,light:{at:[4,9,4],color:WARM,i:4,d:7},vars:TAVARS,
+    build(m,[b,a],s){lathe(m,4,4,0,[2.5,2,2.8,3,2.8,2,1.5],tavGlaze(b,a));m.box(3,6,3,5,8,5,a);lathe(m,4,4,8,[3.8,3.8,3.4,3,2.6],s.on?mix(CREAM,WARM,.25):shade(CREAM,.85),!!s.on);}});
+  def('tavplates',{name:'Talavera wall plates',kind:'wall',group:'talavera',size:[3,2],depth:3,vars:TAVARS,
+    build(m,[b,a]){for(const [cx,cy,r] of [[5,5,4.5],[17,10,5.5]])for(let x=0;x<24;x++)for(let y=0;y<16;y++){const d=Math.hypot(x+.5-cx,y+.5-cy);if(d<r){m.set(x,y,0,b);m.set(x,y,d>r-1?2:1,d>r-1?b:talav(x-cx+3,y-cy+3,b,a));}}}});
+  def('tavmirror',{name:'Talavera tiled mirror',kind:'wall',group:'talavera',size:[2,3],depth:2,vars:TAVARS,
+    build(m,[b,a]){m.box(0,0,0,16,24,1,tileFront(b,a));m.box(3,3,1,13,21,2,(x,y)=>(x+y)%9<2?0xf1fbff:0xb9d7e1);}});
+  def('tavrug',{name:'Talavera woven rug',kind:'rug',group:'talavera',size:[5,4],vars:TAVARS,
+    build(m,[b,a]){m.box(1,0,1,39,1,31,(x,y,z)=>x<3||x>36||z<3||z>28?b:talav(x,z,b,a));for(let x=2;x<39;x+=2)m.set(x,0,0,CREAM).set(x,0,31,CREAM);}});
+
   def('mxolla', {
     name: 'Clay ollas', kind: 'small', group: 'mexico', size: [1, 1], tap: 'fx', burstAt: [3, 8, 4],
     fx: { burst: 'steam', secs: 2.5, sfx: ['pour'], say: ['Café de olla, sweet with cinnamon', 'Frijoles de la olla, just like abuela', 'Agua fresca, cold from the clay'] },

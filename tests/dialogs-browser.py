@@ -34,16 +34,16 @@ with sync_playwright() as p:
     def template():
         page.click('#bMenu')
         page.get_by_role('tab',name='Rooms',exact=True).click()
+        page.locator('#menu-rooms details.preset-group summary').first.click()
         page.locator('.card').filter(has_text='Lofi Study').click()
     template()
     closed()
-    # Exercise the reported saved template path with each of its three buttons.
+    # Unsaved templates still ask before leaving with each of its three buttons.
     for action in ['lvStay','lvSave','lvDrop','Escape']:
-        page.click('#bSave')
         page.evaluate('a=>{__lr.room.name="Edited "+a;__lr.changed()}',action)
         previous=page.evaluate('__lr.meta.current')
         template()
-        assert 'Keep your changes?' in page.locator('#sheetBody').inner_text()
+        assert 'isn’t in your home yet' in page.locator('#sheetBody').inner_text()
         if action=='Escape':
             # A sheet must take priority over the crate's capturing key handler.
             page.evaluate('__lr.openCrate()')
@@ -57,9 +57,8 @@ with sync_playwright() as p:
         assert (current==previous)==(action in ['lvStay','Escape'])
         if action=='lvSave':
             assert page.evaluate('id=>JSON.parse(localStorage.getItem("lr.room."+id)).name',previous)=='Edited lvSave'
-    print('PASS: saved template confirmation Save, Don’t save, Stay and Escape; correct room transitions and persistence',flush=True)
+    print('PASS: unsaved template confirmation Save, Don’t save, Stay and Escape; correct room transitions and persistence',flush=True)
     # Close remains functional even if an optional audio cue fails.
-    page.click('#bSave')
     page.evaluate('__lr.room.name="Audio unavailable";__lr.changed()')
     template()
     page.evaluate('() => {window.__slide=__lr.Sound.slide;__lr.Sound.slide=()=>{throw Error("audio unavailable")}}')

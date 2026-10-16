@@ -51,7 +51,7 @@ with sync_playwright() as p:
       a.changed(); a.care.tick(0); a.interact(it.id);
     }''')
     assert page.evaluate('__lr.rituals.focus(__lr.meta.current,__focusId).remaining') == 1500000
-    page.click('#bSave')
+    page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()")
     page.evaluate('__advance(750000); __lr.updateRituals(); __lr.view.frame(.1,__lr.view.t+.1)')
     assert abs(page.evaluate('__lr.view.objs.get(__focusId).userData.parts.wax.scale.y') - .6) < 1e-8
     assert page.evaluate('__lr.room.get(__focusId).on')
