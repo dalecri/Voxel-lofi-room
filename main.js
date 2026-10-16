@@ -860,8 +860,8 @@ function startLofiRooms() {
     if (tap === 'bowl') {
       Sound.crunch();
       const cat = view.callCat(id);
-      if (cat) { const ci = room.get(cat); setTimeout(() => Sound.meow(), 300); toast(`<span>${ci ? (ci.name || (CATS[ci.c] || CATS[0]).name) : 'A cat'} comes running!</span>`, 1500); discover('feast'); }
-      else toast(`<span>${room.items.some(i => i.t === 'cat') ? 'Nobody can reach the bowl' : 'Food’s out, but no cats yet'}</span>`, 1400);
+      if (cat) { const ci = room.get(cat); setTimeout(() => ci?.t==='mxdog'?Sound.mxWoof():Sound.meow(), 300); toast(`<span>${ci ? (ci.name || (ci.t==='cat'?(CATS[ci.c] || CATS[0]).name:CAT[ci.t].name)) : 'A cat'} comes running!</span>`, 1500); discover('feast'); }
+      else toast(`<span>${C.petFeed ? 'A snack is here whenever someone feels like it.' : room.items.some(i => i.t === 'cat') ? 'Nobody can reach the bowl' : 'Food’s out, but no cats yet'}</span>`, 1400);
       return;
     }
     if (tap === 'treats') { Sound.crunch(); toast('<span>Shake shake! Drop the jar on a cat with Move</span>', 1600); return; }
@@ -2748,6 +2748,7 @@ function startLofiRooms() {
   view.companion = companion;
   const cozy = LRCozyFurniture.createView({store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
   view.cozyLife = cozy;
+  view.petLife = LRPets.createView({view,room,CAT});
   widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open') });
   updateHeader();
   setMode(state.mode, true);

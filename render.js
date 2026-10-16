@@ -830,6 +830,7 @@
   R.size = function () { return N; };
 
   R.sync = function (room) {
+    if(this.petLife)this.petLife.reset();
     if (this.lifeItems && this.lifeItems !== room.items) this.clearLifeEvents();
     this.lifeItems = room.items;
     this.room = room;
@@ -1075,7 +1076,7 @@
     if (!this.room) return out;
     for (const it of this.room.items) {
       const C = CAT[it.t];
-      if (!C.seat || it.p || C.kind !== 'floor') continue;
+      if (!C.seat || C.petPad || C.petOnly==='dog' || it.p || C.kind !== 'floor') continue;
       const [fw, fd] = fp(it);
       for (let x = it.x; x < it.x + fw; x++) for (let z = it.z; z < it.z + fd; z++) {
         const taken = [...this.pets.values()].some(p => { const seat = p.perch || p.next; return seat && seat.x === x && seat.z === z; });
@@ -1085,9 +1086,11 @@
         }
       }
     }
+    if(this.petLife)out.push(...this.petLife.perches());
     return out;
   };
   R.updatePets = function (dt, t) {
+    if(this.petLife)this.petLife.frame(dt,t);
     for (const [id, P] of this.pets) {
       const obj = this.objs.get(id);
       if (!obj) continue;
@@ -1119,7 +1122,7 @@
       } else if (P.state === 'walk' && P.path && P.path.length) {
         const [tx, tz] = P.path[0];
         const dx = tx - P.x, dz = tz - P.z, d = Math.hypot(dx, dz);
-        const sp = (P.robot ? (P.zoom > this.t ? 2.6 : 1) : 1.5) * dt;
+        const sp = (P.robot ? (P.zoom > this.t ? 2.6 : 1) : 1.5*(P.petSpeed || 1)) * dt;
         let goal = Math.atan2(dx, dz), dh = goal - P.heading;
         while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
         P.heading += dh * Math.min(1, dt * 10);
@@ -1183,6 +1186,7 @@
       inner.scale.set(1 + (1 - squash) * 0.4, squash, 1 + (1 - squash) * 0.25);
       if (tail) tail.rotation.y = Math.sin(t * (P.state === 'pet' ? 9 : P.state === 'walk' ? 6 : 2) + id) * (P.state === 'nap' ? 0.15 : 0.45);
       this.placePet(P, obj);
+      if(this.petLife)this.petLife.pose(P,obj,t);
     }
   };
   R.decidePet = function (P, cx, cz) {
@@ -1207,6 +1211,7 @@
       }
       P.timer = 3; return;
     }
+    if(this.petLife && this.petLife.choose(P))return;
     // when it rains, cats like to sit by a window and watch
     if (this.env.rain && Math.random() < 0.4) {
       const spots = this.windowSpots().filter(w => ![...this.pets.values()].some(o => o !== P && Math.floor(o.x) === w.x && Math.floor(o.z) === w.z));
@@ -1277,7 +1282,7 @@
   };
   R.startHop = function (P, p) {
     P.heading = Math.atan2(p.x + 0.5 - P.x, p.z + 0.5 - P.z);
-    P.hop = { x0: P.x, z0: P.z, y0: P.y, x1: p.x + 0.5, z1: p.z + 0.5, y1: p.y, t: 0, dur: 0.55, then: p.owner === P.favoriteId ? 'nap' : Math.random() < 0.6 ? 'nap' : 'sit', stay: p.owner === P.favoriteId ? 120 + Math.random() * 120 : 6 + Math.random() * 10 };
+    P.hop = { x0: P.x, z0: P.z, y0: P.y, x1: p.px ?? p.x + 0.5, z1: p.pz ?? p.z + 0.5, y1: p.y, t: 0, dur: 0.55, then: CAT[p.t]?.petGaze ? 'sit' : p.owner === P.favoriteId ? 'nap' : Math.random() < 0.6 ? 'nap' : 'sit', stay: p.owner === P.favoriteId ? 120 + Math.random() * 120 : 6 + Math.random() * 10 };
     P.perch = p; P.state = 'hop';
   };
   R.petCat = function (id) {
@@ -1324,7 +1329,7 @@
   R.sendCat = function (spots, only) {
     let best = null;
     for (const [id, P] of this.pets) {
-      if (P.robot || (this.room.get(id) || {}).t === 'merchantcat' || P.visitorLeaving || P.state === 'hop' || P.perch || (only && id !== only)) continue;
+      if (P.robot || P.petActivity || P.petPending || (this.room.get(id) || {}).t === 'merchantcat' || P.visitorLeaving || P.state === 'hop' || P.perch || (only && id !== only)) continue;
       const cx = Math.floor(P.x), cz = Math.floor(P.z);
       for (const [x, z] of spots) {
         const path = cx === x && cz === z ? [] : this.path(cx, cz, x, z);
@@ -1340,7 +1345,9 @@
   // the nearest cat trots over to a bowl and eats; returns the cat's id or 0
   R.callCat = function (bowlId) {
     const bowl = this.room && this.room.get(bowlId);
-    if (!bowl || bowl.p) return 0;
+    if (!bowl) return 0;
+    if(CAT[bowl.t].petFeed && this.petLife)return this.petLife.feed(bowl);
+    if(bowl.p)return 0;
     const best = this.sendCat(this.spotsAround(bowl));
     if (!best) return 0;
     const [w, d] = fp(bowl);

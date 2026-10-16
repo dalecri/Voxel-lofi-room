@@ -485,3 +485,32 @@ Verify with `node --test tests/*.test.cjs`, `npm run build` and
 continued simulation on skipped frames, shadow-map reuse and invalidation,
 normal-mode restoration, context attributes after reload, capture from idle,
 mobile checks and 1440px day/night screenshot comparisons.
+
+## Pet furniture pack
+
+The **Pets** catalog includes 28 free pieces in `packs/pets.js`: scratching post,
+window perch, tunnel, grass, covered litter box, fountain, wall steps, grooming
+arch, wind-up mouse, feather wand, cardboard box, paper bag, donut bed, radiator
+hammock, dog bed, raised bowls, toy basket, leash hook, hamster cage, bunny hutch,
+bird gym, gecko tank, treat jar, carrier, puzzle feeder, lick mat, pet flap and
+pawtrait frames. The existing cat tree stays as it is.
+
+Cats use the existing walk grid and perch reservations. They scratch, nibble,
+drink, rub, bat, chase, dart through tunnels and slip through the flap before
+returning. Boxes, nests, shelves and the hammock can become lasting favorites;
+an occupied hammock has nearby waiting spots. Window-perched cats gaze outside
+or toward a birdfeeder. Treat jars (including on furniture) and puzzle feeders
+use the existing bowl summon/eating path and feeding moment; sleeping or busy
+cats can decline. The existing street dog can amble to a dog bed or raised bowls.
+Small-pet, feather, fountain and mouse motion respects Reduced motion.
+
+Activities and animated inhabitants are temporary renderer state, never extra
+saved pets or private data in a share code. Editing, room changes, removed props
+and direct cat interactions release activities safely. All pieces share as
+ordinary furniture; no shop unlocks, currency or network access are involved.
+
+Run `node --test tests/*.test.cjs`, `npm run build`, then
+`python3 tests/pets-browser.py`. The pack checks art for every palette, reachable
+and reserved spots, feeding, scratching, mouse/wheel motion, pet-flap return,
+dog beds, interruption cleanup and mobile/desktop day/night views. Existing
+favorites also have coverage in `python3 tests/cozy-favorites-browser.py`.

@@ -22,7 +22,7 @@
   }
   // Stable per cat and room, independent of which perches are currently occupied.
   function favorite(cat,items,previous,CAT=root.LR?.CAT || {}) {
-    const seats=items.filter(i=>!i.p && CAT[i.t]?.seat && CAT[i.t].kind==='floor').sort((a,b)=>a.id-b.id);
+    const seats=items.filter(i=>!i.p && CAT[i.t]?.petOnly!=='dog' && (CAT[i.t]?.petSpot || CAT[i.t]?.seat && CAT[i.t].kind==='floor')).sort((a,b)=>a.id-b.id);
     if(seats.some(i=>i.id===previous))return previous;
     let h=0;for(const c of String(cat.name || cat.id))h=(Math.imul(h,31)+c.charCodeAt(0))>>>0;
     return seats.length?seats[h%seats.length].id:null;
