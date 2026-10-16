@@ -20,6 +20,20 @@
     for (let k = 0; k <= n; k++) m.set(Math.round(a[0] + (b[0] - a[0]) * k / n), Math.round(a[1] + (b[1] - a[1]) * k / n), Math.round(a[2] + (b[2] - a[2]) * k / n), col, glow);
   }
   const legs4 = (m, x0, z0, x1, z1, h, col) => [[x0, z0], [x1 - 1, z0], [x0, z1 - 1], [x1 - 1, z1 - 1]].forEach(([x, z]) => m.box(x, 0, z, x + 1, h, z + 1, col));
+
+  def('phone', {name:'Phone launcher',kind:'small',group:'tech',size:[1,1],tap:'launcher',vars:[[0x586873],[0xa98eac]],build(m,[c]) {
+    m.box(2,0,1,6,1,7,c).box(2,1,1,6,2,7,0x242d38).box(2,2,2,6,3,6,0xb1dcd4);
+    for(let x=2;x<6;x+=2)for(let z=2;z<6;z+=2)m.set(x,3,z,0xf7dfad,true);
+    m.box(3,2,6,5,3,7,c);
+  }});
+  def('appportal', {name:'Personal app portal',kind:'small',group:'tech',size:[1,1],tap:'appportal',on:true,vars:[[0xa5bfc0],[0xbba4cc]],build(m,[c]) {
+    m.box(1,0,1,7,2,7,c).box(1,2,3,2,11,5,c).box(6,2,3,7,11,5,c).box(2,10,3,6,12,5,c).box(2,3,4,6,10,5,0x93dfd7,true);
+  }});
+  def('filecab', {name:'File cabinet',kind:'floor',group:'desks',tap:'files',size:[1,1],top:16,vars:[[0xa8b8b1],[0xc8b597]],build(m,[c]) {
+    m.box(0,0,0,8,16,8,c);
+    for(let n=0;n<3;n++){const y=1+n*5;m.box(1,y,7,7,y+4,8,shade(c,.9)).box(3,y+2,8,5,y+3,9,0x726b5f);
+      m.part('privateFiles'+n,[0,0,0]);m.box(1,y+3,8,7,y+4,10,0xffedcc).box(1,y,8,7,y+3,9,c).box(3,y+1,9,5,y+2,10,0x726b5f);m.main();}
+  }});
   const MODULAR = [[0xf2efe8, 0xd8b48a], [0xd8b48a, 0xf2efe8], [0x2e2e36, 0xd8b48a], [0xf2efe8, 0x9ab8c8], [0x8a9a7a, 0xf2efe8]];
 
   // =================================================================

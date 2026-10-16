@@ -130,13 +130,13 @@ with sync_playwright() as p:
     print('PASS: seventh and fourteenth day bonuses, no duplicate completion, missed-day reset')
 
     c, page, errors, failed = boot(browser, missing=('photo', 'lucky'))
-    page.click('#bMenu'); page.click('#bShop')
+    page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.click('#bShop')
     assert page.locator('.shop-card').count() == 3
     assert page.locator('[data-shop-buy="crown"]').is_disabled()
     page.click('#shopClose')
     page.evaluate("__lr.discover('photo'); __lr.discover('lucky')")
     assert balance(page) == 40
-    page.click('#bMenu'); page.click('#bShop')
+    page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.click('#bShop')
     page.click('[data-shop-buy="crown"]')
     assert balance(page) == 0
     assert page.locator('[data-shop-item="crown"]').evaluate("e=>e.classList.contains('purchased')")

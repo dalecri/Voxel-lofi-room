@@ -161,7 +161,22 @@ function startLofiRooms() {
       const it=room.get(id); if (it) { if (care) care.tap(it,id,true); view.burst(id,'steam',3.5); }
       discover('tea');
     } });
-
+  const files = LRDashboard.create({store, letters: letters.model});
+  let pendingPortal = null;
+  const dashboard = LRDashboard.createView({model:files,CAT,widgets,sheet:codeSheet,close:closeSheets,letters,room:()=>room,renderer:()=>view,
+    hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
+    notice:text=>toast(`<span>${esc(text)}</span>`,2600,true),
+    onLaunch:p=>{const it=room.items.find(it=>it.t===p.furnitureId);if(it && widgetView)widgetView.feedback(it.id);if(p.furnitureId==='pomodorocandle')Sound.matchStrike();},
+    saveScene:()=>LRWidgets.shareDecor(room.serialize()),encodeScene:decor=>roomCode(decor),
+    openScene:f=>{
+      const probe=new LR.Room();if(!probe.load(LRWidgets.shareDecor(f.decor)))throw Error('This scene could not be opened.');
+      probe.items=probe.items.filter(i=>CAT[i.t]);closeSheets();leaveThen(()=>{
+        exitCat(true);room.load(probe.serialize());meta.current=Date.now();delete meta.visit;undo.length=0;baseSig=sig();
+        view.panGoal.set(0,0,0);view.zoomGoal=1;changed();save();updateHeader();
+      });
+    },
+    placePortal:p=>{pendingPortal=p.id;closeSheets();state.group='tech';state.tool='add';setMode('edit',true);pickAdd('appportal',true);}
+  });
 
   (function starsBg() {
     const c = document.createElement('canvas'); c.width = 600; c.height = 900;
@@ -653,6 +668,9 @@ function startLofiRooms() {
     const C = CAT[it.t];
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
+    if (C.tap === 'launcher') { dashboard.launcher(); return; }
+    if (C.tap === 'files') { dashboard.files(); return; }
+    if (C.tap === 'appportal') { dashboard.portal(it, `${meta.current}:${it.id}`); return; }
     if (C.tap !== 'arcade' && widgetAction(it)) return;   // native games take priority over outbound portals
     const tap = C.tap;
     const privateTool = LRRoomTools.kind(it,C);
@@ -1191,6 +1209,7 @@ function startLofiRooms() {
   window.addEventListener('keydown', e => {
     if (!$('#sheet').classList.contains('open')) return;
     if (e.key === 'Escape') { e.preventDefault(); closeSheets(); }
+    else LRDashboard.tabKey(e);
     e.stopImmediatePropagation();
   }, true);
   (function crateInput() {
@@ -1314,6 +1333,7 @@ function startLofiRooms() {
       if (d.cand && room.canPlace(d.cand)) {
         pushUndo();
         const it = room.add(room.make(d.cand.t, d.cand));
+        if (it.t === 'appportal' && pendingPortal) { try { files.bind(`${meta.current}:${it.id}`,pendingPortal); } catch(e) { toast('<span>Placed the portal. Choose its destination when you tap it.</span>',2200); } pendingPortal=null; }
         changed();
         view.boing(it.id); view.poof(it.id, [0xffffff, 0xfff0d0]);
         Sound.place(weightOf(it)); duck(); haptic(8);
@@ -1822,9 +1842,9 @@ function startLofiRooms() {
     const stream = new Blob([bytes]).stream().pipeThrough(how === 'in' ? new CompressionStream('deflate-raw') : new DecompressionStream('deflate-raw'));
     return new Uint8Array(await new Response(stream).arrayBuffer());
   }
-  async function roomCode() {
-    const d = LRWidgets.shareDecor(room.serialize());
-    if (isSaved()) d.gid = meta.current;                            // so a guest's note finds its way back to this room
+  async function roomCode(source = room.serialize()) {
+    const d = LRWidgets.shareDecor(source);
+    if (arguments.length === 0 && isSaved()) d.gid = meta.current;                            // so a guest's note finds its way back to this room
     d.items = d.items.map(i => { const o = Object.assign({}, i); if (!o.c) delete o.c; if (!o.r) delete o.r; if (!o.on) delete o.on; return o; });   // drop the defaults
     const raw = new TextEncoder().encode(JSON.stringify(d));
     if (typeof CompressionStream === 'undefined') return 'LR0.' + b64u(raw);
@@ -2205,8 +2225,9 @@ function startLofiRooms() {
     const body = $('#sheetBody');
     body.dataset.merchant = '';
     body.innerHTML = '';
-    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
-    h('div', 'grab');
+    const sections = LRDashboard.menu(body, store, closeSheets);
+    let target = sections.Today;
+    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; target.appendChild(el); return el; };
     const quiet = h('div', 'rowbtns');
     quiet.innerHTML = '<button class="chipbtn" id="bBreathing">☾ Breathing room · 10 minutes</button>';
     $('#bBreathing').onclick = breathingSheet;
@@ -2219,8 +2240,9 @@ function startLofiRooms() {
     h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`);
     const log = store.get('lr.dailyLog', []).slice(0, 5);
     if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'));
+    target = sections.Rooms;
     h('h2', '', `Your home <small>${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
-    roomStack(body);
+    roomStack(target);
     // the house map: which rooms connect to which, with a tap to travel
     const links = rooms.map(r => {
       const d = r.id === meta.current ? room.serialize() : store.get('lr.room.' + r.id, null);
@@ -2271,7 +2293,8 @@ function startLofiRooms() {
     if (meta.visit && meta.visit.id === meta.current) { const gs = h('div', 'rowbtns'); gs.innerHTML = '<button class="chipbtn primary" id="bSignBook">✍ Sign this room’s guest book</button>'; gs.querySelector('#bSignBook').onclick = () => signSheet(); }
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'New rooms start unsaved, so you can play around. Tap Save to keep one.');
-    body.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }));
+    target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }));
+    target = sections.Journal;
     h('h2', '', 'Room journal');
     const feeds = h('div', 'rowbtns');
     ['moments', 'cats'].forEach(feed => {
@@ -2280,7 +2303,8 @@ function startLofiRooms() {
       b.onclick = () => { journalFeed = feed; renderJournal(); }; feeds.appendChild(b);
     });
     h('div', 'disc').id = 'journalFeed'; renderJournal();
-    h('h2', '', 'Settings');
+    h('div', 'saved-scenes-shelf').setAttribute('aria-label', 'Future saved scenes shelf');
+    target = sections.Sound;
     const toggle = (label, on, fn) => {
       const r = h('button', 'toggle' + (on ? ' on' : ''), `<span>${label}</span><i></i>`);
       r.onclick = () => { fn(); renderMenu(); };
@@ -2308,6 +2332,7 @@ function startLofiRooms() {
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Tap a record player to tune in.</span>`, 2000, true); renderMenu();
     };
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
+    target = sections.Settings;
     toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
     toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
@@ -2354,6 +2379,7 @@ function startLofiRooms() {
       g.font = `600 ${Math.round(13 * s)}px Fredoka, sans-serif`; g.fillStyle = document.body.classList.contains('night') ? 'rgba(255,255,255,0.8)' : 'rgba(74,53,48,0.7)';
       g.fillText(room.name + ' · Lofi Rooms', 16 * s, c.height - 18 * s);
       const url = c.toDataURL('image/png');
+      dashboard.addPhoto(url, `${room.name} · ${new Date().toLocaleDateString()}`);
       $('#photoImg').src = url;
       const dl = $('#photoSave'); if (dl) dl.href = url;
       $('#photo').classList.remove('video'); $('#photo').classList.add('open');
@@ -2574,7 +2600,7 @@ function startLofiRooms() {
       view.catMove(f, sd, dt);
     }
     view.beat = meta.music && !stream ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
-    if (!filming) { view.frame(dt, t); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); }
+    if (!filming) { view.frame(dt, t); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); }
     requestAnimationFrame(loop);
   }
 
@@ -2587,7 +2613,7 @@ function startLofiRooms() {
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

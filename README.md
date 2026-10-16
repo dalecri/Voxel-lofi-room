@@ -319,3 +319,15 @@ You can try the room model without a browser:
 ```bash
 node -e "const LR=require('./room.js'); const r=new LR.Room(); r.generate(42); console.log(r.name, r.items.length, 'pieces')"
 ```
+
+## Menu, launcher and file cabinet
+
+The menu has **Today**, **Rooms**, **Journal**, **Sound** and **Settings** tabs. All previous controls remain in these sections; the last tab is saved through Store as `lr.menuTab`. Tab arrows/Home/End work on a keyboard; Close and Escape dismiss the sheet.
+
+The free **Phone launcher** is a small Tech piece. Its searchable grid reads the live catalog and widget destination definitions, including the Pomodoro candle and social links. Travel doors stay room doors; the arcade still plays its game on direct tap. **Add your own** saves a name and full HTTP(S) URL under `lr.portals`. The confirmation suggests placing a free **Personal app portal**. A portal's destination assignment is private and scoped to its room and item ID; sharing its decor gives the recipient an unassigned portal.
+
+The free **File cabinet** is in Desks. Its **Letters** tab reads the existing typewriter's `lr.letters` without creating a draft; opening a letter uses the same editor. **Scenes** saves an immutable decor snapshot under `lr.scenes`, and opening one uses the existing unsaved-room confirmation. Scene downloads are standalone HTML containing an LR0/LR1 code that the normal import sheet can open. Camera still photos are automatically collected under `lr.photos`; photos download as PNG. Every category supports open, rename, download, share and confirmed deletion. Sharing uses the native Android/Web Share sheet when available, with a file download fallback in browsers. Native photo downloads use Android's share sheet, where the owner can choose a save destination. Cabinet papers/drawers fill with file count and are hidden during room photos and timelapses.
+
+File contents, titles and custom portal URLs/assignments stay outside room decor and LR0/LR1 codes. No account or new background fetch is involved. Device storage has finite capacity; if a photo cannot be kept in the cabinet, its original camera preview/export remains available. Clearing app storage removes these private files unless the owner has exported them.
+
+Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/dashboard-browser.py`. The browser harness covers relocated menu controls and tab persistence, catalog-derived launchers and custom links, letters/scenes/photos and downloads, cabinet capture privacy, responsive layouts at 320/390/1280 pixels, Escape, and an actual LR1 import in a fresh session with no private files or portal data. Existing browser scripts now select the relevant menu tab before interacting with its controls.

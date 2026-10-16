@@ -108,7 +108,7 @@ with sync_playwright() as p:
     fresh=browser.new_context(viewport={'width':390,'height':844});fresh.add_init_script("localStorage.setItem('lr.intro','true')");fresh.route(RSS,lambda r:r.abort('failed'))
     recipient=fresh.new_page();recipient.on('pageerror',lambda e:errors.append(str(e)))
     recipient.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');recipient.wait_for_function('!!window.__lr')
-    recipient.click('#bMenu');recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.wait_for_function('__lr.room.name==="All widgets"')
+    recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.wait_for_function('__lr.room.name==="All widgets"')
     assert recipient.evaluate('__lr.room.items.length')==8
     assert 'PRIVATE_PHASE2' not in recipient.evaluate('JSON.stringify(localStorage)')
     assert not errors,errors
