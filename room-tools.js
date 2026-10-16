@@ -54,7 +54,7 @@
       get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get strokes(){return copy(state.strokes);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
-  function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},sound,notice=()=>{}}){
+  function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{}}){
     let active=null,anchor=null,resize=null,liveStroke=null,canvas=null,status=null,frameTime=0;
     const badges=new Map(),button=(parent,label,fn,cls='chipbtn')=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>run(fn);parent.appendChild(b);return b;};
     function run(fn){try{const result=fn();if(status)status.textContent='';return result;}catch(e){if(status)status.textContent=e.message || 'Could not save on this device.';return false;}}
@@ -97,7 +97,7 @@
       const items=document.createElement('div');root.appendChild(items);
       for(const g of model.state.groceries){const row=document.createElement('div');row.className='roomtool-check';const label=document.createElement('label'),check=document.createElement('input'),span=document.createElement('span');check.type='checkbox';check.checked=g.done;check.setAttribute('aria-label',g.text);span.textContent=g.text;label.append(check,span);row.appendChild(label);check.onchange=()=>run(()=>model.checkGrocery(g.id,check.checked));button(row,'Remove',()=>{model.remove('groceries',g.id);groceries();});items.appendChild(row);}
       if(!model.state.groceries.length)text(items,'Nothing on the list yet.');
-      button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});button(root,'French word flashcard',flashcard);
+      button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});button(root,'French word flashcard',flashcard);if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
     });}
     function flashcard(){const data=word();shell('Un mot par jour','A little French, on the fridge.',root=>{
       const card=document.createElement('div');card.className='roomtool-flashcard';text(card,data.word,'roomtool-title');const back=document.createElement('div');back.hidden=true;text(back,data.translation);text(back,data.example,'muted');card.appendChild(back);root.appendChild(card);

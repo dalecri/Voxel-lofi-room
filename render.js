@@ -926,7 +926,7 @@
       while (o && !(o.userData && o.userData.id && this.objs.get(o.userData.id) === o)) o = o.parent;
       if (!o) continue;
       const p = this.root.worldToLocal(h.point.clone());
-      return { id: o.userData.id, obj: o, point: p, normal: h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : null, dist: h.distance, behindWall: h.distance > wallT + 0.05 };
+      return { id: o.userData.id, obj: o, part: Object.entries(o.userData.parts).find(([, part]) => part === h.object.parent)?.[0], point: p, normal: h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : null, dist: h.distance, behindWall: h.distance > wallT + 0.05 };
     }
     return null;
   };
@@ -1036,10 +1036,10 @@
       if (!C.seat || it.p || C.kind !== 'floor') continue;
       const [fw, fd] = fp(it);
       for (let x = it.x; x < it.x + fw; x++) for (let z = it.z; z < it.z + fd; z++) {
-        const taken = [...this.pets.values()].some(p => p.perch && p.perch.x === x && p.perch.z === z);
+        const taken = [...this.pets.values()].some(p => { const seat = p.perch || p.next; return seat && seat.x === x && seat.z === z; });
         if (taken) continue;
         for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          if (this.cellFree(x + dx, z + dz)) out.push({ x, z, y: C.seat * S, from: [x + dx, z + dz], t: it.t });
+          if (this.cellFree(x + dx, z + dz)) out.push({ x, z, y: C.seat * S, from: [x + dx, z + dz], t: it.t, owner: it.id });
         }
       }
     }
@@ -1055,6 +1055,9 @@
         if (tail) tail.rotation.y = Math.sin(t * 2 + id) * 0.3;
         continue;
       }
+      // A favorite that was removed is no longer a place to wait or nap in mid-air.
+      if (P.next?.owner && !this.room.get(P.next.owner)) { P.next = null; P.path = null; P.state = 'sit'; P.timer = 1; }
+      if (P.perch?.owner && !this.room.get(P.perch.owner)) P.timer = 0;
       const cx = Math.floor(P.x), cz = Math.floor(P.z);
       // something got built on top of me: pop to the nearest free cell
       if (!P.perch && !P.hop && !this.cellFree(cx, cz)) {
@@ -1171,6 +1174,18 @@
         if (path) { P.watch = w.heading; if (path.length) { P.path = path; P.state = 'walk'; } else { P.heading = w.heading; P.watch = null; P.state = 'sit'; P.timer = 12; if (this.hooks.catActivity) this.hooks.catActivity(P.id, 'rain'); } return; }
       }
     }
+    // A cat keeps a favorite furniture piece even while another cat occupies it.
+    if (window.LRCozyFurniture && !this.room.get(P.id)?.visitor) {
+      P.favoriteId = this.cozyLife ? this.cozyLife.favoriteFor(P) : LRCozyFurniture.favorite(this.room.get(P.id) || P, this.room.items, P.favoriteId, CAT);
+      const favorites = this.perches().filter(p => p.owner === P.favoriteId);
+      if (Math.random() < .72) for (const p of favorites) {
+        const path = this.path(cx, cz, p.from[0], p.from[1]);
+        if (!path) continue;
+        P.next = p; P.path = path; P.state = 'walk';
+        if (!path.length) { P.next = null; this.startHop(P, p); }
+        return;
+      }
+    }
     const r = Math.random();
     if (r < 0.3) {
       const ps = this.perches();
@@ -1220,7 +1235,7 @@
   };
   R.startHop = function (P, p) {
     P.heading = Math.atan2(p.x + 0.5 - P.x, p.z + 0.5 - P.z);
-    P.hop = { x0: P.x, z0: P.z, y0: P.y, x1: p.x + 0.5, z1: p.z + 0.5, y1: p.y, t: 0, dur: 0.55, then: Math.random() < 0.6 ? 'nap' : 'sit', stay: 6 + Math.random() * 10 };
+    P.hop = { x0: P.x, z0: P.z, y0: P.y, x1: p.x + 0.5, z1: p.z + 0.5, y1: p.y, t: 0, dur: 0.55, then: p.owner === P.favoriteId ? 'nap' : Math.random() < 0.6 ? 'nap' : 'sit', stay: p.owner === P.favoriteId ? 120 + Math.random() * 120 : 6 + Math.random() * 10 };
     P.perch = p; P.state = 'hop';
   };
   R.petCat = function (id) {
@@ -1441,6 +1456,7 @@
     this.updateWeather(dt, t);
     this.updateLifeEvents(dt);
     if (this.companion) this.companion.frame(dt, t);
+    if (this.cozyLife) this.cozyLife.frame(dt, t);
     this.updateBreathing();
     if (this.fp) this.updateCatView(dt, t);
     this.draw();

@@ -378,6 +378,11 @@
         [[1, 0.07, 'triangle'], [2, 0.015, 'sine']].forEach(([mul, vol, type]) => this.tone(n(m) * mul, t + i * 0.28, 1.6, vol, type));
       }
     },
+    harp(index = 0) {   // a hand-plucked string, only played by a furniture tap
+      if (!this.ready()) return;
+      const notes = [60, 62, 64, 67, 69, 72, 74], f = n(notes[((index % 7) + 7) % 7]), t = this.ctx.currentTime;
+      [[1, .085], [2, .025], [3, .009]].forEach(([mul, vol]) => this.tone(f * mul, t, 1.8 / mul, vol, 'sine', .003));
+    },
     meow(vol) {
       if (!this.ready()) return;
       const t = this.ctx.currentTime, o = this.tone(620, t, 0.45, 0.06, 'sawtooth', 0.05), v = vol || 1, p = 0.85 + Math.random() * 0.35;   // every meow a little different

@@ -158,6 +158,7 @@ function startLofiRooms() {
   const undo = [];
   const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
     editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
+    onPhotos: id => cozy.photoPicker(id),
     letters, word: () => { widgets.refresh(['minifridge']); return widgets.data('fridge-note'); }, sound: Sound,
     notice: text => toast(`<span>${text}</span>`, 3200), onBrew: id => {
       const it=room.get(id); if (it) { if (care) care.tap(it,id,true); view.burst(id,'steam',3.5); }
@@ -707,12 +708,13 @@ function startLofiRooms() {
 
   // ---------------------------------------------------------------
   // Tapping things in the room
-  function interact(id) {
+  function interact(id, hit) {
     const it = room.get(id);
     if (!it) return;
     const C = CAT[it.t];
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
+    if (cozy.tap(it, hit?.part)) return;
     if (C.tap === 'launcher') { dashboard.launcher(); return; }
     if (C.tap === 'files') { dashboard.files(); return; }
     if (C.tap === 'appportal') { dashboard.portal(it, `${meta.current}:${it.id}`); return; }
@@ -1280,8 +1282,9 @@ function startLofiRooms() {
   const driftNow = () => meta.dreamy !== false && meta.phase === 'night' && new Date().getHours() < 5;
   function checkDrift(quiet, force) {
     const on = force != null ? force : driftNow();
+    view.driftGoal = on ? LRCozyFurniture.dreamStrength(room.items, CAT) : 0;
     if (on === drifting) return;
-    drifting = on; view.driftGoal = on ? 1 : 0; Sound.dreamy = on;
+    drifting = on; Sound.dreamy = on;
     document.body.classList.toggle('drift', on);
     if (on && !quiet) { toast('<b>☾ Dream mode</b><span>It’s past midnight. The room drifts…</span>', 3400); discover('dreamer'); }
   }
@@ -1516,12 +1519,12 @@ function startLofiRooms() {
     if (pointers.size < 2) gesture = null;
     if (orbit && orbit.t0 && e.type === 'pointerup' && pointers.size === 0 && !orbit.moved && performance.now() - orbit.t0 < 450) {
       if (orbit.tapId) {
-        if (state.mode === 'explore') interact(orbit.tapId); else tapEdit(orbit.tapId);
+        if (state.mode === 'explore') interact(orbit.tapId, view.pickItem(e.clientX, e.clientY)); else tapEdit(orbit.tapId);
         lastTap = null;
       } else if (orbit.companion && companion) {
         const hit = view.pickItem(e.clientX, e.clientY);
         const it = hit && room.get(hit.id);
-        if (hit && !hit.behindWall && it && (CAT[it.t].tap || CAT[it.t].kind === 'pet')) interact(hit.id);
+        if (hit && !hit.behindWall && it && (CAT[it.t].tap || CAT[it.t].kind === 'pet')) interact(hit.id, hit);
         else if (companion.hit(e.clientX, e.clientY)) companion.tap();
         lastTap = null;
       } else if (state.mode === 'explore' && view.fp) {
@@ -2663,13 +2666,15 @@ function startLofiRooms() {
   window.addEventListener('resize', () => view.resize());
   companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
+  const cozy = LRCozyFurniture.createView({store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
+  view.cozyLife = cozy;
   widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open') });
   updateHeader();
   setMode(state.mode, true);
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

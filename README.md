@@ -341,3 +341,44 @@ Control center uses existing music, sound, weather, glow, dream and clock settin
 Spotlight searches catalog names, typewriter letter titles, saved scene titles and idea-jar text. Results navigate to the real tools; furniture opens Decorate with that item filtered, with **Show all** to clear the filter. Locked cosmetics open the merchant shop. Home stores no copy of file or tool data and makes no network requests. Its coziness score is visible in `home.js`: this week's completed Daily Moments + resident cats + current-room plants cared for today. The weekly count uses `lr.dailyLog`, since historical discoveries in `lr.found` have no dates.
 
 Run `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/home-browser.py` for fixture derivations, grouped search, notifications, controls, navigation, mobile/day/night layouts, private share payloads and offline behavior. Home also closes with Escape or Android Back.
+
+### Furniture that lives with you
+
+`cozy-furniture.js` adds a sushi conveyor counter, Daily Moment streak scoreboard,
+pluckable harp, photo collage wall, costume tee, dreamcatcher, beaded doorway,
+whiteboard, tip jar, two room-sized rugs, and an offline cat-call laptop. These
+functional additions are free in the normal picker. The tip jar shares the
+existing savings tool. Tap the tee to open the real wardrobe; its print follows
+the equipped costume. The scoreboard reads `lr.dailyStreak` directly.
+
+Take a camera photo to collect it in Files, then tap the collage to pin it. On a
+mini fridge, tap **Photo magnets** in the grocery sheet; the French word remains
+available. Pins reference existing `lr.photos` records instead of copying images.
+Removing a cabinet photo removes its displayed image. Whiteboard text autosaves.
+All surface text, pins, and each resident cat's favorite seat live privately in
+`lr.cozy`, scoped by room and item/cat. They never enter LR0/LR1 room codes. Private
+surfaces are badged in Decorate and suppressed during photos and timelapses.
+Shared rooms import the furniture with empty surfaces and the recipient's local
+streak and wardrobe, never the sender's personal content.
+
+Each of the conveyor's six plates can be tapped separately. A reachable cat walks
+to a free adjacent tile and eats; otherwise the companion receives a held plate
+and a small eating animation. Plates replenish after 20 seconds. Sharing a plate
+unlocks the *One more little plate* moment once through normal discovery. Harp
+strings pluck a separate muted-aware sound on tap, without adding a music-band
+voice. Favorite furniture attracts cats back for two-to-four-minute naps;
+occupied or unreachable perches fall back to normal cat behavior. Visitors keep
+their existing behavior. A dreamcatcher strengthens already-active dream mode by
+25%, without stacking or overriding the dream toggle/time rules. The bead curtain
+uses the normal door-link picker and shimmers briefly when a cat or companion
+brushes past. Reduced motion stops the belt, string vibration and bead sway.
+The laptop's four-cat call is synthesized pixel art with deterministic brief
+reconnections, with no camera, microphone, or network connection.
+
+Verify with `node --test tests/*.test.cjs`, `npm run build`, and
+`python3 tests/cozy-furniture-browser.py` and `python3 tests/cozy-favorites-browser.py`.
+Tests cover model variants, the belt
+loop, harp mute, persistent favorites and private data, real camera/photo pins,
+dining, wardrobe, savings, separate favorite-seat reservations and removal
+recovery, doorway motion, dream boosts, capture privacy, clean
+share import, reloads, and mobile/desktop day/night screenshots.
