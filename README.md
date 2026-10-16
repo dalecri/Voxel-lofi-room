@@ -141,7 +141,7 @@ Then open http://localhost:5180.
   - The menu's **Your house** map shows every room and where its doors go. Tap a door to travel, or tap **Change** to send it somewhere else.
 - **Share a room as a code.** In the menu, **Share this room as a code** gives you a short text to send, and **Open a friend's code** lets you visit theirs. Visiting doesn't add it to your home unless you save it.
 - **A home that saves itself.** Rooms already in Your home autosave every few seconds and before travel, pause or closing. New rooms, Surprise rooms and friends' rooms stay unsaved until you choose to keep them; leaving an edited unsaved room still asks. In Rooms, choose a **Main bedroom** to open whenever the app starts, or keep **Last room visited**. An unsaved experiment is preserved with a **Resume unsaved room** shortcut if startup takes you to your bedroom.
-- **Your home as a stack.** The menu shows your saved rooms as a stack of little isometric slices, tinted with each room's walls and floor, newest on top. The room you're in glows and sits slightly raised, and rooms joined by doors get a dashed edge and a 🚪. Tap a slice or its name to go there, or tap the dashed slice on top to start a new room.
+- **Your home as a village.** Rooms appear as static dioramas along a winding map in the Rooms tab, with their names underneath and a warm glow around your current room. Tap a diorama to travel, or **New room** to open the templates. Only rooms linked by portal doors have signposted paths. Thumbnails render lazily at 240px using the existing picker context, cache by room id and decor fingerprint, and never include private widget/file surfaces. Saved-room autosave, deletion, unsaved-room Save and the main-bedroom setting keep their existing behavior.
 - **Seasonal decor:**
   - **Halloween:** a jack-o'-lantern, a pumpkin pile, a friendly ghost, a spider web, a bat garland and a candy bowl.
   - **Winter holidays:** a tree, a wreath, stockings, gifts, a snowman and hot cocoa.
@@ -151,7 +151,7 @@ Then open http://localhost:5180.
 - **Several rooms.** Start from one of 29 templates, split into collapsed Rooms and Scenes groups in the menu, or tap **Surprise** for a random themed room. Tap the room name to rename it.
 - **55 cozy moments** to find, such as *Night owl*, *Golden hour*, *Stormy tea*, *Moonlight sonata*, *Cat parliament* and *Snowed in*.
 - **The living room.** The room notices being cared for, and nothing ever dies: neglect only means wilted, sleepy, dusty or dramatic, and one caring session brings everything back. Care runs on real time, so it carries on while the app is closed.
-  - **Coziness:** each room has a gentle coziness score that rolls up all of the care below. A cozy room has golden motes drifting in the air, more visitors and magic moments, and a warm golden glow on its slice in your home stack. It's never shown as a number.
+  - **Coziness:** each room has a gentle coziness score that rolls up all of the care below. A cozy room has golden motes drifting in the air, more visitors and magic moments, and more gentle activity in the room. It's never shown as a number.
   - **Plants:** tap a plant to water it once a day. New plants start as sprouts, grow bushy after a couple of watered days and burst into bloom after five. Skip two days and they droop; one watering perks them up.
   - **Cats:** pet them daily and keep the food bowl filled and they're affectionate (purrs, slow blinks, the odd heart). Ignore them and they get dramatic: more mischief, and they pointedly ignore you for a couple of pets before forgiving you.
   - **Fireplace:** the fire burns down to embers over about three hours, with the light, glow and crackle fading as it goes. Tap a lit fire to toss on a log and it roars back. When it goes out, relighting it is the ritual.
@@ -433,3 +433,22 @@ and check Settings alignment at 390px, actual rain application, saved state,
 permission failure feedback, and no application console errors.
 
 Live weather also requests temperature, measured precipitation and hourly precipitation probability from the same Open-Meteo endpoint. Hourly timestamps use Unix time to handle time zones and DST. `meta.weatherDetails` caches only those readings, not location. Particle density uses measured precipitation normalized to mm/hour, bounded from 0.2–1.3 of the normal weather effect. Forecast probability is displayed separately, so an upcoming chance of rain never becomes invented current rainfall. Turning Live weather off in Settings restores normal weather density; the cloud toolbar button stays removed.
+
+### Village previews
+
+`village.js` owns decor fingerprints, a bounded in-memory thumbnail cache,
+portal-door bridge computation, responsive non-overlapping serpentine layout,
+and the lazy map view. `Renderer.roomThumb({id, ...room.serialize()})` returns a
+static PNG data URL. It reuses the furniture thumbnail renderer and shared voxel
+geometry, with a cheap instanced floor/wall shell and no new WebGL context or
+animation loop. A neutral daylight preview stays cached across dayparts. Titles
+and door links update the map without invalidating unchanged art. Private
+canvases, tool contents and visitors are excluded. Observers and pending idle
+work are disconnected when the sheet closes.
+
+Doors currently link saved home rooms; scene-file visiting is not implemented,
+so this navigator does not add scene travel. The existing door-link controls
+remain below the map. Run `node --test tests/*.test.cjs`, `npm run build`,
+`python3 tests/village-browser.py` and `python3 tests/house-browser.py` to check
+cache invalidation, bridges, layout, lazy rendering, travel, saved-room controls
+and mobile/day/night screenshots.

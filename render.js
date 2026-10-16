@@ -1871,7 +1871,7 @@
     try { this.draw(); return this.r.domElement.toDataURL('image/png'); }
     finally { restore(); }
   };
-  R.thumb = function (it, definition, prepare) {
+  R.ensureThumbs = function () {
     if (!this.thumbR) {
       const c = document.createElement('canvas'); c.width = c.height = 120;
       this.thumbR = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -1882,6 +1882,10 @@
       this.thumbS.add(d, new THREE.AmbientLight(0xffffff, 1.1), new THREE.HemisphereLight(0xffffff, 0x8a7a7a, 0.6));
       this.thumbC = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     }
+  };
+  R.thumb = function (it, definition, prepare) {
+    this.ensureThumbs();
+    this.thumbR.setSize(120,120,false);
     const obj = this.makeObject(Object.assign({ id: -1 }, it), null, true, definition);
     this.thumbS.add(obj);
     obj.rotation.y = (definition || CAT[it.t]).kind === 'wall' ? 0.55 : 0;
@@ -1897,6 +1901,69 @@
     this.thumbS.remove(obj);
     if (definition && obj.userData.glowMat) obj.userData.glowMat.dispose();
     return url;
+  };
+  // A neutral, static snapshot of decor only. Uses the same thumbnail WebGL
+  // context as picker art, with no simulation, private widgets or extra loop.
+  // Pass a serialized room with its saved id: {id, ...room.serialize()}.
+  R.roomThumb = function (room) {
+    if (!this.roomThumbCache) this.roomThumbCache = LRVillage.createCache();
+    return this.roomThumbCache.get(room, data => {
+      this.ensureThumbs();
+      this.thumbR.setSize(240,240,false);
+      const group=new THREE.Group(), n=data.n || 10, walls=wallDefs(n), objects=new Map(), owned=[];
+      // Cheap tiled shell: one instanced draw instead of meshing every wall voxel.
+      const open=!!WALLS[data.wall?.style]?.none,wfn=(WALLS[data.wall?.style] || WALLS.paint).fn,ffn=(FLOORS[data.floor?.style] || FLOORS.oak).fn;
+      const wallColor=(WALL_COLORS[data.wall?.color] || WALL_COLORS[0])[1];
+      const geometry=new THREE.BoxGeometry(1,1,1),material=new THREE.MeshLambertMaterial(),tiles=new THREE.InstancedMesh(geometry,material,n*n+(open?0:n*HC*2));
+      owned.push(tiles,geometry,material);const dummy=new THREE.Object3D();let index=0;
+      const tile=(x,y,z,w,h,d,color)=>{dummy.position.set(x,y,z);dummy.scale.set(w,h,d);dummy.updateMatrix();tiles.setMatrixAt(index,dummy.matrix);tiles.setColorAt(index++,new THREE.Color(color));};
+      for(let z=0;z<n;z++)for(let x=0;x<n;x++)tile(x+.5,-.22,z+.5,1,.44,1,ffn(x*V+68,z*V+68));
+      if(!open)for(let y=0;y<HC;y++)for(let u=0;u<n;u++){
+        tile(u+.5,y+.5,-.22,1,1,.44,wfn(wallColor,u*V+68,y*V+4));
+        tile(-.22,y+.5,n-u-.5,.44,1,1,wfn(wallColor,u*V+68,y*V+4));
+      }
+      group.add(tiles);
+      const preview=Object.create(this);preview.env={phase:'day',rain:false,view:data.view || 'city'};preview.glowMat=this.glowMat.clone();preview.glowMat.color.setScalar(1);owned.push(preview.glowMat);
+      const previousView=LR.viewNow;
+      try {
+        // Window builders use this legacy global. Restore it before returning so
+        // another room's preview cannot alter the live room or poison shared geometry.
+        LR.viewNow=preview.env.view;
+        for(const it of data.items || []){
+          const C=CAT[it.t];if(!C || it.visitor || it.t==='guestnote' || (C.kind==='wall' && (open || it.k>1)))continue;
+          const obj=preview.makeObject(it,null,true);objects.set(it.id,obj);group.add(obj);
+          if(obj.userData.glowMat)owned.push(obj.userData.glowMat);
+          if(obj.userData.hands)for(const hand of obj.userData.hands)owned.push(hand.geometry,hand.material);
+        }
+        for(const it of data.items || []){
+          const obj=objects.get(it.id);if(!obj)continue;const C=CAT[it.t];
+          if(C.kind==='wall'){
+            const W=walls[it.k];if(!W){obj.visible=false;continue;}obj.position.set(W.o[0]+W.a[0]*(it.u+C.size[0]/2),it.e || 0,W.o[2]+W.a[2]*(it.u+C.size[0]/2));obj.rotation.y=W.th;
+          } else if(it.p){
+            const owner=(data.items || []).find(p=>p.id===it.p),parent=objects.get(it.p);
+            if(!owner || !parent || parent===obj) {obj.visible=false;continue;}
+            const ancestors=new Set([it.id]);let ancestor=owner,cycle=false;
+            while(ancestor){if(ancestors.has(ancestor.id)){cycle=true;break;}ancestors.add(ancestor.id);ancestor=(data.items || []).find(i=>i.id===ancestor.p);}
+            if(cycle){obj.visible=false;continue;}
+            const OC=CAT[owner.t],[w,d]=OC.size,[cw,cd]=fp(it);
+            obj.position.set((it.lx || 0)+cw/2-w/2,(topOf(owner) || 0)*S,OC.kind==='wall'?.5:(it.lz || 0)+cd/2-d/2);obj.rotation.y=(it.r || 0)*Math.PI/2;parent.add(obj);
+          } else {
+            const [w,d]=fp(it);obj.position.set((it.x || 0)+w/2,0,(it.z || 0)+d/2);obj.rotation.y=(it.r || 0)*Math.PI/2;
+            if(it.tipped){obj.rotation.z=Math.PI/2*.94;obj.position.y=.3;}
+          }
+        }
+        this.thumbS.add(group);group.updateMatrixWorld(true);
+        const box=new THREE.Box3().setFromObject(group),center=box.getCenter(new THREE.Vector3()),cam=this.thumbC;
+        cam.position.copy(center).add(new THREE.Vector3(12,10,12));cam.lookAt(center);cam.updateMatrixWorld(true);
+        // Fit all eight corners in camera space, including tall wall furniture.
+        const inv=cam.matrixWorldInverse,projected=new THREE.Box3();
+        for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])projected.expandByPoint(new THREE.Vector3(x,y,z).applyMatrix4(inv));
+        const radius=Math.max(projected.max.x-projected.min.x,projected.max.y-projected.min.y)*.54;
+        cam.left=-radius;cam.right=radius;cam.top=radius;cam.bottom=-radius;cam.updateProjectionMatrix();
+        this.thumbR.render(this.thumbS,cam);
+        return this.thumbR.domElement.toDataURL('image/png');
+      } finally {LR.viewNow=previousView;this.thumbS.remove(group);for(const resource of owned)resource.dispose();}
+    });
   };
   R.dropThumbs = function () {
     if (!this.thumbR) return;

@@ -106,6 +106,7 @@ function startLofiRooms() {
   applyMood();
   let moodsPlayed = new Set();
   const room = new LR.Room();
+  let villageView = null;
   function loadRoom(id) {
     const d = store.get('lr.room.' + id, null);
     if (d && room.load(d)) { meta.current = id; return true; }
@@ -436,7 +437,7 @@ function startLofiRooms() {
     if (undo.length > 40) undo.shift();
   }
   function changed() {
-    view.sync(room);
+    view.sync(room); villageView?.refresh();
     dirty = true;
     checkRoomMoments();
     updateSaveChip();
@@ -1711,6 +1712,7 @@ function startLofiRooms() {
   // Rooms list & menu
   const sheet = $('#sheet');
   function closeSheets() {
+    villageView?.destroy(); villageView=null;
     roomToolsUI.close();
     const open = sheet.classList.contains('open');
     sheet.classList.remove('open'); $('#sheetBody').dataset.merchant = '';
@@ -2248,73 +2250,18 @@ function startLofiRooms() {
     if (id === meta.current) { loadRoom(rooms[0].id); baseSig = sig(); undo.length = 0; changed(); save(); updateHeader(); }
     saveIndex(); saveMeta(); renderMenu();
   }
-  // Your home as a stack of isometric slices, one per saved room, newest on top (pure CSS 3D: the
-  // tilt is on .iso, each slice sits at translateZ(i * pitch)). Names live in flat labels beside it.
-  let stackSeen = null;   // which rooms were already shown, so only new ones drop in
-  function roomStack(body) {
-    const cur = meta.current, list = rooms.slice().sort((a, b) => a.id - b.id);   // ids are creation times
-    const data = id => (id === cur ? room.serialize() : store.get('lr.room.' + id, null));
-    const unsaved = !isSaved();
-    const ids = new Set(rooms.map(r => r.id));
-    const doorsOf = d => (d && Array.isArray(d.items) ? d.items.filter(i => CAT[i.t] && CAT[i.t].tap === 'portal' && ids.has(i.link)) : []);
-    const linked = new Set();
-    list.forEach(r => doorsOf(data(r.id)).forEach(dd => { if (dd.link !== r.id) { linked.add(r.id); linked.add(dd.link); } }));
-    const slices = list.map(r => ({ r, d: data(r.id) }));
-    if (unsaved) slices.push({ r: { id: cur, name: room.name, n: room.items.length }, d: room.serialize(), draft: true });
-    const n = slices.length + 1;   // + the ghost slice on top
-    const compact = n > 7, pitch = n > 12 ? 28 : n > 7 ? 34 : 50;
-    const k = compact ? 0.82 : 1;   // a tall stack gets slimmer slices so names keep their room
-    const rise = k * pitch * Math.sin(55 * Math.PI / 180), tile = 92 * k, tileH = tile * Math.SQRT2 * Math.cos(55 * Math.PI / 180);
-    const base = 18 + tileH / 2 + 12;                                       // from the stage bottom to the bottom slice's centre
-    const H = Math.ceil(base + (n - 1) * rise + tileH / 2 + 22);
-    const wrap = document.createElement('div'); wrap.className = 'stackwrap' + (compact ? ' compact' : ''); wrap.style.height = H + 'px';
-    const float = document.createElement('div'); float.className = 'stackfloat';
-    const stage = document.createElement('div'); stage.className = 'isostage';
-    const iso = document.createElement('div'); iso.className = 'iso'; iso.style.bottom = base + 'px'; if (k !== 1) iso.style.transform = `scale(${k}) rotateX(55deg) rotateZ(45deg)`;
-    const labels = document.createElement('div'); labels.className = 'stacklabels';
-    const fresh = stackSeen ? slices.filter(x => !stackSeen.has(x.r.id)).map(x => x.r.id) : [];
-    const go = (r, draft) => () => { if (draft || r.id === cur) { closeSheets(); return; } closeSheets(); switchRoom(r.id); };
-    slices.forEach(({ r, d, draft }, i) => {
-      const here = r.id === cur, link = linked.has(r.id);
-      const s = document.createElement('button');
-      s.className = 'slice' + (here ? ' here' : '') + (link ? ' linked' : '') + (draft ? ' draft' : '') + (fresh.includes(r.id) ? ' drop' : '');
-      s.style.setProperty('--z', (i * pitch + (here ? 8 : 0)) + 'px');
-      s.style.zIndex = i + 1;
-      if (d) {
-        s.style.setProperty('--a', LR.hex(WALLS[d.wall.style] ? WALLS[d.wall.style].fn((WALL_COLORS[d.wall.color] || WALL_COLORS[0])[1], 70, 30) : 0xf2e6d0));
-        s.style.setProperty('--b', LR.hex(FLOORS[d.floor.style] ? FLOORS[d.floor.style].fn(70, 70) : 0xd8b48a));
-      }
-      s.setAttribute('aria-label', `${r.name}${here ? ', you are here' : ''}`);
-      if (care && d) { const cz = care.cozyOf(r.id, d.items); s.style.setProperty('--cozy', Math.max(0, (cz - 0.55) / 0.45).toFixed(2)); }
-      s.onclick = go(r, draft);
-      iso.appendChild(s);
-      const L = document.createElement('div');
-      L.className = 'slabel' + (here ? ' here' : '') + (compact ? ' compact' : '');
-      L.style.top = (H - base - i * rise) + 'px';
-      const count = `${r.n} thing${r.n === 1 ? '' : 's'}`;
-      L.innerHTML = `<button class="sname"><b>${link ? '<i class="door" title="Linked by a door">🚪</i>' : ''}${r.name.replace(/</g, '&lt;')}</b>${compact ? `<span>${count}</span>` : `<span>${count}${draft ? ' · not saved' : ''}</span>`}</button>${here && !compact ? '<em>you are here</em>' : ''}`;
-      L.querySelector('.sname').onclick = go(r, draft);
-      if (draft) {
-        const sv = document.createElement('button'); sv.className = 'chipbtn mini'; sv.textContent = 'Save';
-        sv.onclick = () => { commit(); renderMenu(); }; L.appendChild(sv);
-      } else if (rooms.length > 1) {
-        const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.setAttribute('aria-label', `Delete ${r.name}`);
-        x.onclick = ev => { ev.stopPropagation(); deleteRoom(r.id); };
-        L.appendChild(x);
-      }
-      labels.appendChild(L);
-    });
-    // the ghost slice: tap to start a new room
-    const g = document.createElement('button'); g.className = 'slice ghost'; g.style.setProperty('--z', ((n - 1) * pitch) + 'px'); g.style.zIndex = n;
-    g.setAttribute('aria-label', 'Start a new room');
-    const newFlow = () => { const sec = [...$('#sheetBody').querySelectorAll('h2')].find(e => /Start a new room/.test(e.textContent)); if (sec) { sec.scrollIntoView({ behavior: view.reducedMotion ? 'auto' : 'smooth', block: 'start' }); sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash'); } Sound.blip(); };
-    g.onclick = newFlow; iso.appendChild(g);
-    const GL = document.createElement('div'); GL.className = 'slabel ghostlabel'; GL.style.top = (H - base - (n - 1) * rise) + 'px';
-    GL.innerHTML = '<button class="sname"><b>＋ New room</b></button>'; GL.querySelector('.sname').onclick = newFlow; labels.appendChild(GL);
-    stage.appendChild(iso); float.append(stage, labels); wrap.appendChild(float); body.appendChild(wrap);
-    stackSeen = new Set(slices.map(x => x.r.id));
+  function roomVillage(parent) {
+    const newFlow=()=>{const sec=[...$('#sheetBody').querySelectorAll('h2')].find(e=>/Start a new room/.test(e.textContent));if(sec){sec.scrollIntoView({behavior:view.reducedMotion?'auto':'smooth',block:'start'});sec.classList.remove('flash');void sec.offsetWidth;sec.classList.add('flash');}Sound.blip();};
+    villageView=LRVillage.mount({parent,CAT,current:()=>meta.current,
+      rooms:()=>{
+        const list=rooms.slice().sort((a,b)=>a.id-b.id).map(r=>({...((r.id===meta.current?room.serialize():store.get('lr.room.'+r.id,null)) || {items:[]}),id:r.id,name:r.id===meta.current?room.name:r.name}));
+        if(!isSaved())list.push({...room.serialize(),id:meta.current,draft:true});
+        return list;
+      },thumb:d=>view.roomThumb(d),travel:r=>{closeSheets();if(r.id!==meta.current)switchRoom(r.id);},
+      save:()=>{commit();renderMenu();},remove:deleteRoom,newRoom:newFlow});
   }
   function renderMenu() {
+    villageView?.destroy(); villageView=null;
     home.close(false);
     roomToolsUI.close();
     saveIndex();
@@ -2332,7 +2279,7 @@ function startLofiRooms() {
     if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'));
     target = sections.Rooms;
     h('h2', '', `Your home <small>${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
-    roomStack(target);
+    roomVillage(target);
     h('p','muted small','Rooms in your home save automatically. New rooms ask before you leave.');
     const bedroom=h('label','settings-phase');bedroom.textContent='Main bedroom';
     const bedroomSelect=document.createElement('select');bedroomSelect.setAttribute('aria-label','Main bedroom');

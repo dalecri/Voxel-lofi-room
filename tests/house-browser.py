@@ -30,10 +30,10 @@ with sync_playwright() as p:
  menu('Rooms');page.get_by_role('combobox',name='Main bedroom',exact=True).select_option('101');esc()
  page.evaluate('__lr.room.name="AUTO_SAVED_LIVING";__lr.changed()');page.wait_for_function('JSON.parse(localStorage.getItem("lr.room.102")).name==="AUTO_SAVED_LIVING"')
  assert page.evaluate('JSON.parse(localStorage.getItem("lr.rooms")).find(r=>r.id===102).name')=='AUTO_SAVED_LIVING'
- page.evaluate('__lr.room.name="LAST_SECOND_LIVING";__lr.changed()');menu('Rooms');page.locator('.slabel').filter(has_text='Bedroom').locator('.sname').click();assert page.evaluate('__lr.meta.current')==101;assert page.locator('#lvSave').count()==0
+ page.evaluate('__lr.room.name="LAST_SECOND_LIVING";__lr.changed()');menu('Rooms');page.locator('.village-room').filter(has_text='Bedroom').locator('.village-visit').click();assert page.evaluate('__lr.meta.current')==101;assert page.locator('#lvSave').count()==0
  assert page.evaluate('JSON.parse(localStorage.getItem("lr.room.102")).name')=='LAST_SECOND_LIVING'
  # Saved-room startup always opens the selected bedroom, not the last visited room.
- menu('Rooms');page.locator('.slabel').filter(has_text='LAST_SECOND_LIVING').locator('.sname').click();assert page.evaluate('__lr.meta.current')==102
+ menu('Rooms');page.locator('.village-room').filter(has_text='LAST_SECOND_LIVING').locator('.village-visit').click();assert page.evaluate('__lr.meta.current')==102
  page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==101
  # Radio cards work for old stations without an icon and newly added stations.
  menu('Sound');assert page.locator('.station-card').count()==2
