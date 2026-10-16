@@ -2342,12 +2342,11 @@ function startLofiRooms() {
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     todayUI.mount(target,{beforeTasks:panel=>{
-      const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
+      const { D, name, hint } = dailyInfo();
       const badge=h('details','daily-notice'+(D.done?' got':''),null,panel);
       const summary=h('summary','daily-badge',null,badge);
       h('span','daily-badge-dot',D.done?'✓':'✦',summary).setAttribute('aria-hidden','true');
       h('span','',D.done?'Daily moment · done':'Daily moment',summary);
-      if(streak)h('small','',`🔥 ${streak} day streak`,summary);
       const detail=h('div','daily-notice-copy',null,badge);
       h('b','',esc(name),detail);
       h('p','muted small',D.done?'Done for today. A new moment tomorrow.':esc(hint),detail);
@@ -2423,6 +2422,8 @@ function startLofiRooms() {
     target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }, true));
     target = sections.Journal;
     h('h2', '', 'Room journal');
+    const streak=store.get('lr.dailyStreak',{n:0}).n;
+    h('p','muted journal-streak',streak?`🔥 Daily moment · ${streak} day streak`:'Daily moment · A new streak begins with one cozy moment.');
     const feeds = h('div', 'rowbtns');
     ['moments', 'cats'].forEach(feed => {
       const b = document.createElement('button'); b.className = 'chipbtn'; b.id = feed === 'cats' ? 'bCatDiary' : 'bMomentDiary';
