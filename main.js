@@ -176,6 +176,7 @@ function startLofiRooms() {
   const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
     editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
     onPhotos: id => cozy.photoPicker(id),
+    portrait:reaction=>companionPortrait('idle',reaction),portraitKey:()=>JSON.stringify(wardrobe.slots),music:()=>!!meta.music,toggleMusic:()=>setMusic(!meta.music),
     letters, word: () => { widgets.refresh(['minifridge']); return widgets.data('fridge-note'); }, sound: Sound,
     notice: text => toast(`<span>${text}</span>`, 3200), onBrew: id => {
       const it=room.get(id); if (it) { if (care) care.tap(it,id,true); view.burst(id,'steam',3.5); }
@@ -208,13 +209,16 @@ function startLofiRooms() {
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
   const todayTasks=LRToday.create({store,earn:(source,id)=>shop.earn(source,id),onChecked:t=>remember('tasks',{id:t.id})});
   const taskPortraits=new Map();
-  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
-    portraitKey:()=>JSON.stringify(wardrobe.slots),
-    portrait:pose=>{const key=JSON.stringify([wardrobe.slots,pose]);if(!taskPortraits.has(key)){
-      const src=view.thumb({t:'task-journey:'+key,c:0,on:true},LRCompanion.definitionForSlots(wardrobe.slots,true),o=>{
-        const pivot=new THREE.Group();o.add(pivot);pivot.add(o.userData.inner);LRCompanion.attachRig(o);LRCompanion.applyPose(o,pivot,{pose,mode:'idle',elapsed:0,tilt:0,weight:0,blink:pose==='sleep',pageTurn:0},true);
+  function companionPortrait(pose='idle',reaction='calm'){
+    const key=JSON.stringify([wardrobe.slots,pose,reaction]);if(!taskPortraits.has(key)){
+      const src=view.thumb({t:'companion-portrait:'+key,c:0,on:true},LRCompanion.definitionForSlots(wardrobe.slots,true),o=>{
+        const pivot=new THREE.Group();o.add(pivot);pivot.add(o.userData.inner);LRCompanion.attachRig(o);LRCompanion.applyPose(o,pivot,{pose,mode:'idle',elapsed:0,tilt:reaction==='watching'?.12:0,weight:reaction==='happy'?.08:0,blink:pose==='sleep',pageTurn:0},true);
+        if(reaction==='happy'){o.userData.parts.leftarm.rotation.z=-.6;o.userData.parts.rightarm.rotation.z=.6;}
       },180);if(taskPortraits.size>=12)taskPortraits.delete(taskPortraits.keys().next().value);taskPortraits.set(key,src);
-    }return taskPortraits.get(key);},
+    }return taskPortraits.get(key);
+  }
+  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
+    portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
     celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
     settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();openSheet();},
     hidden:()=>filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
@@ -238,7 +242,7 @@ function startLofiRooms() {
     }
   }
 
-  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','journal','settings'].includes(p.id));
+  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','journal','settings','breathing'].includes(p.id));
   // A device-private destination ID, resolved from the same directory as Control Centre.
   const APP_SHORTCUT_KEY='lr.appShortcut';
   const shortcutApp=()=>{const id=store.get(APP_SHORTCUT_KEY,null);return controlApps().find(p=>p.id===id);};

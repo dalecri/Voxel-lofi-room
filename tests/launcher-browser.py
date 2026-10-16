@@ -23,7 +23,7 @@ with sync_playwright() as p:
  view=page.locator('#homeView');body=page.locator('#sheetBody')
  def launch(id):page.click('#bHome');view.locator('[data-app="'+id+'"]').click();assert not page.evaluate('__lr.home.active')
  launch('typewriter');page.locator('#letterBody').fill('PRIVATE_HOME_TOOL_LETTER');page.click('#letterClose')
- expected={'mailbox':'Letters to future you','groceries':'On the fridge','ideas':'The idea jar','tea':'A little pot of tea','savings':'A little savings jar','sketch':'A little sketchbook','french':'A little French','whiteboard':'A little whiteboard','focus':'A little time to focus','breathing':'Ten minutes in your room','wardrobe':'A little wardrobe','tst':'TwoStoryTails'}
+ expected={'mailbox':'Letters to future you','groceries':'On the fridge','ideas':'The idea jar','tea':'Tea','savings':'A little savings jar','sketch':'A little sketchbook','french':'A little French','whiteboard':'A little whiteboard','focus':'A little time to focus','wardrobe':'A little wardrobe','tst':'TwoStoryTails'}
  for id,title in expected.items():
   launch(id);assert title in body.inner_text(),(id,body.inner_text())
   if id=='ideas':

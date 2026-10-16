@@ -89,12 +89,15 @@
     }
     let next=0;
     function refresh(){for(const m of mounts){if(!m.panel.isConnected)mounts.delete(m);else m.refresh();}
-      const ctx=context(),rows=timers({tea:ctx.tea,focus:ctx.focus,now:+(ctx.now || new Date())});badges.hidden=hidden()||!rows.length;document.body.classList.toggle('has-timers',!badges.hidden);
+      const ctx=context(),rows=timers({tea:ctx.tea,focus:ctx.focus,now:+(ctx.now || new Date())});badges.hidden=hidden()||!rows.length;document.body.classList.toggle('has-timers',!badges.hidden);dock();
       const keys=rows.map(r=>r.id).join();if(badges.dataset.keys!==keys){badges.dataset.keys=keys;badges.replaceChildren();for(const row of rows){const b=el('button','timer-badge');b.type='button';b.dataset.timer=row.id;b.append(el('span','timer-icon',row.icon),el('b'),el('span','timer-value'));badges.appendChild(b);}}
       for(const row of rows){const b=[...badges.children].find(b=>b.dataset.timer===row.id);b.querySelector('b').textContent=row.title;b.querySelector('.timer-value').textContent=row.value;b.setAttribute('aria-label',row.title+' · '+row.value+' · Open timer');b.onclick=()=>openTimer(row);}
     }
-    function viewport(){const v=window.visualViewport;badges.style.setProperty('--timer-keyboard',Math.max(0,v?innerHeight-v.height-v.offsetTop:0)+'px');}
-    window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);viewport();document.addEventListener('visibilitychange',refresh);
+    // Keep the glance dock on the left, above whichever bottom controls are visible.
+    function dock(){if(badges.hidden)return;let bottom=90;for(const node of document.querySelectorAll('.explorebar,.tools,#tray,#catbar')){const style=getComputedStyle(node);if(style.display==='none'||style.visibility==='hidden'||Number(style.opacity)<.1)continue;const r=node.getBoundingClientRect();if(r.width&&r.height&&r.top<innerHeight&&r.right>14&&r.left<innerWidth-90)bottom=Math.max(bottom,innerHeight-r.top+12);}badges.style.setProperty('--timer-dock',bottom+'px');}
+    function viewport(){const v=window.visualViewport;badges.style.setProperty('--timer-keyboard',Math.max(0,v?innerHeight-v.height-v.offsetTop:0)+'px');dock();}
+    window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);viewport();document.addEventListener('visibilitychange',refresh);window.addEventListener('resize',viewport);
+    const dockResize=new ResizeObserver(dock);document.querySelectorAll('.explorebar,.tools,#tray,#catbar').forEach(n=>dockResize.observe(n));
     return {mount,refresh,badges,tick(time){if(time<next)return;next=time+1000;refresh();}};
   }
   const api={KEY,SKY,STARTERS,ICONS,iconFor,journey,weather,countdown,timers,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRToday=api;

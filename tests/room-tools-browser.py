@@ -60,12 +60,12 @@ with sync_playwright() as p:
  print('PASS: idea shake avoids repeats; exact-cent savings deposits fill coin levels and never charge Fireflies',flush=True)
  # Timer persists an absolute deadline, preserves garden tea, and completes once.
  page.evaluate('''() => {__lr.meta.herbs=1;tapTool('kettle');window.__teaChimes=0;const f=__lr.Sound.ritualChime;__lr.Sound.ritualChime=function(){__teaChimes++;return f.call(this)}}''')
- page.get_by_role('combobox',name='Tea steep',exact=True).select_option('2');page.get_by_role('button',name='Brew tea',exact=True).click();assert page.evaluate('__lr.meta.herbs')==0
+ page.get_by_role('button',name='Green tea · 2 min',exact=True).click();page.get_by_role('button',name='Brew tea',exact=True).click();assert page.evaluate('__lr.meta.herbs')==0
  assert page.evaluate('__lr.meta.tea.until>Date.now()');page.evaluate('window.__clock+=61000;__lr.roomToolsUI.tick(true)');assert '0:59' in page.locator('.roomtool-timer').inner_text()
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
  # Reload resets our test clock, but the saved absolute end time remains identical.
  page.evaluate('''() => {window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);window.__clock=__lr.roomTools.tea.endAt+1;window.__teaChimes=0;const f=__lr.Sound.ritualChime;__lr.Sound.ritualChime=function(){__teaChimes++;return f.call(this)};__lr.roomToolsUI.tick(true);__lr.roomToolsUI.tick(true);tapTool('kettle')}''')
- assert page.evaluate('__teaChimes')==1;assert 'Your tea is ready' in page.locator('.roomtool-timer').inner_text();page.get_by_role('button',name='Enjoy the tea',exact=True).click();page.keyboard.press('Escape')
+ assert page.evaluate('__teaChimes')==1;assert 'Your tea is ready' in page.locator('.tea-note').inner_text();page.get_by_role('button',name='Enjoy the tea',exact=True).click();page.keyboard.press('Escape')
  print('PASS: tea survives reload/background elapsed time, preserves herb brewing and chimes exactly once',flush=True)
  # Real pointer strokes save normalized coordinates and redraw at mobile/desktop sizes.
  page.evaluate("tapTool('sketchbook')");canvas=page.locator('.roomtool-sketch');box=canvas.bounding_box()

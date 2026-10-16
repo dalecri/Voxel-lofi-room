@@ -8,6 +8,19 @@
     if(!Number.isSafeInteger(n)||n<=0)throw Error('Use a positive amount.');return n;
   }
   const amount=n=>(n/100).toFixed(2);
+  const TEA_PRESETS=[{name:'Green tea',minutes:2},{name:'Black tea',minutes:3},{name:'Herbal',minutes:5}];
+  // Clockwise from twelve o'clock: 1 at 36 degrees, 10 at the top.
+  function dialMinutes(x,y){const turn=(Math.atan2(x,-y)+Math.PI*2)%(Math.PI*2);return Math.round(turn/(Math.PI*2)*10)||10;}
+  function teaDisplay(t,remaining,selected=3){
+    const state=t?.status || 'idle',minutes=state==='brewing'||state==='ready'?t.minutes:selected;
+    return {state,minutes,preset:TEA_PRESETS.find(p=>p.minutes===minutes)?.name || `${minutes} min steep`,
+      progress:state==='ready'?1:state==='brewing'?Math.max(0,Math.min(1,1-remaining/(t.minutes*60000))):0,
+      label:state==='brewing'?'Cancel steep':state==='ready'?'Enjoy the tea':'Brew tea',
+      mascot:state==='ready'?'happy':state==='brewing'?'watching':'calm',
+      readout:state==='ready'?'Ready':state==='brewing'?`${Math.floor(Math.ceil(remaining/1000)/60)}:${String(Math.ceil(remaining/1000)%60).padStart(2,'0')}`:`${minutes} MIN${minutes===1?'':'S'}`,
+      note:state==='ready'?'Your tea is ready.':state==='brewing'?'A quiet moment to steep.':'Make a little time for tea.'};
+  }
+
   function create({store,now=()=>new Date(),random=Math.random,onBrew=()=>{}}){
     const old=store.get(KEY,{})||{},copy=a=>JSON.parse(JSON.stringify(a));
     const state={v:1,next:Number.isSafeInteger(old.next)&&old.next>0?old.next:1,
@@ -54,8 +67,9 @@
       get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get strokes(){return copy(state.strokes);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
-  function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{}}){
+  function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{}}){
     let active=null,anchor=null,resize=null,liveStroke=null,canvas=null,status=null,frameTime=0;
+    let teaMinutes=3;
     const badges=new Map(),button=(parent,label,fn,cls='chipbtn')=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>run(fn);parent.appendChild(b);return b;};
     function run(fn){try{const result=fn();if(status)status.textContent='';return result;}catch(e){if(status)status.textContent=e.message || 'Could not save on this device.';return false;}}
     function field(parent,label,type='text',value=''){
@@ -117,17 +131,45 @@
       const shake=button(root,'Shake for an idea',()=>{const idea=model.shake();if(!idea)return;result.textContent=idea.text;const v=renderer();if(anchor&&v.objs.has(anchor)){v.excite(anchor);v.burst(anchor,'magic',.8);}sound.rustle();});shake.disabled=!model.state.ideas.length;
       for(const idea of model.state.ideas){const row=document.createElement('div');row.className='roomtool-card';text(row,idea.text);removeButton(row,()=>{model.remove('ideas',idea.id);ideas();});root.appendChild(row);}
     });}
-    function tea(){model.poll(false);shell('A little pot of tea','A quiet real-time steep. You can close this sheet and leave the room.',root=>{
-      const timer=text(root,'','roomtool-timer');timer.dataset.teaClock='true';timer.setAttribute('role','timer');
-      const select=document.createElement('select');select.setAttribute('aria-label','Tea steep');for(const [name,n] of [['Green tea · 2 minutes',2],['Black tea · 3 minutes',3],['Herbal tea · 5 minutes',5]]){const o=document.createElement('option');o.textContent=name;o.value=n;select.appendChild(o);}select.value='3';root.appendChild(select);
-      const t=model.state.tea,running=t?.status==='brewing';select.disabled=running;
-      const start=button(root,'Brew tea',()=>{model.brew(Number(select.value));onBrew(anchor);tea();});start.disabled=running;
-      if(running)button(root,'Cancel steep',()=>{model.cancelTea();tea();});
-      if(t?.status==='ready')button(root,'Enjoy the tea',()=>{model.enjoyTea();sound.sip();tea();});
+    function tea(){model.poll(false);const saved=model.tea;if(saved?.minutes>=1&&saved.minutes<=10)teaMinutes=saved.minutes;shell('Tea','A quiet real-time steep. You can close this sheet and leave the room.',root=>{
+      root.classList.add('tea-focus');const heading=root.parentElement.querySelector(':scope > h2'),description=root.previousElementSibling;if(description?.matches('p.muted'))description.remove();
+      const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);return n;};
+      const top=document.createElement('div');top.className='tea-top';root.appendChild(top);
+      const tune=button(top,'♫ Tune in',()=>{toggleMusic();updateClock();},'tea-pill');tune.dataset.teaMusic='true';
+      const preset=text(top,'','tea-pill tea-current');preset.dataset.teaPreset='true';if(heading){heading.classList.add('tea-heading');root.appendChild(heading);}
+      const dial=document.createElement('div');dial.className='tea-dial';root.appendChild(dial);
+      const ring=svg('svg',{viewBox:'0 0 320 320','aria-hidden':'true'}),radius=110,circumference=2*Math.PI*radius;
+      ring.appendChild(svg('circle',{cx:160,cy:160,r:radius,class:'tea-dial-track'}));
+      const arc=svg('circle',{cx:160,cy:160,r:radius,class:'tea-dial-progress',transform:'rotate(-90 160 160)','stroke-dasharray':circumference,'stroke-dashoffset':circumference});arc.dataset.teaArc='true';ring.appendChild(arc);
+      for(let i=0;i<50;i++){const a=i/50*Math.PI*2,r=i%5===0?144:148;ring.appendChild(svg('line',{x1:160+Math.sin(a)*r,y1:160-Math.cos(a)*r,x2:160+Math.sin(a)*153,y2:160-Math.cos(a)*153,class:i%5===0?'tea-tick major':'tea-tick'}));}
+      for(let i=1;i<=10;i++){const a=i/10*Math.PI*2,n=svg('text',{x:160+Math.sin(a)*130,y:160-Math.cos(a)*130,'text-anchor':'middle','dominant-baseline':'central',class:'tea-minute'});n.textContent=i;n.dataset.minute=i;ring.appendChild(n);}
+      const hand=svg('circle',{r:7,class:'tea-dial-handle'});hand.dataset.teaHandle='true';ring.appendChild(hand);dial.appendChild(ring);
+      const timer=text(dial,'','roomtool-timer tea-readout');timer.dataset.teaClock='true';timer.setAttribute('role','timer');
+      const slider=document.createElement('input');slider.type='range';slider.min='1';slider.max='10';slider.step='1';slider.className='tea-dial-input';slider.setAttribute('aria-label','Tea steep length');dial.appendChild(slider);
+      const select=n=>{teaMinutes=Math.max(1,Math.min(10,Math.round(n)));updateClock();};slider.oninput=()=>select(Number(slider.value));
+      let pointer=null;const point=e=>{const b=dial.getBoundingClientRect();select(dialMinutes(e.clientX-b.left-b.width/2,e.clientY-b.top-b.height/2));};
+      dial.onpointerdown=e=>{if(slider.disabled||e.button!==0)return;e.preventDefault();pointer=e.pointerId;slider.focus({preventScroll:true});dial.setPointerCapture(pointer);point(e);};dial.onpointermove=e=>{if(e.pointerId===pointer)point(e);};dial.onpointerup=dial.onpointercancel=()=>{pointer=null;};
+      const presets=document.createElement('div');presets.className='tea-presets';root.appendChild(presets);for(const p of TEA_PRESETS){const b=button(presets,`${p.name} · ${p.minutes} min`,()=>select(p.minutes),'tea-pill');b.dataset.teaMinutes=p.minutes;}
+      const note=text(root,'','tea-note');note.dataset.teaNote='true';
+      const actions=document.createElement('div');actions.className='tea-actions';root.appendChild(actions);
+      const start=button(actions,'',()=>{const t=model.tea;if(t?.status==='brewing')model.cancelTea();else if(t?.status==='ready'){model.enjoyTea();sound.sip();}else{model.brew(teaMinutes);onBrew(anchor);}updateClock();},'tea-start');start.dataset.teaAction='true';
+      const steam=document.createElement('div');steam.className='tea-steam';steam.setAttribute('aria-hidden','true');for(let i=0;i<3;i++)steam.appendChild(document.createElement('i'));dial.appendChild(steam);
+      const mascot=document.createElement('div');mascot.className='tea-mascot';const image=document.createElement('img');image.alt='Your little roommate';image.width=100;image.height=100;mascot.appendChild(image);actions.appendChild(mascot);text(root,'Your tea keeps steeping with this sheet closed.','tea-footnote muted small');
       updateClock();
     });}
     function updateClock(){if(!active?.isConnected)return;const el=active.querySelector('[data-tea-clock]');if(!el)return;
-      const t=model.tea;if(!t||t.status==='done')el.textContent='A moment to steep.';else if(t.status==='ready')el.textContent='Your tea is ready.';else {const s=Math.ceil(model.remaining/1000);el.textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} to steep`;}
+      const d=teaDisplay(model.tea,model.remaining,teaMinutes),running=d.state==='brewing',locked=running||d.state==='ready';active.dataset.teaState=d.state;
+      el.textContent=d.readout;el.setAttribute('aria-label',running?d.readout+' remaining':d.state==='ready'?d.note:d.readout);
+      active.querySelector('[data-tea-preset]').textContent=d.preset;
+      const slider=active.querySelector('.tea-dial-input');slider.value=Math.min(10,d.minutes);slider.disabled=locked;slider.setAttribute('aria-valuetext',`${d.minutes} minutes`);
+      const angle=d.minutes/10*Math.PI*2,hand=active.querySelector('[data-tea-handle]');hand.setAttribute('cx',160+Math.sin(angle)*110);hand.setAttribute('cy',160-Math.cos(angle)*110);hand.style.display=locked?'none':'';
+      const arc=active.querySelector('[data-tea-arc]');arc.setAttribute('stroke-dashoffset',2*Math.PI*110*(1-d.progress));arc.dataset.progress=d.progress;
+      active.querySelectorAll('[data-tea-minutes]').forEach(b=>{b.disabled=locked;b.setAttribute('aria-pressed',String(Number(b.dataset.teaMinutes)===d.minutes));});
+      active.querySelectorAll('.tea-minute').forEach(n=>n.classList.toggle('selected',Number(n.dataset.minute)===d.minutes));
+      const action=active.querySelector('[data-tea-action]');action.setAttribute('aria-label',d.label);action.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">'+(running?'<rect x="6" y="6" width="12" height="12" rx="2"/>':d.state==='ready'?'<path d="M5 11h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM16 12h2a2 2 0 0 1 0 4h-2M8 4v3M12 4v3"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg><span>'+d.label+'</span>';
+      active.querySelector('[data-tea-note]').textContent=d.note;const tune=active.querySelector('[data-tea-music]');tune.setAttribute('aria-pressed',String(music()));
+      const mascot=active.querySelector('.tea-mascot'),image=mascot.querySelector('img'),key=portraitKey()+':'+d.mascot;mascot.dataset.state=d.mascot;
+      if(mascot.dataset.key!==key){mascot.dataset.key=key;const src=portrait(d.mascot);image.hidden=!src;if(src)image.src=src;image.alt=d.mascot==='happy'?'Your little roommate is happy the tea is ready':d.mascot==='watching'?'Your little roommate watches the tea steep':'Your little roommate keeps you company';}
     }
     function savings(){shell('A little savings jar','A private record of what you have set aside.',root=>{
       const data=model.state,goal=field(root,'Goal name','text',data.goal?.title||''),target=field(root,'Target amount','text',data.goal?amount(data.goal.target):'');target.inputMode='decimal';
@@ -158,7 +200,7 @@
       const events=model.poll(allowed);if(events.mail.length)notice(`${events.mail.length===1?'A letter from your past self has':'Letters from your past self have'} arrived.`);
       if(events.tea){sound.ritualChime();notice('Your tea is ready. Take a little pause.');}
       if(active?.isConnected)for(const l of model.state.mail){const row=[...active.querySelectorAll('[data-mail]')].find(r=>r.dataset.mail===l.id);if(row&&l.status==='arrived'&&row.dataset.mailStatus!=='arrived'){row.dataset.mailStatus='arrived';row.querySelector('.muted').textContent=`Arrived · ${l.deliverOn}`;button(row,'Read letter',()=>{const letter=model.read(l.id);if(letter)readMail(letter);});}}
-      updateClock();if(events.tea&&active?.querySelector('[data-tea-clock]'))tea();
+      updateClock();
     }
     function frame(dt){
       frameTime+=dt;if(frameTime<.2)return;frameTime=0;const v=renderer(),r=room(),state=model.visual,level=state.level,show=!hidden()&&!v.capturing,alive=new Set();
@@ -195,5 +237,5 @@
       for(let z=1;z<8;z+=2)m.box(7,2,z,9,3,z+1,0x8c847a);m.box(12,2,1,13,3,7,0xd8a659);
     }});
   }
-  const api={KEY,day,validDate,cents,amount,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
+  const api={KEY,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
 })(typeof window!=='undefined'?window:globalThis);

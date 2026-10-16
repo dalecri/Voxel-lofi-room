@@ -39,3 +39,13 @@ test('free furniture definitions, inherited fridge skins, and share privacy rema
  const f=fixture();f.model.addIdea('PRIVATE_IDEA');f.model.stroke({color:'#443c34',points:[[.1,.1]]});
  const d=W.shareDecor({name:'Tools',n:10,tools:f.model.state,letters:{body:'PRIVATE_MAIL'},items:[{id:1,t:'savingsjar',x:2,z:2,tools:f.model.state,amount:'PRIVATE_AMOUNT'}]});assert.equal(d.items[0].t,'savingsjar');assert.ok(!JSON.stringify(d).includes('PRIVATE'));assert.ok(!('tools' in d));
 });
+test('tea dial maps every minute clockwise and presets keep their familiar steep lengths',()=>{
+ assert.deepEqual(T.TEA_PRESETS.map(p=>p.minutes),[2,3,5]);
+ for(let n=1;n<=10;n++){const a=n/10*Math.PI*2,minute=T.dialMinutes(Math.sin(a),-Math.cos(a));assert.equal(minute,n);const f=fixture();f.model.brew(minute);assert.equal(f.model.tea.minutes,n);assert.equal(f.model.remaining,n*60000);}
+});
+test('tea focus presentation derives buttons, mascot and bounded progress without changing the timer model',()=>{
+ const f=fixture(),m=f.model;let d=T.teaDisplay(m.tea,m.remaining,2);assert.equal(d.state,'idle');assert.equal(d.label,'Brew tea');assert.equal(d.preset,'Green tea');assert.equal(d.readout,'2 MINS');assert.equal(d.mascot,'calm');
+ m.brew(2);d=T.teaDisplay(m.tea,m.remaining);assert.equal(d.label,'Cancel steep');assert.equal(d.mascot,'watching');assert.equal(d.progress,0);f.advance(60000);d=T.teaDisplay(m.tea,m.remaining);assert.equal(d.progress,.5);assert.equal(d.readout,'1:00');
+ const before=m.state;T.teaDisplay(m.tea,m.remaining);assert.deepEqual(m.state,before);f.advance(60000);assert.equal(m.poll().tea,true);d=T.teaDisplay(m.tea,m.remaining);assert.equal(d.label,'Enjoy the tea');assert.equal(d.mascot,'happy');assert.equal(d.progress,1);assert.equal(d.note,'Your tea is ready.');assert.equal(m.poll().tea,false);
+ m.enjoyTea();d=T.teaDisplay(m.tea,m.remaining,2);assert.equal(d.state,'done');assert.equal(d.label,'Brew tea');assert.equal(d.mascot,'calm');assert.equal(d.progress,0);m.brew(3);m.cancelTea();assert.equal(T.teaDisplay(m.tea,m.remaining).state,'idle');
+});
