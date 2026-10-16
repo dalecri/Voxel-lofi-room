@@ -28,7 +28,7 @@
     }
     return walk(template.content);
   }
-  function create({ store, now = () => new Date(), clean = sanitizeHTML }) {
+  function create({ store, now = () => new Date(), clean = sanitizeHTML, onSaved=()=>{} }) {
     const saved = store.get(KEY,null);
     const state = { v:1, next:Number.isSafeInteger(saved?.next) && saved.next>0 ? saved.next : 1,
       current:typeof saved?.current === 'string' ? saved.current : null,
@@ -47,7 +47,7 @@
     }
     function update({letterhead,body}) {
       const letter=get();if(!letter)return;
-      letter.letterhead=String(letterhead);letter.body=clean(body);letter.updatedAt=now().getTime();persist();
+      const old=letter.body;letter.letterhead=String(letterhead);letter.body=clean(body);letter.updatedAt=now().getTime();persist();if(letter.body!==old&&letter.body.replace(/<[^>]*>/g,'').trim())onSaved({...letter});
     }
     function select(id) {if(!get(id))return false;state.current=id;persist();return true;}
     function rename(id,title) {const l=get(id);if(!l)return false;l.title=String(title).trim() || 'Untitled letter';l.updatedAt=now().getTime();persist();return true;}
@@ -66,8 +66,8 @@
     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);return {saved:true};
   }
-  function createView({store,sound,roomName,onWriting=()=>{},beforeOpen=()=>{}}) {
-    const model=create({store}),view=document.createElement('section');view.id='lettersView';view.hidden=true;
+  function createView({store,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{}}) {
+    const model=create({store,onSaved}),view=document.createElement('section');view.id='lettersView';view.hidden=true;
     view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Write a letter');
     view.innerHTML=`<header class="letter-chrome"><button type="button" id="letterClose">← Room</button><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton">Letters</button><button type="button" id="letterExport">Save as file</button></header>
       <div id="letterScroll"><main class="letter-paper"><div id="letterHead" contenteditable="plaintext-only" role="textbox" aria-label="Letterhead" spellcheck="false"></div><div id="letterBody" contenteditable="true" role="textbox" aria-label="Letter body" aria-multiline="true" data-placeholder="Dear friend," spellcheck="true"></div></main></div>

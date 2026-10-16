@@ -8,7 +8,7 @@
     if(!Number.isSafeInteger(n)||n<=0)throw Error('Use a positive amount.');return n;
   }
   const amount=n=>(n/100).toFixed(2);
-  function create({store,now=()=>new Date(),random=Math.random}){
+  function create({store,now=()=>new Date(),random=Math.random,onBrew=()=>{}}){
     const old=store.get(KEY,{})||{},copy=a=>JSON.parse(JSON.stringify(a));
     const state={v:1,next:Number.isSafeInteger(old.next)&&old.next>0?old.next:1,
       mail:Array.isArray(old.mail)?old.mail:[],groceries:Array.isArray(old.groceries)?old.groceries:[],ideas:Array.isArray(old.ideas)?old.ideas:[],
@@ -38,7 +38,7 @@
     function clearGroceries(){state.groceries=state.groceries.filter(g=>!g.done);save();}
     function addIdea(text){text=String(text).trim();if(!text)throw Error('Drop in a little idea first.');state.ideas.unshift({id:id('idea'),text,createdAt:now().getTime()});save();}
     function shake(){const pool=state.ideas.filter(i=>state.ideas.length===1||i.id!==state.lastIdea);if(!pool.length)return null;const i=pool[Math.min(pool.length-1,Math.floor(Math.max(0,random())*pool.length))];state.lastIdea=i.id;save();return copy(i);}
-    function brew(minutes){if(!Number.isInteger(minutes)||minutes<1||minutes>30)throw Error('Choose between 1 and 30 minutes.');state.tea={minutes,endAt:now().getTime()+minutes*60000,status:'brewing',notified:false};save();}
+    function brew(minutes){if(!Number.isInteger(minutes)||minutes<1||minutes>30)throw Error('Choose between 1 and 30 minutes.');state.tea={minutes,endAt:now().getTime()+minutes*60000,status:'brewing',notified:false};save();onBrew(copy(state.tea));}
     function cancelTea(){state.tea=null;save();}
     function enjoyTea(){if(state.tea){state.tea.status='done';state.tea.notified=true;save();}}
     const total=()=>state.deposits.reduce((n,d)=>n+d.cents,0);

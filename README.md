@@ -554,3 +554,15 @@ cat bubbles and night aurora at 390px.
 ### Theme pack checks
 
 `tests/theme-packs.json` lists the twenty new packs in catalog order. Run `node --test tests/themes.test.cjs` to build every variant, validate tap sounds, and exercise spin, lava and particle animations. After `npm run build`, run `python3 tests/themes-browser.py 1` (then `2`, `3`, `4`) with Playwright and Chromium installed. Each batch places and taps three pieces per pack at 390px and renders all forty catalog thumbnails. Screenshots are written to `/tmp/themes-batch-N.png` and `/tmp/theme-GROUP-390.png`.
+
+## Calendar: a memory of time
+
+Tap the Wall calendar or the Calendar card in Control Centre for a month grid. Ritual dots remember letters, tea, checked tasks, watered plants, fed cats, completed focus candles and Daily Moments. Empty days stay neutral. The private `lr.activityLog` retains the newest 400 dates; repeated autosaves of a letter or re-checking the same task count once per day. It records activity kinds and IDs, never letter bodies or task text.
+
+Day detail includes an approximate local moon phase, editable local events (`lr.calendarEvents`), cached Canadian holidays when Live extras is enabled, and one dismissible scene memory from the same date in an earlier year. Seasonal notes appear seven days before the existing sets open. The existing opt-in Open-Meteo request now includes seven daily highs/lows and sky conditions; turning Live weather off hides the strip. No extra location request is made by the calendar.
+
+Google Calendar is optional and read-only. In `calendar.js`, fill the single `GOOGLE_CLIENT_ID` constant after enabling Calendar API, configuring the Google consent screen/test users, and registering an OAuth Web client with your exact HTTPS JavaScript origin (localhost is supported for development). Setup steps are also in the module's top comment. No client secret is used. As agreed, this static site uses the Google Identity Services browser-token flow; Google's authorization-code flow would need a backend.
+
+The Google SDK loads only after Connect. The only requested scope is `calendar.readonly`; month events come from the primary calendar and cache only in memory. An expiring access token stays in localStorage (`lr.googleCalendarToken`), excluded from the native SQLite mirror and every room code. Reconnect is explicit; disconnect clears local credentials and revokes through GIS when available. Google may reject sign-in inside Android WebViews; use the registered browser origin for authorization. Local calendar features work without Google, a client ID, or a connection. Google Tasks remains deferred.
+
+Validation: `node --test tests/calendar.test.cjs`; after `npm run build`, `python3 tests/calendar-browser.py` covers the furniture and app entry points, event CRUD, memory/dots, holiday and forecast gates, mobile/desktop day/night layouts, private shares, and a stubbed GIS/Calendar API connection with reconnect/disconnect.

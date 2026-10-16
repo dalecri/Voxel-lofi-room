@@ -17,12 +17,12 @@
         stale?`Last forecast · ${probability}% chance of ${wet}`:probability===0?`No ${wet} expected this hour.`:`${wet==='snow'?'Snowflakes':wet==='rain'?'Raindrops':'Drops or flakes'} might visit · ${probability}% this hour`,
       fetched:d&&meta.weatherFetchedAt?`Updated ${new Date(meta.weatherFetchedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}`:''};
   }
-  function create({store,now=()=>Date.now()}) {
+  function create({store,now=()=>Date.now(),onChecked=()=>{}}) {
     const read=()=>{const data=store.get(KEY,{});return {v:1,next:Number(data?.next)||1,items:(Array.isArray(data?.items)?data.items:[]).filter(t=>t&&typeof t.id==='string'&&typeof t.text==='string').map(t=>({...t}))};};
     const write=data=>{store.set(KEY,data);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(data))throw Error('Could not save your list on this device.');};
     return {list:()=>read().items,
       add(text){text=String(text).trim().replace(/\s+/g,' ').slice(0,140);if(!text)return false;const d=read();if(d.items.length>=50)throw Error('A little breathing room: keep up to 50 things here.');d.items.push({id:'task-'+d.next++,text,done:false,createdAt:now()});write(d);return true;},
-      check(id,on){const d=read(),t=d.items.find(t=>t.id===id);if(t){t.done=!!on;write(d);}},
+      check(id,on){const d=read(),t=d.items.find(t=>t.id===id);if(t){const newlyDone=!t.done&&!!on;t.done=!!on;write(d);if(newlyDone)onChecked(t);}},
       remove(id){const d=read();d.items=d.items.filter(t=>t.id!==id);write(d);},
     };
   }

@@ -67,7 +67,7 @@
     function refresh(){if(!enabled())return Promise.resolve();return once('ambient:'+generation,()=>Promise.allSettled([loadArt(),loadKp(),loadHolidays(new Date(now()).getFullYear())]));}
     function setEnabled(on){generation++;for(const c of controllers)c.abort();controllers.clear();attempted.clear();meta.liveExtras=!!on;save();if(!on){state.art={...FALLBACK_ART};state.kp=0;}changed();return refresh();}
     function tick(){if(enabled()&&now()>=nextTick){nextTick=now()+60000;return refresh();}}
-    return {state,enabled,setEnabled,refresh,tick,radio,books,savedBooks,addBook,removeBook,fact,drink,holidaysFor};
+    return {state,enabled,setEnabled,refresh,tick,radio,books,savedBooks,addBook,removeBook,fact,drink,holidaysFor,ensureHolidays:year=>enabled()&&Number.isInteger(year)&&year>=1900&&year<=2200?loadHolidays(year):Promise.resolve()};
   }
   function register(L){
     L.def('galleryframe',{name:'Gallery frame',kind:'wall',group:'wall',size:[2,3],depth:3,tap:'atlas-art',vars:[[0xb58d67,0xf2e6ce],[0x71624f,0xe7dfd2]],build(m,[wood,paper]){

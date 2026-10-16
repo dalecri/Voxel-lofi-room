@@ -18,7 +18,7 @@ with sync_playwright() as p:
  def route(r):
   if r.request.url.startswith('http://127.0.0.1:'):r.continue_()
   elif r.request.url.startswith('https://api.open-meteo.com/v1/forecast?'):
-   requests.append(r.request.url);q=parse_qs(urlparse(r.request.url).query);assert q=={'latitude':['43.7'],'longitude':['-79.4'],'current':['weathercode,wind_speed_10m,temperature_2m,precipitation'],'hourly':['precipitation_probability'],'forecast_days':['2'],'timeformat':['unixtime'],'timezone':['auto']},q
+   requests.append(r.request.url);q=parse_qs(urlparse(r.request.url).query);assert q=={'latitude':['43.7'],'longitude':['-79.4'],'current':['weathercode,wind_speed_10m,temperature_2m,precipitation'],'hourly':['precipitation_probability'],'daily':['weathercode,temperature_2m_max,temperature_2m_min'],'forecast_days':['7'],'timeformat':['unixtime'],'timezone':['auto']},q
    r.fulfill(status=200,headers={'access-control-allow-origin':'*'},content_type='application/json',body=json.dumps({'current':None} if failure else {'current':{'weathercode':63,'wind_speed_10m':20}}))
   else:r.abort()
  context.route('**/*',route);page=context.new_page();page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)

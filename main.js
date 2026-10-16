@@ -15,16 +15,18 @@ function startLofiRooms() {
     set(k, v) { put(k, JSON.stringify(v)); },
     del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
   };
+  const calendarModel=LRCalendar.create({store});
+  const remember=(kind,options)=>{try{calendarModel.append(kind,options);}catch(e){/* optional memory never interrupts a ritual */}};
   const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); }, onPurchase: item => {
     if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setSlots(wardrobe.slots); companion.frame(0); } }
   } });
-  const rituals = LRRituals.create({ store });
+  const rituals = LRRituals.create({ store,onComplete:c=>remember('focus',{date:LRCalendar.day(new Date(c.end)),id:c.room+':'+c.id+':'+c.start}) });
   let breathCamera = null;
   let companion = null, widgetView = null;
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
-  const roomTools = LRRoomTools.create({ store });
-  const letters = LRLetters.createView({ store, sound: Sound, roomName: () => room.name, beforeOpen: () => { closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; } });
+  const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}) });
+  const letters = LRLetters.createView({ store,onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; } });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -167,7 +169,7 @@ function startLofiRooms() {
   view.fx.activity = view.glowFx.activity = activity;
   view.glowOn = meta.glow !== false;
   // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
-  const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), watered: it => shop.earn('water', `${meta.current}:${it.id}`), changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
+  const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), brewed:()=>remember('tea'), watered: it => { shop.earn('water', `${meta.current}:${it.id}`);remember('plant'); }, changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
   store.del('lr.mode');   // editing is a temporary session, never a startup preference
   const state = { mode: 'explore', tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
@@ -204,7 +206,7 @@ function startLofiRooms() {
     document.body.classList.toggle('reduce-motion', view.reducedMotion);
   }
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
-  const todayTasks=LRToday.create({store});
+  const todayTasks=LRToday.create({store,onChecked:t=>remember('tasks',{id:t.id})});
   const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
     settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();openSheet();},
     hidden:()=>filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
@@ -272,6 +274,7 @@ function startLofiRooms() {
     else if(['letters','scenes','photos'].includes(p.id))dashboard.files(p.id[0].toUpperCase()+p.id.slice(1));
     else if(p.id==='camera')$('#bPhoto').click();
     else if(p.id==='newspaper')newspaperSheet();
+    else if(p.id==='calendar')calendar.open();
     else if(p.id==='tst')widgetAction(find('tstcorkboard') || {t:'tstcorkboard',id:null});
     else if(['journal','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
   }
@@ -374,7 +377,7 @@ function startLofiRooms() {
   function dailyCheck(key) {
     const { D, name } = dailyInfo();
     if (D.done || D.id !== key) return;
-    D.done = true; store.set('lr.daily', D);
+    D.done = true; store.set('lr.daily', D);remember('daily',{date:D.date,id:D.date});
     const S = store.get('lr.dailyStreak', { n: 0, last: '' });
     S.n = S.last === yesterday() ? S.n + 1 : S.last === D.date ? S.n : 1; S.last = D.date;
     store.set('lr.dailyStreak', S); wardrobe.sync();
@@ -840,12 +843,7 @@ function startLofiRooms() {
     }
     if (tap === 'cuckoo') { cuckoo(id); return; }
     if (tap === 'read') { Sound.flip(); toast(`<span>${pickOne(C.lines)}</span>`, 2200); return; }
-    if (tap === 'calendar') {
-      const o = view.objs.get(id); if (o) o.userData.playUntil = view.t + 0.7;
-      Sound.flip();
-      toast(`<span>${new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</span>`, 1600);
-      return;
-    }
+    if (tap === 'calendar') { Sound.flip();calendar.open();return; }
     if (tap === 'feeder') {
       view.feedBirds(id); Sound.crunch(); setTimeout(() => Sound.tweet(), 500); setTimeout(() => Sound.tweet(), 1300);
       view.sparkle(view.itemPoint(id, [4, 4, 5]), 0xc8a060, 10);
@@ -875,7 +873,7 @@ function startLofiRooms() {
     if (tap === 'bowl') {
       Sound.crunch();
       const cat = view.callCat(id);
-      if (cat) { const ci = room.get(cat); setTimeout(() => ci?.t==='mxdog'?Sound.mxWoof():Sound.meow(), 300); toast(`<span>${ci ? (ci.name || (ci.t==='cat'?(CATS[ci.c] || CATS[0]).name:CAT[ci.t].name)) : 'A cat'} comes running!</span>`, 1500); discover('feast'); }
+      if (cat) { const ci = room.get(cat);if(ci?.t==='cat')remember('cat'); setTimeout(() => ci?.t==='mxdog'?Sound.mxWoof():Sound.meow(), 300); toast(`<span>${ci ? (ci.name || (ci.t==='cat'?(CATS[ci.c] || CATS[0]).name:CAT[ci.t].name)) : 'A cat'} comes running!</span>`, 1500); discover('feast'); }
       else toast(`<span>${C.petFeed ? 'A snack is here whenever someone feels like it.' : room.items.some(i => i.t === 'cat') ? 'Nobody can reach the bowl' : 'Food’s out, but no cats yet'}</span>`, 1400);
       return;
     }
@@ -1408,7 +1406,7 @@ function startLofiRooms() {
     { from: a => a.t === 'vinyl', to: b => CAT[b.t].tap === 'mood' || (CAT[b.t].tap === 'music' && CAT[b.t].anim === 'record'), hint: 'Drop to play this record',
       run(a, b) { const name = Sound.setMood(a.c | 0); meta.mood = Sound.mood; meta.moodSet = true; moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape'); if (meta.station !== 0 || !meta.music) playStation(0, true); else saveMeta(); Sound.needle(); view.excite(b.id); toast(`<span>Now playing: ${name}</span>`, 1600); discover('lofi'); } },
     { from: a => a.t === 'treats', to: b => b.t === 'cat', hint: 'Drop to give a treat',
-      run(a, b) { view.feedCat(b.id); Sound.crunch(); Sound.purr(true); setTimeout(() => Sound.purr(false), 2400); toast(`<span>${nameOf(b)} munches happily ♥</span>`, 1500); discover('feast'); } },
+      run(a, b) { remember('cat');view.feedCat(b.id); Sound.crunch(); Sound.purr(true); setTimeout(() => Sound.purr(false), 2400); toast(`<span>${nameOf(b)} munches happily ♥</span>`, 1500); discover('feast'); } },
     { from: a => a.t === 'blanket', to: b => !!CAT[b.t].nap && !b.p && !b.blanket, hint: 'Drop to tuck it in',
       run(a, b) { pushUndo(); b.blanket = true; room.remove(a.id); changed(); view.poof(b.id, [0xc8484a, 0xf4e8d4]); Sound.place(); toast('<span>All tucked in. Naps here last longer</span>', 1600); } },
     { from: a => a.t === 'fishfood', to: b => !!CAT[b.t].tank, hint: 'Drop to feed the fish',
@@ -2735,7 +2733,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); liveWeather.refresh(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { tickWorld(worldT); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
+    if (worldT >= 1) { calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
@@ -2777,6 +2775,8 @@ function startLofiRooms() {
     addStation:station=>{if(!(meta.stations || []).some(s=>s.url===station.url)){(meta.stations || (meta.stations=[])).push(station);saveMeta();}},
     hidden:()=>letters.active || home.active || filming || view.capturing || document.hidden || $('#photo').classList.contains('open')
   });
+  const googleCalendar=LRCalendar.createGoogle();
+  const calendar=LRCalendar.createView({model:calendarModel,google:googleCalendar,sheet:codeSheet,atlas,meta,scenes:()=>files.list('Scenes'),seasons:LR.SEASONS || [],thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s)});
   atlas.refresh();
   updateHeader();
   setMode(state.mode, true);
@@ -2792,7 +2792,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

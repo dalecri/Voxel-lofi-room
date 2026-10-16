@@ -1,7 +1,7 @@
 // Small rituals use real elapsed time, independent of frame rate and room saves.
 (function (root) {
   const FOCUS = 25 * 60000, BREATH = 10 * 60000;
-  function create({ store, now = Date.now }) {
+  function create({ store, now = Date.now, onComplete=()=>{} }) {
     const candles = store.get('lr.focusRituals', {});
     let breathing = null;
     const key = (room, id) => `${room}:${id}`;
@@ -33,7 +33,7 @@
     function tick() {
       const finished = [];
       for (const c of Object.values(candles)) {
-        if (!c.finished && !c.cancelled && c.end <= now()) { c.finished = true; finished.push({ room: c.room, id: c.id }); }
+        if (!c.finished && !c.cancelled && c.end <= now()) { c.finished = true; finished.push({ room: c.room, id: c.id });onComplete({...c}); }
       }
       if (finished.length) store.set('lr.focusRituals', candles);
       const breathFinished = !!breathing && now() - breathing.start >= BREATH;

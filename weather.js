@@ -17,8 +17,9 @@
   }
   function forecastURL(coords) {
     const p=rounded({coords});
-    return `https://api.open-meteo.com/v1/forecast?latitude=${p.latitude.toFixed(1)}&longitude=${p.longitude.toFixed(1)}&current=weathercode,wind_speed_10m,temperature_2m,precipitation&hourly=precipitation_probability&forecast_days=2&timeformat=unixtime&timezone=auto`;
+    return `https://api.open-meteo.com/v1/forecast?latitude=${p.latitude.toFixed(1)}&longitude=${p.longitude.toFixed(1)}&current=weathercode,wind_speed_10m,temperature_2m,precipitation&hourly=precipitation_probability&daily=weathercode,temperature_2m_max,temperature_2m_min&forecast_days=7&timeformat=unixtime&timezone=auto`;
   }
+  function forecast(body){const d=body?.daily;if(!Array.isArray(d?.time))return [];return d.time.slice(0,7).flatMap((t,i)=>{const date=typeof t==='number'?new Date((t+(Number(body.utc_offset_seconds)||0))*1000).toISOString().slice(0,10):t,high=d.temperature_2m_max?.[i],low=d.temperature_2m_min?.[i],code=d.weathercode?.[i];return /^\d{4}-\d{2}-\d{2}$/.test(date)&&Number.isFinite(high)&&Number.isFinite(low)&&Number.isInteger(code)?[{date,high,low,condition:condition(code)}]:[];});}
   function details(body,time=Date.now()) {
     const c=body?.current || {},times=body?.hourly?.time || [],values=body?.hourly?.precipitation_probability || [];
     // Hourly timestamps are Unix seconds, so this also works across local DST.
@@ -67,7 +68,7 @@
           const body=await response.json(),current=body?.current,code=current?.weathercode,speed=current?.wind_speed_10m;
           if(!Number.isInteger(code)||code<0||code>99||!Number.isFinite(speed)||speed<0)throw Error('Invalid weather');
           if(token!==generation||!enabled())return false;
-          const sky=condition(code);meta.weatherDetails=details(body,now());meta.weatherFetchedAt=now();applyWeather(sky,true);wind=speed;meta.weather=sky;save();changed();return true;
+          const sky=condition(code);meta.weatherDetails={...details(body,now()),forecast:forecast(body)};meta.weatherFetchedAt=now();applyWeather(sky,true);wind=speed;meta.weather=sky;save();changed();return true;
         }catch(e){return false;} // Keep the last good condition and retry next cycle.
         finally {clearTimeout(timeout);if(controller===abort)controller=null;}
       });
@@ -75,6 +76,6 @@
     }
     return {setEnabled,refresh,manual,soundWind:fallback=>enabled()&&wind!=null?windFactor(wind):fallback,get details(){return enabled()?meta.weatherDetails || null:null;},get intensity(){return enabled()?intensity(meta.weatherDetails):1;},get enabled(){return enabled();}};
   }
-  const api={STATES,WMO,INTERVAL,condition,windFactor,rounded,forecastURL,details,intensity,create};
+  const api={STATES,WMO,INTERVAL,condition,windFactor,rounded,forecastURL,forecast,details,intensity,create};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRWeather=api;
 })(typeof window!=='undefined'?window:globalThis);

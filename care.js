@@ -89,6 +89,7 @@
       const t = now(), today = A.today();
       if (it.t === 'kettle' || it.t === 'teapot') {
         if (A.meta.herbs > 0) {
+          if (!quiet && A.brewed) A.brewed();
           A.meta.herbs--; A.meta.tea = { until: t + 2 * H }; A.saveMeta();
           if (!quiet) { view.burst(id, 'steam', 3.5); it.t === 'kettle' ? Sound.whistle() : Sound.pour(); }
           if (!quiet) A.toast('<b>🍵 Garden tea</b><span>Brewed from herbs you grew. Sip it from a mug.</span>', 2400);

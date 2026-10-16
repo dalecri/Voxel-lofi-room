@@ -6,6 +6,7 @@
 (function () {
   const DB = 'lofi_rooms';
   const PREFIX = 'lr.';
+  const localOnly = k => k === 'lr.googleCalendarToken'; // OAuth tokens never enter native SQLite.
   const cap = window.Capacitor;
   const native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
   const plugin = name => (cap.registerPlugin ? cap.registerPlugin(name) : cap.Plugins[name]);
@@ -25,7 +26,7 @@
       statements: 'CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY NOT NULL, v TEXT NOT NULL, updated INTEGER NOT NULL);',
     });
     const res = await sqlite.query({ database: DB, statement: 'SELECT k, v FROM kv;', values: [], readonly: false });
-    const rows = (res.values || []).filter(r => r && typeof r.k === 'string');
+    const rows = (res.values || []).filter(r => r && typeof r.k === 'string' && !localOnly(r.k));
     if (rows.length) {
       // the database wins: restore it into the WebView's storage
       rows.forEach(r => { try { localStorage.setItem(r.k, r.v); } catch (e) {} });
@@ -33,7 +34,7 @@
       // first launch with the database: adopt anything the WebView already had
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith(PREFIX)) pending.set(k, localStorage.getItem(k));
+        if (k && k.startsWith(PREFIX) && !localOnly(k)) pending.set(k, localStorage.getItem(k));
       }
       await flush();
     }
@@ -41,7 +42,7 @@
 
   function set(k, v) {
     try { localStorage.setItem(k, v); } catch (e) {}
-    if (!sqlite) return;
+    if (!sqlite || localOnly(k)) return;
     pending.set(k, v);
     clearTimeout(flushTimer);
     flushTimer = setTimeout(flush, 250);
@@ -49,7 +50,7 @@
 
   function del(k) {
     try { localStorage.removeItem(k); } catch (e) {}
-    if (!sqlite) return;
+    if (!sqlite || localOnly(k)) return;
     pending.set(k, null);
     clearTimeout(flushTimer);
     flushTimer = setTimeout(flush, 250);
