@@ -74,7 +74,7 @@ with sync_playwright() as p:
     print('PASS: free candle, shrinking wax, 25-minute timing, gutter, one completion, persistence, snuff and ordinary candle compatibility')
 
     page.evaluate("__lr.setMode('explore',true); __lr.setPhase('day',true); __lr.view.setPhase('day',true); window.__phase=__lr.meta.phase; window.__weather=__lr.meta.weather; window.__baseExposure=__lr.view.r.toneMappingExposure")
-    page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.click('#bBreathing'); page.click('#breathStart')
+    page.click('#bHome');page.locator('#homeView [data-app=breathing]').click(); page.click('#breathStart')
     page.wait_for_function('!!window.__lr.Sound.breathVoice')
     page.evaluate('__lr.view.frame(1,__lr.view.t+1)')
     assert page.locator('#breathingHud').is_visible()
@@ -100,7 +100,7 @@ with sync_playwright() as p:
     print('PASS: breathing circle, moon-blue dimming, synchronized phase and tone, blocked editing, Escape, lighting and control restoration')
 
     page.evaluate("() => { window.__chimes=0; const chime=__lr.Sound.ritualChime.bind(__lr.Sound); __lr.Sound.ritualChime=()=>{__chimes++;chime();}; }")
-    page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.click('#bBreathing'); page.click('#breathStart')
+    page.click('#bHome');page.locator('#homeView [data-app=breathing]').click(); page.click('#breathStart')
     page.evaluate('__advance(599999); __lr.updateRituals()')
     assert page.locator('#breathingHud').is_visible()
     page.evaluate('__advance(1); __lr.updateRituals(); __lr.updateRituals()')
@@ -109,7 +109,7 @@ with sync_playwright() as p:
     assert not page.evaluate('__lr.Sound.breathVoice')
     # A muted session remains fully usable and never creates a breathing oscillator.
     page.evaluate('__lr.Sound.on=false')
-    page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.click('#bBreathing'); page.click('#breathStart')
+    page.click('#bHome');page.locator('#homeView [data-app=breathing]').click(); page.click('#breathStart')
     assert page.evaluate('__lr.rituals.breath.active && !__lr.Sound.breathVoice')
     page.click('#breathStop')
     assert not page.evaluate('__lr.rituals.breath.active')

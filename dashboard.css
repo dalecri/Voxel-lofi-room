@@ -15,9 +15,3 @@
 .files-empty{padding:20px 0;line-height:1.6}.file-photo{display:block;width:100%;border-radius:16px}
 .saved-scenes-shelf:empty{display:none}
 @media(max-width:360px){.dashboard-tabs{gap:2px}.dashboard-tabs .chipbtn{padding:9px 7px;font-size:12px}.launcher-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.ritual-cards{display:grid;gap:8px;margin-bottom:20px}
-.ritual-card{width:100%;border:1px solid var(--line);text-align:left;color:var(--ink);font:inherit;cursor:pointer;gap:12px}
-.ritual-card .ritual-copy{flex:1;min-width:0}.ritual-card .ritual-copy span{margin-top:3px;overflow-wrap:anywhere}
-.ritual-card i svg{width:22px;height:22px}.ritual-card .ritual-arrow{width:13px;height:18px;flex:none;color:var(--ink-dim);opacity:.65}
-.ritual-card#bBreathing i{background:#8e9afa;color:#fff}.ritual-card#bWardrobe i{background:#a28cab;color:#fff}.ritual-card#bShop i{background:var(--accent);color:#fff}
-.ritual-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}

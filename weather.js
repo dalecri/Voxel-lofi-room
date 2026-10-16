@@ -1,5 +1,5 @@
 // Optional live weather. Only a toggle, last sky condition and successful-fetch
-// time are persisted in lr.meta. Rounded coordinates and wind stay in memory.
+// time and a small forecast summary are persisted in lr.meta. Coordinates stay in memory.
 (function(root) {
   const STATES=['clear','rain','storm','snow'],INTERVAL=30*60*1000;
   const WMO=Object.freeze(Object.fromEntries([
@@ -17,7 +17,21 @@
   }
   function forecastURL(coords) {
     const p=rounded({coords});
-    return `https://api.open-meteo.com/v1/forecast?latitude=${p.latitude.toFixed(1)}&longitude=${p.longitude.toFixed(1)}&current=weathercode,wind_speed_10m&timezone=auto`;
+    return `https://api.open-meteo.com/v1/forecast?latitude=${p.latitude.toFixed(1)}&longitude=${p.longitude.toFixed(1)}&current=weathercode,wind_speed_10m,temperature_2m,precipitation&hourly=precipitation_probability&forecast_days=2&timeformat=unixtime&timezone=auto`;
+  }
+  function details(body,time=Date.now()) {
+    const c=body?.current || {},times=body?.hourly?.time || [],values=body?.hourly?.precipitation_probability || [];
+    // Hourly timestamps are Unix seconds, so this also works across local DST.
+    let index=-1;for(let i=0;i<times.length;i++)if(Number.isFinite(times[i])&&times[i]*1000<=time&&time<times[i]*1000+3600000)index=i;
+    const probability=values[index],validProbability=Number.isFinite(probability)&&probability>=0&&probability<=100;
+    return {temperature:Number.isFinite(c.temperature_2m)?c.temperature_2m:null,precipitation:Number.isFinite(c.precipitation)&&c.precipitation>=0?c.precipitation:null,interval:Number.isFinite(c.interval)&&c.interval>0?c.interval:900,
+      probability:validProbability?Math.round(probability):null,probabilityAt:validProbability?times[index]*1000:null};
+  }
+  function intensity(data) {
+    // Measured mm/hour drives density. Forecast probability is not rainfall.
+    if(!Number.isFinite(data?.precipitation))return 1;
+    const rate=data.precipitation*3600/(data.interval || 900);
+    return Math.max(.2,Math.min(1.3,.2+rate*.15));
   }
   function create({meta,save,applyWeather,notice=()=>{},changed=()=>{},geolocation=root.navigator?.geolocation,fetchWeather=(...args)=>root.fetch(...args),now=()=>Date.now(),visible=()=>!root.document?.hidden}) {
     let position=null,wind=null,nextAt=0,pending=null,controller=null,generation=0;
@@ -53,14 +67,14 @@
           const body=await response.json(),current=body?.current,code=current?.weathercode,speed=current?.wind_speed_10m;
           if(!Number.isInteger(code)||code<0||code>99||!Number.isFinite(speed)||speed<0)throw Error('Invalid weather');
           if(token!==generation||!enabled())return false;
-          const sky=condition(code);applyWeather(sky,true);wind=speed;meta.weather=sky;meta.weatherFetchedAt=now();save();changed();return true;
+          const sky=condition(code);meta.weatherDetails=details(body,now());meta.weatherFetchedAt=now();applyWeather(sky,true);wind=speed;meta.weather=sky;save();changed();return true;
         }catch(e){return false;} // Keep the last good condition and retry next cycle.
         finally {clearTimeout(timeout);if(controller===abort)controller=null;}
       });
       pending=task;task.finally(()=>{if(pending===task)pending=null;});return task;
     }
-    return {setEnabled,refresh,manual,soundWind:fallback=>enabled()&&wind!=null?windFactor(wind):fallback,get enabled(){return enabled();}};
+    return {setEnabled,refresh,manual,soundWind:fallback=>enabled()&&wind!=null?windFactor(wind):fallback,get details(){return enabled()?meta.weatherDetails || null:null;},get intensity(){return enabled()?intensity(meta.weatherDetails):1;},get enabled(){return enabled();}};
   }
-  const api={STATES,WMO,INTERVAL,condition,windFactor,rounded,forecastURL,create};
+  const api={STATES,WMO,INTERVAL,condition,windFactor,rounded,forecastURL,details,intensity,create};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRWeather=api;
 })(typeof window!=='undefined'?window:globalThis);

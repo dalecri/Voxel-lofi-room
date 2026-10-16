@@ -26,8 +26,17 @@
     ['sound','Radio & sound','♫','Choose what’s playing'],
     ['settings','Settings','⚙','Weather, motion and room settings'],
   ].map(([id,label,icon,description])=>({id,label,icon,description}));
+  // The first ID is the preview when absent. Any matching piece in the room
+  // supplies its actual model and variant; an absent asset is grayed in CSS only.
+  const FURNITURE={typewriter:['typewriter'],mailbox:['letterbox','mailbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook'],french:['minifridge'],whiteboard:['whiteboard'],focus:['focuscandle'],wardrobe:['dresser'],merchant:['marketstall'],letters:['filecab'],scenes:['filecab'],photos:['filecab'],newspaper:['newspaper'],tst:['tstcorkboard'],sound:['record','jukebox']};
+  function furniture(entry,items,CAT) {
+    const ids=entry.furnitureId?[entry.furnitureId]:FURNITURE[entry.id] || [];
+    const it=items.find(i=>!i.visitor&&ids.includes(i.t));
+    const id=it?.t || ids.find(id=>CAT[id]);
+    return id?{id,variant:it?.c || 0,present:!!it}:null;
+  }
   function destinations(CAT,widgets,custom,portals) {
     return [...TOOLS.map(t=>({...t})),...portals(CAT,widgets,custom).map(p=>({...p,id:'portal:'+p.url,description:p.custom?'Your private link':'Open app'}))];
   }
-  const api={TOOLS,destinations};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRLauncher=api;
+  const api={TOOLS,FURNITURE,furniture,destinations};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRLauncher=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -334,6 +334,16 @@ File contents, titles and custom portal URLs/assignments stay outside room decor
 
 Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/dashboard-browser.py`. The browser harness covers relocated menu controls and tab persistence, catalog-derived launchers and custom links, letters/scenes/photos and downloads, cabinet capture privacy, responsive layouts at 320/390/1280 pixels, Escape, and an actual LR1 import in a fresh session with no private files or portal data. Existing browser scripts now select the relevant menu tab before interacting with its controls.
 
+## Your Space and Today
+
+The menu is called **Your Space**. Today keeps the Daily Moment and streak and replaces the old Rituals shortcuts with a sky card and **Little things** checklist. It shows the real local date/time, room daypart, current weather and, with Live weather enabled, temperature and this hour's precipitation chance. Missing forecasts are never estimated; older readings are marked cached. The same checklist appears in Home's Today section and uses device-private `lr.todayTasks`, outside every room share. Tasks stay until checked or removed; there is no external task service.
+
+Small corner badges show the existing tea and focus timers counting down in real time, including while other sheets are open. Tap a badge to open its real timer. Ready tea stays visible until enjoyed; completed focus timers keep their existing chime. Focus badges can reopen a candle from another room without starting another session.
+
+Control Center cards use the actual catalog furniture thumbnail, including the variant placed in this room. Only the asset turns gray when absent; its tool stays tappable. Placement changes update the previews while Home is open. These previews do not become room or share data.
+
+Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/today-browser.py`.
+
 ## Home
 
 The sunrise toolbar button and the phone launcher's **Home** tile open a full-screen, device-local dashboard. Today reads the same daily moment and streak as the menu, plus the current daypart/weather and existing tea, merchant and mailbox state. Gentle notifications are derived from that state; their rows open the existing tools rather than duplicating their interfaces.
@@ -394,8 +404,8 @@ existing Capacitor WebView prompt; approximate permission is sufficient. Exact
 coordinates are immediately rounded to 0.1 degrees. Only rounded coordinates are
 sent, without cookies, a referrer or HTTP caching; no coordinates are written to device storage
 or room codes. The rounded position and current wind stay in memory for this
-session. Only `meta.liveWeather`, the existing `meta.weather` condition, and
-`meta.weatherFetchedAt` are saved under `lr.meta`.
+session. `meta.liveWeather`, the existing `meta.weather` condition,
+`meta.weatherFetchedAt` and a small `meta.weatherDetails` summary are saved under `lr.meta`.
 
 The controller in `weather.js` maps WMO conditions onto clear/rain/storm/snow,
 updates quietly on boot when opted in, and refreshes every 30 minutes while open.
@@ -421,3 +431,5 @@ private persistence, wind, caching/retries, boot/foreground refresh, in-flight
 cancellation and Settings manual override. Browser tests mock location and Open-Meteo
 and check Settings alignment at 390px, actual rain application, saved state,
 permission failure feedback, and no application console errors.
+
+Live weather also requests temperature, measured precipitation and hourly precipitation probability from the same Open-Meteo endpoint. Hourly timestamps use Unix time to handle time zones and DST. `meta.weatherDetails` caches only those readings, not location. Particle density uses measured precipitation normalized to mm/hour, bounded from 0.2–1.3 of the normal weather effect. Forecast probability is displayed separately, so an upcoming chance of rain never becomes invented current rainfall. Turning Live weather off in Settings restores normal weather density; the cloud toolbar button stays removed.

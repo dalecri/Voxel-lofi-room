@@ -15,9 +15,9 @@ test('all WMO codes 0–99 map to a supported sky, with every specified code map
 });
 test('weather is opt-in; enabling requests location once and sends only rounded coordinates',async()=>{
  const f=fixture();await f.controller.refresh();assert.equal(f.locations(),0);assert.equal(f.requests.length,0);await f.controller.setEnabled(true);assert.equal(f.locations(),1);assert.equal(f.requests.length,1);
- const url=new URL(f.requests[0].url);assert.equal(url.origin,'https://api.open-meteo.com');assert.equal(url.pathname,'/v1/forecast');assert.equal(url.searchParams.get('latitude'),'43.7');assert.equal(url.searchParams.get('longitude'),'-79.4');assert.equal(url.searchParams.get('current'),'weathercode,wind_speed_10m');assert.equal(url.searchParams.get('timezone'),'auto');
+ const url=new URL(f.requests[0].url);assert.equal(url.origin,'https://api.open-meteo.com');assert.equal(url.pathname,'/v1/forecast');assert.equal(url.searchParams.get('latitude'),'43.7');assert.equal(url.searchParams.get('longitude'),'-79.4');assert.equal(url.searchParams.get('current'),'weathercode,wind_speed_10m,temperature_2m,precipitation');assert.equal(url.searchParams.get('timezone'),'auto');
  assert.deepEqual(f.applied,[['rain',true]]);assert.equal(f.meta.weather,'rain');assert.equal(f.meta.weatherFetchedAt,1000);assert.equal(f.controller.soundWind(.2),.5);
- assert.equal(f.requests[0].options.cache,'no-store');assert.equal(f.requests[0].options.credentials,'omit');assert.equal(f.requests[0].options.referrerPolicy,'no-referrer');assert.deepEqual(Object.keys(f.meta).sort(),['liveWeather','weather','weatherFetchedAt']);for(const s of f.saved)assert.ok(!JSON.stringify(s).includes('latitude')&&!JSON.stringify(s).includes('43.653226'));
+ assert.equal(f.requests[0].options.cache,'no-store');assert.equal(f.requests[0].options.credentials,'omit');assert.equal(f.requests[0].options.referrerPolicy,'no-referrer');assert.deepEqual(Object.keys(f.meta).sort(),['liveWeather','weather','weatherDetails','weatherFetchedAt']);for(const s of f.saved)assert.ok(!JSON.stringify(s).includes('latitude')&&!JSON.stringify(s).includes('43.653226'));
  await f.controller.refresh();assert.equal(f.requests.length,1);f.advance(W.INTERVAL);await f.controller.refresh();assert.equal(f.requests.length,2);assert.equal(f.locations(),1);
 });
 test('denial or unavailable geolocation switches the setting back off, with a reason and no fetch',async()=>{
@@ -47,4 +47,18 @@ test('manual override applies the chosen sky while disabled, then gives feedback
  assert.equal(f.controller.manual(()=>{assert.equal(f.meta.liveWeather,false);events.push('manual sky');}),true);
  assert.deepEqual(events,['manual sky',"Live weather off — you're in charge of the sky now"]);
  f.controller.manual(()=>events.push('another manual sky'));assert.equal(events.at(-1),'another manual sky');assert.equal(events.length,3);
+});
+
+test('hourly precipitation probability uses the correct Unix hour and never invents missing forecast values',()=>{
+ const time=Date.UTC(2026,9,16,15,20),hour=Math.floor(time/3600000)*3600;
+ const body={current:{temperature_2m:12.5,precipitation:.8,interval:900},hourly:{time:[hour-3600,hour,hour+3600],precipitation_probability:[10,75,90]}};
+ const d=W.details(body,time);assert.deepEqual(d,{temperature:12.5,precipitation:.8,interval:900,probability:75,probabilityAt:hour*1000});
+ assert.equal(W.details(body,time+3600000).probability,90);assert.equal(W.details(body,time+7200000).probability,null);assert.equal(W.details({current:{}},time).temperature,null);
+ body.hourly.precipitation_probability[1]=null;assert.equal(W.details(body,time).probability,null);
+});
+test('measured precipitation controls bounded particle density, separately from forecast chance',()=>{
+ assert.equal(W.intensity(null),1);assert.equal(W.intensity({probability:95}),1);
+ assert.ok(W.intensity({precipitation:.05,interval:900})<W.intensity({precipitation:2,interval:900}));
+ assert.equal(W.intensity({precipitation:100,interval:900}),1.3);
+ const low=W.intensity({precipitation:.4,interval:900});assert.equal(low,W.intensity({precipitation:1.6,interval:3600}));
 });

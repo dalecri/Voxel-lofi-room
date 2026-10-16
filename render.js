@@ -491,7 +491,7 @@
     if (!wx) { if (W.n) this.initWeather(); else return; }
     const d = wx.dummy, M = 5, floorY = -3;
     const scale = Math.min(1.6, (N + 2 * M) * (N + 2 * M) / 400);   // bigger plots get more
-    const n = Math.min(wx.parts.length, Math.round(W.n * scale));
+    const n = Math.min(wx.parts.length, Math.round(W.n * scale * (this.weatherIntensity ?? 1)));
     ['rain', 'snow', 'petal'].forEach(k => { wx[k].count = W.kind === k ? n : 0; });
     wx.splash.count = 0;   // nothing lands in the room, so no splashes on its floor
     if (W.n) {

@@ -198,9 +198,19 @@ function startLofiRooms() {
     document.body.classList.toggle('reduce-motion', view.reducedMotion);
   }
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
+  const todayTasks=LRToday.create({store});
+  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
+    settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();sheet.classList.add('open');},
+    hidden:()=>filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
+    notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),
+    openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});else focusSheet(row.focus,row.focus.room);},
+  });
   const home = LRHome.createView({
     context:()=>({store,meta,room,roomId:meta.current,tools:roomTools.homeState,daily:dailyInfo(),merchant:!!merchantHere(),plantsToday:care?.plantsToday,sound:Sound.on,reduced:view.reducedMotion}),
     apps:()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations),
+    todayPanel:host=>todayUI.mount(host),
+    previewKey:()=>JSON.stringify([meta.current,room.items.map(i=>[i.t,i.c])]),
+    preview:p=>{const f=LRLauncher.furniture(p,room.items,CAT);return f?{...f,src:thumbOf(f.id,f.variant)}:null;},
     sources:()=>({CAT:Object.fromEntries(Object.entries(CAT).map(([id,C])=>[id,{name:C.name}])),letters:letters.model.list().map(l=>({id:l.id,title:l.title})),scenes:files.list('Scenes').map(f=>({id:f.id,title:f.title})),ideas:roomTools.homeState.ideas}),
     beforeOpen:()=>{letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
     onClose:()=>$('#bHome').focus(),
@@ -241,6 +251,8 @@ function startLofiRooms() {
     else if(p.id==='french')roomToolsUI.flashcard();
     else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
     else if(p.id==='focus'){
+      const active=rituals.activeFocus.find(c=>c.room===meta.current) || rituals.activeFocus[0];
+      if(active){focusSheet(active,active.room);return;}
       const it=find('focuscandle') || {id:'control-center-focus'};
       if(!rituals.focus(meta.current,it.id).active){rituals.light(meta.current,it.id);Sound.matchStrike();updateRituals();}
       focusSheet(it);
@@ -1674,11 +1686,12 @@ function startLofiRooms() {
   $('#bTime').onclick = () => { meta.realtime = false; setPhase(PHASE_ORDER[(PHASE_ORDER.indexOf(meta.phase) + 1) % 4]); Sound.turn(); };
   // Background weather supports clear, rain, storm and snow.
   const WEATHERS = LRWeather.STATES;
-  const liveWeather = LRWeather.create({meta,save:()=>saveMeta(),applyWeather,notice:text=>toast(`<span>${esc(text)}</span>`,2800,true),changed:()=>{if(sheet.classList.contains('open') && $('#menu-settings'))renderMenu();}});
+  const liveWeather = LRWeather.create({meta,save:()=>saveMeta(),applyWeather,notice:text=>toast(`<span>${esc(text)}</span>`,2800,true),changed:()=>{const settings=$('#menu-settings');if(sheet.classList.contains('open') && settings && !settings.hidden)renderMenu();}});
   const WEATHER_SAY = { clear: 'Clear skies', rain: 'Rain on the window…', storm: 'A storm rolls in', snow: 'It’s snowing' };
   function applyWeather(w, quiet) {
     meta.weather = WEATHERS.includes(w) ? w : 'clear';
     meta.raining = meta.weather === 'rain' || meta.weather === 'storm';
+    view.weatherIntensity=meta.liveWeather?LRWeather.intensity(meta.weatherDetails):1;
     view.setWeather(meta.weather); view.setRain(meta.raining); view.refreshEnv(meta.phase);
     if (meta.mood === 'auto') applyMood();
     document.body.classList.toggle('raining', meta.raining);
@@ -1701,11 +1714,11 @@ function startLofiRooms() {
     // Dismissal and the pending room transition must survive an unavailable audio device.
     if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
   }
-  function focusSheet(it) {
+  function focusSheet(it, roomId=meta.current) {
     const body = $('#sheetBody'); body.dataset.merchant = '';
-    const minutes = Math.ceil(rituals.focus(meta.current, it.id).remaining / 60000);
+    const minutes = Math.ceil(rituals.focus(roomId, it.id).remaining / 60000);
     body.innerHTML = `<div class="grab"></div><h2>A little time to focus</h2><p class="muted">Your candle has about ${minutes} minute${minutes === 1 ? '' : 's'} left. It will gutter out with a soft chime. Nothing to finish, nothing to earn.</p><div class="rowbtns"><button class="chipbtn" id="focusSnuff">Snuff the candle</button><button class="chipbtn primary" id="focusContinue">Let it glow</button></div>`;
-    $('#focusSnuff').onclick = () => { rituals.snuff(meta.current, it.id); updateRituals(); closeSheets(); };
+    $('#focusSnuff').onclick = () => { rituals.snuff(roomId, it.id); updateRituals(); closeSheets(); };
     $('#focusContinue').onclick = closeSheets; sheet.classList.add('open');
   }
   function breathingSheet() {
@@ -1751,7 +1764,6 @@ function startLofiRooms() {
   $('#breathStop').onclick = () => stopBreathing();
   document.addEventListener('visibilitychange', () => { if (document.hidden) Sound.breathTone(0, false); else updateRituals(); });
   function updateShopBalance() {
-    updateRitualCards();
     const el = $('#shopBalance');
     if (el) el.textContent = `${shop.balance} Fireflies`;
     document.querySelectorAll('[data-shop-buy]').forEach(b => {
@@ -2298,20 +2310,6 @@ function startLofiRooms() {
     stage.appendChild(iso); float.append(stage, labels); wrap.appendChild(float); body.appendChild(wrap);
     stackSeen = new Set(slices.map(x => x.r.id));
   }
-  function updateRitualCards(force = false) {
-    const today = $('#menu-today');
-    if (!today || !force && (today.hidden || !sheet.classList.contains('open'))) return;
-    const breath = rituals.breath, outfit = LRCostumes.find(wardrobe.selected);
-    const states = {
-      bBreathing: breath.active ? `${Math.ceil(breath.remaining / 60000)} minutes left · ${breath.phase.toLowerCase()}` : '10 minutes · not started',
-      bWardrobe: outfit ? `Wearing ${outfit.name}` : 'Dress the little dude',
-      bShop: `${shop.balance} Fireflies · ${merchantHere() ? 'visiting your room' : 'out wandering, back another day'}`,
-    };
-    for (const [id, text] of Object.entries(states)) {
-      const sub = today.querySelector(`#${id} [data-ritual-state]`);
-      if (sub && sub.textContent !== text) sub.textContent = text;
-    }
-  }
   function renderMenu() {
     home.close(false);
     roomToolsUI.close();
@@ -2322,19 +2320,9 @@ function startLofiRooms() {
     const sections = LRDashboard.menu(body, store, closeSheets);
     let target = sections.Today;
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; target.appendChild(el); return el; };
-    h('h2', '', 'Rituals');
-    const ritualsList = h('div', 'ritual-cards');
-    const ritualCard = (id, title, icon, action) => {
-      const b = document.createElement('button'); b.type = 'button'; b.id = id; b.className = 'd today ritual-card';
-      b.innerHTML = `<i aria-hidden="true">${icon}</i><div class="ritual-copy"><b>${title}</b><span data-ritual-state></span></div><svg class="ritual-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m9 5 7 7-7 7"/></svg>`;
-      b.onclick = action; ritualsList.appendChild(b);
-    };
-    ritualCard('bBreathing', 'Breathing room', '☾', breathingSheet);
-    ritualCard('bWardrobe', 'Wardrobe', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6a2 2 0 1 1 3 1.7L12 9v2L3 18a1 1 0 0 0 .6 2h16.8a1 1 0 0 0 .6-2l-9-7"/></svg>', wardrobeSheet);
-    ritualCard('bShop', 'Traveling merchant', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 9h18l-2-6H5L3 9v12h18V9M8 21V12h8v9"/></svg>', () => openShop());
-    updateRitualCards(true);
+    todayUI.mount(target);
     const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
-    h('h2', '', `Today <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
+    h('h2', '', `Daily moment <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
     h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`);
     const log = store.get('lr.dailyLog', []).slice(0, 5);
     if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'));
@@ -2711,7 +2699,8 @@ function startLofiRooms() {
   let last = performance.now(), t = 0, soundT = 0, clockT = 0, momentT = 0, worldT = 0;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
-    updateRituals(); home.tick(now);
+    updateRituals(); home.tick(now); todayUI.tick(now);
+    view.weatherIntensity=liveWeather.intensity;
     const liftGoal = state.mode === 'edit' ? (innerWidth < 760 ? 84 : 60) : (innerWidth < 760 ? 24 : 16);
     liftNow += (liftGoal - liftNow) * Math.min(1, dt * 6);
     soundT += dt;
@@ -2720,7 +2709,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); liveWeather.refresh(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { tickWorld(worldT); updateRitualCards(); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
+    if (worldT >= 1) { tickWorld(worldT); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
@@ -2758,7 +2747,7 @@ function startLofiRooms() {
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
   liveWeather.refresh();
-  window.__lr = { liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

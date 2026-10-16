@@ -40,7 +40,7 @@
       if (breathFinished) breathing = null;
       return { finished, breathFinished };
     }
-    return { focus, light, snuff, tick, startBreathing() { breathing = { start: now() }; }, stopBreathing() { breathing = null; }, get breath() { return breath(); } };
+    return { focus, light, snuff, tick, get activeFocus(){return Object.values(candles).map(c=>({...c,...focus(c.room,c.id)})).filter(c=>c.active).sort((a,b)=>a.end-b.end);}, startBreathing() { breathing = { start: now() }; }, stopBreathing() { breathing = null; }, get breath() { return breath(); } };
   }
   function register(L) {
     L.def('focuscandle', {
