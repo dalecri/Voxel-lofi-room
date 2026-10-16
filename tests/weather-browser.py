@@ -26,8 +26,7 @@ with sync_playwright() as p:
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr')
  assert page.evaluate('__lr.meta.weather')=='clear'
  assert page.locator('#bRain').count()==0
- states=re.search(r"const WEATHERS = (\[[^;]+\]);",(ROOT/'main.js').read_text()).group(1)
- assert json.loads(states.replace("'",'"'))==['clear','rain','storm','snow']
+ assert page.evaluate('LRWeather.STATES')==['clear','rain','storm','snow']
  for expected in ['rain','storm','snow','clear']:
   page.evaluate("w=>{__lr.meta.weather=w;__lr.meta.raining=w==='rain'||w==='storm';localStorage.setItem('lr.meta',JSON.stringify(__lr.meta))}",expected)
   page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr')
@@ -46,9 +45,9 @@ with sync_playwright() as p:
   page.evaluate('p=>{__lr.meta.realtime=false;__lr.meta.dreamy=false;__lr.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':844});page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
-   assert page.locator('#menu-settings .toggle').count()==5
+   assert page.locator('#menu-settings .toggle').count()==6
    assert page.locator('#menu-settings .toggle span').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
-   assert page.locator('#menu-settings p').evaluate("e=>getComputedStyle(e).textAlign==='left'")
+   assert page.locator('#menu-settings p').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    if width==390:page.screenshot(path=f'/tmp/settings-left-{phase}.png')
    if phase=='day' and width==390:

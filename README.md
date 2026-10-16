@@ -382,3 +382,40 @@ loop, harp mute, persistent favorites and private data, real camera/photo pins,
 dining, wardrobe, savings, separate favorite-seat reservations and removal
 recovery, doorway motion, dream boosts, capture privacy, clean
 share import, reloads, and mobile/desktop day/night screenshots.
+
+### Optional live weather
+
+Settings now has **Live weather**, off until the owner enables it. It uses the
+browser/WebView's normal location permission prompt and Open-Meteo's free current
+weather endpoint. Android declares coarse and fine location permissions for the
+existing Capacitor WebView prompt; approximate permission is sufficient. Exact
+coordinates are immediately rounded to 0.1 degrees. Only rounded coordinates are
+sent, without cookies, a referrer or HTTP caching; no coordinates are written to device storage
+or room codes. The rounded position and current wind stay in memory for this
+session. Only `meta.liveWeather`, the existing `meta.weather` condition, and
+`meta.weatherFetchedAt` are saved under `lr.meta`.
+
+The controller in `weather.js` maps WMO conditions onto clear/rain/storm/snow,
+updates quietly on boot when opted in, and refreshes every 30 minutes while open.
+It checks elapsed real time on foreground/resume so sleeping the app does not
+lose the next refresh. Location is acquired once per enabled session, not watched
+continuously. Network/HTTP/malformed-response failures keep the last good sky and
+retry next cycle, silently. Permission denial turns the setting back off with an
+explanation. Wind uses the existing sound layer, scaled from km/h to 0–1 (40 km/h
+reaches full level), falling back to the normal weather-derived factor until a
+live fetch succeeds or when disabled.
+
+The cloud toolbar button remains removed, as requested earlier; Home's **Rain**
+control is the manual override. Using it disables live weather before changing
+the sky, cancels pending work and shows the override message. Late responses
+cannot overwrite a manual change. Sakura weather remains removed; the sakura
+tree and petal-tap Hanami moment are unchanged. The base button reset now sets
+`text-align: left`, including Settings on Android.
+
+Verify with `node --test tests/*.test.cjs`, `npm run build`,
+`python3 tests/live-weather-browser.py`, and `python3 tests/weather-browser.py`.
+Tests cover all WMO codes 0–99, opt-in/permission denial, rounded coordinates,
+private persistence, wind, caching/retries, boot/foreground refresh, in-flight
+cancellation and Home manual override. Browser tests mock location and Open-Meteo
+and check Settings alignment at 390px, actual rain application, saved state,
+permission failure feedback, and no application console errors.

@@ -199,7 +199,7 @@ function startLofiRooms() {
         if(key==='music') { if(!!meta.music!==on)playStation(on?0:-1); }
         // Home starts the built-in offline radio; custom streams stay in Sound.
         else if(key==='sound') { if(Sound.on!==on)Sound.toggle();meta.sound=Sound.on; }
-        else if(key==='rain')applyWeather(on?'rain':'clear');
+        else if(key==='rain')liveWeather.manual(()=>applyWeather(on?'rain':'clear'));
         else if(key==='glow'){meta.glow=on;view.glowOn=on;}
         else if(key==='dreamy'){meta.dreamy=on;checkDrift(true);}
         else if(key==='realtime'){meta.realtime=on;if(on)setPhase(realPhase(),true);}
@@ -987,7 +987,7 @@ function startLofiRooms() {
       bubbler: level(has(i => CAT[i.t].tank && !CAT[i.t].tank.pond && (i.on || CAT[i.t].tank.bowl)), 0.5),
       steam: its.some(i => CAT[i.t].steam) ? 1 : 0,
       rain: w === 'storm' ? 2 : w === 'rain' ? 1 : 0,
-      wind: w === 'snow' ? 1 : w === 'storm' ? 0.6 : (w === 'clear' && view.ph.night > 0.6 ? 0.4 : 0),
+      wind: liveWeather.soundWind(w === 'snow' ? 1 : w === 'storm' ? 0.6 : (w === 'clear' && view.ph.night > 0.6 ? 0.4 : 0)),
       crickets: month >= 5 && month <= 7 && view.ph.night > 0.6 && (w === 'clear') ? (view.noWalls ? 1 : 0.6) : 0,
       birds: meta.phase === 'morning' && (w === 'clear') ? 1 : 0,
       city: view.noWalls ? 0.8 : its.some(i => CAT[i.t].anim === 'rgb' || /arcade|console|gaming/.test(i.t)) ? 0.55 : 0,
@@ -1641,7 +1641,8 @@ function startLofiRooms() {
   }
   $('#bTime').onclick = () => { meta.realtime = false; setPhase(PHASE_ORDER[(PHASE_ORDER.indexOf(meta.phase) + 1) % 4]); Sound.turn(); };
   // Background weather supports clear, rain, storm and snow.
-  const WEATHERS = ['clear', 'rain', 'storm', 'snow'];
+  const WEATHERS = LRWeather.STATES;
+  const liveWeather = LRWeather.create({meta,save:()=>saveMeta(),applyWeather,notice:text=>toast(`<span>${esc(text)}</span>`,2800,true),changed:()=>{if(sheet.classList.contains('open') && $('#menu-settings'))renderMenu();}});
   const WEATHER_SAY = { clear: 'Clear skies', rain: 'Rain on the window…', storm: 'A storm rolls in', snow: 'It’s snowing' };
   function applyWeather(w, quiet) {
     meta.weather = WEATHERS.includes(w) ? w : 'clear';
@@ -2391,6 +2392,8 @@ function startLofiRooms() {
     };
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     target = sections.Settings;
+    toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
+    h('p', 'muted small', 'Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.');
     toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
     toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
@@ -2608,7 +2611,7 @@ function startLofiRooms() {
   const app = window.Store && window.Store.app;
   if (app) {
     app.addListener('pause', () => { roomToolsUI.flush(); letters.flush(); save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
-    app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); });
+    app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); liveWeather.refresh(); });
     app.addListener('backButton', () => {
       if (home.active) home.close();
       else if (letters.active) letters.close();
@@ -2633,7 +2636,7 @@ function startLofiRooms() {
     soundT += dt;
     if (soundT > 0.3) { Sound.soundscape(soundState(soundT)); soundT = 0; }
     clockT += dt;
-    if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); }
+    if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); liveWeather.refresh(); }
     momentT += dt;
     worldT += dt;
     if (worldT >= 1) { tickWorld(worldT); updateRitualCards(); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
@@ -2663,6 +2666,7 @@ function startLofiRooms() {
     requestAnimationFrame(loop);
   }
 
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) liveWeather.refresh(); });
   window.addEventListener('resize', () => view.resize());
   companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
@@ -2674,7 +2678,8 @@ function startLofiRooms() {
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  liveWeather.refresh();
+  window.__lr = { liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
