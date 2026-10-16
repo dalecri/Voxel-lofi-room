@@ -1737,9 +1737,9 @@
     if (ud.parts.float) { const f = ud.parts.float; if (f.userData.y0 == null) f.userData.y0 = f.position.y; f.position.y = f.userData.y0 + (0.5 + 0.5 * Math.sin(t * 1.6 + it.id)) * 0.06 * (ud.excited > t ? 3 : 1); }
     if (ud.parts.swing) ud.parts.swing.rotation.z = Math.sin(t * 1.7 + it.id) * (ud.excited > t ? 0.35 : 0.12);
     if (ud.parts.blink) ud.parts.blink.visible = !!it.on && Math.sin(t * 5 + it.id * 2.3) > -0.2;
-    if (ud.parts.spin) {
+    if (ud.parts.spin && !this.reducedMotion) {
       if (C.spinOn) { ud.spinW = (ud.spinW || 0) + ((it.on ? C.spinOn : 0) - (ud.spinW || 0)) * Math.min(1, dt * 1.5); ud.parts.spin.rotation[C.spinAxis || 'y'] += ud.spinW * dt; }   // fans (and washer drums, on z): only while switched on
-      else { ud.spinV = (ud.spinV || 0.3) * Math.exp(-dt * 0.8); ud.parts.spin.rotation.y += Math.max(0.3, ud.spinV) * dt; }
+      else { ud.spinV = (ud.spinV ?? (C.spinIdle ?? 0.3)) * Math.exp(-dt * 0.8); if (ud.spinV < .001) ud.spinV = 0; ud.parts.spin.rotation.y += Math.max(C.spinIdle ?? 0.3, ud.spinV) * dt; }
     }
     // a part that slides out for a moment (the cuckoo) and birds that visit by day or when fed
     if (ud.parts.pop) {

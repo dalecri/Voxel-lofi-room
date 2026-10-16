@@ -843,7 +843,7 @@ function startLofiRooms() {
     if (tap === 'mood') {
       // cycle: auto → each mood in turn → back to auto
       const n = Sound.moods.length;
-      meta.mood = meta.mood === 'auto' ? 0 : meta.mood + 1 >= n ? 'auto' : meta.mood + 1;
+      meta.mood = Number.isInteger(C.musicMood) ? C.musicMood : meta.mood === 'auto' ? 0 : meta.mood + 1 >= n ? 'auto' : meta.mood + 1;
       meta.moodSet = true;
       const name = (meta.mood === 'auto' ? 'Follow the day · ' : '') + applyMood();
       moodsPlayed.add(Sound.mood); if (moodsPlayed.size >= 3) discover('mixtape');
@@ -1015,7 +1015,7 @@ function startLofiRooms() {
       const lit = meta.litRooms || (meta.litRooms = []), first = !lit.includes(meta.current);
       Sound.ignite(first); if (first) { lit.push(meta.current); saveMeta(); }
     } else if (C.anim === 'buzz' || /neon/.test(it.t)) { if (it.on) Sound.neonOn(); else Sound.lampClick(false, 1.3); }
-    else if (C.anim === 'flame' || /candle|candel/.test(it.t)) { if (it.on) Sound.matchStrike(); else Sound.soft(0.2, 0.04, 'lowpass', 900); }
+    else if (C.anim === 'flame' || /candle|candel/.test(it.t)) { if (it.on) Sound.matchStrike(); else if (Sound.ready()) Sound.soft(0.2, 0.04, 'lowpass', 900); }
     else Sound.lampClick(it.on, 0.75 + typeHash(it.t) * 0.6);
   }
   // the live soundscape, read from the room: what's here, what's on, the weather and the hour
