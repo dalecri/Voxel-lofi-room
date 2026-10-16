@@ -225,7 +225,7 @@ function startLofiRooms() {
   function navigateSpace(target,item) {
     closeSheets();
     if(target==='settings'){store.set('lr.menuTab','Settings');renderMenu();openSheet();}
-    else if(target==='daily'){store.set('lr.menuTab','Today');renderMenu();openSheet();}
+    else if(target==='daily'){store.set('lr.menuTab','Journal');renderMenu();openSheet();}
     else if(target==='merchant')openShop();
     else if(target==='tea')roomToolsUI.open('tea',room.items.find(i=>i.t==='kettle')?.id || null);
     else if(target==='mailbox')roomToolsUI.open('mailbox',room.items.find(i=>['mailbox','letterbox'].includes(i.t))?.id || null);
@@ -245,6 +245,7 @@ function startLofiRooms() {
   function updateAppShortcut(){
     const b=$('#bAppShortcut'),p=shortcutApp();
     b.replaceChildren();
+    $('#bEditAppShortcut').hidden=!p;
     if(p){const icon=document.createElement('span');icon.textContent=p.icon || '↗';icon.setAttribute('aria-hidden','true');b.appendChild(icon);}
     else b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
     b.title=p?`Open ${p.label}. Change in Control Centre.`:'Choose room shortcut';
@@ -267,6 +268,7 @@ function startLofiRooms() {
     updateAppShortcut();const p=shortcutApp();if(!p){appShortcutSheet();return;}
     home.close(false);letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);launchTool(p);
   };
+  $('#bEditAppShortcut').onclick=appShortcutSheet;
   updateAppShortcut();
   window.addEventListener('storage',e=>{if(!e.key || [APP_SHORTCUT_KEY,'lr.portals'].includes(e.key))updateAppShortcut();});
   const home = LRHome.createView({
@@ -2373,18 +2375,7 @@ function startLofiRooms() {
     const spotlight=homeSearch();body.insertBefore(spotlight,body.querySelector('[role=tablist]'));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
-    todayUI.mount(target,{beforeTasks:panel=>{
-      const { D, name, hint } = dailyInfo();
-      const badge=h('details','daily-notice'+(D.done?' got':''),null,panel);
-      const summary=h('summary','daily-badge',null,badge);
-      h('span','daily-badge-dot',D.done?'✓':'✦',summary).setAttribute('aria-hidden','true');
-      h('span','',D.done?'Daily moment · done':'Daily moment',summary);
-      const detail=h('div','daily-notice-copy',null,badge);
-      h('b','',esc(name),detail);
-      h('p','muted small',D.done?'Done for today. A new moment tomorrow.':esc(hint),detail);
-      const log = store.get('lr.dailyLog', []).slice(0, 5);
-      if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${esc(M ? M[1] : e.id)}`; }).join('<br>'), detail);
-    }});
+    todayUI.mount(target);
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomVillage(target);
@@ -2454,6 +2445,18 @@ function startLofiRooms() {
     target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }, true));
     target = sections.Journal;
     h('h2', '', 'Room journal');
+    {
+      const { D, name, hint } = dailyInfo();
+      const badge=h('details','daily-notice'+(D.done?' got':''),null,target);
+      const summary=h('summary','daily-badge',null,badge);
+      h('span','daily-badge-dot',D.done?'✓':'✦',summary).setAttribute('aria-hidden','true');
+      h('span','',D.done?'Daily moment · done':'Daily moment',summary);
+      const detail=h('div','daily-notice-copy',null,badge);
+      h('b','',esc(name),detail);
+      h('p','muted small',D.done?'Done for today. A new moment tomorrow.':esc(hint),detail);
+      const log = store.get('lr.dailyLog', []).slice(0, 5);
+      if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${esc(M ? M[1] : e.id)}`; }).join('<br>'), detail);
+    }
     const streak=store.get('lr.dailyStreak',{n:0}).n;
     h('p','muted journal-streak',streak?`🔥 Daily moment · ${streak} day streak`:'Daily moment · A new streak begins with one cozy moment.');
     const feeds = h('div', 'rowbtns');
@@ -2482,12 +2485,17 @@ function startLofiRooms() {
       const index=Number.isInteger(wanted)&&wanted>=0&&wanted<list.length?wanted:0,st=list[index];
       const updateRadio=(fn,focus)=>{const top=body.scrollTop;fn();renderMenu();body.scrollTop=top;if(focus)body.querySelector(focus)?.focus({preventScroll:true});};
       const i=index-1,r=document.createElement('article'),playing=meta.music&&meta.station===index;r.className='station-card'+(playing?' playing':'');
-      const face=document.createElement('div');face.className='station-dial';face.textContent=icons.includes(st.icon)?st.icon:'📻';face.setAttribute('aria-hidden','true');
-      const copy=document.createElement('div');copy.className='station-copy';const name=document.createElement('b');name.textContent=st.name;
+      const face=document.createElement('span');face.className='station-dial';face.textContent=icons.includes(st.gen?meta.lofiIcon:st.icon)?(st.gen?meta.lofiIcon:st.icon):'📻';face.setAttribute('aria-hidden','true');
+      const copy=document.createElement('button');copy.type='button';copy.className='station-copy';const name=document.createElement('b');name.textContent=st.name;
       const band=document.createElement('span');band.className='muted small';band.textContent=st.gen?'OFFLINE · LOFI BAND':'SAVED · LIVE STREAM';
-      const channel=document.createElement('div');channel.className='station-channel';channel.innerHTML='<small>STATION</small><strong>'+String(index+1).padStart(2,'0')+'</strong>';
+      const channel=document.createElement('span');channel.className='station-channel';channel.innerHTML='<small>STATION</small><strong>'+String(index+1).padStart(2,'0')+'</strong>';
       const status=document.createElement('span');status.className='station-status';status.textContent=playing?'On air':'Ready when you are';status.setAttribute('role','status');
       copy.append(band,channel,name,face,status);
+      const iconPicker=document.createElement('div');iconPicker.className='station-icon-picker';iconPicker.hidden=true;iconPicker.setAttribute('role','group');iconPicker.setAttribute('aria-label','Choose icon for '+st.name);
+      copy.tabIndex=0;copy.setAttribute('role','button');copy.setAttribute('aria-label','Edit icon for '+st.name);copy.setAttribute('aria-expanded','false');
+      copy.onclick=()=>{iconPicker.hidden=!iconPicker.hidden;copy.setAttribute('aria-expanded',String(!iconPicker.hidden));};
+      for(const icon of icons){const option=document.createElement('button');option.type='button';option.textContent=icon;option.setAttribute('aria-label','Use '+icon+' for '+st.name);option.setAttribute('aria-pressed',String(face.textContent===icon));option.onclick=()=>updateRadio(()=>{if(st.gen)meta.lofiIcon=icon;else meta.stations[i].icon=icon;saveMeta();},'.station-copy');iconPicker.appendChild(option);}
+
       const tuner=document.createElement('div');tuner.className='station-tuner';tuner.setAttribute('aria-hidden','true');
       tuner.innerHTML='<div class="station-ticks"><i></i></div><div class="station-scale"><span>01</span><span>'+String(index+1).padStart(2,'0')+' / '+String(list.length).padStart(2,'0')+'</span><span>'+String(list.length).padStart(2,'0')+'</span></div>';
       tuner.querySelector('i').style.left=(list.length>1?index/(list.length-1)*100:50)+'%';
@@ -2496,15 +2504,13 @@ function startLofiRooms() {
       const play=document.createElement('button');play.className='station-play';play.innerHTML=radioGlyph(playing?'stop':'play');play.setAttribute('aria-label',(playing?'Stop ':'Play ')+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>updateRadio(()=>playStation(playing?-1:index),'.station-play');row.append(step(-1,'Previous'),play,step(1,'Next'));
       const edit=document.createElement('div');edit.className='station-edit';
       if(!st.gen){
-        const label=document.createElement('label');label.className='station-icon-label';label.textContent='Icon';const select=document.createElement('select');select.setAttribute('aria-label','Icon for '+st.name);
-        stationIcons(select,st.icon);select.onchange=()=>{meta.stations[i].icon=select.value;saveMeta();renderMenu();};label.appendChild(select);edit.appendChild(label);
         const del=document.createElement('button');del.className='chipbtn';del.textContent='Remove';del.onclick=()=>{
           if(meta.station===index)playStation(-1,true);else if(meta.station>index)meta.station--;
           if(meta.lastStation===index)meta.lastStation=0;else if(meta.lastStation>index)meta.lastStation--;
           meta.stations.splice(i,1);saveMeta();renderMenu();
         };edit.appendChild(del);
       }
-      r.append(copy,tuner,row);if(!st.gen)r.appendChild(edit);sl.appendChild(r);
+      r.append(copy,iconPicker,tuner,row);if(!st.gen)r.appendChild(edit);sl.appendChild(r);
     }
     const add = h('div', 'addstation');
     add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><label class="station-icon-label">Icon<select id="stIcon" aria-label="New station icon"></select></label><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';

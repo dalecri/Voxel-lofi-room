@@ -21,13 +21,15 @@ with sync_playwright() as p:
  def esc():page.keyboard.press('Escape')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  assert page.evaluate('__lr.meta.current')==101;assert page.evaluate('JSON.parse(localStorage.getItem("lr.room.102")).name')=='Living draft restored'
- menu('Today');badge=page.locator('.daily-badge');assert badge.is_visible();assert page.locator('.daily-notice').get_attribute('open') is None;assert not page.locator('.daily-notice-copy').is_visible();assert not page.locator('.daily-heading').count();assert badge.bounding_box()['height']<=60
- badge.click();assert page.locator('.daily-notice-copy').is_visible();badge.click();assert not page.locator('.daily-notice-copy').is_visible();esc()
+ menu('Today');assert page.locator('#menu-today .daily-notice').count()==0
+ page.get_by_role('tab',name='Journal',exact=True).click();badge=page.locator('#menu-journal .daily-badge');assert badge.is_visible();assert page.locator('#menu-journal .journal-streak').is_visible();assert page.locator('.daily-notice').get_attribute('open') is None;badge.click();assert page.locator('.daily-notice-copy').is_visible();badge.click();esc()
+ def set_icon(name,icon):
+  page.get_by_role('button',name='Edit icon for '+name,exact=True).click();page.get_by_role('button',name='Use '+icon+' for '+name,exact=True).click()
  page.evaluate("HTMLMediaElement.prototype.play=function(){return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){}")
  # One receiver follows the selected channel, wraps, and keeps the controls focused.
- menu('Sound');assert page.locator('.station-card').count()==1;assert page.locator('.station-copy b').inner_text()=='Lofi radio'
+ menu('Sound');assert page.locator('.station-card .station-icon-label,.station-card select').count()==0;assert page.locator('.station-card').count()==1;assert page.locator('.station-copy b').inner_text()=='Lofi radio';page.locator('.station-copy').focus();page.keyboard.press('Enter');assert page.locator('.station-copy').get_attribute('aria-expanded')=='true';page.get_by_role('button',name='Use 🌊 for Lofi radio',exact=True).click();assert page.evaluate('__lr.meta.lofiIcon')=='🌊';assert page.locator('.station-copy').evaluate('e=>e===document.activeElement')
  page.locator('.station-next').click();assert page.evaluate('__lr.meta.music && __lr.meta.station===1');assert page.locator('.station-next').evaluate('e=>e===document.activeElement');assert page.locator('.station-copy b').inner_text()=='Old station'
- page.get_by_role('combobox',name='Icon for Old station',exact=True).select_option('🌙');assert page.locator('.station-dial').inner_text()=='🌙'
+ set_icon('Old station','🌙');assert page.locator('.station-dial').inner_text()=='🌙'
  page.locator('#stName').fill('Night garden');page.locator('#stUrl').fill('https://example.com/night.mp3');page.get_by_role('combobox',name='New station icon',exact=True).select_option('🌿');page.click('#stAdd');assert page.locator('.station-card').count()==1
  page.get_by_role('button',name='Stop Old station',exact=True).click();assert not page.evaluate('__lr.meta.music');assert page.locator('.station-copy b').inner_text()=='Old station'
  page.locator('.station-prev').click();assert page.evaluate('__lr.meta.station===0');page.get_by_role('button',name='Stop Lofi radio',exact=True).click();page.get_by_role('button',name='Play Lofi radio',exact=True).click();assert page.locator('.station-card.playing').count()==1
@@ -38,9 +40,9 @@ with sync_playwright() as p:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase);assert page.locator('body').evaluate("(e,p)=>e.classList.contains('night')===(p==='night')",phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');page.locator('.station-card').first.scroll_into_view_if_needed();page.screenshot(path=f'/tmp/radio-cards-{phase}-{width}.png')
- esc();page.reload(wait_until='networkidle');ready();menu('Sound');assert page.locator('.station-card').count()==1;assert page.locator('.station-copy b').inner_text()=='Night garden';assert page.get_by_role('combobox',name='Icon for Night garden',exact=True).input_value()=='🌿'
+ esc();page.reload(wait_until='networkidle');ready();menu('Sound');assert page.locator('.station-card').count()==1;assert page.locator('.station-copy b').inner_text()=='Night garden';assert page.locator('.station-dial').inner_text()=='🌿'
  page.evaluate("HTMLMediaElement.prototype.play=function(){return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){}")
- page.locator('.station-prev').click();assert page.get_by_role('combobox',name='Icon for Old station',exact=True).input_value()=='🌙';page.get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-copy b').inner_text()=='Lofi radio';assert page.evaluate('__lr.meta.stations.length')==1
+ page.locator('.station-prev').click();assert page.locator('.station-dial').inner_text()=='🌙';page.get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-copy b').inner_text()=='Lofi radio';assert page.evaluate('__lr.meta.stations.length')==1
  page.locator('.station-next').click();page.get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-card').count()==1;assert page.evaluate('__lr.meta.stations.length')==0;assert page.locator('.station-prev').is_disabled();assert page.locator('.station-next').is_disabled();esc()
  assert not errors,errors
  print('PASS one radio, next/previous wrap and focus, play/stop, selected channel/icon persistence, removal, single-channel controls, compact daily badge, mobile/day/night',flush=True)

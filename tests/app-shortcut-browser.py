@@ -21,10 +21,10 @@ with sync_playwright() as p:
  def esc():page.keyboard.press('Escape')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  button=page.locator('#bAppShortcut');body=page.locator('#sheetBody');home=page.locator('#homeView')
- assert button.get_attribute('aria-label')=='Choose room shortcut'
+ assert button.get_attribute('aria-label')=='Choose room shortcut';assert not page.locator('#bEditAppShortcut').is_visible()
  button.click();assert body.locator('h2').inner_text()=='Room shortcut';assert body.locator('[data-shortcut=typewriter]').is_visible()
  body.get_by_role('searchbox',name='Find a shortcut app',exact=True).fill('typewriter');assert body.locator('[data-shortcut]').count()==1;body.locator('[data-shortcut=typewriter]').click();assert page.evaluate("JSON.parse(localStorage.getItem('lr.appShortcut'))")=='typewriter';assert button.get_attribute('aria-label')=='Open Typewriter';assert button.evaluate('e=>e===document.activeElement')
- button.click();assert page.locator('#letterBody').is_visible();page.locator('#letterBody').fill('PRIVATE_SHORTCUT_DRAFT');page.click('#letterClose')
+ assert page.locator('#bEditAppShortcut').is_visible();page.click('#bEditAppShortcut');assert body.locator('[data-shortcut=typewriter]').get_attribute('aria-pressed')=='true';body.locator('[data-shortcut=typewriter]').click();button.click();assert page.locator('#letterBody').is_visible();page.locator('#letterBody').fill('PRIVATE_SHORTCUT_DRAFT');page.click('#letterClose')
  page.click('#bHome');home.get_by_role('button',name='Set room shortcut',exact=True).click();assert body.locator('[data-shortcut=typewriter]').get_attribute('aria-pressed')=='true';body.locator('[data-shortcut=tea]').click();button.click();assert body.locator('h2').inner_text()=='A little pot of tea';esc()
  # Private user-added apps come from the live Control Centre directory too.
  page.evaluate("__lr.files.addPortal('PRIVATE_SHORTCUT_APP','https://example.com/private-shortcut');window.opened=[];window.open=(...args)=>opened.push(args);void 0")
