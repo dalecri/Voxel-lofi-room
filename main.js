@@ -2502,15 +2502,15 @@ function startLofiRooms() {
       const row=document.createElement('div');row.className='station-controls';
       const step=(delta,label)=>{const b=document.createElement('button');b.className='station-step '+(delta<0?'station-prev':'station-next');b.disabled=list.length<2;b.innerHTML=radioGlyph(delta<0?'previous':'next');b.setAttribute('aria-label',label+' station from '+st.name);b.onclick=()=>updateRadio(()=>playStation((index+delta+list.length)%list.length),delta<0?'.station-prev':'.station-next');return b;};
       const play=document.createElement('button');play.className='station-play';play.innerHTML=radioGlyph(playing?'stop':'play');play.setAttribute('aria-label',(playing?'Stop ':'Play ')+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>updateRadio(()=>playStation(playing?-1:index),'.station-play');row.append(step(-1,'Previous'),play,step(1,'Next'));
-      const edit=document.createElement('div');edit.className='station-edit';
+      let remove=null;
       if(!st.gen){
-        const del=document.createElement('button');del.className='chipbtn';del.textContent='Remove';del.onclick=()=>{
+        const del=document.createElement('button');remove=del;del.type='button';del.className='station-remove';del.setAttribute('aria-label','Remove');del.title='Remove '+st.name;del.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>';del.onclick=()=>{
           if(meta.station===index)playStation(-1,true);else if(meta.station>index)meta.station--;
           if(meta.lastStation===index)meta.lastStation=0;else if(meta.lastStation>index)meta.lastStation--;
           meta.stations.splice(i,1);saveMeta();renderMenu();
-        };edit.appendChild(del);
+        };
       }
-      r.append(copy,iconPicker,tuner,row);if(!st.gen)r.appendChild(edit);sl.appendChild(r);
+      r.append(copy,iconPicker,tuner,row);if(remove)r.appendChild(remove);sl.appendChild(r);
     }
     const add = h('div', 'addstation');
     add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><label class="station-icon-label">Icon<select id="stIcon" aria-label="New station icon"></select></label><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
