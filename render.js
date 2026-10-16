@@ -992,7 +992,7 @@
       this.glowFx.spawn(p.x, p.y, p.z, Math.cos(a) * s, 1 + Math.random() * 1.2, Math.sin(a) * s, col || 0xfff0a0, 0.06, 0.6 + Math.random() * 0.4, 3, 1.2);
     }
   };
-  R.boing = function (id) { const o = this.objs.get(id); if (o) o.userData.boing = 1; };
+  R.boing = function (id) { const o = this.objs.get(id); if (o && !this.reducedMotion) o.userData.boing = 1; };
 
   // ---- cats ----
   R.syncPet = function (it, obj, room) {
@@ -1359,7 +1359,7 @@
       if (CAT[L.userData.it.t].focusRitual && cv) L.position.copy(this.itemPoint(L.userData.it.id, [4, 4 + 14 * (0.2 + 0.8 * cv.fraction), 4]));
       if (cv && cv.level !== undefined) i *= 0.35 + 0.9 * cv.level;                 // a roaring fire lights the room, embers barely
       if (cv && cv.gutter) i *= 0.55 + 0.3 * Math.sin(t * 9 + L.id) * Math.sin(t * 23);   // a candle guttering
-      if (L.userData.flicker) i *= 0.82 + 0.12 * Math.sin(t * 13 + L.id) + 0.08 * Math.sin(t * 31 + L.id * 2);
+      if (L.userData.flicker && !this.reducedMotion) i *= 0.82 + 0.12 * Math.sin(t * 13 + L.id) + 0.08 * Math.sin(t * 31 + L.id * 2);
       if (L.userData.rgb) L.color.setHSL((t * 0.08 + L.userData.rgb * 0.13) % 1, 0.9, 0.6);
       L.intensity = i;
     }

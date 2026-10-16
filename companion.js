@@ -384,16 +384,16 @@
     bubble.setAttribute('role', 'status'); bubble.setAttribute('aria-live', 'polite'); bubble.setAttribute('aria-label', DISPLAY_NAME); bubble.hidden = true; document.body.appendChild(bubble);
     let cachedRoom = null, cachedItems = null, refresh = 0, desks = [], windows = [], activities = [], seats = [], zTime = 0, lastSip = false;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    function env() { return { ...environment(), n: room.n, walk: view.walk || [], desks, windows, activities, seats, reducedMotion: reduced.matches }; }
+    function env() { return { ...environment(), n: room.n, walk: view.walk || [], desks, windows, activities, seats, reducedMotion: view.reducedMotion ?? reduced.matches }; }
     function scan() { ({desks,windows,activities,seats} = scanActivities(room,view)); }
     function frame(dt) {
       const e = environment(); refresh -= dt;
       if (cachedRoom !== e.roomId || cachedItems !== room.items || refresh <= 0) { scan(); cachedRoom = e.roomId; cachedItems = room.items; refresh = .5; }
       const s = brain.step(dt, env());
       object.position.set(s.x, s.y + s.hop + s.bob, s.z); object.rotation.y = s.heading;
-      applyPose(object,pose,s,reduced.matches);
+      applyPose(object,pose,s,view.reducedMotion ?? reduced.matches);
       const parts=object.userData.parts, typing=s.pose==='type';
-      const stretch=s.mode==='window' && e.phase==='morning' && !reduced.matches && s.activity?.time<5 ? Math.sin(s.activity.time/5*Math.PI)*.35 : 0;
+      const stretch=s.mode==='window' && e.phase==='morning' && !(view.reducedMotion ?? reduced.matches) && s.activity?.time<5 ? Math.sin(s.activity.time/5*Math.PI)*.35 : 0;
       parts.leftarm.rotation.z=stretch;parts.rightarm.rotation.z=-stretch;
       stool.visible=typing;stool.position.y=-s.y/.4;stool.scale.y=s.y/(.4*1.25);
       if(s.sipping && !lastSip && !e.quiet) LofiSound.sip();lastSip=!!s.sipping;

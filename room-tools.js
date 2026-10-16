@@ -51,7 +51,7 @@
     }
     function undoStroke(){state.strokes.pop();save();}function clearSketch(){state.strokes=[];save();}
     return {send,poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,stroke,undoStroke,clearSketch,total,
-      get state(){return copy(state);},get strokes(){return copy(state.strokes);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
+      get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get strokes(){return copy(state.strokes);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
   function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},sound,notice=()=>{}}){

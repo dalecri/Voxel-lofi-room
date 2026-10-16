@@ -46,14 +46,14 @@
   }
   function tabKey(e){const list=e.target.closest?.('[role=tablist]');if(!list || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const b=[...list.querySelectorAll('[role=tab]')],i=b.indexOf(e.target);if(i<0)return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?b.length-1:(i+(e.key==='ArrowRight'?1:b.length-1))%b.length;b[next].click();b[next].focus();}
   function menu(body,store,close){body.appendChild(element('div','grab'));button(body,'Close',close,'chipbtn sheet-close');body.appendChild(element('h2','','Your room'));body.appendChild(element('p','muted','A little space for your day.'));return tabs(body,MENU_TABS,store.get('lr.menuTab','Today'),name=>store.set('lr.menuTab',name),'menu');}
-  function createView({model,CAT,widgets,sheet,letters,room,renderer,hidden,saveScene,openScene,encodeScene,placePortal,notice,onLaunch=()=>{},close=()=>{}}) {
+  function createView({model,CAT,widgets,sheet,letters,room,renderer,hidden,saveScene,openScene,encodeScene,placePortal,notice,onLaunch=()=>{},close=()=>{},localDestinations=[]}) {
     const safe=fn=>async()=>{try{await fn();}catch(e){notice(e.message || 'Could not open this file.');}};
     function launch(p){onLaunch(p);window.open(p.url,'_blank','noopener,noreferrer');}
     function launcher(){sheet('App launcher','Your destinations, together. Custom links stay on this device.',h=>{
       const search=h('input','dashboard-search');search.type='search';search.placeholder='Find an app';search.setAttribute('aria-label','Find an app');
       const grid=h('div','launcher-grid'),empty=h('p','muted');
-      function draw(){grid.replaceChildren();const all=destinations(CAT,widgets,model.custom),q=search.value.toLocaleLowerCase(),rows=all.filter(p=>p.label.toLocaleLowerCase().includes(q));empty.textContent=rows.length?'':'No matching destinations.';
-        rows.forEach(p=>{const b=button(grid,'',()=>launch(p),'launcher-tile');const icon=element('span','launcher-icon',p.icon);icon.setAttribute('aria-hidden','true');b.append(icon,element('b','',p.label));b.title=p.url;});
+      function draw(){grid.replaceChildren();const all=destinations(CAT,widgets,model.custom).concat(localDestinations),q=search.value.toLocaleLowerCase(),rows=all.filter(p=>p.label.toLocaleLowerCase().includes(q));empty.textContent=rows.length?'':'No matching destinations.';
+        rows.forEach(p=>{const b=button(grid,'',()=>p.action?p.action():launch(p),'launcher-tile');const icon=element('span','launcher-icon',p.icon);icon.setAttribute('aria-hidden','true');b.append(icon,element('b','',p.label));b.title=p.url || p.label;});
         const add=button(grid,'',addPortal,'launcher-tile');const icon=element('span','launcher-icon','＋');icon.setAttribute('aria-hidden','true');add.append(icon,element('b','','Add your own'));
       }search.oninput=draw;draw();
     });}
@@ -88,7 +88,7 @@
     async function share(t,f){try{const p=await payload(t,f);if(root.Capacitor?.isNativePlatform?.()){await nativeShare(p,f.title);return;}const file=new File([await blob(p)],p.filename,{type:p.type});if(navigator.canShare?.({files:[file]})){await navigator.share({title:f.title,files:[file]});return;}await download(t,f);notice('File downloaded. You can attach it to a message.');}catch(e){if(e.name!=='AbortError' && !/cancel/i.test(e.message || ''))throw e;}}
     let next=0;
     function frame(){if(performance.now()<next)return;next=performance.now()+1000;const cabinets=room().items.filter(it=>it.t==='filecab');if(!cabinets.length)return;const count=model.count,v=renderer();for(const it of cabinets){const p=v.objs.get(it.id)?.userData.parts;if(!p)continue;for(let n=0;n<3;n++)if(p['privateFiles'+n])p['privateFiles'+n].visible=!hidden() && !v.capturing && count>n*4;}}
-    return {launcher,portal,files,frame,addPhoto(data,title){try{model.add('Photos',{data,title});}catch(e){notice('Photo is still open, but the cabinet is full. Download it to keep a copy.');}}};
+    return {launcher,portal,files,openFile:open,frame,addPhoto(data,title){try{model.add('Photos',{data,title});}catch(e){notice('Photo is still open, but the cabinet is full. Download it to keep a copy.');}}};
   }
   const api={MENU_TABS,FILE_TABS,EMPTY,KEYS,url,destinations,create,tabs,tabKey,menu,createView};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRDashboard=api;

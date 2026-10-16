@@ -213,6 +213,6 @@
     const magicBoost = () => 0.6 + (view.cozy || 0.5);
     const mischiefBoost = () => (room.items.some(i => kindOf(i) === 'cat' && catMood(i) === 'dramatic') ? 2.5 : 1);
     const fireHeat = () => { let m = 0; room.items.forEach(it => { const v = view.careVis && view.careVis.get(it.id); if (v && v.level) m = Math.max(m, v.level); }); return m || 1; };
-    return { tap, petCat, catMood, tick, flush, prune, cozyOf, magicBoost, mischiefBoost, fireHeat, kindOf };
+    return { get plantsToday(){return room.items.filter(it=>['plant','herb'].includes(kindOf(it))&&db[A.roomId()]?.items[it.id]?.wd===A.today()).length;}, tap, petCat, catMood, tick, flush, prune, cozyOf, magicBoost, mischiefBoost, fireHeat, kindOf };
   };
 })();

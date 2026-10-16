@@ -331,3 +331,13 @@ The free **File cabinet** is in Desks. Its **Letters** tab reads the existing ty
 File contents, titles and custom portal URLs/assignments stay outside room decor and LR0/LR1 codes. No account or new background fetch is involved. Device storage has finite capacity; if a photo cannot be kept in the cabinet, its original camera preview/export remains available. Clearing app storage removes these private files unless the owner has exported them.
 
 Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/dashboard-browser.py`. The browser harness covers relocated menu controls and tab persistence, catalog-derived launchers and custom links, letters/scenes/photos and downloads, cabinet capture privacy, responsive layouts at 320/390/1280 pixels, Escape, and an actual LR1 import in a fresh session with no private files or portal data. Existing browser scripts now select the relevant menu tab before interacting with its controls.
+
+## Home
+
+The sunrise toolbar button and the phone launcher's **Home** tile open a full-screen, device-local dashboard. Today reads the same daily moment and streak as the menu, plus the current daypart/weather and existing tea, merchant and mailbox state. Gentle notifications are derived from that state; their rows open the existing tools rather than duplicating their interfaces.
+
+Control center uses existing music, sound, weather, glow, dream and clock settings. Starting music here uses the built-in offline radio; custom streams remain in the Sound menu. Turning off Follow the clock exposes the existing four dayparts. Reduced motion defaults to the device preference and saves an explicit override in `lr.reducedMotion`; it reduces UI animations, companion fidgets, groove bobs, item bounce, lamp flicker and new ambient events. The engine has no public volume control, so Home does not add a slider.
+
+Spotlight searches catalog names, typewriter letter titles, saved scene titles and idea-jar text. Results navigate to the real tools; furniture opens Decorate with that item filtered, with **Show all** to clear the filter. Locked cosmetics open the merchant shop. Home stores no copy of file or tool data and makes no network requests. Its coziness score is visible in `home.js`: this week's completed Daily Moments + resident cats + current-room plants cared for today. The weekly count uses `lr.dailyLog`, since historical discoveries in `lr.found` have no dates.
+
+Run `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/home-browser.py` for fixture derivations, grouped search, notifications, controls, navigation, mobile/day/night layouts, private share payloads and offline behavior. Home also closes with Escape or Android Back.

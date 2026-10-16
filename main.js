@@ -163,7 +163,7 @@ function startLofiRooms() {
     } });
   const files = LRDashboard.create({store, letters: letters.model});
   let pendingPortal = null;
-  const dashboard = LRDashboard.createView({model:files,CAT,widgets,sheet:codeSheet,close:closeSheets,letters,room:()=>room,renderer:()=>view,
+  const dashboard = LRDashboard.createView({model:files,CAT,widgets,sheet:codeSheet,close:closeSheets,letters,localDestinations:[{label:'Home',icon:'☀',action:()=>home.open()}],room:()=>room,renderer:()=>view,
     hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2600,true),
     onLaunch:p=>{const it=room.items.find(it=>it.t===p.furnitureId);if(it && widgetView)widgetView.feedback(it.id);if(p.furnitureId==='pomodorocandle')Sound.matchStrike();},
@@ -175,8 +175,51 @@ function startLofiRooms() {
         view.panGoal.set(0,0,0);view.zoomGoal=1;changed();save();updateHeader();
       });
     },
-    placePortal:p=>{pendingPortal=p.id;closeSheets();state.group='tech';state.tool='add';setMode('edit',true);pickAdd('appportal',true);}
+    placePortal:p=>{pendingPortal=p.id;closeSheets();state.addFilter=null;state.group='tech';state.tool='add';setMode('edit',true);pickAdd('appportal',true);}
   });
+
+  const motionMedia = matchMedia('(prefers-reduced-motion: reduce)');
+  let motionPreference = store.get(LRHome.MOTION_KEY,null);
+  Object.defineProperty(view,'reducedMotion',{get:()=>motionPreference ?? motionMedia.matches});
+  function applyMotion() {
+    motionPreference = store.get(LRHome.MOTION_KEY,null);
+    document.body.classList.toggle('reduce-motion', view.reducedMotion);
+  }
+  applyMotion(); motionMedia.addEventListener('change', applyMotion);
+  const home = LRHome.createView({
+    context:()=>({store,meta,room,roomId:meta.current,tools:roomTools.homeState,daily:dailyInfo(),merchant:!!merchantHere(),plantsToday:care?.plantsToday,sound:Sound.on,reduced:view.reducedMotion}),
+    sources:()=>({CAT:Object.fromEntries(Object.entries(CAT).map(([id,C])=>[id,{name:C.name}])),letters:letters.model.list().map(l=>({id:l.id,title:l.title})),scenes:files.list('Scenes').map(f=>({id:f.id,title:f.title})),ideas:roomTools.homeState.ideas}),
+    beforeOpen:()=>{letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
+    onClose:()=>$('#bHome').focus(),
+    actions:{
+      toggle:(key,on)=>{
+        if(key==='music') { if(!!meta.music!==on)playStation(on?0:-1); }
+        // Home starts the built-in offline radio; custom streams stay in Sound.
+        else if(key==='sound') { if(Sound.on!==on)Sound.toggle();meta.sound=Sound.on; }
+        else if(key==='rain')applyWeather(on?'rain':'clear');
+        else if(key==='glow'){meta.glow=on;view.glowOn=on;}
+        else if(key==='dreamy'){meta.dreamy=on;checkDrift(true);}
+        else if(key==='realtime'){meta.realtime=on;if(on)setPhase(realPhase(),true);}
+        else if(key==='reduced'){store.set(LRHome.MOTION_KEY,on);applyMotion();}
+        saveMeta();updateHeader();
+      },
+      phase:p=>{if(!meta.realtime)setPhase(p,true);},
+      navigate:(target,item)=>{
+        if(target==='daily'){store.set('lr.menuTab','Today');renderMenu();sheet.classList.add('open');}
+        else if(target==='merchant')openShop();
+        else if(target==='tea')roomToolsUI.open('tea',room.items.find(i=>i.t==='kettle')?.id || null);
+        else if(target==='mailbox')roomToolsUI.open('mailbox',room.items.find(i=>['mailbox','letterbox'].includes(i.t))?.id || null);
+        else if(target==='Ideas')roomToolsUI.open('ideas',room.items.find(i=>i.t==='ideajar')?.id || null);
+        else if(target==='Letters'){const f=letters.model.list().find(l=>l.id===item.id);if(f)dashboard.openFile('Letters',f);}
+        else if(target==='Scenes'){const f=files.list('Scenes').find(f=>f.id===item.id);if(f)dashboard.openFile('Scenes',f);}
+        else if(target==='Furniture'){
+          const C=CAT[item.id];if(!C)return;if(!shop.available(C)){openShop();return;}
+          state.tool='add';state.group=C.group;state.addFilter=item.id;setMode('edit',true);pickAdd(item.id,true);
+        }
+      },
+    },
+  });
+  $('#bHome').onclick=()=>home.open();
 
   (function starsBg() {
     const c = document.createElement('canvas'); c.width = 600; c.height = 900;
@@ -383,10 +426,11 @@ function startLofiRooms() {
       tabs.appendChild(b);
     };
     if (state.tool === 'add') {
-      GROUPS.forEach(([k, label]) => tab(label, state.group === k, () => { state.group = k; }));
-      Object.values(CAT).filter(C => C.group === state.group && shop.available(C)).forEach(C => {
+      GROUPS.forEach(([k, label]) => tab(label, state.group === k, () => { state.addFilter=null; state.group = k; }));
+      if(state.addFilter){const all=document.createElement('button');all.className='chipbtn';all.textContent='Show all';all.onclick=()=>{state.addFilter=null;renderTray();};row.appendChild(all);}
+      Object.values(CAT).filter(C => C.group === state.group && shop.available(C) && (!state.addFilter || C.key===state.addFilter)).forEach(C => {
         const b = document.createElement('button');
-        b.className = 'swatch' + (state.add === C.key ? ' on' : '');
+        b.className = 'swatch' + (state.add === C.key ? ' on' : ''); b.dataset.furniture=C.key;
         const name = C.kind === 'pet' ? 'Cats' : C.name;
         b.innerHTML = `<img alt="" src="${thumbOf(C.key, 0)}"><span>${name}</span>`;
         b.title = name;
@@ -500,7 +544,7 @@ function startLofiRooms() {
   // keyboard: step through the tray (←/→) and its tabs (↑/↓)
   function stepTray(dir) {
     if (state.tool === 'add') {
-      const list = Object.values(CAT).filter(C => C.group === state.group && shop.available(C));
+      const list = Object.values(CAT).filter(C => C.group === state.group && shop.available(C) && (!state.addFilter || C.key===state.addFilter));
       if (!list.length) return;
       const i = list.findIndex(C => C.key === state.add);
       pickAdd(list[(i + dir + list.length) % list.length].key);
@@ -514,8 +558,8 @@ function startLofiRooms() {
   function stepTab(dir) {
     if (state.tool === 'add') {
       const i = GROUPS.findIndex(g => g[0] === state.group);
-      state.group = GROUPS[(i + dir + GROUPS.length) % GROUPS.length][0];
-      const first = Object.values(CAT).find(C => C.group === state.group && shop.available(C));
+      state.addFilter=null;state.group = GROUPS[(i + dir + GROUPS.length) % GROUPS.length][0];
+      const first = Object.values(CAT).find(C => C.group === state.group && shop.available(C) && (!state.addFilter || C.key===state.addFilter));
       if (first) state.add = first.key;
       state.addR = null;
     } else {
@@ -579,12 +623,12 @@ function startLofiRooms() {
     }
     view.setHover(0);
   }
-  $('#bEdit').onclick = () => { setMode('edit'); Sound.init(); };
+  $('#bEdit').onclick = () => { state.addFilter=null; setMode('edit'); Sound.init(); };
   if (FINE) {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bRain: 'Weather: clear, rain, storm, snow, sakura', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bRain: 'Weather: clear, rain, storm, snow, sakura', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bHome: 'Home', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -1052,7 +1096,7 @@ function startLofiRooms() {
   setInterval(() => { if (Math.random() < 0.15 * (care ? care.magicBoost() : 1)) visit(); }, 60000);   // cozy rooms get more visitors
   function merchantHere() { return merchant.active && merchantCat && room.items.includes(merchantCat) && meta.visitors !== false; }
   function tickWorld(dt) {
-    const idle = !letters.active && !rituals.breath.active && !document.hidden && state.mode === 'explore' && !state.drag && !view.fp && !filming && !$('#photo').classList.contains('open') && !$('#intro').classList.contains('open');
+    const idle = !home.active && !letters.active && !rituals.breath.active && !document.hidden && state.mode === 'explore' && !state.drag && !view.fp && !filming && !$('#photo').classList.contains('open') && !$('#intro').classList.contains('open');
     if (merchantHere() && sheet.classList.contains('open') && $('#sheetBody').dataset.merchant === 'here') merchant.linger();
     const edges = [];
     for (let k = 0; k < room.n; k++) edges.push([k, 0], [0, k], [k, room.n - 1], [room.n - 1, k]);
@@ -1070,7 +1114,7 @@ function startLofiRooms() {
       toast('<span>Mallow wandered in with a few little treasures. Tap his satchel 🐾</span>', 3200);
       room.items.filter(i => i.t === 'cat' && !i.visitor).slice(0, 1).forEach(cat => recordCat(cat, 'merchant'));
     }
-    const event = ambientLife.tick(dt, idle && !sheet.classList.contains('open'), { window: room.items.some(i => CAT[i.t].beam), rain: meta.raining, day: meta.phase === 'day' || meta.phase === 'morning' });
+    const event = ambientLife.tick(dt, idle && !view.reducedMotion && !sheet.classList.contains('open'), { window: room.items.some(i => CAT[i.t].beam), rain: meta.raining, day: meta.phase === 'day' || meta.phase === 'morning' });
     if (event && view.ambientEvent(event)) Sound.ambientEvent(event);
   }
   // cuckoo clocks call the hour on their own, like the wall clock tells real time
@@ -1860,6 +1904,7 @@ function startLofiRooms() {
     return d;
   }
   function codeSheet(title, sub, build) {
+    home.close(false);
     roomToolsUI.close();
     const body = $('#sheetBody'); body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
@@ -2213,7 +2258,7 @@ function startLofiRooms() {
     // the ghost slice: tap to start a new room
     const g = document.createElement('button'); g.className = 'slice ghost'; g.style.setProperty('--z', ((n - 1) * pitch) + 'px'); g.style.zIndex = n;
     g.setAttribute('aria-label', 'Start a new room');
-    const newFlow = () => { const sec = [...$('#sheetBody').querySelectorAll('h2')].find(e => /Start a new room/.test(e.textContent)); if (sec) { sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash'); } Sound.blip(); };
+    const newFlow = () => { const sec = [...$('#sheetBody').querySelectorAll('h2')].find(e => /Start a new room/.test(e.textContent)); if (sec) { sec.scrollIntoView({ behavior: view.reducedMotion ? 'auto' : 'smooth', block: 'start' }); sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash'); } Sound.blip(); };
     g.onclick = newFlow; iso.appendChild(g);
     const GL = document.createElement('div'); GL.className = 'slabel ghostlabel'; GL.style.top = (H - base - (n - 1) * rise) + 'px';
     GL.innerHTML = '<button class="sname"><b>＋ New room</b></button>'; GL.querySelector('.sname').onclick = newFlow; labels.appendChild(GL);
@@ -2235,6 +2280,7 @@ function startLofiRooms() {
     }
   }
   function renderMenu() {
+    home.close(false);
     roomToolsUI.close();
     saveIndex();
     const body = $('#sheetBody');
@@ -2571,7 +2617,8 @@ function startLofiRooms() {
     app.addListener('pause', () => { roomToolsUI.flush(); letters.flush(); save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
     app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); });
     app.addListener('backButton', () => {
-      if (letters.active) letters.close();
+      if (home.active) home.close();
+      else if (letters.active) letters.close();
       else if (rituals.breath.active) stopBreathing();
       else if (filming) filmCancel = true;
       else if (crateOpen) closeCrate();
@@ -2587,7 +2634,7 @@ function startLofiRooms() {
   let last = performance.now(), t = 0, soundT = 0, saveT = 0, clockT = 0, momentT = 0, worldT = 0;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
-    updateRituals();
+    updateRituals(); home.tick(now);
     const liftGoal = state.mode === 'edit' ? (innerWidth < 760 ? 84 : 60) : (innerWidth < 760 ? 24 : 16);
     liftNow += (liftGoal - liftNow) * Math.min(1, dt * 6);
     soundT += dt;
@@ -2618,13 +2665,13 @@ function startLofiRooms() {
       if (turn) view.fp.look += turn * dt * 2.2;
       view.catMove(f, sd, dt);
     }
-    view.beat = meta.music && !stream ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
+    view.beat = meta.music && !stream && !view.reducedMotion ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
     if (!filming) { view.frame(dt, t); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); }
     requestAnimationFrame(loop);
   }
 
   window.addEventListener('resize', () => view.resize());
-  companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
   widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open') });
   updateHeader();
@@ -2632,7 +2679,7 @@ function startLofiRooms() {
   updateRituals();
   if (meta.music) { meta.music = false; updateHeader(); }   // browsers need a tap before music can play
   requestAnimationFrame(loop);
-  window.__lr = { files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
