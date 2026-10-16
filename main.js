@@ -238,8 +238,39 @@ function startLofiRooms() {
     }
   }
 
+  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','journal','settings'].includes(p.id));
+  // A device-private destination ID, resolved from the same directory as Control Centre.
+  const APP_SHORTCUT_KEY='lr.appShortcut';
+  const shortcutApp=()=>{const id=store.get(APP_SHORTCUT_KEY,null);return controlApps().find(p=>p.id===id);};
+  function updateAppShortcut(){
+    const b=$('#bAppShortcut'),p=shortcutApp();
+    b.replaceChildren();
+    if(p){const icon=document.createElement('span');icon.textContent=p.icon || '↗';icon.setAttribute('aria-hidden','true');b.appendChild(icon);}
+    else b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+    b.title=p?`Open ${p.label}. Change in Control Centre.`:'Choose room shortcut';
+    b.setAttribute('aria-label',p?'Open '+p.label:'Choose room shortcut');
+  }
+  function appShortcutSheet(){
+    codeSheet('Room shortcut','Choose an app for the button above the paw. Change it here in Control Centre anytime. Just yours, on this device.',h=>{
+      const search=h('input','dashboard-search');search.type='search';search.placeholder='Find a tool or app';search.setAttribute('aria-label','Find a shortcut app');
+      const grid=h('div','launcher-grid'),empty=h('p','muted');
+      const draw=()=>{grid.replaceChildren();const q=search.value.trim().toLocaleLowerCase(),selected=store.get(APP_SHORTCUT_KEY,null),rows=controlApps().filter(p=>p.label.toLocaleLowerCase().includes(q));empty.textContent=rows.length?'':'No matching apps.';
+        for(const p of rows){const b=document.createElement('button');b.type='button';b.className='launcher-tile';b.dataset.shortcut=p.id;b.setAttribute('aria-pressed',String(p.id===selected));
+          const icon=document.createElement('span');icon.className='launcher-icon';icon.textContent=p.icon || '↗';icon.setAttribute('aria-hidden','true');const name=document.createElement('b');name.textContent=p.label;b.append(icon,name);
+          b.onclick=()=>{store.set(APP_SHORTCUT_KEY,p.id);updateAppShortcut();closeSheets();$('#bAppShortcut').focus({preventScroll:true});toast(`<span>Shortcut set to ${esc(p.label)}</span>`,1800,true);};grid.appendChild(b);
+        }
+      };search.oninput=draw;draw();
+      const clear=h('button','chipbtn','Clear shortcut');clear.onclick=()=>{store.del(APP_SHORTCUT_KEY);updateAppShortcut();closeSheets();$('#bAppShortcut').focus({preventScroll:true});};
+    });
+  }
+  $('#bAppShortcut').onclick=()=>{
+    updateAppShortcut();const p=shortcutApp();if(!p){appShortcutSheet();return;}
+    home.close(false);letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);launchTool(p);
+  };
+  updateAppShortcut();
+  window.addEventListener('storage',e=>{if(!e.key || [APP_SHORTCUT_KEY,'lr.portals'].includes(e.key))updateAppShortcut();});
   const home = LRHome.createView({
-    apps:()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','journal','settings'].includes(p.id)),
+    apps:controlApps,
     previewKey:()=>JSON.stringify([meta.current,room.items.map(i=>[i.t,i.c])]),
     preview:p=>{const f=LRLauncher.furniture(p,room.items,CAT);return f?{...f,src:thumbOf(f.id,f.variant)}:null;},
 
@@ -247,6 +278,7 @@ function startLofiRooms() {
     onClose:()=>$('#bHome').focus(),
     actions:{
       launch:launchTool,
+      chooseShortcut:appShortcutSheet,
       addPortal:()=>dashboard.addPortal(),
       navigate:navigateSpace,
     },
