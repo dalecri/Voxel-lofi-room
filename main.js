@@ -2343,10 +2343,16 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     todayUI.mount(target,{beforeTasks:panel=>{
       const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
-      h('h2', 'daily-heading', `Daily moment <small>· ${streak ? `🔥 ${streak} day streak` : 'Start a streak'}</small>`, panel);
-      h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`, panel);
+      const badge=h('details','daily-notice'+(D.done?' got':''),null,panel);
+      const summary=h('summary','daily-badge',null,badge);
+      h('span','daily-badge-dot',D.done?'✓':'✦',summary).setAttribute('aria-hidden','true');
+      h('span','',D.done?'Daily moment · done':'Daily moment',summary);
+      if(streak)h('small','',`🔥 ${streak} day streak`,summary);
+      const detail=h('div','daily-notice-copy',null,badge);
+      h('b','',esc(name),detail);
+      h('p','muted small',D.done?'Done for today. A new moment tomorrow.':esc(hint),detail);
       const log = store.get('lr.dailyLog', []).slice(0, 5);
-      if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'), panel);
+      if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${esc(M ? M[1] : e.id)}`; }).join('<br>'), detail);
     }});
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
@@ -2436,25 +2442,32 @@ function startLofiRooms() {
     h('p', 'muted small', 'Tap a record player to step through: Lofi radio (built in, works offline), then your stations, then off. Add a direct stream link (an .mp3 or Icecast/Shoutcast URL). YouTube links can’t play inside the app.');
     const sl = h('div', 'stations');
     const icons=['📻','🌙','☕','🌧','🌿','🎷','🎹','🌊','🌸','✨','🎧','🔥'];
+    const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">'+(kind==='stop'?'<rect x="6" y="6" width="12" height="12" rx="2"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';
     const stationIcons=(select,value='📻')=>{icons.forEach(icon=>{const o=document.createElement('option');o.value=icon;o.textContent=icon;select.appendChild(o);});select.value=icons.includes(value)?value:'📻';};
     stationList().forEach((st,index)=>{
-      const i=index-1,r=document.createElement('article');r.className='station-card'+(meta.music&&meta.station===index?' playing':'');
+      const i=index-1,r=document.createElement('article'),playing=meta.music&&meta.station===index;r.className='station-card'+(playing?' playing':'');
       const face=document.createElement('div');face.className='station-dial';face.textContent=icons.includes(st.icon)?st.icon:'📻';face.setAttribute('aria-hidden','true');
       const copy=document.createElement('div');copy.className='station-copy';const name=document.createElement('b');name.textContent=st.name;
-      const band=document.createElement('span');band.className='muted small';band.textContent=st.gen?'Built-in lofi · always here':'Your frequency';copy.append(name,band);
-      const grill=document.createElement('div');grill.className='station-grill';grill.setAttribute('aria-hidden','true');
-      const row=document.createElement('div');row.className='rowbtns';
-      const play=document.createElement('button');play.className='chipbtn';play.textContent=meta.music&&meta.station===index?'■ Stop':'▶ Play';play.setAttribute('aria-label',(meta.music&&meta.station===index?'Stop ':'Play ')+st.name);play.onclick=()=>{playStation(meta.music&&meta.station===index?-1:index);renderMenu();};row.appendChild(play);
+      const band=document.createElement('span');band.className='muted small';band.textContent=st.gen?'OFFLINE · LOFI BAND':'SAVED · LIVE STREAM';
+      const channel=document.createElement('div');channel.className='station-channel';channel.innerHTML='<small>STATION</small><strong>'+String(index+1).padStart(2,'0')+'</strong>';
+      const status=document.createElement('span');status.className='station-status';status.textContent=playing?'On air':'Ready when you are';status.setAttribute('role','status');
+      copy.append(band,channel,name,face,status);
+      const tuner=document.createElement('div');tuner.className='station-tuner';tuner.setAttribute('aria-hidden','true');
+      tuner.innerHTML='<div class="station-ticks"><i></i></div><div class="station-scale"><span>01</span><span>•</span><span>12</span></div>';
+      const row=document.createElement('div');row.className='station-controls';
+      const step=(delta,label)=>{const b=document.createElement('button');b.className='station-step';b.innerHTML=radioGlyph(delta<0?'previous':'next');b.setAttribute('aria-label',label+' station from '+st.name);b.onclick=()=>{const n=stationList().length;playStation((index+delta+n)%n);renderMenu();};return b;};
+      const play=document.createElement('button');play.className='station-play';play.innerHTML=radioGlyph(playing?'stop':'play');play.setAttribute('aria-label',(playing?'Stop ':'Play ')+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>{playStation(playing?-1:index);renderMenu();};row.append(step(-1,'Previous'),play,step(1,'Next'));
+      const edit=document.createElement('div');edit.className='station-edit';
       if(!st.gen){
         const label=document.createElement('label');label.className='station-icon-label';label.textContent='Icon';const select=document.createElement('select');select.setAttribute('aria-label','Icon for '+st.name);
-        stationIcons(select,st.icon);select.onchange=()=>{meta.stations[i].icon=select.value;saveMeta();renderMenu();};label.appendChild(select);row.appendChild(label);
+        stationIcons(select,st.icon);select.onchange=()=>{meta.stations[i].icon=select.value;saveMeta();renderMenu();};label.appendChild(select);edit.appendChild(label);
         const del=document.createElement('button');del.className='chipbtn';del.textContent='Remove';del.onclick=()=>{
           if(meta.station===index)playStation(-1,true);else if(meta.station>index)meta.station--;
           if(meta.lastStation===index)meta.lastStation=0;else if(meta.lastStation>index)meta.lastStation--;
           meta.stations.splice(i,1);saveMeta();renderMenu();
-        };row.appendChild(del);
+        };edit.appendChild(del);
       }
-      r.append(face,copy,grill,row);sl.appendChild(r);
+      r.append(copy,tuner,row);if(!st.gen)r.appendChild(edit);sl.appendChild(r);
     });
     const add = h('div', 'addstation');
     add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><label class="station-icon-label">Icon<select id="stIcon" aria-label="New station icon"></select></label><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';

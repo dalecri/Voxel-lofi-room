@@ -1,0 +1,41 @@
+"""npm run build && python3 tests/house-browser.py. Compact Daily moment badge and miniature radio controls."""
+import functools,json
+from pathlib import Path
+from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
+from threading import Thread
+from playwright.sync_api import sync_playwright
+ROOT=Path(__file__).resolve().parents[1]
+class Quiet(SimpleHTTPRequestHandler):
+ def log_message(self,*args):pass
+server=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(ROOT/'www')))
+Thread(target=server.serve_forever,daemon=True).start()
+with sync_playwright() as p:
+ browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
+ context=browser.new_context(reduced_motion='reduce',viewport={'width':390,'height':844})
+ context.add_init_script('''if(!sessionStorage.houseFixture){sessionStorage.houseFixture='true';const a={v:1,name:'Bedroom',n:10,wall:{style:'paint',color:0},floor:{style:'oak'},items:[]},b={...a,name:'Living room'};for(const [k,v] of Object.entries({'lr.intro':true,'lr.mode':'explore','lr.rooms':[{id:101,name:a.name,n:0},{id:102,name:b.name,n:0}],'lr.room.101':a,'lr.room.102':b,'lr.draft':{id:102,base:'',data:{...b,name:'Living draft restored'}},'lr.mainBedroom':101,'lr.meta':{current:102,visitors:false,realtime:false,dreamy:false,phase:'day',stations:[{name:'Old station',url:'https://example.com/old.mp3'}]}}))localStorage.setItem(k,JSON.stringify(v));}''')
+ context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
+ page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(15000)
+ def ready():page.wait_for_function('!!window.__lr?.dashboard');page.evaluate('__lr.renderLoop.stop()')
+ def menu(tab):
+  page.click('#bMenu');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
+ def esc():page.keyboard.press('Escape')
+ page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
+ assert page.evaluate('__lr.meta.current')==101;assert page.evaluate('JSON.parse(localStorage.getItem("lr.room.102")).name')=='Living draft restored'
+ menu('Today');badge=page.locator('.daily-badge');assert badge.is_visible();assert page.locator('.daily-notice').get_attribute('open') is None;assert not page.locator('.daily-notice-copy').is_visible();assert not page.locator('.daily-heading').count();assert badge.bounding_box()['height']<=60
+ badge.click();assert page.locator('.daily-notice-copy').is_visible();badge.click();assert not page.locator('.daily-notice-copy').is_visible();esc()
+ page.evaluate("HTMLMediaElement.prototype.play=function(){return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){}")
+ # Radio cards work for old stations without an icon and newly added stations.
+ menu('Sound');assert page.locator('.station-card').count()==2
+ page.get_by_role('combobox',name='Icon for Old station',exact=True).select_option('🌙');assert page.locator('.station-card').filter(has_text='Old station').locator('.station-dial').inner_text()=='🌙'
+ page.locator('#stName').fill('Night garden');page.locator('#stUrl').fill('https://example.com/night.mp3');page.get_by_role('combobox',name='New station icon',exact=True).select_option('🌿');page.click('#stAdd');assert page.locator('.station-card').count()==3
+ page.get_by_role('button',name='Play Lofi radio',exact=True).click();assert page.evaluate('__lr.meta.music && __lr.meta.station===0');assert page.locator('.station-card.playing').count()==1;page.get_by_role('button',name='Stop Lofi radio',exact=True).click();assert not page.evaluate('__lr.meta.music')
+ page.locator('.station-card').first.get_by_role('button',name='Next station from Lofi radio',exact=True).click();assert page.evaluate('__lr.meta.music && __lr.meta.station===1');page.locator('.station-card').filter(has_text='Old station').get_by_role('button',name='Previous station from Old station',exact=True).click();assert page.evaluate('__lr.meta.station===0');page.get_by_role('button',name='Stop Lofi radio',exact=True).click()
+ for phase in ['day','night']:
+  page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase);assert page.locator('body').evaluate("(e,p)=>e.classList.contains('night')===(p==='night')",phase)
+  for width in [320,390,1280]:
+   page.set_viewport_size({'width':width,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');page.locator('.station-card').first.scroll_into_view_if_needed();page.screenshot(path=f'/tmp/radio-cards-{phase}-{width}.png')
+ esc();page.reload(wait_until='networkidle');ready();menu('Sound');assert page.get_by_role('combobox',name='Icon for Old station',exact=True).input_value()=='🌙';assert page.get_by_role('combobox',name='Icon for Night garden',exact=True).input_value()=='🌿';page.locator('.station-card').filter(has_text='Night garden').get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-card').count()==2;esc()
+ assert not errors,errors
+ print('PASS compact daily badge and radio playback, stepping, icons, persistence, mobile/day/night',flush=True)
+ browser.close()
+server.shutdown()
