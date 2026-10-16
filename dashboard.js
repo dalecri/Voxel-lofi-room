@@ -11,7 +11,7 @@
     const rows=[];
     for(const [id,C] of Object.entries(CAT)) {
       if(C.tap==='portal' && url(C.link || C.url)) rows.push({furnitureId:id,label:C.name,url:url(C.link || C.url),icon:C.icon || '↗'});
-      for(const p of widgets?.destinations(id) || []) rows.push({furnitureId:id,label:p.label || C.name,url:url(p.url),icon:C.icon || ({pomodorocandle:'🕯',arcade:'🎮',crt:'📺',libcase:'📚',gamingdesk:'⌨',tstcorkboard:'📌'})[id] || '↗'});
+      for(const p of widgets?.destinations(id) || []) rows.push({furnitureId:id,label:p.label || C.name,url:url(p.url),icon:C.icon || ({terrarium:'🫙',pomodorocandle:'🕯',arcade:'🎮',crt:'📺',libcase:'📚',gamingdesk:'⌨',tstcorkboard:'📌'})[id] || '↗'});
     }
     rows.push(...custom.map(p=>({...p,url:url(p.url),icon:'☆',custom:true})));
     const seen=new Set();return rows.filter(p=>p.url && !seen.has(p.url) && seen.add(p.url));

@@ -646,6 +646,32 @@
       line(m, [5, 8, 4], [7, 6, 5], 0x5a3a4a); line(m, [7, 6, 5], [7, 2, 7], 0x5a3a4a); m.box(6, 1, 7, 8, 2, 8, b);
     },
   });
+  def('terrarium', {
+    name: 'Terrarium', kind: 'small', group: 'decor', size: [1, 1], tap: 'screen',
+    vars: [[WOOD.oak], [WOOD.walnut], [WOOD.honey]],
+    build(m, [wood]) {
+      // A round wooden plinth and an open-view glass dome, like the other glass miniatures.
+      for (let x = 0; x < 8; x++) for (let z = 0; z < 8; z++) {
+        const d = Math.hypot(x - 3.5, z - 3.5);
+        if (d < 3.9) m.box(x, 0, z, x + 1, 2, z + 1, shade(wood, d > 3.1 ? .84 : 1));
+        if (d < 3.25) m.set(x, 2, z, GREEN_D);
+      }
+      m.blob(3, 3, 2.5, 2.4, 2.2, 1.8, GREEN).blob(5, 3, 3, 1.6, 1.5, 1.7, GREEN_L);
+      m.box(3, 3, 4, 6, 4, 6, 0x73b9d1).set(4, 3, 5, 0xb8e8e7);
+      m.set(2, 3, 5, GREEN_D).set(2, 4, 5, GREEN).set(2, 5, 5, 0xf2c14e);
+      [[1, 5], [3, 5], [2, 4], [2, 6]].forEach(([x, z]) => m.set(x, 5, z, 0xeaa0b8));
+      m.set(5, 4, 2, 0xa8aaa0).set(6, 3, 4, 0xc5c4b7);
+      // Sparse glass ribs and glints keep the landscape visible through the front.
+      for (let y = 3; y <= 9; y++) {
+        const r = 3.6 * Math.sqrt(Math.max(0, 1 - Math.pow((y - 3) / 7, 2)));
+        for (let x = 0; x < 8; x++) for (let z = 0; z < 8; z++) {
+          const d = Math.hypot(x - 3.5, z - 3.5);
+          if (Math.abs(d - r) < .4 && (y === 3 || y === 9 || z <= 1 || x === 0 || x === 7)) m.set(x, y, z, (x + y) % 4 === 0 ? 0xf0fcfa : 0xb8dedd);
+        }
+      }
+      m.box(3, 10, 3, 5, 11, 5, 0xdaf2ef);
+    },
+  });
   def('snowglobe', {
     name: 'Snow globe', kind: 'small', group: 'decor', size: [1, 1], tap: 'snow',
     vars: [[WOOD.walnut, 0x3f8f58], [0xd9584a, 0xf2efe8], [0x3c4a78, 0xe8a0b4]],

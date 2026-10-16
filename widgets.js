@@ -15,6 +15,7 @@
   // OWNER CONFIG: each row marks confirmed links or defaults still needing verification.
   // Add another row with the same furnitureId to get a destination picker.
   const PORTALS = [
+    { furnitureId: 'terrarium', label: 'Voxel Worlds', url: 'https://heycristobal.com/voxel-worlds/' },
     { furnitureId: 'arcade', label: 'HTML games', url: 'https://heycristobal.com/my-collection/' }, // Owner: verify exact games index URL; collection page used until confirmed.
     { furnitureId: 'crt', label: 'TwoStoryTails on YouTube', url: 'https://www.youtube.com/@twostorytails' }, // Owner: verify channel URL.
     { furnitureId: 'libcase', label: 'Portfolio', url: 'https://heycristobal.com/' }, // Owner: verify portfolio URL when editing; confirmed as heycristobal.com.
