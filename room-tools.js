@@ -92,11 +92,19 @@
       const paper=document.createElement('article');paper.className='roomtool-letter';if(l.html)paper.innerHTML=LRLetters.sanitizeHTML(l.html);else paper.textContent=l.body;root.appendChild(paper);button(root,'Back to mailbox',mailbox);
     });}
     function groceries(){shell('On the fridge door','Your grocery list, private to this device.',root=>{
-      const form=document.createElement('form');root.appendChild(form);const input=field(form,'Add groceries');input.autocomplete='off';
-      const add=()=>{model.addGrocery(input.value);groceries();active.querySelector('input').focus();};form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add);
-      const items=document.createElement('div');root.appendChild(items);
-      for(const g of model.state.groceries){const row=document.createElement('div');row.className='roomtool-check';const label=document.createElement('label'),check=document.createElement('input'),span=document.createElement('span');check.type='checkbox';check.checked=g.done;check.setAttribute('aria-label',g.text);span.textContent=g.text;label.append(check,span);row.appendChild(label);check.onchange=()=>run(()=>model.checkGrocery(g.id,check.checked));button(row,'Remove',()=>{model.remove('groceries',g.id);groceries();});items.appendChild(row);}
-      if(!model.state.groceries.length)text(items,'Nothing on the list yet.');
+      const notebook=document.createElement('section');notebook.className='grocery-notebook';notebook.setAttribute('aria-label','Grocery notebook');root.appendChild(notebook);
+      const binding=document.createElement('div');binding.className='grocery-binding';binding.setAttribute('aria-hidden','true');for(let n=0;n<5;n++)binding.appendChild(document.createElement('i'));notebook.appendChild(binding);
+      const title=document.createElement('h3');title.textContent='Your grocery list';notebook.appendChild(title);text(notebook,'A little list for the next shop.','grocery-subtitle');
+      const items=document.createElement('div');items.className='grocery-items';notebook.appendChild(items);
+      const foodIcon=value=>[[/milk|yogurt|cream|cheese/i,'🥛'],[/egg/i,'🥚'],[/bread|toast|bagel|flour/i,'🍞'],[/apple|banana|berry|berries|fruit|orange|lemon/i,'🍎'],[/carrot|salad|spinach|lettuce|vegetable|broccoli/i,'🥬'],[/rice|pasta|noodle/i,'🍝'],[/coffee|tea/i,'☕'],[/fish|salmon|tuna/i,'🐟'],[/chicken|meat|beef/i,'🍗']].find(([rule])=>rule.test(value))?.[1] || '🛒';
+      for(const g of model.state.groceries){
+        const row=document.createElement('div');row.className='grocery-row'+(g.done?' done':'');const label=document.createElement('label'),check=document.createElement('input'),icon=document.createElement('span'),name=document.createElement('span'),mark=document.createElement('span');
+        check.type='checkbox';check.checked=g.done;check.setAttribute('aria-label',g.text);icon.className='grocery-icon';icon.textContent=foodIcon(g.text);icon.setAttribute('aria-hidden','true');name.className='grocery-name';name.textContent=g.text;mark.className='grocery-check';mark.setAttribute('aria-hidden','true');mark.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>';
+        label.append(check,icon,name,mark);row.appendChild(label);check.onchange=()=>run(()=>{model.checkGrocery(g.id,check.checked);row.classList.toggle('done',check.checked);});button(row,'Remove',()=>{model.remove('groceries',g.id);groceries();},'grocery-remove');items.appendChild(row);
+      }
+      if(!model.state.groceries.length)text(items,'🧺 Nothing on the list yet. A little space for what you need.','grocery-empty');
+      const form=document.createElement('form');form.className='grocery-add';root.appendChild(form);const input=field(form,'Add groceries');input.autocomplete='off';input.placeholder='Something for the basket…';
+      const add=()=>{model.addGrocery(input.value);groceries();active.querySelector('input:not([type=checkbox])').focus();};form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add,'grocery-add-button');
       button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});button(root,'French word flashcard',flashcard);if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
     });}
     function flashcard(){const data=word();shell('Un mot par jour','A little French, on the fridge.',root=>{
