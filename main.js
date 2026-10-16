@@ -2438,13 +2438,16 @@ function startLofiRooms() {
       r.onclick = () => { fn(); renderMenu(); };
     };
     toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
-    h('h2', '', 'Radio stations');
-    h('p', 'muted small', 'Tap a record player to step through: Lofi radio (built in, works offline), then your stations, then off. Add a direct stream link (an .mp3 or Icecast/Shoutcast URL). YouTube links can’t play inside the app.');
+    h('h2', '', 'Your radio');
+    h('p', 'muted small', 'Use the arrows to tune between Lofi radio (offline) and your saved stations. Add a direct MP3 or Icecast/Shoutcast stream below. YouTube links can’t play inside the app.');
     const sl = h('div', 'stations');
     const icons=['📻','🌙','☕','🌧','🌿','🎷','🎹','🌊','🌸','✨','🎧','🔥'];
     const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">'+(kind==='stop'?'<rect x="6" y="6" width="12" height="12" rx="2"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';
     const stationIcons=(select,value='📻')=>{icons.forEach(icon=>{const o=document.createElement('option');o.value=icon;o.textContent=icon;select.appendChild(o);});select.value=icons.includes(value)?value:'📻';};
-    stationList().forEach((st,index)=>{
+    {
+      const list=stationList(),wanted=meta.music?meta.station:meta.lastStation;
+      const index=Number.isInteger(wanted)&&wanted>=0&&wanted<list.length?wanted:0,st=list[index];
+      const updateRadio=(fn,focus)=>{const top=body.scrollTop;fn();renderMenu();body.scrollTop=top;if(focus)body.querySelector(focus)?.focus({preventScroll:true});};
       const i=index-1,r=document.createElement('article'),playing=meta.music&&meta.station===index;r.className='station-card'+(playing?' playing':'');
       const face=document.createElement('div');face.className='station-dial';face.textContent=icons.includes(st.icon)?st.icon:'📻';face.setAttribute('aria-hidden','true');
       const copy=document.createElement('div');copy.className='station-copy';const name=document.createElement('b');name.textContent=st.name;
@@ -2453,10 +2456,11 @@ function startLofiRooms() {
       const status=document.createElement('span');status.className='station-status';status.textContent=playing?'On air':'Ready when you are';status.setAttribute('role','status');
       copy.append(band,channel,name,face,status);
       const tuner=document.createElement('div');tuner.className='station-tuner';tuner.setAttribute('aria-hidden','true');
-      tuner.innerHTML='<div class="station-ticks"><i></i></div><div class="station-scale"><span>01</span><span>•</span><span>12</span></div>';
+      tuner.innerHTML='<div class="station-ticks"><i></i></div><div class="station-scale"><span>01</span><span>'+String(index+1).padStart(2,'0')+' / '+String(list.length).padStart(2,'0')+'</span><span>'+String(list.length).padStart(2,'0')+'</span></div>';
+      tuner.querySelector('i').style.left=(list.length>1?index/(list.length-1)*100:50)+'%';
       const row=document.createElement('div');row.className='station-controls';
-      const step=(delta,label)=>{const b=document.createElement('button');b.className='station-step';b.innerHTML=radioGlyph(delta<0?'previous':'next');b.setAttribute('aria-label',label+' station from '+st.name);b.onclick=()=>{const n=stationList().length;playStation((index+delta+n)%n);renderMenu();};return b;};
-      const play=document.createElement('button');play.className='station-play';play.innerHTML=radioGlyph(playing?'stop':'play');play.setAttribute('aria-label',(playing?'Stop ':'Play ')+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>{playStation(playing?-1:index);renderMenu();};row.append(step(-1,'Previous'),play,step(1,'Next'));
+      const step=(delta,label)=>{const b=document.createElement('button');b.className='station-step '+(delta<0?'station-prev':'station-next');b.disabled=list.length<2;b.innerHTML=radioGlyph(delta<0?'previous':'next');b.setAttribute('aria-label',label+' station from '+st.name);b.onclick=()=>updateRadio(()=>playStation((index+delta+list.length)%list.length),delta<0?'.station-prev':'.station-next');return b;};
+      const play=document.createElement('button');play.className='station-play';play.innerHTML=radioGlyph(playing?'stop':'play');play.setAttribute('aria-label',(playing?'Stop ':'Play ')+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>updateRadio(()=>playStation(playing?-1:index),'.station-play');row.append(step(-1,'Previous'),play,step(1,'Next'));
       const edit=document.createElement('div');edit.className='station-edit';
       if(!st.gen){
         const label=document.createElement('label');label.className='station-icon-label';label.textContent='Icon';const select=document.createElement('select');select.setAttribute('aria-label','Icon for '+st.name);
@@ -2468,7 +2472,7 @@ function startLofiRooms() {
         };edit.appendChild(del);
       }
       r.append(copy,tuner,row);if(!st.gen)r.appendChild(edit);sl.appendChild(r);
-    });
+    }
     const add = h('div', 'addstation');
     add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><label class="station-icon-label">Icon<select id="stIcon" aria-label="New station icon"></select></label><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
     stationIcons(add.querySelector('#stIcon'));
@@ -2477,7 +2481,7 @@ function startLofiRooms() {
       if (!/^https?:\/\//i.test(url)) { Sound.nope(); toast('<span>Paste a link that starts with http</span>', 1600, true); return; }
       if (/youtube\.com|youtu\.be/i.test(url)) { Sound.nope(); toast('<span>YouTube can’t play inside the app. Try a direct radio stream link.</span>', 2600, true); return; }
       (meta.stations || (meta.stations = [])).push({ name, url, icon:add.querySelector('#stIcon').value }); saveMeta(); Sound.chime();
-      toast(`<span>Added ${name.replace(/</g, '&lt;')}. Tap a record player to tune in.</span>`, 2000, true); renderMenu();
+      toast(`<span>Added ${name.replace(/</g, '&lt;')}. Use the arrows to tune in.</span>`, 2000, true); renderMenu();
     };
     atlasUI.mountRadio(target);
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });

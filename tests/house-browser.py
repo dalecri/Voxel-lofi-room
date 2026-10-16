@@ -21,6 +21,7 @@ with sync_playwright() as p:
  def esc():page.keyboard.press('Escape')
  def template():
   menu('Rooms');page.locator('#menu-rooms .preset-group').first.locator('summary').click();page.locator('.card').filter(has_text='Lofi Study').click()
+ context.add_init_script("HTMLMediaElement.prototype.play=function(){return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){}")
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  assert page.evaluate('__lr.meta.current')==101;assert page.evaluate('JSON.parse(localStorage.getItem("lr.room.102")).name')=='Living draft restored'
  menu('Rooms');assert page.locator('#menu-rooms .preset-group').count()==2;assert page.locator('#menu-rooms .preset-group[open]').count()==0
@@ -36,15 +37,15 @@ with sync_playwright() as p:
  menu('Rooms');page.locator('.village-room').filter(has_text='LAST_SECOND_LIVING').locator('.village-visit').click();assert page.evaluate('__lr.meta.current')==102
  page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==101
  # Radio cards work for old stations without an icon and newly added stations.
- menu('Sound');assert page.locator('.station-card').count()==2
+ menu('Sound');assert page.locator('.station-card').count()==1;page.get_by_role('button',name='Next station from Lofi radio',exact=True).click()
  page.get_by_role('combobox',name='Icon for Old station',exact=True).select_option('🌙');assert page.locator('.station-card').filter(has_text='Old station').locator('.station-dial').inner_text()=='🌙'
- page.locator('#stName').fill('Night garden');page.locator('#stUrl').fill('https://example.com/night.mp3');page.get_by_role('combobox',name='New station icon',exact=True).select_option('🌿');page.click('#stAdd');assert page.locator('.station-card').count()==3
- page.get_by_role('button',name='Play Lofi radio',exact=True).click();assert page.evaluate('__lr.meta.music && __lr.meta.station===0');assert page.locator('.station-card.playing').count()==1;page.get_by_role('button',name='Stop Lofi radio',exact=True).click();assert not page.evaluate('__lr.meta.music')
+ page.locator('#stName').fill('Night garden');page.locator('#stUrl').fill('https://example.com/night.mp3');page.get_by_role('combobox',name='New station icon',exact=True).select_option('🌿');page.click('#stAdd');assert page.locator('.station-card').count()==1;page.get_by_role('button',name='Previous station from Old station',exact=True).click()
+ page.get_by_role('button',name='Stop Lofi radio',exact=True).click();page.get_by_role('button',name='Play Lofi radio',exact=True).click();assert page.evaluate('__lr.meta.music && __lr.meta.station===0');assert page.locator('.station-card.playing').count()==1;page.get_by_role('button',name='Stop Lofi radio',exact=True).click();assert not page.evaluate('__lr.meta.music')
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase);assert page.locator('body').evaluate("(e,p)=>e.classList.contains('night')===(p==='night')",phase)
   for width in [390,1280]:
    page.set_viewport_size({'width':width,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/radio-cards-{phase}-{width}.png')
- esc();page.reload(wait_until='networkidle');ready();menu('Sound');assert page.get_by_role('combobox',name='Icon for Old station',exact=True).input_value()=='🌙';assert page.get_by_role('combobox',name='Icon for Night garden',exact=True).input_value()=='🌿';page.locator('.station-card').filter(has_text='Night garden').get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-card').count()==2;esc()
+ esc();page.reload(wait_until='networkidle');ready();menu('Sound');page.get_by_role('button',name='Next station from Lofi radio',exact=True).click();assert page.get_by_role('combobox',name='Icon for Old station',exact=True).input_value()=='🌙';page.get_by_role('button',name='Next station from Old station',exact=True).click();assert page.get_by_role('combobox',name='Icon for Night garden',exact=True).input_value()=='🌿';page.locator('.station-card').filter(has_text='Night garden').get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-card').count()==1;esc()
  # Unsaved work stays unsaved, still asks, and survives opening the main bedroom.
  template();page.evaluate('__lr.room.name="UNSAVED_EXPERIMENT";__lr.changed()');draft_id=page.evaluate('__lr.meta.current');template();assert page.locator('#lvSave').is_visible();page.click('#lvStay');assert page.evaluate('__lr.meta.current')==draft_id
  page.evaluate("window.dispatchEvent(new Event('pagehide'))");page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==101
