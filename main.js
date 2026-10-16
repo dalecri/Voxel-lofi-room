@@ -16,7 +16,7 @@ function startLofiRooms() {
     del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
   };
   const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); }, onPurchase: item => {
-    if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setCostume(item.costume); companion.frame(0); } }
+    if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setSlots(wardrobe.slots); companion.frame(0); } }
   } });
   const rituals = LRRituals.create({ store });
   let breathCamera = null;
@@ -1823,26 +1823,55 @@ function startLofiRooms() {
   function wardrobeSheet() {
     wardrobe.sync();
     codeSheet('A little wardrobe', 'Outfits stay on this device. Your roommate and wardrobe choices never travel in shared room codes.', h => {
-      $('#sheetBody').dataset.merchant = '';
-      const grid = h('div', 'shop-grid wardrobe-grid');
-      for (const c of LRCostumes.COSTUMES) {
-        const owned = wardrobe.owns(c.id), card = document.createElement('div');
-        card.className = 'shop-card wardrobe-card'; card.dataset.costume = c.id;
-        const image = document.createElement('img'); image.alt = ''; image.src = costumeThumb(c.id); card.appendChild(image);
-        const name = document.createElement('b'); name.textContent = c.name; card.appendChild(name);
-        const note = document.createElement('p'); note.textContent = owned ? 'Yours forever' : LRCostumes.condition(c); card.appendChild(note);
-        const button = document.createElement('button'); button.className = 'chipbtn' + (owned ? ' primary' : '');
-        button.textContent = wardrobe.selected === c.id ? 'Wearing' : owned ? 'Wear' : 'Locked';
-        button.disabled = !owned || wardrobe.selected === c.id;
-        button.setAttribute('aria-label', owned ? 'Wear ' + c.name : c.name + ': ' + LRCostumes.condition(c));
-        button.onclick = () => {
-          if (!wardrobe.equip(c.id)) return;
-          companion.setCostume(c.id); companion.frame(0); Sound.chime(); wardrobeSheet();
-        };
-        card.appendChild(button); grid.appendChild(card);
+      const names = {hood:'Hats',suit:'Tops',badge:'Badges',accessory:'Accessories'};
+      const head = h('div','wardrobe-head'), shopButton = document.createElement('button');
+      shopButton.className='chipbtn';shopButton.textContent='✦ Shop';shopButton.onclick=()=>openShop();head.append(shopButton,$('#sheetBody > .sheet-close'));$('#sheetBody').insertBefore(head,$('#sheetBody > h2'));
+      const stage=h('div','wardrobe-stage'), preview=document.createElement('img');
+      preview.alt='Your little roommate, wearing your current picks';preview.className='wardrobe-preview';stage.appendChild(preview);
+      const tabs=h('div','wardrobe-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Clothing categories');
+      const grid=h('div','wardrobe-grid');grid.id='wardrobeItems';grid.setAttribute('role','tabpanel');
+      const buttons=[];let active='all';
+      function refresh() {
+        preview.src=view.thumb({t:'wardrobe-preview:'+JSON.stringify(wardrobe.slots),c:0,on:true},LRCompanion.definitionForSlots(wardrobe.slots,true),o=>{o.userData.parts.lids.visible=false;},360);
+        for(const tab of buttons){const on=tab.dataset.slot===active;tab.setAttribute('aria-selected',String(on));tab.tabIndex=on?0:-1;}
+        grid.setAttribute('aria-labelledby','wardrobeTab-'+active);grid.replaceChildren();
+        for(const slot of LRCostumes.SLOTS.filter(s=>active==='all'||active===s)) {
+          for(const c of LRCostumes.COSTUMES.filter(c=>c.id==='plain'||c.layers[slot])) {
+            const owned=wardrobe.owns(c.id), pick=wardrobe.slots[slot];
+            const equipped=c.id==='plain'?!LRCostumes.find(pick)?.layers[slot]:pick===c.id, card=document.createElement('button');
+            card.type='button';card.className='wardrobe-card'+(equipped?' equipped':'');card.dataset.costume=c.id;card.dataset.slot=slot;
+            card.disabled=!owned;card.setAttribute('aria-pressed',String(equipped));
+            const title=c.id==='plain'?'Bare':c.name;
+            card.setAttribute('aria-label',names[slot]+': '+title+(owned?'':', '+LRCostumes.condition(c)));
+            const img=document.createElement('img');img.alt='';
+            const picks=LRCostumes.slotsFor('plain');picks[slot]=c.id;
+            img.src=slotThumb(picks);card.appendChild(img);
+            const label=document.createElement('b');label.textContent=title;card.appendChild(label);
+            const note=document.createElement('small');note.textContent=owned?names[slot]:LRCostumes.condition(c);card.appendChild(note);
+            if(equipped){const check=document.createElement('span');check.className='wardrobe-check';check.textContent='✓';check.setAttribute('aria-hidden','true');card.appendChild(check);}
+            card.onclick=()=>{
+              const next=wardrobe.slots[slot]===c.id?'plain':c.id;
+              if(!wardrobe.equipSlot(slot,next))return;
+              companion.setSlots(wardrobe.slots);companion.frame(0);activity.wake();Sound.chime();refresh();
+              grid.querySelector(`[data-slot="${slot}"][data-costume="${c.id}"]`)?.focus({preventScroll:true});
+            };
+            grid.appendChild(card);
+          }
+        }
       }
-      const shopButton = h('button','chipbtn','Visit Mallow’s shop'); shopButton.onclick = () => openShop();
+      for(const [slot,label] of [['all','All'],...Object.entries(names)]) {
+        const tab=document.createElement('button');tab.className='chipbtn';tab.textContent=label;tab.dataset.slot=slot;tab.id='wardrobeTab-'+slot;
+        tab.setAttribute('role','tab');tab.setAttribute('aria-controls',grid.id);tab.onclick=()=>{active=slot;refresh();};
+        buttons.push(tab);tabs.appendChild(tab);
+      }
+      refresh();
     });
+  }
+  const slotThumbs=new Map();
+  function slotThumb(slots) {
+    const key=JSON.stringify(slots);
+    if(!slotThumbs.has(key))slotThumbs.set(key,view.thumb({t:'slot-preview:'+key,c:0,on:true},LRCompanion.definitionForSlots(slots,true),o=>{o.userData.parts.lids.visible=false;}));
+    return slotThumbs.get(key);
   }
   const costumeThumbs = new Map();
   function costumeThumb(id) {
@@ -2715,7 +2744,7 @@ function startLofiRooms() {
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) liveWeather.refresh(); });
   window.addEventListener('resize', () => view.resize());
-  companion = LRCompanion.create({ view, room, costume: wardrobe.selected, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  companion = LRCompanion.create({ view, room, slots: wardrobe.slots, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
   const cozy = LRCozyFurniture.createView({store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
   view.cozyLife = cozy;

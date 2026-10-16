@@ -242,6 +242,23 @@
   .shop-card p { flex: 1; margin: 0; font-size: 12px; color: var(--ink-dim); line-height: 1.4; }
   .shop-card button { width: 100%; }
   .shop-card button:disabled { opacity: .55; cursor: default; }
+  .wardrobe-head { display:flex; justify-content:flex-end; gap:8px; margin:6px 0 12px; }
+  .wardrobe-head .sheet-close { float:none; margin:0; }
+  .wardrobe-stage { display:grid; place-items:center; border:1px solid var(--line); border-radius:24px; background:radial-gradient(ellipse at 50% 65%, #e7bd7755, var(--chip) 75%); margin:16px 0; }
+  .wardrobe-preview { width:min(100%, 300px); height:240px; object-fit:contain; image-rendering:pixelated; }
+  .wardrobe-tabs { display:flex; gap:6px; overflow-x:auto; padding:3px 0 12px; }
+  .wardrobe-tabs button { flex:none; padding:10px 12px; font-size:13px; }
+  .wardrobe-tabs [aria-selected="true"] { background:var(--accent); color:white; }
+  .wardrobe-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+  .wardrobe-card { position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 8px; border:1px solid var(--line); border-radius:18px; background:var(--chip); text-align:center; min-width:0; }
+  .wardrobe-card img { width:100%; height:96px; object-fit:contain; image-rendering:pixelated; }
+  .wardrobe-card b { font:500 15px var(--display); }
+  .wardrobe-card small { color:var(--ink-dim); font-size:11px; line-height:1.4; }
+  .wardrobe-card.equipped { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+  .wardrobe-check { position:absolute; top:6px; right:6px; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--accent); color:white; font-weight:800; }
+  .wardrobe-card:disabled { cursor:default; }
+  .wardrobe-card:disabled img { opacity:.5; filter:grayscale(1); }
+  @media(max-width:350px) { .wardrobe-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   .shop-card.purchased { animation: shop-sparkle .7s ease-out; }
   @keyframes shop-sparkle { 35% { transform: translateY(-4px) scale(1.03); box-shadow: 0 0 24px #eac77e99; } }
   @media (prefers-reduced-motion: reduce) { .shop-card.purchased, .toast.firefly { animation: none; } }

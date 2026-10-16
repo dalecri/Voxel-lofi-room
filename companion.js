@@ -283,9 +283,16 @@
     }
     m.main();
   }
+  function definitionForSlots(slots, preview = false) {
+    const picks = costumes.normalizeSlots(slots), layers = {};
+    for (const slot of costumes.SLOTS) {
+      const layer = costumes.find(picks[slot]).layers[slot];
+      if (layer) layers[slot] = layer;
+    }
+    return { name: DISPLAY_NAME, kind: 'companion', size: [1,1], vars: [[]], anim: 'twinkle', build(m) { buildDude(m,{layers}); if(preview) for(const name of ['book','page','cup']) m.parts[name].vox.clear(); } };
+  }
   function definitionFor(id = 'plain', preview = false) {
-    const costume = costumes.find(id) || costumes.find('plain');
-    return { name: DISPLAY_NAME, kind: 'companion', size: [1,1], vars: [[]], anim: 'twinkle', build(m) { buildDude(m,costume); if(preview) for(const name of ['book','page','cup']) m.parts[name].vox.clear(); } };
+    return definitionForSlots(costumes.slotsFor(id),preview);
   }
   const definition = definitionFor();
   function attachRig(object) {
@@ -364,20 +371,22 @@
     }
     return {activities,seats,desks,windows};
   }
-  function create({ view, room, environment, costume = 'plain', onWardrobe = () => {} }) {
+  function create({ view, room, environment, costume = 'plain', slots = null, onWardrobe = () => {} }) {
     const brain = createBrain(), object = view.makeObject({ t: ID, id: ID, on: true, c: 0 }, null, true, definition);
     object.name = ID; object.scale.setScalar(.4); view.root.add(object);
     const pose = new THREE.Group(); object.add(pose); pose.add(object.userData.inner); attachRig(object);
-    let currentCostume = 'plain';
-    function setCostume(id) {
-      if (!costumes.find(id)) return false;
-      if (id === currentCostume) return true;
-      const fresh = view.makeObject({t: ID + ':' + id, id: ID, on: true, c: 0},null,true,definitionFor(id));
+    let currentSlots = costumes.slotsFor('plain');
+    const costumeId = () => costumes.SLOTS.every(s=>currentSlots[s]===currentSlots.hood) ? currentSlots.hood : 'mixed';
+    function setSlots(picks) {
+      const next = costumes.normalizeSlots(picks);
+      if (JSON.stringify(next) === JSON.stringify(currentSlots)) return true;
+      const fresh = view.makeObject({t: ID + ':' + JSON.stringify(next), id: ID, on: true, c: 0},null,true,definitionForSlots(next));
       pose.remove(object.userData.inner);object.userData.glowMat.dispose();
       object.userData=fresh.userData;pose.add(object.userData.inner);attachRig(object);
-      currentCostume=id;object.userData.costume=id;return true;
+      currentSlots=next;object.userData.slots={...next};object.userData.costume=costumeId();return true;
     }
-    object.userData.costume='plain';setCostume(costume);
+    function setCostume(id) { return !!costumes.find(id) && setSlots(costumes.slotsFor(id)); }
+    object.userData.costume='plain';object.userData.slots={...currentSlots};setSlots(slots || costumes.slotsFor(costume));
     const stool = view.makeObject({t:'botstool',id:'botstool'}, null, true, {kind:'companion',size:[1,1],vars:[[]],build(m){m.box(1,0,1,7,1,7,0x34595c).box(3,1,3,5,9,5,0x779986).box(0,9,0,8,10,8,0x34595c);}}); object.add(stool);stool.visible=false;
     const light = new THREE.PointLight(0xffe4c0, .6, 2.5); light.position.set(0, 1.6, 0); object.add(light);
     const bubble = document.createElement('div'); bubble.id = 'lampbotBubble'; bubble.className = 'toast companion-bubble';
@@ -397,7 +406,7 @@
       parts.leftarm.rotation.z=stretch;parts.rightarm.rotation.z=-stretch;
       stool.visible=typing;stool.position.y=-s.y/.4;stool.scale.y=s.y/(.4*1.25);
       if(s.sipping && !lastSip && !e.quiet) LofiSound.sip();lastSip=!!s.sipping;
-      light.color.setHex(typing ? 0xb7d5ff : currentCostume === 'automata' ? 0xa4eee0 : 0xffe4c0);
+      light.color.setHex(typing ? 0xb7d5ff : currentSlots.hood === 'automata' ? 0xa4eee0 : 0xffe4c0);
       const dim = 1 - .6 * (view.breathDim || 0);
       object.userData.glowMat.color.setScalar(s.brightness * dim); light.intensity = .6 * s.brightness * dim;
       object.visible = !view.fp;
@@ -421,9 +430,9 @@
       const hits = view.raycaster.intersectObjects(object.userData.meshes, false), wall = view.pickWall(x, y);
       return !!hits.length && (!item || hits[0].distance < item.dist) && (!wall || hits[0].distance <= wall.t + .05);
     }
-    return { id: ID, object, brain, bubble, frame, hit, setCostume, get costume() { return currentCostume; }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, get name() { return DISPLAY_NAME; } };
+    return { id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, get name() { return DISPLAY_NAME; } };
   }
-  const api = { RIG, buildDude, definitionFor, attachRig, applyPose, scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
+  const api = { RIG, buildDude, definitionFor, definitionForSlots, attachRig, applyPose, scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.LRCompanion = api;
 })(typeof window !== 'undefined' ? window : globalThis);

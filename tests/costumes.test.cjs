@@ -2,6 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const W=require('../costumes.js'), C=require('../companion.js'), L=require('../room.js'), S=require('../shop.js');
 require('../packs/seasonal.js');
+const voxel=(part,x,y,z)=>[...part.vox].find(([k])=>L.Model.decode(k).join()===[x,y,z].join())?.[1];
 function fixture(date=new Date(2026,5,1)) {
   const values={};const store={get:(k,d)=>structuredClone(values[k]??d),set:(k,v)=>{values[k]=structuredClone(v);}};
   let now=date,wardrobe;
@@ -65,4 +66,42 @@ test('one new data entry unlocks and builds without a renderer change',()=>{
 test('merchant reserves one of three wares for an unowned costume',()=>{
   const f=fixture(),M=require('../life.js').merchant({store:f.store,today:()=> '2026-06-01',owns:f.wallet.owns,catalog:S.catalog,random:()=>.2});
   M.tick(200,true,1);assert.equal(M.wares.length,3);assert.equal(new Set(M.wares).size,3);assert.ok(S.catalog.find(c=>c.id===M.wares[0]).costume);
+});
+
+test('legacy selection migrates once to four identical private slots, preserving exact art',()=>{
+  for(const c of W.COSTUMES){
+    const f=fixture();f.store.set(W.KEY,{selected:c.id,owned:[c.id]});const wardrobe=f.reload();
+    assert.deepEqual(wardrobe.slots,W.slotsFor(c.id));
+    assert.ok(!('selected' in f.values[W.KEY]));assert.deepEqual(f.reload().slots,wardrobe.slots);
+    const old=new L.Model(),mixed=new L.Model();C.definitionFor(c.id).build(old);C.definitionForSlots(wardrobe.slots).build(mixed);
+    for(const part of Object.keys(old.parts))assert.deepEqual([...mixed.parts[part].vox],[...old.parts[part].vox]);
+  }
+});
+test('slot composition uses the chosen hood, suit and badge, while bare is exactly the base rig',()=>{
+  const f=fixture();f.store.set(W.KEY,{owned:['bear','cat']});const w=f.reload();
+  assert.ok(w.equipSlot('hood','bear'));assert.ok(w.equipSlot('suit','cat'));assert.ok(w.equipSlot('badge','automata'));
+  const mixed=new L.Model(),bear=new L.Model(),cat=new L.Model(),base=new L.Model(),bare=new L.Model();
+  C.definitionForSlots(w.slots).build(mixed);C.definitionFor('bear').build(bear);C.definitionFor('cat').build(cat);
+  assert.deepEqual([...mixed.parts.head.vox],[...bear.parts.head.vox]);
+  assert.deepEqual([...mixed.parts.leftleg.vox],[...cat.parts.leftleg.vox]);
+  assert.equal(voxel(mixed.parts.main,3,6,8)&0xffffff,0x91d9d0);
+  assert.deepEqual(f.reload().slots,w.slots);const detached=w.slots;detached.hood='frog';assert.equal(w.slots.hood,'bear');
+  for(const slot of W.SLOTS)assert.ok(w.equipSlot(slot,'plain'));
+  C.definitionFor('plain').build(base);C.definitionForSlots(w.slots).build(bare);
+  for(const part of Object.keys(base.parts))assert.deepEqual([...bare.parts[part].vox],[...base.parts[part].vox]);
+});
+test('locked, unknown and missing layers cannot equip a slot; shop purchases unlock all layers',()=>{
+  const f=fixture(),before=f.wardrobe.slots;
+  for(const slot of W.SLOTS)assert.equal(f.wardrobe.equipSlot(slot,'bear'),false);
+  assert.equal(f.wardrobe.equipSlot('hood','missing'),false);assert.equal(f.wardrobe.equipSlot('missing','automata'),false);
+  assert.equal(f.wardrobe.equipSlot('accessory','automata'),false);assert.deepEqual(f.wardrobe.slots,before);
+  f.wallet.earn('daily');assert.ok(f.wallet.buy('costume-bear'));
+  assert.deepEqual(f.wardrobe.slots,W.slotsFor('bear'));
+  for(const slot of ['hood','suit','badge'])assert.ok(f.wardrobe.equipSlot(slot,'bear'));
+});
+test('data-only hand accessories compose into the arm and remain attached to its pose rig',()=>{
+  const entry={id:'test-mug',name:'Tea cup',unlock:{type:'free'},layers:{accessory:{shapes:[{shape:'box',part:'rightarm',at:[8,4,6],size:[2,2,2],color:0xaabbcc}]}}};
+  W.COSTUMES.push(entry);
+  try{const f=fixture();assert.ok(f.wardrobe.equipSlot('accessory',entry.id));const m=new L.Model();C.definitionForSlots(f.wardrobe.slots).build(m);assert.equal(voxel(m.parts.rightarm,8,4,6),0xaabbcc);assert.equal(voxel(m.parts.head,8,4,6),undefined);}
+  finally{W.COSTUMES.pop();}
 });

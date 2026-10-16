@@ -12,8 +12,8 @@ Thread(target=server.serve_forever,daemon=True).start()
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(viewport={'width':390,'height':844})
- context.add_init_script("localStorage.setItem('lr.intro','true')")
- context.route('https://www.cbc.ca/**',lambda r:r.abort())
+ context.add_init_script("if(!sessionStorage.wardrobeFixture){sessionStorage.wardrobeFixture='true';localStorage.setItem('lr.intro','true');localStorage.setItem('lr.wardrobe',JSON.stringify({selected:'cat',owned:['cat']}));}")
+ context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.wardrobe')
  # Contact sheet uses the same definitions, rig and pose function as the live companion.
@@ -42,19 +42,33 @@ with sync_playwright() as p:
  page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.n=10;a.room.name='Wardrobe room';a.meta.current++;a.meta.phase='day';a.meta.weather='clear';a.meta.realtime=false;a.setMode('explore',true);a.changed();a.companion.frame(.1);a.view.frame(.1,a.view.t+.1);}''')
  point=page.evaluate('''() => {const a=__lr,p=a.companion.object.localToWorld(new THREE.Vector3(0,1.6,.38)).project(a.view.cam),r=a.view.r.domElement.getBoundingClientRect();const x=r.left+(p.x+1)*r.width/2,y=r.top+(1-p.y)*r.height/2;for(let dy=-15;dy<=15;dy+=3)for(let dx=-15;dx<=15;dx+=3)if(a.companion.hit(x+dx,y+dy))return {x:x+dx,y:y+dy};throw Error('no bot target');}''')
  page.mouse.click(point['x'],point['y']);page.locator('.wardrobe-card').first.wait_for()
- assert page.locator('.wardrobe-card').count()==8
- assert page.locator('[data-costume="bear"]').get_by_role('button').is_disabled()
- assert '40 Fireflies' in page.locator('[data-costume="bear"]').inner_text()
- assert '7-day' in page.locator('[data-costume="rabbit"]').inner_text()
- page.locator('[data-costume="automata"]').get_by_role('button').click()
- assert page.evaluate('__lr.wardrobe.selected===\'automata\' && __lr.companion.costume===\'automata\'')
+ assert page.evaluate('JSON.stringify(__lr.wardrobe.slots)===JSON.stringify(LRCostumes.slotsFor("cat"))')
+ assert page.evaluate('!("selected" in JSON.parse(localStorage.getItem("lr.wardrobe")))')
+ assert page.get_by_role('tab').all_text_contents()==['All','Hats','Tops','Badges','Accessories']
+ page.get_by_role('tab',name='Accessories',exact=True).click();assert page.locator('[data-slot="accessory"][data-costume="plain"]').get_attribute('aria-pressed')=='true'
+ page.get_by_role('tab',name='Hats',exact=True).click()
+ hat=lambda id:page.locator('[data-slot="hood"][data-costume="'+id+'"]')
+ assert hat('bear').is_disabled();assert '40 Fireflies' in hat('bear').inner_text();assert '7-day' in hat('rabbit').inner_text()
+ before=page.evaluate('JSON.stringify(__lr.wardrobe.slots)');hat('bear').evaluate('e=>e.click()');assert page.evaluate('JSON.stringify(__lr.wardrobe.slots)')==before
+ preview=page.locator('.wardrobe-preview');assert preview.evaluate('e=>e.complete&&e.naturalWidth===360')
+ old=preview.get_attribute('src');hat('automata').click();assert preview.get_attribute('src')!=old;assert hat('automata').get_attribute('aria-pressed')=='true';assert hat('automata').locator('.wardrobe-check').count()==1
+ # Tapping an equipped item removes only that layer.
+ hat('automata').click();assert page.evaluate('__lr.wardrobe.slots.hood')=='plain';assert hat('plain').get_attribute('aria-pressed')=='true'
+ hat('cat').click();page.get_by_role('tab',name='Tops',exact=True).click();old=preview.get_attribute('src');page.locator('[data-slot="suit"][data-costume="automata"]').click();assert preview.get_attribute('src')!=old
+ assert page.evaluate('__lr.wardrobe.slots.hood==="cat" && __lr.wardrobe.slots.suit==="automata" && JSON.stringify(__lr.companion.slots)===JSON.stringify(__lr.wardrobe.slots)')
+ # Live rig geometry must agree with independently composing the same picks.
+ assert page.evaluate('''() => {const a=__lr,expected=a.view.makeObject({t:'test-mixed-expected',on:true},null,true,LRCompanion.definitionForSlots(a.wardrobe.slots));return ['head','leftarm','leftleg'].every(k=>JSON.stringify(expected.userData.parts[k].children[0].geometry.attributes.position.array)===JSON.stringify(a.companion.object.userData.parts[k].children[0].geometry.attributes.position.array));}''')
+ for width in [320,390,1280]:
+  page.set_viewport_size({'width':width,'height':844});page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert preview.is_visible();page.screenshot(path=f'/tmp/wardrobe-slots-{width}.png')
+ # The shared sheet tab keyboard handler supports clothing categories too.
+ page.get_by_role('tab',name='Tops',exact=True).focus();page.keyboard.press('ArrowRight');assert page.get_by_role('tab',name='Badges',exact=True).get_attribute('aria-selected')=='true'
  page.keyboard.press('Escape')
  page.evaluate('''() => {const a=__lr;a.room.add(a.room.make('companionwardrobe',{x:1,z:1}));a.changed();a.interact(a.room.items.find(i=>i.t==='companionwardrobe').id);}''')
- page.locator('.wardrobe-card').first.wait_for()
- assert page.locator('[data-costume="automata"]').get_by_role('button').inner_text()=='Wearing'
+ assert page.locator('[data-slot="hood"][data-costume="cat"]').get_attribute('aria-pressed')=='true';assert page.locator('[data-slot="suit"][data-costume="automata"]').get_attribute('aria-pressed')=='true'
+ page.get_by_role('button',name='✦ Shop',exact=True).click();assert page.locator('#shopBalance').is_visible()
  page.keyboard.press('Escape');page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.wardrobe')
- assert page.evaluate('__lr.wardrobe.selected===\'automata\' && __lr.companion.costume===\'automata\'')
- print('PASS: real companion tap, dresser tap, locked conditions, equip, and reload persistence',flush=True)
+ assert page.evaluate('__lr.wardrobe.slots.hood==="cat" && __lr.wardrobe.slots.suit==="automata" && JSON.stringify(__lr.companion.slots)===JSON.stringify(__lr.wardrobe.slots)')
+ print('PASS: legacy migration, real companion/dresser taps, slot tabs/checkmarks/bare toggle, locked conditions, mixed preview and matching live rig, reload, 320/390/1280px',flush=True)
  # Buy an offered outfit through the actual merchant button, granting and equipping at once.
  page.evaluate('''() => {const a=__lr;a.setMode('explore',true);a.merchant.tick(200,true,1);a.tickWorld(0);for(let k=0;k<10;k++)a.shop.earn('moment');a.openShop();}''')
  outfit=page.evaluate('''() => LRShop.catalog.find(c=>c.costume && __lr.merchant.offers(c.id))''')
@@ -68,15 +82,15 @@ with sync_playwright() as p:
  print('PASS: Firefly shop purchase unlocks, auto-equips and persists without a second charge',flush=True)
  # A new data-only costume works through the same picker and renderer without code changes.
  page.evaluate('''() => {LRCostumes.COSTUMES.push({id:'PRIVATE_TEST_COSTUME',name:'Test leaf',unlock:{type:'free'},layers:{hood:{color:0x8aaa77,shapes:[{shape:'box',at:[3,20,3],size:[2,2,2],color:0x658855}]}}});__lr.wardrobeSheet();}''')
- page.locator('[data-costume="PRIVATE_TEST_COSTUME"]').get_by_role('button').click()
- assert page.evaluate('__lr.companion.costume')=='PRIVATE_TEST_COSTUME'
+ page.locator('[data-slot="hood"][data-costume="PRIVATE_TEST_COSTUME"]').click()
+ assert page.evaluate('__lr.companion.slots.hood')=='PRIVATE_TEST_COSTUME'
  for width in [320,390,1280]:
   page.set_viewport_size({'width':width,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
  page.keyboard.press('Escape')
- page.evaluate("__lr.room.items[0].wardrobe={selected:'PRIVATE_TEST_COSTUME'};__lr.room.wardrobe={selected:'PRIVATE_TEST_COSTUME'}")
+ page.evaluate("__lr.room.items[0].wardrobe={slots:{hood:'PRIVATE_TEST_COSTUME'}};__lr.room.wardrobe={slots:{hood:'PRIVATE_TEST_COSTUME'}}")
  code=page.evaluate('__lr.roomCode()');decoded=page.evaluate('code=>__lr.readCode(code)',code)
  assert decoded['items'][0]['t']=='companionwardrobe'
- assert all(key not in json.dumps(decoded) for key in ['PRIVATE_TEST_COSTUME','costume-bear','selected','owned','lr.wardrobe'])
+ assert all(key not in json.dumps(decoded) for key in ['PRIVATE_TEST_COSTUME','costume-bear','slots','selected','owned','lr.wardrobe'])
  context.close()
  fresh=browser.new_context(viewport={'width':390,'height':844});fresh.add_init_script("localStorage.setItem('lr.intro','true')")
  recipient=fresh.new_page();recipient.on('pageerror',lambda e:errors.append(str(e)))

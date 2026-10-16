@@ -14,6 +14,9 @@
      x=4,y=7; keep badges to x=2..5,y=5..9. Geometry is merged into its rig part,
      so hood, limbs and badge follow every pose without separate floating meshes.
      Head extras should meet the shell at y=20; hands/feet keep their rig pivots.
+     Each owned costume unlocks all its layers for mixing. Device-private slots
+     pick a costume id per layer (or 'plain'); whole-costume purchases set all
+     four. An accessory with part:'rightarm' follows the hand in every pose.
      No functions, URLs, timers or room metadata belong in registry entries. */
   const COSTUMES = [
     { id: 'plain', name: 'Pajama day', unlock: { type: 'free' }, layers: {} },
@@ -68,6 +71,9 @@
       accessory: { shapes: [{ shape: 'box', at: [0,10,4], size: [8,1,4], color: 0xb06c6c }] } } },
   ];
   const KEY = 'lr.wardrobe';
+  const SLOTS = ['hood','suit','badge','accessory'];
+  const slotsFor = id => Object.fromEntries(SLOTS.map(slot => [slot,id]));
+  const normalizeSlots = slots => Object.fromEntries(SLOTS.map(slot => [slot,find(slots?.[slot]) ? slots[slot] : 'plain']));
   const find = id => COSTUMES.find(c => c.id === id);
   const catalog = () => COSTUMES.filter(c => c.unlock.type === 'fireflies').map(c => ({ id: 'costume-' + c.id, costume: c.id, name: c.name + ' costume', price: c.unlock.price, icon: '🧵', desc: 'A permanent outfit for your little roommate. Bought outfits equip right away.' }));
   function inSeason(season, date, seasons) {
@@ -83,20 +89,27 @@
   }
   function create({ store, owns = () => false, now = () => new Date(), seasons = [] }) {
     const saved = store.get(KEY, {}) || {}, owned = new Set(Array.isArray(saved.owned) ? saved.owned.filter(id => find(id)) : []);
-    let selected = saved.selected || 'plain';
-    function save() { store.set(KEY, { selected, owned: [...owned] }); }
+    let migrated = !saved.slots, slots = normalizeSlots(saved.slots || slotsFor(saved.selected || 'plain'));
+    migrated = migrated || JSON.stringify(saved.slots) !== JSON.stringify(slots);
+    function save() { store.set(KEY, { slots: {...slots}, owned: [...owned] }); }
     function sync() {
-      let changed = false; const streak = store.get('lr.dailyStreak', { n: 0 }).n;
+      let changed = migrated; migrated = false; const streak = store.get('lr.dailyStreak', { n: 0 }).n;
       for (const c of COSTUMES) {
         const u = c.unlock, unlocked = u.type === 'free' || u.type === 'fireflies' && owns('costume-' + c.id) || u.type === 'streak' && streak >= u.days || u.type === 'season' && inSeason(u.season, now(), seasons);
         if (unlocked && !owned.has(c.id)) { owned.add(c.id); changed = true; }
       }
-      if (!owned.has(selected) || !find(selected)) { selected = 'plain'; changed = true; }
+      for (const slot of SLOTS) if (!owned.has(slots[slot])) { slots[slot] = 'plain'; changed = true; }
       if (changed) save(); return changed;
     }
-    function equip(id) { sync(); if (!owned.has(id) || !find(id)) return false; selected = id; save(); return true; }
+    function equip(id) { sync(); if (!owned.has(id) || !find(id)) return false; slots = slotsFor(id); save(); return true; }
+    function equipSlot(slot, id) {
+      sync();
+      if (!SLOTS.includes(slot) || !owned.has(id) || (id !== 'plain' && !find(id)?.layers[slot])) return false;
+      slots[slot] = id; save(); return true;
+    }
     sync();
-    return { sync, equip, owns: id => owned.has(id), get selected() { return selected; } };
+    // selected is a compatibility view only; persistence and rendering use slots.
+    return { sync, equip, equipSlot, owns: id => owned.has(id), get slots() { return {...slots}; }, get selected() { return SLOTS.every(s=>slots[s]===slots.hood) ? slots.hood : 'mixed'; } };
   }
   function register(L) {
     L.def('companionwardrobe', { name: 'Costume dresser', kind: 'floor', group: 'cozy', size: [2,1], top: 19, tap: 'wardrobe', vars: [[0xc3a487,0xf0e2c9]], build(m,[wood,cream]) {
@@ -104,7 +117,7 @@
       for(const y of [4,9,14]) m.box(1,y,8,15,y+4,9,cream).box(7,y+1,9,9,y+2,10,0x9b7f5e);
     } });
   }
-  const api = { COSTUMES, KEY, find, catalog, condition, inSeason, create, register };
+  const api = { COSTUMES, KEY, SLOTS, slotsFor, normalizeSlots, find, catalog, condition, inSeason, create, register };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else { root.LRCostumes = api; register(root.LR); }
 })(typeof window !== 'undefined' ? window : globalThis);

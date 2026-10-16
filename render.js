@@ -1892,9 +1892,9 @@
       this.thumbC = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     }
   };
-  R.thumb = function (it, definition, prepare) {
+  R.thumb = function (it, definition, prepare, pixels = 120) {
     this.ensureThumbs();
-    this.thumbR.setSize(120,120,false);
+    this.thumbR.setSize(pixels,pixels,false);
     const obj = this.makeObject(Object.assign({ id: -1 }, it), null, true, definition);
     this.thumbS.add(obj);
     obj.rotation.y = (definition || CAT[it.t]).kind === 'wall' ? 0.55 : 0;

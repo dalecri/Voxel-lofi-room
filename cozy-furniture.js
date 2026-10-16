@@ -112,7 +112,7 @@
     }
     function paint(e,it) {
       const data=model.surface(roomId(),it.id),g=e.canvas.getContext('2d'),W=e.canvas.width,H=e.canvas.height;
-      const costume=wardrobe.selected,streak=store.get('lr.dailyStreak',{n:0}).n || 0;
+      const slots=wardrobe.slots,costume=JSON.stringify(slots),streak=store.get('lr.dailyStreak',{n:0}).n || 0;
       const pinned=data.pins.map(id=>photos.find(p=>p.id===id)).filter(Boolean).slice(0,it.t==='minifridge'?2:6);
       const signature=JSON.stringify([it.t,data.text,pinned.map(p=>[p.id,p.updatedAt]),costume,streak]);if(e.signature===signature)return;e.signature=signature;
       g.clearRect(0,0,W,H);g.textAlign='center';g.fillStyle='#f9ead4';
@@ -121,9 +121,9 @@
         g.fillStyle='#384842';g.textAlign='left';g.font='32px Nunito';const words=(data.text || 'A little room for a thought. Tap to write.').split(/\n/);let y=48;
         for(const para of words){let line='';for(const word of para.split(' ')){if(g.measureText(line+word).width>W-50&&line){g.fillText(line,24,y);line='';y+=40;}line+=word+' ';}g.fillText(line,24,y);y+=40;if(y>H-20)break;}
       }else if(it.t==='hangingtee'){
-        if(!thumbs.has(costume))thumbs.set(costume,view.thumb({t:'costume-print',c:0,on:true},LRCompanion.definitionFor(costume,true),o=>{o.userData.parts.lids.visible=false;}));
+        if(!thumbs.has(costume))thumbs.set(costume,view.thumb({t:'costume-print:'+costume,c:0,on:true},LRCompanion.definitionForSlots(slots,true),o=>{o.userData.parts.lids.visible=false;}));
         const img=imageFor('costume:'+costume,thumbs.get(costume));if(img?.complete&&img.naturalWidth)g.drawImage(img,10,40,W-20,W-20);
-        g.fillStyle='#584d48';g.font='bold 30px Nunito';g.fillText(LRCostumes.find(costume)?.name || 'Pajama day',W/2,380,W-12);
+        g.fillStyle='#584d48';g.font='bold 30px Nunito';g.fillText(LRCostumes.find(wardrobe.selected)?.name || 'Mixed with love',W/2,380,W-12);
       }else{
         if(!pinned.length&&it.t==='photocollage'){g.font='bold 40px Fredoka';g.fillText('Room memories',W/2,170);g.font='30px Nunito';g.fillText('Tap to pin a room photo',W/2,240);}
         const cols=it.t==='minifridge'?2:3,cellW=W/cols,cellH=H/(it.t==='minifridge'?1:2);
