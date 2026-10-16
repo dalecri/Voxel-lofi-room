@@ -69,3 +69,6 @@ test('room changes reset the one state and quiet rituals suppress speech', () =>
   assert.equal(b.state.roomId, 2); assert.equal(b.state.message, ''); assert.ok(b.state.x >= 11);
   e.quiet = true; b.tap(e); b.step(.1, e); assert.equal(b.state.message, '');
 });
+test('task celebration reuses the hop without adding a speech bubble',()=>{
+ const b=createBrain(),e=env();b.step(.1,e);const before=[b.state.message,b.state.bubbleUntil,b.state.category];b.celebrate(e,'task',true);b.step(.1,e);assert.ok(b.state.hop>0);assert.deepEqual([b.state.message,b.state.bubbleUntil,b.state.category],before);
+});

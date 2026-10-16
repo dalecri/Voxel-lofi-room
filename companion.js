@@ -182,7 +182,7 @@
       s.message = pool[(words * 7 + turns) % pool.length]; s.category = key; words++;
       s.bubbleUntil = s.elapsed + 4; lastSpeech = s.elapsed; return true;
     }
-    function celebrate(e, trigger = 'moment') { jump = .65; s.hop = 0; speak(e, trigger, true); }
+    function celebrate(e, trigger = 'moment', silent = false) { jump = .65; s.hop = 0; if(!silent)speak(e, trigger, true); }
     function travel(to) { transit = { from: { x: s.x, y: s.y, z: s.z }, to, t: 0 }; s.target = null; }
     function step(dt, e) {
       dt = Math.max(0, Math.min(.1, dt)); s.elapsed += dt;
@@ -430,7 +430,7 @@
       const hits = view.raycaster.intersectObjects(object.userData.meshes, false), wall = view.pickWall(x, y);
       return !!hits.length && (!item || hits[0].distance < item.dist) && (!wall || hits[0].distance <= wall.t + .05);
     }
-    return { id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, get name() { return DISPLAY_NAME; } };
+    return { id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, hop() { brain.celebrate(env(), 'task', true); }, get name() { return DISPLAY_NAME; } };
   }
   const api = { RIG, buildDude, definitionFor, definitionForSlots, attachRig, applyPose, scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

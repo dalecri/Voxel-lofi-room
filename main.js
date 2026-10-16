@@ -206,8 +206,16 @@ function startLofiRooms() {
     document.body.classList.toggle('reduce-motion', view.reducedMotion);
   }
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
-  const todayTasks=LRToday.create({store,onChecked:t=>remember('tasks',{id:t.id})});
+  const todayTasks=LRToday.create({store,earn:(source,id)=>shop.earn(source,id),onChecked:t=>remember('tasks',{id:t.id})});
+  const taskPortraits=new Map();
   const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
+    portraitKey:()=>JSON.stringify(wardrobe.slots),
+    portrait:pose=>{const key=JSON.stringify([wardrobe.slots,pose]);if(!taskPortraits.has(key)){
+      const src=view.thumb({t:'task-journey:'+key,c:0,on:true},LRCompanion.definitionForSlots(wardrobe.slots,true),o=>{
+        const pivot=new THREE.Group();o.add(pivot);pivot.add(o.userData.inner);LRCompanion.attachRig(o);LRCompanion.applyPose(o,pivot,{pose,mode:'idle',elapsed:0,tilt:0,weight:0,blink:pose==='sleep',pageTurn:0},true);
+      },180);if(taskPortraits.size>=12)taskPortraits.delete(taskPortraits.keys().next().value);taskPortraits.set(key,src);
+    }return taskPortraits.get(key);},
+    celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
     settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();openSheet();},
     hidden:()=>filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),

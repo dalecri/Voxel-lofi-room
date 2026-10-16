@@ -17,12 +17,17 @@
         stale?`Last forecast · ${probability}% chance of ${wet}`:probability===0?`No ${wet} expected this hour.`:`${wet==='snow'?'Snowflakes':wet==='rain'?'Raindrops':'Drops or flakes'} might visit · ${probability}% this hour`,
       fetched:d&&meta.weatherFetchedAt?`Updated ${new Date(meta.weatherFetchedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}`:''};
   }
-  function create({store,now=()=>Date.now(),onChecked=()=>{}}) {
-    const read=()=>{const data=store.get(KEY,{});return {v:1,next:Number(data?.next)||1,items:(Array.isArray(data?.items)?data.items:[]).filter(t=>t&&typeof t.id==='string'&&typeof t.text==='string').map(t=>({...t}))};};
+  const ICONS=['🌿','🧼','🪥','👟','📞','💧','☕','🥗','🍳','📖','✍️','🧹','🧺','🏋️','🧘','🌙','💊','💻','💬','📚','🌱','🐾','🎨','🎵'];
+  const ICON_RULES=[[/\b(wash|shower|bath)\w*/i,'🧼'],[/\b(brush|floss|teeth)\w*/i,'🪥'],[/\b(walk|run|hike)\w*/i,'👟'],[/\b(call|phone)\w*/i,'📞'],[/\b(water|hydrat)\w*/i,'💧'],[/\b(tea|coffee)\w*/i,'☕'],[/\b(cook|bake)\w*/i,'🍳'],[/\b(eat|meal|lunch|breakfast|dinner)\w*/i,'🥗'],[/\b(read|book)\w*/i,'📖'],[/\b(write|journal|letter)\w*/i,'✍️'],[/\b(clean|tidy|sweep)\w*/i,'🧹'],[/\b(laundry|clothes)\w*/i,'🧺'],[/\b(gym|workout|exercise)\w*/i,'🏋️'],[/\b(meditat|breath)\w*/i,'🧘'],[/\b(sleep|rest|bed)\w*/i,'🌙'],[/\b(medic|pill|vitamin)\w*/i,'💊'],[/\b(work|code|email)\w*/i,'💻'],[/\b(friend|text|message)\w*/i,'💬'],[/\b(study|learn|lesson)\w*/i,'📚'],[/\b(stretch|plant|garden)\w*/i,'🌱'],[/\b(cat|dog|pet)\w*/i,'🐾'],[/\b(draw|paint|art)\w*/i,'🎨'],[/\b(music|practi[cs]|sing)\w*/i,'🎵']];
+  const iconFor=text=>ICON_RULES.find(([pattern])=>pattern.test(String(text)))?.[1] || '🌿';
+  function journey(tasks){const total=tasks.length,checked=tasks.filter(t=>t.done).length,left=total-checked,done=total>0&&left===0,progress=total?checked/total:0;return {total,checked,left,done,progress,stage:progress<.34?'morning':progress<.67?'afternoon':'evening',pose:done?'sleep':'idle',title:done?'All done. Rest now.':total?`${left} little thing${left===1?'':'s'} left!`:'One small thing, whenever you’re ready.'};}
+  function create({store,now=()=>Date.now(),onChecked=()=>{},earn=()=>0}) {
+    const read=()=>{const data=store.get(KEY,{});return {v:1,next:Number(data?.next)||1,items:(Array.isArray(data?.items)?data.items:[]).filter(t=>t&&typeof t.id==='string'&&typeof t.text==='string').map(t=>({...t,icon:ICONS.includes(t.icon)?t.icon:iconFor(t.text)}))};};
     const write=data=>{store.set(KEY,data);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(data))throw Error('Could not save your list on this device.');};
     return {list:()=>read().items,
-      add(text){text=String(text).trim().replace(/\s+/g,' ').slice(0,140);if(!text)return false;const d=read();if(d.items.length>=50)throw Error('A little breathing room: keep up to 50 things here.');d.items.push({id:'task-'+d.next++,text,done:false,createdAt:now()});write(d);return true;},
-      check(id,on){const d=read(),t=d.items.find(t=>t.id===id);if(t){const newlyDone=!t.done&&!!on;t.done=!!on;write(d);if(newlyDone)onChecked(t);}},
+      add(text){text=String(text).trim().replace(/\s+/g,' ').slice(0,140);if(!text)return false;const d=read();if(d.items.length>=50)throw Error('A little breathing room: keep up to 50 things here.');d.items.push({id:'task-'+d.next++,text,icon:iconFor(text),done:false,createdAt:now()});write(d);return true;},
+      check(id,on){const d=read(),t=d.items.find(t=>t.id===id);if(t){const newlyDone=!t.done&&!!on;t.done=!!on;write(d);if(newlyDone){const reward=earn('task',t.id);onChecked(t);return Number.isInteger(reward)?reward:0;}}return 0;},
+      setIcon(id,icon){if(!ICONS.includes(icon))return false;const d=read(),t=d.items.find(t=>t.id===id);if(!t)return false;t.icon=icon;write(d);return true;},
       remove(id){const d=read();d.items=d.items.filter(t=>t.id!==id);write(d);},
     };
   }
@@ -33,7 +38,7 @@
     if(active.length)rows.push({id:'focus',icon:'🕯',title:'Focus',value:countdown(active[0].remaining)+(active.length>1?` +${active.length-1}`:''),target:'focus',focus:active[0]});
     return rows;
   }
-  function createView({model,context,settings,openTimer,hidden=()=>false,notice=()=>{}}) {
+  function createView({model,context,settings,openTimer,portrait=()=>null,portraitKey=()=>'',celebrate=()=>{},hidden=()=>false,notice=()=>{}}) {
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const mounts=new Set(),badges=el('aside','timer-badges');badges.id='timerBadges';badges.hidden=true;badges.setAttribute('aria-label','Active timers');document.body.appendChild(badges);
     function safe(fn){try{fn();refresh();}catch(e){notice(e.message);}}
@@ -42,12 +47,24 @@
       for(let i=0;i<10;i++)drops.appendChild(el('span','','💧'));
       const config=el('button','chipbtn','Weather settings');config.type='button';config.onclick=settings;copy.append(date,clock,phase,condition,chance,drops,updated,config);sky.append(art,copy);panel.appendChild(sky);
       if(beforeTasks)beforeTasks(panel);
-      const section=el('section','today-tasks'),title=el('h3','','Little things'),sub=el('p','muted small','Just yours, on this device. One small thing at a time.'),form=el('form','today-task-form'),input=el('input'),add=el('button','chipbtn primary','＋ Add');input.type='text';input.maxLength=140;input.placeholder='A small thing for today…';input.setAttribute('aria-label','A little task');add.type='submit';form.append(input,add);const list=el('div','today-task-list'),empty=el('p','muted','Nothing tugging at your sleeve.');section.append(title,sub,form,list,empty);panel.appendChild(section);host.appendChild(panel);
-      let signature='';form.onsubmit=e=>{e.preventDefault();safe(()=>{if(model.add(input.value))input.value='';});input.focus();};
+      const section=el('section','today-tasks'),header=el('div','task-journey'),title=el('h3','','Little things'),summary=el('p','task-journey-summary'),track=el('div','task-day-path'),dude=el('div','task-journey-dude'),image=el('img'),sleep=el('span','task-journey-zzz','Zzz');
+      image.alt='Your little roommate';image.width=84;image.height=84;dude.append(image,sleep);sleep.hidden=true;track.setAttribute('aria-hidden','true');
+      for(const [key,label,icon] of [['morning','Morning','☀'],['afternoon','Afternoon','☁'],['evening','Evening','☾']]){const stop=el('span','task-path-stop '+key);stop.append(el('i','',icon),el('small','',label));track.appendChild(stop);}track.appendChild(dude);summary.setAttribute('role','status');header.append(title,summary,track);
+      const sub=el('p','muted small','Just yours, on this device. One small thing at a time.'),form=el('form','today-task-form'),input=el('input'),add=el('button','chipbtn primary','＋ Add');input.type='text';input.maxLength=140;input.placeholder='A small thing for today…';input.setAttribute('aria-label','A little task');add.type='submit';form.append(input,add);const list=el('div','today-task-list'),empty=el('p','muted','Nothing tugging at your sleeve.');section.append(header,sub,form,list,empty);panel.appendChild(section);host.appendChild(panel);
+      let signature='',lastPortrait='';form.onsubmit=e=>{e.preventDefault();safe(()=>{if(model.add(input.value))input.value='';});input.focus();};
       const entry={panel,refresh(){const ctx=context(),w=weather(ctx.meta,ctx.now || new Date());art.textContent=w.icon;sky.dataset.sky=ctx.meta.weather || 'clear';date.textContent=w.date;clock.textContent=w.time;phase.textContent=w.phase;condition.textContent=w.label+(w.temperature?' · '+w.temperature:'');chance.textContent=w.chance;updated.textContent=w.fetched+(w.stale?' · cached':'');drops.hidden=w.probability===null;[...drops.children].forEach((d,i)=>{d.classList.toggle('wet',i<w.probability/10);d.textContent=ctx.meta.weather==='snow'?'❄':'💧';});
-        const tasks=model.list(),key=JSON.stringify(tasks.map(t=>[t.id,t.text]));empty.hidden=tasks.length>0;
-        if(signature!==key){signature=key;list.replaceChildren();for(const t of tasks){const row=el('div','today-task'),label=el('label'),check=el('input'),text=el('span','',t.text),remove=el('button','today-task-remove','×');check.type='checkbox';check.setAttribute('aria-label',t.text);check.onchange=()=>safe(()=>model.check(t.id,check.checked));label.append(check,text);remove.type='button';remove.setAttribute('aria-label','Remove task: '+t.text);remove.onclick=()=>safe(()=>{model.remove(t.id);input.focus();});row.dataset.task=t.id;row.append(label,remove);list.appendChild(row);}}
-        const byId=new Map(tasks.map(t=>[t.id,t]));for(const row of list.children){const t=byId.get(row.dataset.task);row.querySelector('input').checked=!!t.done;row.classList.toggle('done',!!t.done);}
+        const tasks=model.list(),j=journey(tasks),key=JSON.stringify(tasks.map(t=>[t.id,t.text,t.icon]));empty.hidden=tasks.length>0;if(summary.textContent!==j.title)summary.textContent=j.title;header.dataset.stage=j.stage;header.dataset.pose=j.pose;header.dataset.remaining=String(j.left);track.style.setProperty('--task-progress',String(j.progress));sleep.hidden=!j.done;
+        const pk=portraitKey()+':'+j.pose;if(pk!==lastPortrait){lastPortrait=pk;const src=portrait(j.pose);image.hidden=!src;if(src)image.src=src;}
+        if(signature!==key){signature=key;list.replaceChildren();for(const t of tasks){
+          const row=el('div','today-task'),icon=el('button','today-task-icon',t.icon),copy=el('div','today-task-copy'),text=el('span','today-task-text',t.text),remove=el('button','today-task-remove','Remove'),check=el('button','today-task-check'),mark=el('span','task-checkmark','✓'),reward=el('span','task-check-reward'),picker=el('div','today-icon-picker');
+          icon.type='button';icon.setAttribute('aria-label','Icon for task: '+t.text);icon.setAttribute('aria-expanded','false');picker.hidden=true;picker.setAttribute('role','group');picker.setAttribute('aria-label','Choose a task icon');
+          icon.onclick=()=>{picker.hidden=!picker.hidden;icon.setAttribute('aria-expanded',String(!picker.hidden));};
+          for(const emoji of ICONS){const choice=el('button','',emoji);choice.type='button';choice.setAttribute('aria-label','Use '+emoji);choice.setAttribute('aria-pressed',String(t.icon===emoji));choice.onclick=()=>safe(()=>{model.setIcon(t.id,emoji);entry.refresh();list.querySelector('[data-task="'+t.id+'"] .today-task-icon')?.focus();});picker.appendChild(choice);}
+          check.type='button';check.setAttribute('role','checkbox');check.setAttribute('aria-label',t.text);check.append(mark,reward);mark.setAttribute('aria-hidden','true');reward.setAttribute('aria-hidden','true');
+          check.onclick=()=>safe(()=>{const on=check.getAttribute('aria-checked')!=='true',earned=model.check(t.id,on);if(on){celebrate(t);check.classList.remove('celebrating');void check.offsetWidth;check.classList.add('celebrating');setTimeout(()=>check.classList.remove('celebrating'),700);dude.classList.remove('task-hop');void dude.offsetWidth;dude.classList.add('task-hop');if(earned){reward.textContent='+'+earned;check.classList.add('rewarding');setTimeout(()=>{check.classList.remove('rewarding');reward.textContent='';},1300);}}});
+          remove.type='button';remove.setAttribute('aria-label','Remove task: '+t.text);remove.onclick=()=>safe(()=>{model.remove(t.id);input.focus();});copy.append(text,remove);row.dataset.task=t.id;row.append(icon,copy,check,picker);list.appendChild(row);
+        }}
+        const byId=new Map(tasks.map(t=>[t.id,t]));for(const row of list.children){const t=byId.get(row.dataset.task);row.querySelector('.today-task-check').setAttribute('aria-checked',String(!!t.done));row.classList.toggle('done',!!t.done);}
       }};mounts.add(entry);entry.refresh();return panel;
     }
     let next=0;
@@ -60,5 +77,5 @@
     window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);viewport();document.addEventListener('visibilitychange',refresh);
     return {mount,refresh,badges,tick(time){if(time<next)return;next=time+1000;refresh();}};
   }
-  const api={KEY,SKY,weather,countdown,timers,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRToday=api;
+  const api={KEY,SKY,ICONS,iconFor,journey,weather,countdown,timers,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRToday=api;
 })(typeof window!=='undefined'?window:globalThis);

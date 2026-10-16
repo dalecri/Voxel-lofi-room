@@ -27,3 +27,24 @@ test('furniture previews resolve actual placed variants and do not disable absen
  for(const [id,ids] of Object.entries(A.FURNITURE))assert.ok(ids.some(id=>LR.CAT[id]),id);
  assert.deepEqual(items,[{id:1,t:'typewriter',c:2}]);
 });
+test('task Fireflies pay exactly three once per day across re-checks and reload; unchecking never claws back',()=>{
+ const Shop=require('../shop.js'),{store,values}=fixture();let day='2026-10-16';const wallet=Shop.create({store,today:()=>day}),m=T.create({store,earn:(source,id)=>wallet.earn(source,id)});m.add('Wash my face');const id=m.list()[0].id;
+ assert.equal(m.check(id,true),3);assert.equal(wallet.balance,33);assert.equal(m.check(id,true),0);m.check(id,false);assert.equal(wallet.balance,33);assert.equal(m.check(id,true),0);assert.equal(wallet.balance,33);assert.deepEqual(values['lr.fireflyDay'].taskIds,[id]);
+ const reloadedWallet=Shop.create({store,today:()=>day}),reloaded=T.create({store,earn:(s,id)=>reloadedWallet.earn(s,id)});reloaded.check(id,false);assert.equal(reloaded.check(id,true),0);assert.equal(reloadedWallet.balance,33);
+ day='2026-10-17';reloaded.check(id,false);assert.equal(reloaded.check(id,true),3);assert.equal(reloadedWallet.balance,36);
+});
+test('task rewards share the 50/day cozy cap with moments, watering and daily rewards, including partial rewards',()=>{
+ const Shop=require('../shop.js'),{store}=fixture(),wallet=Shop.create({store,today:()=> '2026-10-16'}),m=T.create({store,earn:(s,id)=>wallet.earn(s,id)});
+ wallet.earn('daily');for(let i=0;i<6;i++)wallet.earn('moment');wallet.earn('water','p1');assert.equal(wallet.earnedToday,47);m.add('Walk');m.add('Call');assert.equal(m.check(m.list()[0].id,true),3);assert.equal(m.check(m.list()[1].id,true),0);assert.equal(wallet.balance,80);assert.equal(wallet.earnedToday,50);assert.equal(wallet.earn('water','p2'),0);m.check(m.list()[0].id,false);assert.equal(wallet.balance,80);
+ const f=fixture(),w=Shop.create({store:f.store,today:()=> '2026-10-16'});for(let i=0;i<9;i++)w.earn('moment');w.earn('task','old-task');assert.equal(w.earn('task','near-cap'),2);assert.equal(w.earn('task','near-cap'),0);assert.equal(w.balance,80);
+});
+test('task icons auto-match keywords, allow a small picker, persist and migrate legacy tasks privately',()=>{
+ for(const [text,icon] of [['Wash my face','🧼'],['washing dishes','🧼'],['Walk outside','👟'],['Call mum','📞'],['Brush teeth','🪥'],['Something gentle','🌿']])assert.equal(T.iconFor(text),icon);
+ const {store,values}=fixture(),m=T.create({store});m.add('Wash my face');const id=m.list()[0].id;assert.equal(m.list()[0].icon,'🧼');assert.equal(m.setIcon(id,'🌙'),true);assert.equal(T.create({store}).list()[0].icon,'🌙');assert.equal(m.setIcon(id,'<script>'),false);assert.equal(m.list()[0].icon,'🌙');
+ values[T.KEY]={next:2,items:[{id:'legacy',text:'Walk outside',done:false}]};assert.equal(T.create({store}).list()[0].icon,'👟');assert.ok(!('icon' in values[T.KEY].items[0]));
+ const shared=W.shareDecor({...new LR.Room().serialize(),todayTasks:values[T.KEY]});assert.ok(!('todayTasks' in shared));
+});
+test('journey frames remaining counts positively, advances through dayparts, rests only for a nonempty finished list',()=>{
+ const tasks=[{done:false},{done:false},{done:false}];assert.equal(T.journey(tasks).title,'3 little things left!');assert.equal(T.journey(tasks).stage,'morning');tasks[0].done=true;assert.equal(T.journey(tasks).stage,'morning');tasks[1].done=true;assert.equal(T.journey(tasks).title,'1 little thing left!');assert.equal(T.journey(tasks).stage,'afternoon');tasks[2].done=true;assert.equal(T.journey(tasks).title,'All done. Rest now.');assert.equal(T.journey(tasks).pose,'sleep');assert.equal(T.journey(tasks).progress,1);assert.equal(T.journey(tasks).stage,'evening');assert.equal(T.journey([]).done,false);assert.equal(T.journey([]).pose,'idle');
+ const {store}=fixture(),m=T.create({store});for(let i=0;i<50;i++)m.add('A small thing');assert.throws(()=>m.add('Too many'),/50/);
+});

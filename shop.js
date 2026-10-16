@@ -23,16 +23,17 @@
     const owned = new Set(store.get('lr.shopOwned', []));
     function day() {
       const d = store.get('lr.fireflyDay', null);
-      return d && d.date === today() ? d : { date: today(), earned: 0, watered: [] };
+      return d && d.date === today() ? {...d,watered:Array.isArray(d.watered)?d.watered:[],taskIds:Array.isArray(d.taskIds)?d.taskIds:[]} : { date: today(), earned: 0, watered: [], taskIds:[] };
     }
     function earn(source, plant) {
-      const rates = { moment: 5, daily: 15, water: 2, streak: 25 };
+      const rates = { moment: 5, daily: 15, water: 2, streak: 25, task:3 };
       if (!rates[source]) return 0;
       const d = day();
       if (source === 'water') {
         if (!plant || d.watered.includes(plant)) return 0;
         d.watered.push(plant);
       }
+      if(source==='task'){if(typeof plant!=='string'||!plant||d.taskIds.includes(plant))return 0;d.taskIds.push(plant);}
       // The starter purse and seven-day celebration never consume the cozy-play allowance.
       const n = source === 'streak' ? rates[source] : Math.max(0, Math.min(rates[source], 50 - d.earned));
       if (source !== 'streak') d.earned += n;

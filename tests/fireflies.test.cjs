@@ -70,3 +70,7 @@ test('the fixed cosmetic catalog has unique ids and prices in range', () => {
   assert.equal(new Set(catalog.map(c => c.id)).size, catalog.length);
   assert.ok(catalog.every(c => c.price >= 40 && c.price <= 200 && (c.piece || c.wall || c.floor || c.costume)));
 });
+test('legacy daily ledgers gain task IDs without losing the existing allowance or watered plants',()=>{
+ const f=fixture({'lr.fireflyDay':{date:'2026-10-15',earned:49,watered:['room:1']}}),w=f.wallet;
+ assert.equal(w.earn('task','task-1'),1);assert.equal(w.earn('task','task-1'),0);assert.equal(w.earn('water','room:1'),0);assert.equal(w.earnedToday,50);assert.deepEqual(f.db.get('lr.fireflyDay').taskIds,['task-1']);assert.deepEqual(f.db.get('lr.fireflyDay').watered,['room:1']);assert.equal(f.reload().balance,31);
+});
