@@ -17,7 +17,17 @@
         stale?`Last forecast · ${probability}% chance of ${wet}`:probability===0?`No ${wet} expected this hour.`:`${wet==='snow'?'Snowflakes':wet==='rain'?'Raindrops':'Drops or flakes'} might visit · ${probability}% this hour`,
       fetched:d&&meta.weatherFetchedAt?`Updated ${new Date(meta.weatherFetchedAt).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}`:''};
   }
-  const ICONS=['🌿','🧼','🪥','👟','📞','💧','☕','🥗','🍳','📖','✍️','🧹','🧺','🏋️','🧘','🌙','💊','💻','💬','📚','🌱','🐾','🎨','🎵'];
+  const STARTERS=[
+    {id:'rise',text:'Get out of bed',icon:'🌻'},
+    {id:'teeth',text:'Brush teeth',icon:'🪥'},
+    {id:'wash',text:'Wash my face',icon:'🧼'},
+    {id:'water',text:'Drink water',icon:'💧'},
+    {id:'stretch',text:'Take a stretch break',icon:'🦒'},
+    {id:'happy',text:'Do one thing that makes me happy',icon:'😊'},
+    {id:'breathe',text:'Take 3 deep breaths',icon:'🍃'},
+  ];
+  const taskText=text=>String(text).trim().replace(/\s+/g,' ').slice(0,140);
+  const ICONS=['🌻','🦒','😊','🍃','🌿','🧼','🪥','👟','📞','💧','☕','🥗','🍳','📖','✍️','🧹','🧺','🏋️','🧘','🌙','💊','💻','💬','📚','🌱','🐾','🎨','🎵'];
   const ICON_RULES=[[/\b(wash|shower|bath)\w*/i,'🧼'],[/\b(brush|floss|teeth)\w*/i,'🪥'],[/\b(walk|run|hike)\w*/i,'👟'],[/\b(call|phone)\w*/i,'📞'],[/\b(water|hydrat)\w*/i,'💧'],[/\b(tea|coffee)\w*/i,'☕'],[/\b(cook|bake)\w*/i,'🍳'],[/\b(eat|meal|lunch|breakfast|dinner)\w*/i,'🥗'],[/\b(read|book)\w*/i,'📖'],[/\b(write|journal|letter)\w*/i,'✍️'],[/\b(clean|tidy|sweep)\w*/i,'🧹'],[/\b(laundry|clothes)\w*/i,'🧺'],[/\b(gym|workout|exercise)\w*/i,'🏋️'],[/\b(meditat|breath)\w*/i,'🧘'],[/\b(sleep|rest|bed)\w*/i,'🌙'],[/\b(medic|pill|vitamin)\w*/i,'💊'],[/\b(work|code|email)\w*/i,'💻'],[/\b(friend|text|message)\w*/i,'💬'],[/\b(study|learn|lesson)\w*/i,'📚'],[/\b(stretch|plant|garden)\w*/i,'🌱'],[/\b(cat|dog|pet)\w*/i,'🐾'],[/\b(draw|paint|art)\w*/i,'🎨'],[/\b(music|practi[cs]|sing)\w*/i,'🎵']];
   const iconFor=text=>ICON_RULES.find(([pattern])=>pattern.test(String(text)))?.[1] || '🌿';
   function journey(tasks){const total=tasks.length,checked=tasks.filter(t=>t.done).length,left=total-checked,done=total>0&&left===0,progress=total?checked/total:0;return {total,checked,left,done,progress,stage:progress<.34?'morning':progress<.67?'afternoon':'evening',pose:done?'sleep':'idle',title:done?'All done. Rest now.':total?`${left} little thing${left===1?'':'s'} left!`:'One small thing, whenever you’re ready.'};}
@@ -25,7 +35,8 @@
     const read=()=>{const data=store.get(KEY,{});return {v:1,next:Number(data?.next)||1,items:(Array.isArray(data?.items)?data.items:[]).filter(t=>t&&typeof t.id==='string'&&typeof t.text==='string').map(t=>({...t,icon:ICONS.includes(t.icon)?t.icon:iconFor(t.text)}))};};
     const write=data=>{store.set(KEY,data);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(data))throw Error('Could not save your list on this device.');};
     return {list:()=>read().items,
-      add(text){text=String(text).trim().replace(/\s+/g,' ').slice(0,140);if(!text)return false;const d=read();if(d.items.length>=50)throw Error('A little breathing room: keep up to 50 things here.');d.items.push({id:'task-'+d.next++,text,icon:iconFor(text),done:false,createdAt:now()});write(d);return true;},
+      addStarters(ids=STARTERS.map(s=>s.id)){const d=read(),names=new Set(d.items.map(t=>taskText(t.text).toLocaleLowerCase()));let added=0;for(const s of STARTERS){if(!ids.includes(s.id)||names.has(s.text.toLocaleLowerCase())||d.items.length>=50)continue;d.items.push({id:'task-'+d.next++,text:s.text,icon:s.icon,done:false,createdAt:now()});names.add(s.text.toLocaleLowerCase());added++;}if(added)write(d);return added;},
+      add(text){text=taskText(text);if(!text)return false;const d=read();if(d.items.length>=50)throw Error('A little breathing room: keep up to 50 things here.');d.items.push({id:'task-'+d.next++,text,icon:iconFor(text),done:false,createdAt:now()});write(d);return true;},
       check(id,on){const d=read(),t=d.items.find(t=>t.id===id);if(t){const newlyDone=!t.done&&!!on;t.done=!!on;write(d);if(newlyDone){const reward=earn('task',t.id);onChecked(t);return Number.isInteger(reward)?reward:0;}}return 0;},
       setIcon(id,icon){if(!ICONS.includes(icon))return false;const d=read(),t=d.items.find(t=>t.id===id);if(!t)return false;t.icon=icon;write(d);return true;},
       remove(id){const d=read();d.items=d.items.filter(t=>t.id!==id);write(d);},
@@ -50,7 +61,10 @@
       const section=el('section','today-tasks'),header=el('div','task-journey'),title=el('h3','','Little things'),summary=el('p','task-journey-summary'),track=el('div','task-day-path'),dude=el('div','task-journey-dude'),image=el('img'),sleep=el('span','task-journey-zzz','Zzz');
       image.alt='Your little roommate';image.width=84;image.height=84;dude.append(image,sleep);sleep.hidden=true;track.setAttribute('aria-hidden','true');
       for(const [key,label,icon] of [['morning','Morning','☀'],['afternoon','Afternoon','☁'],['evening','Evening','☾']]){const stop=el('span','task-path-stop '+key);stop.append(el('i','',icon),el('small','',label));track.appendChild(stop);}track.appendChild(dude);summary.setAttribute('role','status');header.append(title,summary,track);
-      const sub=el('p','muted small','Just yours, on this device. One small thing at a time.'),form=el('form','today-task-form'),input=el('input'),add=el('button','chipbtn primary','＋ Add');input.type='text';input.maxLength=140;input.placeholder='A small thing for today…';input.setAttribute('aria-label','A little task');add.type='submit';form.append(input,add);const list=el('div','today-task-list'),empty=el('p','muted','Nothing tugging at your sleeve.');section.append(header,sub,form,list,empty);panel.appendChild(section);host.appendChild(panel);
+      const sub=el('p','muted small','Just yours, on this device. One small thing at a time.'),form=el('form','today-task-form'),input=el('input'),add=el('button','chipbtn primary','＋ Add');input.type='text';input.maxLength=140;input.placeholder='A small thing for today…';input.setAttribute('aria-label','A little task');add.type='submit';form.append(input,add);const list=el('div','today-task-list'),empty=el('p','muted task-empty','A blank page is welcome here.'),notebook=el('div','task-notebook'),pageTitle=el('p','task-notebook-title','Your little list');
+      const starters=el('details','task-starters'),starterSummary=el('summary'),starterTitle=el('b','','A gentle starter plan'),starterCount=el('small','muted'),starterCopy=el('p','muted small','Borrow a little thing, or make it your own.'),starterList=el('div','task-starter-list'),addAll=el('button','chipbtn task-add-starters');starterSummary.append(starterTitle,starterCount);starters.append(starterSummary,starterCopy,starterList,addAll);starters.open=model.list().length===0;addAll.type='button';
+      addAll.onclick=()=>safe(()=>{const n=model.addStarters();if(n)notice(`Added ${n} little thing${n===1?'':'s'}. One at a time.`);});
+      notebook.append(pageTitle,list,empty,starters,form);section.append(header,sub,notebook);panel.appendChild(section);host.appendChild(panel);
       let signature='',lastPortrait='';form.onsubmit=e=>{e.preventDefault();safe(()=>{if(model.add(input.value))input.value='';});input.focus();};
       const entry={panel,refresh(){const ctx=context(),w=weather(ctx.meta,ctx.now || new Date());art.textContent=w.icon;sky.dataset.sky=ctx.meta.weather || 'clear';date.textContent=w.date;clock.textContent=w.time;phase.textContent=w.phase;condition.textContent=w.label+(w.temperature?' · '+w.temperature:'');chance.textContent=w.chance;updated.textContent=w.fetched+(w.stale?' · cached':'');drops.hidden=w.probability===null;[...drops.children].forEach((d,i)=>{d.classList.toggle('wet',i<w.probability/10);d.textContent=ctx.meta.weather==='snow'?'❄':'💧';});
         const tasks=model.list(),j=journey(tasks),key=JSON.stringify(tasks.map(t=>[t.id,t.text,t.icon]));empty.hidden=tasks.length>0;if(summary.textContent!==j.title)summary.textContent=j.title;header.dataset.stage=j.stage;header.dataset.pose=j.pose;header.dataset.remaining=String(j.left);track.style.setProperty('--task-progress',String(j.progress));sleep.hidden=!j.done;
@@ -65,6 +79,11 @@
           check.onclick=()=>safe(()=>{const on=check.getAttribute('aria-checked')!=='true',earned=model.check(t.id,on);if(on){celebrate(t);check.classList.remove('celebrating');void check.offsetWidth;check.classList.add('celebrating');setTimeout(()=>check.classList.remove('celebrating'),700);dude.classList.remove('task-hop');void dude.offsetWidth;dude.classList.add('task-hop');if(earned){reward.textContent='+'+earned;check.classList.add('rewarding');setTimeout(()=>{check.classList.remove('rewarding');reward.textContent='';},1300);}}});
           remove.type='button';remove.setAttribute('aria-label','Remove task: '+t.text);remove.onclick=()=>safe(()=>{model.remove(t.id);input.focus();});copy.append(text,remove);row.dataset.task=t.id;row.append(icon,copy,check,picker);list.appendChild(row);
         }}
+        const names=new Set(tasks.map(t=>taskText(t.text).toLocaleLowerCase())),suggestions=STARTERS.filter(s=>!names.has(s.text.toLocaleLowerCase())),space=Math.max(0,50-tasks.length);
+        const sk=JSON.stringify([suggestions.map(s=>s.id),space]);if(starters.dataset.items!==sk){starters.dataset.items=sk;starterList.replaceChildren();starters.hidden=!suggestions.length;starterCount.textContent=`${suggestions.length} small ideas`;
+          for(const s of suggestions){const b=el('button','task-starter'),icon=el('span','',s.icon),text=el('span','',s.text),plus=el('span','task-starter-plus','＋');b.type='button';b.disabled=!space;b.setAttribute('aria-label','Add '+s.text);icon.setAttribute('aria-hidden','true');plus.setAttribute('aria-hidden','true');b.append(icon,text,plus);b.onclick=()=>safe(()=>{model.addStarters([s.id]);});starterList.appendChild(b);}
+          addAll.disabled=!space;addAll.textContent=space?`Add ${Math.min(space,suggestions.length)} little thing${Math.min(space,suggestions.length)===1?'':'s'}`:'Your page has 50 little things';
+        }
         const byId=new Map(tasks.map(t=>[t.id,t]));for(const row of list.children){const t=byId.get(row.dataset.task);row.querySelector('.today-task-check').setAttribute('aria-checked',String(!!t.done));row.classList.toggle('done',!!t.done);}
       }};mounts.add(entry);entry.refresh();return panel;
     }
@@ -78,5 +97,5 @@
     window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);viewport();document.addEventListener('visibilitychange',refresh);
     return {mount,refresh,badges,tick(time){if(time<next)return;next=time+1000;refresh();}};
   }
-  const api={KEY,SKY,ICONS,iconFor,journey,weather,countdown,timers,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRToday=api;
+  const api={KEY,SKY,STARTERS,ICONS,iconFor,journey,weather,countdown,timers,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRToday=api;
 })(typeof window!=='undefined'?window:globalThis);
