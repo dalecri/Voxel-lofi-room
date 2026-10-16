@@ -34,6 +34,44 @@
     for(let n=0;n<3;n++){const y=1+n*5;m.box(1,y,7,7,y+4,8,shade(c,.9)).box(3,y+2,8,5,y+3,9,0x726b5f);
       m.part('privateFiles'+n,[0,0,0]);m.box(1,y+3,8,7,y+4,10,0xffedcc).box(1,y,8,7,y+3,9,c).box(3,y+1,9,5,y+2,10,0x726b5f);m.main();}
   }});
+  // One 3 × 2 floor footprint; the furniture inside is decorative, not a second level.
+  def('loft', {
+    name: 'Mezzanine loft bed', kind: 'floor', group: 'furniture', size: [3, 2], wallish: true, tap: 'toggle', on: true,
+    light: { at: [12, 8, 10], color: 0xffd49a, i: 3, d: 5 },
+    vars: [[WOOD.oak, 0x8cae9c], [WOOD.walnut, 0xb290b6], [0xe3cfaa, 0x8eaec8]],
+    build(m, [w, blanket], s) {
+      const f = grain(w), edge = shade(w, 0.8);
+      // Inset posts give the deck a one-voxel overhang, inside the 24 × 16 bounds.
+      [[1, 1], [21, 1], [1, 13], [21, 13]].forEach(([x, z]) => m.box(x, 0, z, x + 2, 18, z + 2, f));
+      m.box(0, 9, 0, 24, 10, 2, edge).box(0, 9, 14, 24, 10, 16, edge);
+      m.box(0, 9, 2, 2, 10, 14, edge).box(22, 9, 2, 24, 10, 14, edge);
+      // Slat seams are voxel colours in one mesh, with no coplanar overlay planes.
+      m.box(0, 10, 0, 24, 11, 16, (x, y, z) => x % 4 === 3 ? shade(w, 0.85) : f(x, y, z));
+      m.box(3, 11, 3, 21, 13, 13, 0xf4ead9);
+      m.box(4, 13, 5, 8, 15, 11, 0xfffaf0);
+      m.box(15, 13, 4, 20, 14, 12, blanket).box(15, 14, 4, 17, 15, 12, mix(blanket, 0xffffff, 0.3));
+      // Rails and intermediate uprights; leave the right short side open at the ladder.
+      for (const y of [14, 17]) {
+        m.box(1, y, 1, 23, y + 1, 2, f).box(1, y, 14, 23, y + 1, 15, f);
+        m.box(1, y, 2, 2, y + 1, 14, f);
+        m.box(22, y, 2, 23, y + 1, 5, f).box(22, y, 11, 23, y + 1, 14, f);
+      }
+      for (const x of [8, 15]) for (const z of [1, 14]) m.box(x, 11, z, x + 1, 18, z + 1, f);
+      m.box(23, 0, 4, 24, 15, 5, f).box(23, 0, 10, 24, 15, 11, f);
+      for (let y = 2; y <= 12; y += 2) m.box(23, y, 5, 24, y + 1, 10, shade(w, 1.12));
+      // Low desk, tucked stool and a tiny, decorative lamp beneath the platform.
+      legs4(m, 4, 8, 15, 14, 5, edge); m.box(4, 5, 8, 15, 6, 14, f);
+      legs4(m, 8, 11, 12, 15, 3, edge); m.box(8, 3, 11, 12, 4, 15, blanket);
+      m.box(5, 6, 11, 8, 7, 14, DARK).set(6, 7, 12, CHROME);
+      m.box(5, 8, 11, 8, 9, 14, 0xe7c594).set(6, 8, 13, 0xffdfaa);
+      // Only these bulbs emit. All geometry shares the same voxel map so touching
+      // platform, rails and posts lose their hidden faces in the standard mesher.
+      for (const z of [0, 15]) {
+        m.box(3, 8, z, 21, 9, z + 1, DARK);
+        for (let x = 4; x <= 20; x += 4) m.set(x, 7, z, s.on ? 0xffd49a : 0xa7977e, s.on);
+      }
+    },
+  });
   const MODULAR = [[0xf2efe8, 0xd8b48a], [0xd8b48a, 0xf2efe8], [0x2e2e36, 0xd8b48a], [0xf2efe8, 0x9ab8c8], [0x8a9a7a, 0xf2efe8]];
 
   // =================================================================
