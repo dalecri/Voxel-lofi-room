@@ -51,7 +51,7 @@ with sync_playwright() as p:
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    if width==390:page.screenshot(path=f'/tmp/settings-left-{phase}.png')
    if phase=='day' and width==390:
-    b=page.get_by_role('button',name='Cat mischief',exact=False);before=b.get_attribute('class');b.click();assert page.get_by_role('button',name='Cat mischief',exact=False).get_attribute('class')!=before
+    b=page.get_by_role('switch',name='Cat mischief',exact=False);before=b.get_attribute('class');b.click();assert page.get_by_role('switch',name='Cat mischief',exact=False).get_attribute('class')!=before
    page.keyboard.press('Escape');assert not page.locator('#sheet').evaluate("e=>e.classList.contains('open')")
  assert not errors,errors
  print('PASS: persisted sakura migration, four background weather states, no weather toolbar button, Home weather, untouched tree petal burst/Hanami, left-aligned working Settings at Android/mobile/desktop day/night, no console errors',flush=True)

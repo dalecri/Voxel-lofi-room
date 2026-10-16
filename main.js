@@ -168,7 +168,8 @@ function startLofiRooms() {
   view.glowOn = meta.glow !== false;
   // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
   const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), watered: it => shop.earn('water', `${meta.current}:${it.id}`), changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
-  const state = { mode: store.get('lr.mode', 'explore'), tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
+  store.del('lr.mode');   // editing is a temporary session, never a startup preference
+  const state = { mode: 'explore', tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
   const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
     editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
@@ -205,7 +206,7 @@ function startLofiRooms() {
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
   const todayTasks=LRToday.create({store});
   const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
-    settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();sheet.classList.add('open');},
+    settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();openSheet();},
     hidden:()=>filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),
     openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});else focusSheet(row.focus,row.focus.room);},
@@ -223,7 +224,7 @@ function startLofiRooms() {
       launch:launchTool,
       addPortal:()=>dashboard.addPortal(),
       navigate:(target,item)=>{
-        if(target==='daily'){store.set('lr.menuTab','Today');renderMenu();sheet.classList.add('open');}
+        if(target==='daily'){store.set('lr.menuTab','Today');renderMenu();openSheet();}
         else if(target==='merchant')openShop();
         else if(target==='tea')roomToolsUI.open('tea',room.items.find(i=>i.t==='kettle')?.id || null);
         else if(target==='mailbox')roomToolsUI.open('mailbox',room.items.find(i=>['mailbox','letterbox'].includes(i.t))?.id || null);
@@ -269,7 +270,7 @@ function startLofiRooms() {
     else if(p.id==='camera')$('#bPhoto').click();
     else if(p.id==='newspaper')newspaperSheet();
     else if(p.id==='tst')widgetAction(find('tstcorkboard') || {t:'tstcorkboard',id:null});
-    else if(['journal','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id[0].toUpperCase()+p.id.slice(1));renderMenu();sheet.classList.add('open');}
+    else if(['journal','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
   }
   $('#bHome').onclick=()=>home.open();
 
@@ -657,7 +658,10 @@ function startLofiRooms() {
   function setMode(mode, quiet) {
     if (mode !== 'explore') exitCat(true);
     state.mode = mode;
-    store.set('lr.mode', mode);
+    const editing = mode === 'edit';
+    for (const [selector, visible] of [['.tools',editing],['#tray',editing],['.explorebar',!editing]]) {
+      const bar = $(selector); bar.hidden = !visible; bar.inert = !visible;
+    }
     document.body.classList.toggle('exploring', mode === 'explore');
     state.drag = null; view.setGhost(null); setHidden(0);
     view.petsPaused = mode === 'edit';
@@ -670,7 +674,7 @@ function startLofiRooms() {
     }
     if (mode === 'edit' && FINE && !store.get('lr.tipKeys', false)) {
       store.set('lr.tipKeys', true);
-      toast('<b>Mouse & keys</b><span>Scroll the tray with the wheel · <kbd>←</kbd><kbd>→</kbd> pick · <kbd>↑</kbd><kbd>↓</kbd> tabs · <kbd>R</kbd> turn · <kbd>Del</kbd> remove</span>', 5200);
+      toast('<b>Mouse & keys</b><span>Scroll the tray with the wheel · <kbd>←→</kbd>&nbsp;pick ·&nbsp;<kbd>↑↓</kbd>&nbsp;tabs ·&nbsp;<kbd>R</kbd>&nbsp;turn ·&nbsp;<kbd>Del</kbd>&nbsp;remove</span>', 5200);
     }
     view.setHover(0);
   }
@@ -1304,7 +1308,9 @@ function startLofiRooms() {
   // Handle the top sheet before crate navigation, text fields or cat-view controls.
   window.addEventListener('keydown', e => {
     if (!$('#sheet').classList.contains('open')) return;
-    if (e.key === 'Escape') { e.preventDefault(); closeSheets(); }
+    const typing = e.target.matches('input, textarea, select') || e.target.isContentEditable;
+    const menuShortcut = !typing && !e.ctrlKey && !e.metaKey && !e.altKey && ['h','?'].includes(e.key.toLowerCase()) && !!$('#menu-today');
+    if (e.key === 'Escape' || menuShortcut) { e.preventDefault(); closeSheets(); }
     else LRDashboard.tabKey(e);
     e.stopImmediatePropagation();
   }, true);
@@ -1711,12 +1717,18 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Rooms list & menu
   const sheet = $('#sheet');
+  function openSheet() {
+    sheet.inert = false; sheet.setAttribute('aria-hidden','false'); sheet.classList.add('open');
+    $('#bMenu').setAttribute('aria-expanded',String(!!$('#menu-today')));
+  }
   function closeSheets() {
     villageView?.destroy(); villageView=null;
     roomToolsUI.close();
     const open = sheet.classList.contains('open');
-    sheet.classList.remove('open'); $('#sheetBody').dataset.merchant = '';
-    if (sheet.contains(document.activeElement)) document.activeElement.blur();
+    const returnFocus = sheet.contains(document.activeElement);
+    sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
+    $('#bMenu').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';
+    if (returnFocus) $('#bMenu').focus({preventScroll:true});
     // Dismissal and the pending room transition must survive an unavailable audio device.
     if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
   }
@@ -1725,12 +1737,12 @@ function startLofiRooms() {
     const minutes = Math.ceil(rituals.focus(roomId, it.id).remaining / 60000);
     body.innerHTML = `<div class="grab"></div><h2>A little time to focus</h2><p class="muted">Your candle has about ${minutes} minute${minutes === 1 ? '' : 's'} left. It will gutter out with a soft chime. Nothing to finish, nothing to earn.</p><div class="rowbtns"><button class="chipbtn" id="focusSnuff">Snuff the candle</button><button class="chipbtn primary" id="focusContinue">Let it glow</button></div>`;
     $('#focusSnuff').onclick = () => { rituals.snuff(roomId, it.id); updateRituals(); closeSheets(); };
-    $('#focusContinue').onclick = closeSheets; sheet.classList.add('open');
+    $('#focusContinue').onclick = closeSheets; openSheet();
   }
   function breathingSheet() {
     const body = $('#sheetBody'); body.dataset.merchant = '';
     body.innerHTML = '<div class="grab"></div><h2>Ten minutes in your room</h2><p class="muted">Moon-blue light, a slow circle, a gentle tone. Breathe in as it opens, out as it softens. Four seconds in, six out, or simply follow at your own pace. Keep your eyes open. Leave whenever you like.</p><div class="rowbtns"><button class="chipbtn primary" id="breathStart">Settle in</button><button class="chipbtn" id="breathNotNow">Back</button></div>';
-    $('#breathStart').onclick = startBreathing; $('#breathNotNow').onclick = closeSheets; sheet.classList.add('open');
+    $('#breathStart').onclick = startBreathing; $('#breathNotNow').onclick = closeSheets; openSheet();
   }
   function startBreathing() {
     if (rituals.breath.active) return;
@@ -1806,7 +1818,7 @@ function startLofiRooms() {
       grid.appendChild(card);
     });
     updateShopBalance();
-    sheet.classList.add('open');
+    openSheet();
   }
   function wardrobeSheet() {
     wardrobe.sync();
@@ -1857,7 +1869,7 @@ function startLofiRooms() {
       $('#crownCats').appendChild(b);
     });
     if (!cats.length) $('#crownCats').textContent = 'Add a cat from the Pets tab first.';
-    $('#crownClose').onclick = closeSheets; sheet.classList.add('open');
+    $('#crownClose').onclick = closeSheets; openSheet();
   }
   function renderJournal() {
     const feed = $('#journalFeed'); if (!feed) return;
@@ -1881,7 +1893,11 @@ function startLofiRooms() {
       el.innerHTML = `<i>${got ? '✦' : '?'}</i><div><b>${got ? name : '???'}</b><span>${got ? desc : 'Keep exploring…'}</span></div>`; feed.appendChild(el);
     });
   }
-  $('#bMenu').onclick = () => { renderMenu(); sheet.classList.add('open'); Sound.slide(true); };
+  $('#bMenu').onclick = () => {
+    if (sheet.classList.contains('open') && $('#menu-today')) { closeSheets(); return; }
+    renderMenu(); openSheet();
+    try { Sound.slide(true); } catch (e) { /* optional interface sound */ }
+  };
   sheet.addEventListener('click', e => { if (e.target === sheet) closeSheets(); });
   $('#brand').onclick = () => {
     const name = prompt('Name this room', room.name);
@@ -1961,7 +1977,7 @@ function startLofiRooms() {
     h('div', 'grab');
     const close = h('button', 'chipbtn sheet-close', 'Close'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
     h('h2', '', title); h('p', 'muted', sub);
-    build(h); sheet.classList.add('open');
+    build(h); openSheet();
   }
   function widgetLinks(panel, links, id) {
     links.forEach(row => {
@@ -2228,7 +2244,7 @@ function startLofiRooms() {
       });
     };
     list.appendChild(nb);
-    sheet.classList.add('open');
+    openSheet();
   }
   function switchRoom(id, asked) {
     if (id === meta.current) return;
@@ -2265,20 +2281,22 @@ function startLofiRooms() {
     home.close(false);
     roomToolsUI.close();
     saveIndex();
-    const body = $('#sheetBody');
+    const body = $('#sheetBody'), focused = document.activeElement;
+    const focusState = focused?.matches('.toggle') ? {label:focused.textContent,panel:focused.closest('[role=tabpanel]')?.id,top:body.scrollTop} : null;
     body.dataset.merchant = '';
     body.innerHTML = '';
     const sections = LRDashboard.menu(body, store, closeSheets);
     let target = sections.Today;
-    const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; target.appendChild(el); return el; };
-    todayUI.mount(target);
-    const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
-    h('h2', '', `Daily moment <small>${streak ? `🔥 ${streak} day streak` : 'start a streak'}</small>`);
-    h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`);
-    const log = store.get('lr.dailyLog', []).slice(0, 5);
-    if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'));
+    const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
+    todayUI.mount(target,{beforeTasks:panel=>{
+      const { D, name, hint } = dailyInfo(), streak = store.get('lr.dailyStreak', { n: 0 }).n;
+      h('h2', 'daily-heading', `Daily moment <small>· ${streak ? `🔥 ${streak} day streak` : 'Start a streak'}</small>`, panel);
+      h('div', 'd today' + (D.done ? ' got' : ''), `<i>${D.done ? '✓' : '☀'}</i><div><b>${name}</b><span>${D.done ? 'Done for today. A new moment tomorrow.' : hint}</span></div>`, panel);
+      const log = store.get('lr.dailyLog', []).slice(0, 5);
+      if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${M ? M[1] : e.id}`; }).join('<br>'), panel);
+    }});
     target = sections.Rooms;
-    h('h2', '', `Your home <small>${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
+    h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomVillage(target);
     h('p','muted small','Rooms in your home save automatically. New rooms ask before you leave.');
     const bedroom=h('label','settings-phase');bedroom.textContent='Main bedroom';
@@ -2357,6 +2375,7 @@ function startLofiRooms() {
     target = sections.Sound;
     const toggle = (label, on, fn) => {
       const r = h('button', 'toggle' + (on ? ' on' : ''), `<span>${label}</span><i></i>`);
+      r.setAttribute('role','switch'); r.setAttribute('aria-pressed',String(!!on)); r.setAttribute('aria-checked',String(!!on));
       r.onclick = () => { fn(); renderMenu(); };
     };
     toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
@@ -2416,6 +2435,10 @@ function startLofiRooms() {
       select.value=meta.phase;select.onchange=()=>setPhase(select.value,true);label.appendChild(select);
     }
     h('p', 'muted small', 'Explore: drag to look around, pinch to zoom, double-tap to zoom in, tap lamps, records, plants and cats. Decorate: Add places things (tap or drag), Move drags them, Turn spins them, Paint changes walls, floors and colours, Remove puts things away. Small things like mugs and lamps sit on desks, tables and shelves. On a computer: left-drag or right-drag spins, the wheel zooms (or scrolls the tray when the mouse is over it), middle-drag pans. Keys: 1–5 tools, ←/→ pick from the tray, ↑/↓ switch tabs, R turns the piece you’re placing or the one under the mouse, Delete removes it, Q/E turn the room, X switches Explore/Decorate, G makes a surprise room, M plays music, Ctrl+Z or U undoes, Esc goes back.');
+    if (focusState) {
+      [...(document.getElementById(focusState.panel)?.querySelectorAll('.toggle') || [])].find(b=>b.textContent===focusState.label)?.focus({preventScroll:true});
+      body.scrollTop=focusState.top;
+    }
   }
 
   function showIntro() {

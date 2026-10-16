@@ -25,7 +25,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.liveWeather');assert not requests;assert page.evaluate('geoCalls')==0
  def settings():
   page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
- def live():return page.get_by_role('button',name='Live weather',exact=True)
+ def live():return page.get_by_role('switch',name='Live weather',exact=True)
  page.evaluate('() => {window.weatherWind=null;__lr.Sound.soundscape=s=>{window.weatherWind=s.wind};}')
  settings();assert page.locator('#menu-settings .toggle').count()==11
  assert page.locator('#menu-settings .toggle span').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
@@ -40,7 +40,7 @@ with sync_playwright() as p:
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function("__lr?.meta.liveWeather && __lr.view.weather==='rain'");page.wait_for_function('__lr.liveWeather.soundWind(0)===.5');assert len(requests)==2;assert page.evaluate('geoCalls')==1
  # Keep the cloud chip removed. Settings' Rain control supplies manual override.
  assert page.locator('#bRain').count()==0
- settings();page.locator('#menu-settings').get_by_role('button',name='Rain',exact=True).click();assert page.evaluate('__lr.meta.liveWeather') is False;assert page.evaluate('__lr.view.weather')=='clear';assert "Live weather off — you're in charge of the sky now" in page.locator('#toasts').inner_text();page.keyboard.press('Escape')
+ settings();page.locator('#menu-settings').get_by_role('switch',name='Rain',exact=True).click();assert page.evaluate('__lr.meta.liveWeather') is False;assert page.evaluate('__lr.view.weather')=='clear';assert "Live weather off — you're in charge of the sky now" in page.locator('#toasts').inner_text();page.keyboard.press('Escape')
  # Failed responses retain the last condition and successful timestamp, silently.
  old=page.evaluate('__lr.meta.weatherFetchedAt');failure=True;settings();live().click();page.wait_for_function('geoCalls===2');page.wait_for_function('n=>performance.getEntriesByType("resource").filter(e=>e.name.startsWith("https://api.open-meteo.com")).length>=n',arg=2)
  page.evaluate('__lr.liveWeather.refresh()');assert page.evaluate('__lr.meta.liveWeather');assert page.evaluate('__lr.meta.weather')=='clear';assert page.evaluate('__lr.meta.weatherFetchedAt')==old

@@ -60,7 +60,7 @@ with sync_playwright() as p:
  tap('beadcurtain');assert 'door' in page.locator('#sheetBody').inner_text().lower();escape()
  result=page.evaluate('''() => {const a=__lr,o=a.view.objs.get(ids.beadcurtain),p=a.view.itemPoint(ids.beadcurtain,[4,0,4]);a.companion.object.position.copy(p);a.cozy.frame(.1,a.view.t);return o.userData.brushedUntil>a.view.t;}''');assert result
  # Respect reduced motion for moving decor.
- page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('button',name='Reduced motion',exact=True).click();page.keyboard.press('Escape')
+ page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('switch',name='Reduced motion',exact=True).click();page.keyboard.press('Escape')
  assert page.evaluate('''() => {const a=__lr;a.cozy.frame(.1,a.view.t);const b=a.view.objs.get(ids.beadcurtain).userData.parts;return Array.from({length:8},(_,n)=>b['bead'+n].rotation.z).every(x=>x===0);}''')
  # Dreamcatcher boosts an already enabled midnight dream, never turns it on by itself.
  page.evaluate("__lr.meta.dreamy=true;Date.prototype.getHours=()=>2;__lr.setPhase('night',true)");page.wait_for_function('__lr.view.driftGoal===1.25')

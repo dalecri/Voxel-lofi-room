@@ -334,6 +334,8 @@ File contents, titles and custom portal URLs/assignments stay outside room decor
 
 Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/dashboard-browser.py`. The browser harness covers relocated menu controls and tab persistence, catalog-derived launchers and custom links, letters/scenes/photos and downloads, cabinet capture privacy, responsive layouts at 320/390/1280 pixels, Escape, and an actual LR1 import in a fresh session with no private files or portal data. Existing browser scripts now select the relevant menu tab before interacting with its controls.
 
+`python3 tests/uiux-browser.py` covers the live-review regressions at 390px and desktop: progress is separate from Rename; H, Escape, Close and Menu dismiss the menu; Decorate never persists across reloads and exposes only its current enter/exit control. It also checks heading/help spacing and accessible switch states, including focus after changing a setting.
+
 ## Your Space and Today
 
 The menu is called **Your Space**. Today keeps the Daily Moment and streak and replaces the old Rituals shortcuts with a sky card and **Little things** checklist. It shows the real local date/time, room daypart, current weather and, with Live weather enabled, temperature and this hour's precipitation chance. Missing forecasts are never estimated; older readings are marked cached. The same checklist appears in Home's Today section and uses device-private `lr.todayTasks`, outside every room share. Tasks stay until checked or removed; there is no external task service.

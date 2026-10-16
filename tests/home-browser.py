@@ -28,7 +28,7 @@ with sync_playwright() as p:
  assert 'PRIVATE_SEALED_BODY' not in view.inner_text();assert 'Your tea is ready' in view.inner_text();assert 'A letter has arrived' in view.inner_text()
  # The old Home settings live in Settings, retaining their actual engine behavior.
  view.locator('[data-app="settings"]').click()
- def control(label):return page.locator('#menu-settings').get_by_role('button',name=re.compile('^'+re.escape(label)+r'(?:$| \()'))
+ def control(label):return page.locator('#menu-settings').get_by_role('switch',name=re.compile('^'+re.escape(label)+r'(?:$| \()'))
  def check(label,on):
   b=control(label)
   if b.evaluate("e=>e.classList.contains('on')")!=on:b.click()
