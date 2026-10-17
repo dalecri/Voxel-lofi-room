@@ -2504,20 +2504,6 @@ function startLofiRooms() {
     target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }, true));
     target = sections.Journal;
     h('h2', '', 'Room journal');
-    {
-      const { D, name, hint } = dailyInfo();
-      const badge=h('details','daily-notice'+(D.done?' got':''),null,target);
-      const summary=h('summary','daily-badge',null,badge);
-      h('span','daily-badge-dot',D.done?'✓':'✦',summary).setAttribute('aria-hidden','true');
-      h('span','',D.done?'Daily moment · done':'Daily moment',summary);
-      const detail=h('div','daily-notice-copy',null,badge);
-      h('b','',esc(name),detail);
-      h('p','muted small',D.done?'Done for today. A new moment tomorrow.':esc(hint),detail);
-      const log = store.get('lr.dailyLog', []).slice(0, 5);
-      if (log.length) h('p', 'muted small dailylog', log.map(e => { const M = MOMENTS.find(x => x[0] === e.id); return `${new Date(e.date + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${esc(M ? M[1] : e.id)}`; }).join('<br>'), detail);
-    }
-    const streak=store.get('lr.dailyStreak',{n:0}).n;
-    h('p','muted journal-streak',streak?`🔥 Daily moment · ${streak} day streak`:'Daily moment · A new streak begins with one cozy moment.');
     const feeds = h('div', 'rowbtns');
     ['moments', 'cats'].forEach(feed => {
       const b = document.createElement('button'); b.className = 'chipbtn'; b.id = feed === 'cats' ? 'bCatDiary' : 'bMomentDiary';
