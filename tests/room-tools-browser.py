@@ -21,7 +21,7 @@ with sync_playwright() as p:
  }''')
  # Mail snapshots a typewriter letter and hides it until its local delivery date.
  page.evaluate('''() => {__lr.letters.model.add('Tools');__lr.letters.model.update({letterhead:'PRIVATE_LETTERHEAD',body:'<b>PRIVATE_FUTURE_LETTER</b> with a little <i>hope</i>.'});tapTool('letterbox')}''')
- page.get_by_role('button',name='Use my current typewriter letter',exact=True).click();page.get_by_label('Subject',exact=True).fill('<img src="https://example.com/PRIVATE_TITLE_LEAK" onerror="window.__toolUnsafe=true"> PRIVATE_ENVELOPE');page.get_by_label('Deliver on',exact=True).fill('2026-10-16')
+ page.get_by_role('button',name='Use my current typewriter letter',exact=True).click();page.locator('#sheet').get_by_label('Subject',exact=True).fill('<img src="https://example.com/PRIVATE_TITLE_LEAK" onerror="window.__toolUnsafe=true"> PRIVATE_ENVELOPE');page.locator('#sheet').get_by_label('Deliver on',exact=True).fill('2026-10-16')
  page.get_by_role('button',name='Send',exact=True).click();assert page.get_by_role('button',name='Read letter',exact=True).count()==0
  assert 'Sealed until 2026-10-16' in page.locator('#sheetBody').inner_text();assert 'PRIVATE_FUTURE_LETTER' not in page.locator('#sheetBody').inner_text()
  page.evaluate('__lr.letters.model.update({letterhead:"Changed",body:"Changed after sealing"})')
@@ -31,34 +31,34 @@ with sync_playwright() as p:
  page.keyboard.press('Escape')
  print('PASS: mailbox seals a private formatted snapshot, retains it across reload and hides the body before delivery',flush=True)
  # The retro email window: header defaults, inline edits, Save draft round-trips the whole compose state, Send seals and clears it.
- page.evaluate("tapTool('letterbox')");win=page.locator('.mailwin')
+ page.evaluate("tapTool('letterbox')");win=page.locator('#sheet .mailwin')
  assert win.locator('.mailwin-bar').inner_text().strip()=='Email'
- assert page.get_by_label('From',exact=True).input_value()=='crisdalessio@gmail.com';assert page.get_by_label('To',exact=True).input_value()=='Future me';assert page.get_by_label('Subject',exact=True).input_value()=='A note for future me'
- assert page.get_by_label('Deliver on',exact=True).input_value()=='2026-10-22'
- page.get_by_label('From',exact=True).click();page.get_by_label('From',exact=True).fill('PRIVATE_FROM@example.com');page.get_by_label('To',exact=True).fill('Me, next spring')
- page.get_by_label('Subject',exact=True).fill('PRIVATE_DRAFT_SUBJECT');page.get_by_label('Message',exact=True).fill('Hey!\n\nPRIVATE_DRAFT_BODY. Stay tuned!');page.get_by_label('Deliver on',exact=True).fill('2026-10-20')
+ assert page.locator('#sheet').get_by_label('From',exact=True).input_value()=='crisdalessio@gmail.com';assert page.locator('#sheet').get_by_label('To',exact=True).input_value()=='Future me';assert page.locator('#sheet').get_by_label('Subject',exact=True).input_value()=='A note for future me'
+ assert page.locator('#sheet').get_by_label('Deliver on',exact=True).input_value()=='2026-10-22'
+ page.locator('#sheet').get_by_label('From',exact=True).click();page.locator('#sheet').get_by_label('From',exact=True).fill('PRIVATE_FROM@example.com');page.locator('#sheet').get_by_label('To',exact=True).fill('Me, next spring')
+ page.locator('#sheet').get_by_label('Subject',exact=True).fill('PRIVATE_DRAFT_SUBJECT');page.locator('#sheet').get_by_label('Message',exact=True).fill('Hey!\n\nPRIVATE_DRAFT_BODY. Stay tuned!');page.locator('#sheet').get_by_label('Deliver on',exact=True).fill('2026-10-20')
  page.get_by_role('button',name='Save draft',exact=True).click();assert 'Draft saved' in win.inner_text()
  page.screenshot(path='/tmp/mailbox-compose-mobile.png')
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
  page.evaluate("window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);tapTool('letterbox')")
- assert 'Draft restored' in page.locator('.mailwin').inner_text()
+ assert 'Draft restored' in page.locator('#sheet .mailwin').inner_text()
  for label,value in [('From','PRIVATE_FROM@example.com'),('To','Me, next spring'),('Subject','PRIVATE_DRAFT_SUBJECT'),('Message','Hey!\n\nPRIVATE_DRAFT_BODY. Stay tuned!'),('Deliver on','2026-10-20')]:
-  assert page.get_by_label(label,exact=True).input_value()==value,(label,page.get_by_label(label,exact=True).input_value())
+  assert page.locator('#sheet').get_by_label(label,exact=True).input_value()==value,(label,page.locator('#sheet').get_by_label(label,exact=True).input_value())
  # Today and past dates are refused by the date picker; nothing is sealed and the draft stays.
  before=page.locator('.mailwin-letter').count()
  for bad in ['2026-10-15','2026-10-01']:
-  page.get_by_label('Deliver on',exact=True).fill(bad);page.get_by_role('button',name='Send',exact=True).click();assert page.locator('.mailwin-letter').count()==before;assert page.evaluate('!!__lr.roomTools.mailDraft')
- page.get_by_label('Deliver on',exact=True).fill('2026-10-20');page.get_by_role('button',name='Send',exact=True).click()
+  page.locator('#sheet').get_by_label('Deliver on',exact=True).fill(bad);page.get_by_role('button',name='Send',exact=True).click();assert page.locator('.mailwin-letter').count()==before;assert page.evaluate('!!__lr.roomTools.mailDraft')
+ page.locator('#sheet').get_by_label('Deliver on',exact=True).fill('2026-10-20');page.get_by_role('button',name='Send',exact=True).click()
  card=page.locator('.mailwin-letter',has_text='PRIVATE_DRAFT_SUBJECT');assert card.count()==1;assert 'Sealed until 2026-10-20' in card.inner_text();assert 'PRIVATE_DRAFT_BODY' not in page.locator('#sheetBody').inner_text()
- assert page.evaluate('__lr.roomTools.mailDraft')==None;assert page.get_by_label('Subject',exact=True).input_value()=='A note for future me';assert page.get_by_label('Message',exact=True).input_value()==''
- assert page.get_by_label('From',exact=True).input_value()=='PRIVATE_FROM@example.com'
- assert page.evaluate("document.documentElement.scrollWidth<=innerWidth && document.querySelector('.mailwin').getBoundingClientRect().right<=innerWidth")
+ assert page.evaluate('__lr.roomTools.mailDraft')==None;assert page.locator('#sheet').get_by_label('Subject',exact=True).input_value()=='A note for future me';assert page.locator('#sheet').get_by_label('Message',exact=True).input_value()==''
+ assert page.locator('#sheet').get_by_label('From',exact=True).input_value()=='PRIVATE_FROM@example.com'
+ assert page.evaluate("document.documentElement.scrollWidth<=innerWidth && document.querySelector('#sheet .mailwin').getBoundingClientRect().right<=innerWidth")
  page.screenshot(path='/tmp/mailbox-sent-mobile.png');page.keyboard.press('Escape')
  assert not errors,errors
  print('PASS: retro email window: defaults, inline edits, Save draft restores across reload, past dates refused, Send seals and clears the draft at 390px',flush=True)
  # Groceries and the French card share the fridge without losing either entry point.
- page.evaluate("tapTool('minifridge')");page.get_by_label('Add groceries',exact=True).fill('PRIVATE_MILK');page.get_by_role('button',name='Add to list',exact=True).click()
- page.get_by_label('Add groceries',exact=True).fill('Eggs');page.get_by_role('button',name='Add to list',exact=True).click();page.get_by_role('checkbox',name='PRIVATE_MILK',exact=True).check()
+ page.evaluate("tapTool('minifridge')");page.locator('#sheet').get_by_label('Add groceries',exact=True).fill('PRIVATE_MILK');page.get_by_role('button',name='Add to list',exact=True).click()
+ page.locator('#sheet').get_by_label('Add groceries',exact=True).fill('Eggs');page.get_by_role('button',name='Add to list',exact=True).click();page.get_by_role('checkbox',name='PRIVATE_MILK',exact=True).check()
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
  page.evaluate("window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);tapTool('minifridge')")
  assert page.get_by_role('checkbox',name='PRIVATE_MILK',exact=True).is_checked()
@@ -70,13 +70,13 @@ with sync_playwright() as p:
  # Idea jar handles empty state, two ideas and non-repeating shakes.
  page.evaluate("tapTool('ideajar')");assert page.get_by_role('button',name='Shake the jar',exact=True).is_disabled()
  for idea in ['PRIVATE_APP_IDEA','A tiny offline game']:
-  page.get_by_role('button',name='Drop in an idea',exact=True).click();page.get_by_label('A little idea',exact=True).fill(idea);page.get_by_role('button',name='Drop in jar',exact=True).click()
+  page.get_by_role('button',name='Drop in an idea',exact=True).click();page.locator('#sheet').get_by_label('A little idea',exact=True).fill(idea);page.get_by_role('button',name='Drop in jar',exact=True).click()
  page.get_by_role('button',name='Shake the jar',exact=True).click();first=page.locator('.idea-card-text').inner_text();page.get_by_role('button',name='Shake the jar',exact=True).click();assert page.locator('.idea-card-text').inner_text()!=first;page.keyboard.press('Escape')
  # Savings uses cents and fills only private coin parts, not the room model.
  page.evaluate("tapTool('savingsjar');window.__wallet=__lr.shop.balance")
- page.get_by_label('Goal name',exact=True).fill('PRIVATE_GOAL');page.get_by_label('Target amount',exact=True).fill('100.00');page.get_by_role('button',name='Save goal',exact=True).click()
+ page.locator('#sheet').get_by_label('Goal name',exact=True).fill('PRIVATE_GOAL');page.locator('#sheet').get_by_label('Target amount',exact=True).fill('100.00');page.get_by_role('button',name='Save goal',exact=True).click()
  for value in ['0.10','0.20','24.70']:
-  page.get_by_label('Deposit amount',exact=True).fill(value);page.get_by_label('Deposit note',exact=True).fill('PRIVATE_DEPOSIT');page.get_by_role('button',name='Log deposit',exact=True).click()
+  page.locator('#sheet').get_by_label('Deposit amount',exact=True).fill(value);page.locator('#sheet').get_by_label('Deposit note',exact=True).fill('PRIVATE_DEPOSIT');page.get_by_role('button',name='Log deposit',exact=True).click()
  assert '25.00 of 100.00' in page.locator('#sheetBody').inner_text();assert page.evaluate('__lr.shop.balance===__wallet')
  page.evaluate('__lr.roomToolsUI.frame(1)');assert page.evaluate('''() => {const a=__lr,p=a.view.objs.get(a.room.items.find(i=>i.t==='savingsjar').id).userData.parts;return Array.from({length:8},(_,i)=>p['privateCoin'+i].visible)}''')==[True,True,False,False,False,False,False,False]
  # Capture rendering must not expose a private coin level or unread-mail flag.

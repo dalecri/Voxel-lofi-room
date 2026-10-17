@@ -96,29 +96,33 @@
     function open(tool,id=anchor){anchor=id;
       if(tool==='mailbox')mailbox();else if(tool==='groceries')groceries();else if(tool==='ideas')ideas();else if(tool==='tea')tea();else if(tool==='savings')savings();else if(tool==='sketch')sketch();
     }
-    // A retro pixel email window: inline-editable header rows, a monospace body, Save draft and Send.
+    // The same pixel email window the typewriter writes in. Rich text stays off here.
+    let pendingSeal=null;
+    function plainLetter(html){
+      const template=document.createElement('template');
+      template.innerHTML=LRLetters.sanitizeHTML(html).replace(/<br\s*\/?>/gi,'\n').replace(/<\/(?:p|div)>/gi,'\n');
+      return template.content.textContent.replace(/\n{3,}/g,'\n\n').replace(/^\n+|\n+$/g,'');
+    }
+    function applyTypewriter(ui,snapshot){
+      ui.body.value=plainLetter(snapshot.body);ui.body.readOnly=true;ui.fields.Subject.value=snapshot.title;
+      if(snapshot.from)ui.fields.From.value=snapshot.from;if(snapshot.to)ui.fields.To.value=snapshot.to;
+      if(!ui.foot.querySelector('.mailwin-hint'))text(ui.foot,'Typewriter formatting will travel inside this envelope.','mailwin-hint');
+      return snapshot;
+    }
+    function seal(letter){pendingSeal=letter?{...letter}:null;mailbox();const due=active?.querySelector('input[type=date]');due?.focus();try{due?.showPicker();}catch(e){/* the date row is open either way */}}
     function mailbox(){
+      const sealed=pendingSeal;pendingSeal=null;
       model.poll(false);shell('Letters to future you','A little time capsule, private to this device. It arrives on its date when you next visit your room.',root=>{
-        const c=model.compose(),win=document.createElement('form');win.className='mailwin';win.noValidate=false;win.setAttribute('aria-label','Compose a letter to future you');win.onsubmit=e=>e.preventDefault();root.appendChild(win);
-        const bar=document.createElement('div');bar.className='mailwin-bar';bar.setAttribute('aria-hidden','true');
-        bar.innerHTML='<i class="mailwin-close"></i><i class="mailwin-stripes"></i><b class="mailwin-name"><i class="mailwin-envelope"></i>Email</b><i class="mailwin-stripes"></i><i class="mailwin-zoom"></i><i class="mailwin-shade"></i>';win.appendChild(bar);
-        const head=document.createElement('div');head.className='mailwin-head';win.appendChild(head);
-        const row=(key,value,max)=>{const r=document.createElement('label');r.className='mailwin-row';const k=document.createElement('span');k.className='mailwin-key';k.textContent=key;const v=document.createElement('input');v.className='mailwin-val';v.type='text';v.value=value;v.maxLength=max;v.spellcheck=false;v.setAttribute('aria-label',key);r.append(k,v);head.appendChild(r);return v;};
-        const from=row('From',c.from,120),to=row('To',c.to,120),title=row('Subject',c.subject,200);
+        const c=model.compose(),tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+        const ui=LRMailWindow.create({title:'Email',icon:'envelope',label:'Compose a letter to future you',from:sealed?.from||c.from,to:sealed?.to||c.to,subject:sealed?.title||c.subject,body:sealed?'':c.body,placeholder:'Hey future me!',richText:false,deliverOn:{value:c.deliverOn,min:day(tomorrow)},status:c.draft&&!sealed?'Draft restored':'',buttons:[{label:'Save draft'},{label:'Send',className:'mailwin-send'}]});
+        root.appendChild(ui.form);
+        const {form:win,body,due,saved,foot}=ui,from=ui.fields.From,to=ui.fields.To,title=ui.fields.Subject;
         from.addEventListener('change',()=>run(()=>model.setFrom(from.value)));   // the sender is remembered even without a draft
-        const page=document.createElement('div');page.className='mailwin-page';win.appendChild(page);
-        const body=document.createElement('textarea');body.className='mailwin-body';body.value=c.body;body.rows=8;body.setAttribute('aria-label','Message');body.placeholder='Hey future me!';page.appendChild(body);
-        const scroll=document.createElement('div');scroll.className='mailwin-scroll';scroll.setAttribute('aria-hidden','true');scroll.innerHTML='<i class="up"></i><i class="thumb"></i><i class="down"></i>';page.appendChild(scroll);
-        const foot=document.createElement('div');foot.className='mailwin-foot';win.appendChild(foot);
-        const dueRow=document.createElement('label');dueRow.className='mailwin-due';const dueKey=document.createElement('span');dueKey.textContent='Deliver on';
-        const due=document.createElement('input');due.type='date';due.value=c.deliverOn;due.setAttribute('aria-label','Deliver on');const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);due.min=day(tomorrow);due.required=true;dueRow.append(dueKey,due);foot.appendChild(dueRow);
-        let snapshot=null;const draft=letters.model.get();
-        if(draft)button(foot,'Use my current typewriter letter',()=>{letters.flush();snapshot=letters.model.get();const template=document.createElement('template');template.innerHTML=LRLetters.sanitizeHTML(snapshot.body);body.value=template.content.textContent;body.readOnly=true;title.value=snapshot.title;text(foot,'Typewriter formatting will travel inside this envelope.','mailwin-hint');},'mailwin-btn mailwin-small');
-        const saved=document.createElement('p');saved.className='mailwin-saved';saved.setAttribute('role','status');if(c.draft)saved.textContent='Draft restored';
-        const actions=document.createElement('div');actions.className='mailwin-actions';win.appendChild(actions);actions.appendChild(saved);
+        let snapshot=sealed?applyTypewriter(ui,sealed):null;const draft=letters.model.get();
+        if(draft)button(foot,'Use my current typewriter letter',()=>{letters.flush();snapshot=applyTypewriter(ui,letters.model.get());},'mailwin-btn mailwin-small');
         const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,deliverOn:due.value});
-        button(actions,'Save draft',()=>{model.saveDraft(state());model.setFrom(from.value);const t=new Date();saved.textContent=`Draft saved ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;},'mailwin-btn');
-        button(actions,'Send',()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value});sound.rustle();mailbox();},'mailwin-btn mailwin-send');
+        ui.buttons['Save draft'].onclick=()=>run(()=>{model.saveDraft(state());model.setFrom(from.value);const t=new Date();saved.textContent=`Draft saved ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;});
+        ui.buttons.Send.onclick=()=>run(()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value});sound.rustle();mailbox();});
         if(model.state.mail.length){const h=document.createElement('p');h.className='mailwin-listhead';h.textContent='Your envelopes';root.appendChild(h);}
         for(const l of model.state.mail){
           const row=document.createElement('section');row.className='roomtool-card mailwin-letter';row.dataset.mail=l.id;row.dataset.mailStatus=l.status;root.appendChild(row);text(row,l.title,'roomtool-title');
@@ -250,7 +254,7 @@
       for(const [id,b] of badges)if(!alive.has(id)){b.remove();badges.delete(id);}
     }
     document.addEventListener('visibilitychange',()=>{if(document.hidden)flushStroke();});window.addEventListener('pagehide',flushStroke);
-    return {open,close,tick,frame,flush:flushStroke,flashcard};
+    return {open,close,seal,tick,frame,flush:flushStroke,flashcard};
   }
   function register(L){
     const {def,CAT}=L;

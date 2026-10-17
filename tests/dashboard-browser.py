@@ -45,7 +45,7 @@ with sync_playwright() as p:
  page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate("window.__opened=[];window.open=u=>__opened.push(u)");tap('phone');assert page.get_by_role('button',name='PRIVATE_CUSTOM_APP',exact=True).is_visible();page.get_by_role('button',name='PRIVATE_CUSTOM_APP',exact=True).click();assert page.evaluate('__opened.at(-1)')=='https://example.com/PRIVATE_APP';escape();tap('appportal');assert page.evaluate('__opened.at(-1)')=='https://example.com/PRIVATE_APP'
  print('PASS: launcher derives live catalog/widget destinations, search/outbound links, custom persistence, placement suggestion and private direct portal binding',flush=True)
  # Real existing letter editor, then cabinet open/rename/download.
- page.evaluate("__lr.letters.open()");page.locator('#letterBody').fill('PRIVATE_LETTER_BODY with three words');page.locator('#letterHead').fill('PRIVATE_LETTERHEAD');page.evaluate('__lr.letters.flush()');page.click('#letterClose')
+ page.evaluate("__lr.letters.open()");page.locator('#letterBody').fill('PRIVATE_LETTER_BODY with three words');page.evaluate('__lr.letters.flush()');page.click('#letterClose')
  tap('filecab');assert '4 words' in body.inner_text();page.locator('.file-more summary').click();page.get_by_role('button',name='Rename',exact=True).click();page.get_by_label('Title',exact=True).fill('PRIVATE_LETTER_TITLE');page.get_by_role('button',name='Save title',exact=True).click();assert 'PRIVATE_LETTER_TITLE' in body.inner_text()
  page.locator('.file-more summary').click()
  with page.expect_download() as download:page.get_by_role('button',name='Download',exact=True).click()

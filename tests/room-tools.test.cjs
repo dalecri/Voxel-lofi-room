@@ -71,3 +71,22 @@ test('mailbox compose window: From defaults and persists, Subject becomes the en
  const after=f.reload();assert.equal(after.mailDraft,null);c=after.compose();assert.equal(c.draft,false);assert.equal(c.from,'PRIVATE_SENDER@example.com');assert.equal(c.subject,'A note for future me');assert.equal(c.body,'');
  assert.equal(f.reload().send({body:'x',deliverOn:'2026-10-20'}).title,'A note for future me');assert.deepEqual(Object.keys(f.data),['lr.tools']);
 });
+test('a typewriter letter sealed into the mailbox is a snapshot later edits cannot change',()=>{
+ const Letters=require('../letters.js'),f=fixture();
+ const letters=Letters.create({store:f.store,now:()=>new Date(2026,9,15,14),clean:html=>html});
+ const letter=letters.add('Study');
+ letters.update({letterhead:letter.letterhead,body:'<p>Dear <b>PRIVATE_SNAPSHOT</b></p>',title:'For future me'});
+ const snap=letters.get();
+ const sent=f.model.send({title:snap.title,body:'Dear PRIVATE_SNAPSHOT',html:snap.body,letterhead:snap.letterhead,deliverOn:'2026-10-22',from:'crisdalessio@gmail.com',to:'Me'});
+ snap.body='MUTATED_SOURCE';
+ letters.update({letterhead:'changed head',body:'<i>EDITED_LATER</i>',title:'Edited title'});
+ const stored=f.reload().state.mail.find(m=>m.id===sent.id);
+ assert.equal(stored.html,'<p>Dear <b>PRIVATE_SNAPSHOT</b></p>');
+ assert.equal(stored.body,'Dear PRIVATE_SNAPSHOT');
+ assert.equal(stored.letterhead,letter.letterhead);
+ assert.equal(stored.title,'For future me');
+ assert.equal(stored.to,'Me');
+ assert.equal(letters.get().body,'<i>EDITED_LATER</i>');
+ assert.ok(!JSON.stringify(f.data['lr.tools']).includes('EDITED_LATER'));
+ assert.ok(JSON.stringify(f.data['lr.tools']).includes('PRIVATE_SNAPSHOT'));
+});

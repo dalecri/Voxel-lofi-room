@@ -26,7 +26,7 @@ function startLofiRooms() {
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
   const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}) });
-  const letters = LRLetters.createView({ store,onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; } });
+  const letters = LRLetters.createView({ store,onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); } });
 
   // ---------------------------------------------------------------
   // Cozy moments

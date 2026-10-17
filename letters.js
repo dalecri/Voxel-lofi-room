@@ -45,9 +45,11 @@
       state.letters.unshift({id,title:'Untitled letter',letterhead:`${roomName} · ${dateStamp(date)}`,body:'',createdAt:date.getTime(),updatedAt:date.getTime()});
       state.current=id;persist();return {...get()};
     }
-    function update({letterhead,body}) {
+    function update({letterhead,body,title}) {
       const letter=get();if(!letter)return;
-      const old=letter.body;letter.letterhead=String(letterhead);letter.body=clean(body);letter.updatedAt=now().getTime();persist();if(letter.body!==old&&letter.body.replace(/<[^>]*>/g,'').trim())onSaved({...letter});
+      const old=letter.body;letter.letterhead=String(letterhead);letter.body=clean(body);
+      if(title!==undefined)letter.title=String(title).trim()||'Untitled letter';
+      letter.updatedAt=now().getTime();persist();if(letter.body!==old&&letter.body.replace(/<[^>]*>/g,'').trim())onSaved({...letter});
     }
     function select(id) {if(!get(id))return false;state.current=id;persist();return true;}
     function rename(id,title) {const l=get(id);if(!l)return false;l.title=String(title).trim() || 'Untitled letter';l.updatedAt=now().getTime();persist();return true;}
@@ -66,38 +68,42 @@
     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);return {saved:true};
   }
-  function createView({store,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{}}) {
+  function createView({store,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{},sender=()=>'',rememberSender=()=>{},onSendToFuture=()=>{}}) {
     const model=create({store,onSaved}),view=document.createElement('section');view.id='lettersView';view.hidden=true;
     view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Write a letter');
     view.innerHTML=`<header class="letter-chrome"><button type="button" id="letterClose">← Room</button><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton">Letters</button><button type="button" id="letterExport">Save as file</button></header>
-      <div id="letterScroll"><main class="letter-paper"><div id="letterHead" contenteditable="plaintext-only" role="textbox" aria-label="Letterhead" spellcheck="false"></div><div id="letterBody" contenteditable="true" role="textbox" aria-label="Letter body" aria-multiline="true" data-placeholder="Dear friend," spellcheck="true"></div></main></div>
-      <nav class="letter-tools" aria-label="Letter formatting"><button type="button" data-format="bold" aria-label="Bold" aria-pressed="false"><b>B</b></button><button type="button" data-format="italic" aria-label="Italic" aria-pressed="false"><i>I</i></button><button type="button" data-format="underline" aria-label="Underline" aria-pressed="false"><u>U</u></button><span></span><button type="button" id="letterDate">Date stamp</button></nav>
-      <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" id="letterListClose">Back to paper</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
+      <div id="letterScroll" class="letter-stage"></div>
+      <div class="letter-keyboard" id="letterKeyboard" aria-hidden="true"></div>
+      <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" class="mailwin-btn mailwin-small" id="letterListClose">Back to the letter</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" class="mailwin-btn" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
+    const windowUi=root.LRMailWindow.create({title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
+    view.querySelector('#letterScroll').appendChild(windowUi.form);
     document.body.appendChild(view);
-    const $=s=>view.querySelector(s),body=$('#letterBody'),head=$('#letterHead'),scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
+    const $=s=>view.querySelector(s),body=windowUi.body,subject=windowUi.fields.Subject,from=windowUi.fields.From,to=windowUi.fields.To,scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
     let active=false,timer=null,lastRange=null,lastFocus=null,lastClack=-Infinity,lastBell=-Infinity,beforeLine=null,composing=false,compositionLine=null;
     function message(text) {status.textContent=text;}
     function safe(action) {try{return action();}catch(e){message(e.message || 'Could not save on this device.');return false;}}
     function flush() {
       clearTimeout(timer);timer=null;if(!active || !model.current)return;
-      safe(()=>{model.update({letterhead:head.textContent,body:body.innerHTML});message('Saved');});
+      const letter=model.get();if(!letter)return;
+      safe(()=>{rememberSender(from.value);model.update({letterhead:letter.letterhead,body:body.innerHTML,title:subject.value});message('Saved');});
     }
     function schedule() {message('Saving…');clearTimeout(timer);timer=setTimeout(flush,250);}
     function load() {
-      const l=model.get();head.textContent=l?.letterhead || '';body.innerHTML=sanitizeHTML(l?.body || '');
-      head.contentEditable=l?'plaintext-only':'false';body.contentEditable=l?'true':'false';
-      $('#letterExport').disabled=!l;view.querySelectorAll('.letter-tools button').forEach(b=>b.disabled=!l);
+      const l=model.get();subject.value=l?.title || '';from.value=sender();body.innerHTML=sanitizeHTML(l?.body || '');
+      body.contentEditable=l?'true':'false';subject.disabled=from.disabled=to.disabled=!l;
+      $('#letterExport').disabled=!l;windowUi.buttons.Save.disabled=!l;windowUi.buttons['Send to future'].disabled=!l;
+      view.querySelectorAll('.letter-tools button').forEach(b=>b.disabled=!l);
       lastRange=null;scroll.scrollTop=0;message(l?'Saved':'Start a new letter');
     }
     function remember() {
       if(!active)return;const s=window.getSelection();if(!s.rangeCount)return;const r=s.getRangeAt(0);
-      if(body.contains(r.commonAncestorContainer) || head.contains(r.commonAncestorContainer))lastRange=r.cloneRange();
+      if(body.contains(r.commonAncestorContainer))lastRange=r.cloneRange();
       view.querySelectorAll('[data-format]').forEach(b=>b.setAttribute('aria-pressed',String(body.contains(r.commonAncestorContainer) && document.queryCommandState(b.dataset.format))));
     }
-    function restore(bodyOnly=false) {
+    function restore() {
       const s=window.getSelection();let r=lastRange;
-      if(!r || !r.startContainer.isConnected || bodyOnly && !body.contains(r.commonAncestorContainer)) {r=document.createRange();r.selectNodeContents(body);r.collapse(false);}
-      (head.contains(r.commonAncestorContainer)?head:body).focus({preventScroll:true});s.removeAllRanges();s.addRange(r);return r;
+      if(!r || !r.startContainer.isConnected || !body.contains(r.commonAncestorContainer)) {r=document.createRange();r.selectNodeContents(body);r.collapse(false);}
+      body.focus({preventScroll:true});s.removeAllRanges();s.addRange(r);return r;
     }
     function caretLine() {
       const s=window.getSelection();if(!s.rangeCount || !body.contains(s.anchorNode))return null;
@@ -115,7 +121,7 @@
       view.style.top=(v?.offsetTop || 0)+'px';view.style.height=(v?.height || window.innerHeight)+'px';requestAnimationFrame(keepCaret);
     }
     function clack() {const t=performance.now();if(t-lastClack>=65){lastClack=t;sound.clack(1,false);}}
-    function format(command) {if(!model.current)return;restore(true);document.execCommand('styleWithCSS',false,false);document.execCommand(command,false);remember();schedule();}
+    function format(command) {if(!model.current)return;restore();document.execCommand('styleWithCSS',false,false);document.execCommand(command,false);remember();schedule();}
     function insert(text,html=false) {restore();document.execCommand(html?'insertHTML':'insertText',false,text);remember();schedule();requestAnimationFrame(keepCaret);}
     function rows() {
       const box=$('#letterRows');box.replaceChildren();
@@ -123,10 +129,14 @@
       for(const l of model.list()) {
         const row=document.createElement('div');row.className='letter-row';row.dataset.letter=l.id;
         const title=document.createElement('input');title.value=l.title;title.setAttribute('aria-label','Rename '+l.title);
-        title.onchange=()=>safe(()=>{model.rename(l.id,title.value);title.value=model.list().find(x=>x.id===l.id).title;});
-        const open=document.createElement('button');open.type='button';open.textContent='Open';open.setAttribute('aria-label','Open '+l.title);
+        const open=document.createElement('button');open.type='button';open.className='mailwin-btn mailwin-small';open.textContent='Open';open.setAttribute('aria-label','Open '+l.title);
         open.onclick=()=>{flush();safe(()=>model.select(l.id));load();list.hidden=true;body.focus();};
-        const del=document.createElement('button');del.type='button';del.textContent='Delete';del.setAttribute('aria-label','Delete '+l.title);
+        const del=document.createElement('button');del.type='button';del.className='mailwin-btn mailwin-small';del.textContent='Delete';del.setAttribute('aria-label','Delete '+l.title);
+        title.onchange=()=>safe(()=>{
+          model.rename(l.id,title.value);const saved=model.list().find(x=>x.id===l.id);title.value=saved.title;
+          title.setAttribute('aria-label','Rename '+saved.title);open.setAttribute('aria-label','Open '+saved.title);del.setAttribute('aria-label','Delete '+saved.title);
+          if(model.current===l.id)subject.value=saved.title;
+        });
         del.onclick=()=>{if(!del.dataset.confirm){del.dataset.confirm='yes';del.textContent='Delete for good?';return;}flush();safe(()=>model.remove(l.id));load();rows();};
         row.append(title,open,del);box.appendChild(row);
       }
@@ -141,6 +151,16 @@
     }
     $('#letterClose').onclick=close;$('#letterListButton').onclick=showList;$('#letterListClose').onclick=()=>{list.hidden=true;body.focus();};
     $('#letterNew').onclick=()=>{flush();safe(()=>model.add(roomName()));load();list.hidden=true;body.focus();};
+    windowUi.buttons.Save.onclick=()=>flush();
+    windowUi.buttons['Send to future'].onclick=()=>{
+      flush();const snap=model.get();
+      if(!snap || !snap.body.replace(/<[^>]*>/g,'').trim()){message('Write a little first.');return;}
+      onSendToFuture({title:snap.title,body:snap.body,letterhead:snap.letterhead,from:from.value,to:to.value.trim()||'Me'});
+    };
+    from.addEventListener('change',()=>safe(()=>rememberSender(from.value)));
+    subject.addEventListener('input',schedule);
+    subject.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();body.focus();}});
+    subject.addEventListener('blur',flush);
     view.querySelectorAll('.letter-tools button').forEach(b=>b.addEventListener('pointerdown',e=>{remember();e.preventDefault();}));
     view.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>format(b.dataset.format));
     $('#letterDate').onclick=()=>{insert(dateStamp(new Date()));clack();};
@@ -150,26 +170,22 @@
       catch(e){message('Could not save the file. Your draft is still here.');}
       finally{button.disabled=!model.current;}
     };
-    for(const editor of [head,body]) {
-      editor.addEventListener('beforeinput',e=>{
-        if(editor===head && /insertParagraph|insertLineBreak/.test(e.inputType)){e.preventDefault();body.focus();return;}
-        beforeLine=caretLine();if(/^(insertText|insertCompositionText|deleteCompositionText|insertParagraph|insertLineBreak|deleteContentBackward|deleteContentForward)$/.test(e.inputType))clack();
-      });
-      editor.addEventListener('input',e=>{
-        schedule();remember();const after=caretLine(),t=performance.now();
-        if(editor===body && !composing && /^(insertText|insertParagraph|insertLineBreak)$/.test(e.inputType) && beforeLine!==null && after!==null && after>beforeLine+8 && t-lastBell>200){sound.typeBell();lastBell=t;}
-        requestAnimationFrame(keepCaret);
-      });
-      editor.addEventListener('compositionstart',()=>{composing=true;compositionLine=caretLine();});editor.addEventListener('compositionend',()=>{composing=false;clack();schedule();const line=caretLine(),t=performance.now();if(editor===body && compositionLine!==null && line!==null && line>compositionLine+8 && t-lastBell>200){sound.typeBell();lastBell=t;}});
-      const paste=e=>{
-        e.preventDefault();const data=e.clipboardData || e.dataTransfer;if(!data)return;remember();
-        const html=data.getData('text/html'),text=data.getData('text/plain');
-        if(editor===head)insert(text);
-        else if(html)insert(sanitizeHTML(html),true);else insert(text);
-      };
-      editor.addEventListener('paste',paste);editor.addEventListener('drop',paste);
-      editor.addEventListener('blur',flush);
-    }
+    body.addEventListener('beforeinput',e=>{
+      beforeLine=caretLine();if(/^(insertText|insertCompositionText|deleteCompositionText|insertParagraph|insertLineBreak|deleteContentBackward|deleteContentForward)$/.test(e.inputType))clack();
+    });
+    body.addEventListener('input',e=>{
+      schedule();remember();const after=caretLine(),t=performance.now();
+      if(!composing && /^(insertText|insertParagraph|insertLineBreak)$/.test(e.inputType) && beforeLine!==null && after!==null && after>beforeLine+8 && t-lastBell>200){sound.typeBell();lastBell=t;}
+      requestAnimationFrame(keepCaret);
+    });
+    body.addEventListener('compositionstart',()=>{composing=true;compositionLine=caretLine();});
+    body.addEventListener('compositionend',()=>{composing=false;clack();schedule();const line=caretLine(),t=performance.now();if(compositionLine!==null && line!==null && line>compositionLine+8 && t-lastBell>200){sound.typeBell();lastBell=t;}});
+    const paste=e=>{
+      e.preventDefault();const data=e.clipboardData || e.dataTransfer;if(!data)return;remember();
+      const html=data.getData('text/html'),text=data.getData('text/plain');
+      if(html)insert(sanitizeHTML(html),true);else insert(text);
+    };
+    body.addEventListener('paste',paste);body.addEventListener('drop',paste);body.addEventListener('blur',flush);
     document.addEventListener('selectionchange',remember);
     window.addEventListener('keydown',e=>{
       if(!active)return;

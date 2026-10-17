@@ -10,6 +10,18 @@ test('private letter drafts keep formatting, editable letterheads and selection 
  const copy=reloaded.get();copy.body='unpersisted';assert.notEqual(reloaded.get().body,copy.body);
  assert.deepEqual(Object.keys(f.values),['lr.letters']);
 });
+test('a subject title saves on the letter and the letter store stays letters-only',()=>{
+ const f=fixture(),a=f.model.add('Room');
+ f.model.update({letterhead:a.letterhead,body:'<b>hi</b>',title:'  For later  '});
+ const saved=f.reload().get();
+ assert.equal(saved.title,'For later');
+ assert.deepEqual(Object.keys(saved).sort(),['body','createdAt','id','letterhead','title','updatedAt']);
+ f.model.update({letterhead:saved.letterhead,body:saved.body});
+ assert.equal(f.model.get().title,'For later');
+ f.model.update({letterhead:saved.letterhead,body:'x',title:'   '});
+ assert.equal(f.model.get().title,'Untitled letter');
+ assert.deepEqual(Object.keys(f.values),['lr.letters']);
+});
 test('letters list creates unique IDs, renames, switches, deletes and persists an empty stack',()=>{
  const f=fixture(),a=f.model.add('Study'),b=f.model.add('Study');assert.notEqual(a.id,b.id);
  assert.ok(f.model.rename(a.id,'For a friend'));assert.ok(f.model.select(a.id));assert.equal(f.reload().get().title,'For a friend');
