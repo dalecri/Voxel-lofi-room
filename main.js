@@ -498,7 +498,13 @@ function startLofiRooms() {
   }
   function doUndo() {
     if (!undo.length) { toast('<span>Nothing to undo</span>', 1200); return; }
-    room.restore(undo.pop());
+    const previous = undo.pop();
+    if (typeof previous === 'string') room.restore(previous);
+    else {
+      // A surprise is a new draft. Undo travels back without overwriting either room.
+      save(); room.restore(previous.data); meta.current = previous.current; baseSig = previous.base;
+      if (previous.visit) meta.visit = previous.visit; else delete meta.visit;
+    }
     changed(); updateHeader();
     Sound.turn(); haptic(5);
   }
@@ -750,12 +756,18 @@ function startLofiRooms() {
   }
 
   function surprise() {
-    pushUndo();
+    save();
+    undo.push({ data: room.snapshot(), current: meta.current, base: baseSig, visit: meta.visit && { ...meta.visit } });
+    if (undo.length > 40) undo.shift();
+    let id = Date.now();
+    while (id === meta.current || rooms.some(r => r.id === id)) id++;
+    meta.current = id; delete meta.visit;
     const seed = (Math.random() * 0xffffffff) >>> 0;
     const th = room.generate(seed);
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
-    changed(); updateHeader(); saveIndex();
-    toast(`<b>${room.name}</b><span>${th.name} · Undo brings your old room back</span>`, 2600);
+    baseSig = sig();
+    changed(); save(); updateHeader();
+    toast(`<b>${room.name}</b><span>${th.name} · Tap Save to keep it. Undo brings your old room back.</span>`, 2600);
     const d = $('#bSurprise svg'); if (d) { d.classList.remove('spin'); requestAnimationFrame(() => d.classList.add('spin')); }
     Sound.arpeggio(); haptic(10);
   }
@@ -2030,7 +2042,7 @@ function startLofiRooms() {
   function newRoom(k, forcedId) {
     const id = forcedId || Date.now();
     fillRoom(k);
-    meta.current = id; undo.length = 0; baseSig = sig();
+    meta.current = id; delete meta.visit; undo.length = 0; baseSig = sig();
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
     if (forcedId) commit(true);   // a room built through a door joins the house straight away
     changed(); save(); saveMeta(); updateHeader();
