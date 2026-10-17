@@ -30,6 +30,20 @@
   function dreamStrength(items,CAT){return items.some(i=>CAT[i.t]?.dreamBoost)?1.25:1;}
   function register(LR) {
     const {def,CAT,WOOD,shade}=LR,ink=0x383e40,cream=0xfff0d4;
+    def('focusgarden',{name:'Focus Garden',kind:'floor',group:'plants',size:[2,1],top:4,tap:'focus-garden',vars:[[WOOD.oak],[WOOD.walnut],[0xcbb58d]],build(m,[wood]){
+      m.box(0,0,0,16,1,8,shade(wood,.7)).box(0,1,0,16,4,1,wood).box(0,1,7,16,4,8,wood).box(0,1,1,1,4,7,wood).box(15,1,1,16,4,7,wood).box(1,1,1,15,3,7,0x645042);
+      m.box(1,4,0,15,5,1,shade(wood,1.16)).box(1,4,7,15,5,8,shade(wood,1.16));m.set(2,3,2,0x8a7460).set(12,3,5,0x8a7460);
+    }});
+    def('focusbloom',{name:'Focus bloom',kind:'small',group:'plants',size:[1,1],tap:'focus-label',focusGrowth:true,vars:[[0xe9a1b9],[0xdec075],[0xa7b5dc]],build(m,[petal]){
+      m.box(2,0,2,6,1,6,0x66513f).set(4,1,4,0xb39261);
+      m.part('growth1',[0,0,0]);m.box(4,1,4,5,4,5,0x7f9d62).set(3,3,4,0x94b978);
+      m.part('growth2',[0,0,0]);m.box(4,4,4,5,7,5,0x7f9d62).box(2,4,4,4,5,5,0x91af6f).box(5,5,4,7,6,5,0x91af6f);
+      m.part('growth3',[0,0,0]);m.box(4,7,4,5,9,5,0x7f9d62).box(3,9,3,6,11,6,LR.shade(petal,.85));
+      m.part('growth4',[0,0,0]);m.box(1,10,3,7,11,5,petal).box(3,10,1,5,11,7,petal).box(3,11,3,5,12,5,0xf4db93);m.main();
+    }});
+    // Reuse the existing cherry tree art. Its care is the ordinary watered-day
+    // plant lifecycle; only the focus bloom above has a timed growth override.
+    def('focuscherry',{name:'Focus cherry sapling',kind:'floor',group:'plants',size:[1,1],tap:'water',vars:[[0xf6a8c4],[0xfad0e0],[0xe8789a]],build(m,vars,state){LR.CAT.sakura.build(m,vars,state);}});
     def('sushiconveyor',{name:'Sushi conveyor counter',kind:'floor',group:'kitchen',size:[4,2],top:10,tap:'cozy-sushi',vars:[[WOOD.oak,0xcf7763],[WOOD.walnut,0x87aaa0]],build(m,[wood,c]){
       m.box(0,0,0,32,9,16,wood).box(0,9,0,32,10,16,shade(wood,1.2));
       m.box(1,10,1,31,11,15,ink).box(5,10,5,27,12,11,wood).box(6,12,6,26,13,10,c);

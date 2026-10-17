@@ -166,6 +166,8 @@
       const B = bucket(A.roomId()), vis = new Map(), t = now();
       let touched = false;
       for (const it of room.items) {
+        // Session-grown plants never enter the watered-days/wilt state machine.
+        if (CAT[it.t]?.focusGrowth) { vis.set(it.id,A.growthOverride?.(it) || {stage:4});continue; }
         const e = entry(it); if (!e) continue;
         const v = {};
         if (e.k === 'plant' || e.k === 'herb') {

@@ -241,7 +241,7 @@
       s.weight = !e.reducedMotion && s.mode === 'idle' ? Math.sin(s.elapsed * .35) * .015 : 0;
       return s;
     }
-    return { state: s, step, speak, celebrate, tap(e) { celebrate(e, 'tap'); } };
+    return { state: s, step, speak, celebrate, say(text,cheer=false){if(cheer)celebrate({},'moment',true);s.message=String(text);s.bubbleUntil=s.elapsed+4;lastSpeech=s.elapsed;}, tap(e) { celebrate(e, 'tap'); } };
   }
   const costumes = typeof module !== 'undefined' && module.exports ? require('./costumes.js') : root.LRCostumes;
   // One shared rig. Costumes merge their voxels into these parts, never into room decor.
@@ -430,7 +430,7 @@
       const hits = view.raycaster.intersectObjects(object.userData.meshes, false), wall = view.pickWall(x, y);
       return !!hits.length && (!item || hits[0].distance < item.dist) && (!wall || hits[0].distance <= wall.t + .05);
     }
-    return { id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, hop() { brain.celebrate(env(), 'task', true); }, get name() { return DISPLAY_NAME; } };
+    return { say(text,cheer=false){brain.say(text,cheer);}, id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, hop() { brain.celebrate(env(), 'task', true); }, get name() { return DISPLAY_NAME; } };
   }
   const api = { RIG, buildDude, definitionFor, definitionForSlots, attachRig, applyPose, scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -41,9 +41,10 @@
       remove(id){const d=read();d.items=d.items.filter(t=>t.id!==id);write(d);},
     };
   }
-  function timers({tea,now=Date.now()}) {
+  function timers({tea,focus=[],now=Date.now()}) {
     const rows=[];
     if(tea?.status==='brewing'||tea?.status==='ready')rows.push({id:'tea',icon:'🫖',title:'Tea',value:tea.status==='ready'||tea.endAt<=now?'Ready':countdown(tea.endAt-now),target:'tea'});
+    const garden=focus.find(f=>f.kind==='garden'&&f.active);if(garden)rows.push({id:'garden',icon:'🌱',title:'Focus Garden',value:countdown(garden.remaining),target:'garden',focus:garden});
     return rows;
   }
   function createView({model,context,openTimer,portrait=()=>null,portraitKey=()=>'',celebrate=()=>{},hidden=()=>false,notice=()=>{}}) {
@@ -56,6 +57,7 @@
       const skyDude=el('div','today-sky-dude'),skyImage=el('img');
       skyImage.alt='';skyImage.width=72;skyImage.height=72;skyDude.setAttribute('aria-hidden','true');skyDude.appendChild(skyImage);
       copy.append(date,clock,phase,condition,chance,drops,updated);sky.append(art,copy,skyDude);panel.appendChild(sky);
+      const garden=el('button','today-garden'),gardenIcon=el('span','','🌱'),gardenCopy=el('span'),gardenTitle=el('b','','Focus Garden'),gardenDetail=el('small');garden.type='button';gardenCopy.append(gardenTitle,gardenDetail);garden.append(gardenIcon,gardenCopy);garden.hidden=true;panel.appendChild(garden);
       if(beforeTasks)beforeTasks(panel);
       const section=el('section','today-tasks'),header=el('div','task-journey'),title=el('h3','','Little things'),summary=el('p','task-journey-summary'),track=el('div','task-day-path'),dude=el('div','task-journey-dude'),image=el('img'),sleep=el('span','task-journey-zzz','Zzz');
       image.alt='Your little roommate';image.width=84;image.height=84;dude.append(image,sleep);sleep.hidden=true;track.setAttribute('aria-hidden','true');
@@ -66,6 +68,7 @@
       notebook.append(pageTitle,list,empty,starters,form);section.append(notebook,header,sub);panel.appendChild(section);host.appendChild(panel);
       let signature='',lastPortrait='';form.onsubmit=e=>{e.preventDefault();safe(()=>{if(model.add(input.value))input.value='';});input.focus();};
       const entry={panel,refresh(){const ctx=context(),w=weather(ctx.meta,ctx.now || new Date());art.textContent=w.icon;sky.dataset.sky=ctx.meta.weather || 'clear';date.textContent=w.date;clock.textContent=w.time;phase.textContent=w.phase;condition.textContent=w.label+(w.temperature?' · '+w.temperature:'');chance.textContent=w.chance;updated.textContent=w.fetched+(w.stale?' · cached':'');drops.hidden=w.probability===null;[...drops.children].forEach((d,i)=>{d.classList.toggle('wet',i<w.probability/10);d.textContent=ctx.meta.weather==='snow'?'❄':'💧';});
+        const activeGarden=timers({focus:ctx.focus,now:+(ctx.now || new Date())}).find(t=>t.id==='garden');garden.hidden=!activeGarden;if(activeGarden){gardenDetail.textContent=activeGarden.value+' left · Back to garden';garden.onclick=()=>openTimer(activeGarden);}
         const tasks=model.list(),j=journey(tasks),key=JSON.stringify(tasks.map(t=>[t.id,t.text,t.icon]));empty.hidden=tasks.length>0;if(summary.textContent!==j.title)summary.textContent=j.title;header.dataset.stage=j.stage;header.dataset.pose=j.pose;header.dataset.remaining=String(j.left);track.style.setProperty('--task-progress',String(j.progress));sleep.hidden=!j.done;
         const pk=portraitKey()+':'+j.pose;if(pk!==lastPortrait){lastPortrait=pk;const src=portrait(j.pose);image.hidden=!src;if(src)image.src=src;}
         const skyKey=portraitKey()+':idle';if(skyImage.dataset.key!==skyKey){skyImage.dataset.key=skyKey;const src=portrait('idle');skyImage.hidden=!src;skyDude.hidden=!src;if(src)skyImage.src=src;}

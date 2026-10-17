@@ -10,7 +10,7 @@ function fixture() {
 
 test('retired focus timers and shortcuts clear silently; legacy candle placements become ordinary candles', () => {
   const f=fixture();f.db.set('lr.focusRituals',{'1:2':{end:9999999}});f.db.set('lr.appShortcut','focus');
-  const r=f.reload();assert.equal(f.db.has('lr.focusRituals'),false);assert.equal(f.db.has('lr.appShortcut'),false);assert.equal(r.light,undefined);assert.deepEqual(r.tick(),{breathFinished:false});
+  const r=f.reload();assert.equal(f.db.has('lr.focusRituals'),false);assert.equal(f.db.has('lr.appShortcut'),false);assert.equal(r.activeFocus.length,0);assert.deepEqual(r.tick(),{breathFinished:false});
   const LR=require('../room.js'),room=new LR.Room();assert.equal(LR.CAT.focuscandle,undefined);
   assert.ok(room.load({v:1,items:[{id:2,t:'focuscandle',x:2,z:3,on:true,c:1}]}));
   assert.equal(room.items[0].t,'candle');assert.equal(room.items[0].id,2);assert.equal(room.items[0].x,2);assert.equal(room.items[0].z,3);assert.equal(room.items[0].on,true);assert.ok(!LR.CAT.candle.focusRitual);

@@ -21,6 +21,7 @@ function startLofiRooms() {
     if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setSlots(wardrobe.slots); companion.frame(0); } }
   } });
   const rituals = LRRituals.create({ store });
+  const focusGarden = LRFocusGarden.create({store,rituals});
   let breathCamera = null;
   let companion = null, widgetView = null, frenchUI = null;
   const widgets = LRWidgets.create({ store });
@@ -169,7 +170,7 @@ function startLofiRooms() {
   view.fx.activity = view.glowFx.activity = activity;
   view.glowOn = meta.glow !== false;
   // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
-  const care = window.LRCare ? window.LRCare({ room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), brewed:()=>remember('tea'), watered: it => { shop.earn('water', `${meta.current}:${it.id}`);remember('plant'); }, changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
+  const care = window.LRCare ? window.LRCare({ growthOverride:it=>focusGarden.growth(meta.current,it.id), room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), brewed:()=>remember('tea'), watered: it => { shop.earn('water', `${meta.current}:${it.id}`);remember('plant'); }, changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
   store.del('lr.mode');   // editing is a temporary session, never a startup preference
   const state = { mode: 'explore', tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
@@ -234,12 +235,12 @@ function startLofiRooms() {
       },180);if(taskPortraits.size>=12)taskPortraits.delete(taskPortraits.keys().next().value);taskPortraits.set(key,src);
     }return taskPortraits.get(key);
   }
-  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea}),
+  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
     portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
     celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
     hidden:()=>library.active || barnaby.active || frenchUI?.active || filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),
-    openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});},
+    openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});else if(row.target==='garden')gardenUI.open(row.focus.id);},
   });
   const spaceSources=()=>({CAT:Object.fromEntries(Object.entries(CAT).map(([id,C])=>[id,{name:C.name}])),letters:letters.model.list().map(l=>({id:l.id,title:l.title})),scenes:files.list('Scenes').map(f=>({id:f.id,title:f.title})),ideas:roomTools.homeState.ideas});
   function navigateSpace(target,item) {
@@ -879,6 +880,8 @@ function startLofiRooms() {
       if (privateTool === 'groceries') { view.openDoor(id); Sound.fridge(true); setTimeout(() => Sound.fridge(false),2700); }
       roomToolsUI.open(privateTool,id); return;
     }
+    if (tap === 'focus-garden') { gardenUI.open(it.id); return; }
+    if (tap === 'focus-label') { const label=focusGarden.label(meta.current,it.id);toast(`<b>${label?.completed?'Grown with a little focus':'A mystery seedling'}</b><span>${label?esc(new Date(label.end).toLocaleDateString())+' · '+label.minutes+' minutes':'A bloom from a cozy garden'}</span>`,3500,true);return; }
     if (tap === 'library') { library.open(); return; }
     if (tap === 'barnaby') { Sound.coin(); discover('gamer'); barnaby.open(); return; }
     if (tap === 'french') { Sound.flip(); frenchUI.open(); return; }
@@ -1559,6 +1562,7 @@ function startLofiRooms() {
       pushUndo();
       view.poof(id, [0xf4e6d0, 0xffffff, 0xd8c8b8]);
       const gone = room.remove(id);
+      gone.filter(it=>['focusgarden','focusbloom'].includes(it.t)).forEach(it=>focusGarden.detach(meta.current,it.id));
       changed(); Sound.poof(); haptic(8);
       if (gone.length > 1) toast(`<span>Put away ${C.name.toLowerCase()} and ${gone.length - 1} thing${gone.length > 2 ? 's' : ''} on it</span>`, 1600);
     } else if (state.tool === 'paint') {
@@ -1851,8 +1855,36 @@ function startLofiRooms() {
     $('#bMenu').focus();
     if (completed) { Sound.ritualChime(); toast('<span>Ten quiet minutes. Welcome back to your room.</span>', 3200); }
   }
+  const gardenPortraits=new Map();
+  const gardenUI=LRFocusGarden.createView({model:focusGarden,sheet:codeSheet,roomId:()=>meta.current,
+    preview:(stage,c)=>{const key=stage+':'+c;if(!gardenPortraits.has(key))gardenPortraits.set(key,view.thumb({t:'focusbloom',c,on:false},undefined,o=>{for(let n=1;n<=4;n++)o.userData.parts['growth'+n].visible=n<=stage;}));return gardenPortraits.get(key);},
+    start:(bed,minutes)=>{
+      updateFocusGarden(true);
+      const active=focusGarden.active;if(active)return;
+      const target=room.get(bed);if(!target||target.t!=='focusgarden')throw Error('Place a Focus Garden in this room to plant a seed.');
+      focusGarden.start(meta.current,bed,minutes);focusGarden.settle(room,meta.current,LR);
+      if(!focusGarden.active.plant){focusGarden.pocket();throw Error('Make a little space around the bed for a seed.');}
+      changed();if(care)care.tick(0);save();Sound.tick2();todayUI.refresh();
+    },
+    end:()=>{updateFocusGarden(true);const ended=focusGarden.pocket();if(!ended)return;focusGarden.settle(room,meta.current,LR);changed();if(care)care.tick(0);save();todayUI.refresh();toast('<span>Tucked back into your pocket for later</span>',3200,true);companion?.say('Good stretch. The seed will wait.');},
+  });
+  let gardenNext=0,gardenVisual=null;
+  function updateFocusGarden(force=false){
+    if(!force&&Date.now()<gardenNext)return;gardenNext=Date.now()+1000;
+    focusGarden.tick();
+    if(focusGarden.settle(room,meta.current,LR)){changed();save();}
+    for(const s of focusGarden.state.sessions.filter(s=>s.completed&&!s.announced)){
+      remember('focus',{date:LRCalendar.day(new Date(s.end)),id:s.id});
+      if(s.room===meta.current&&s.plant&&room.get(s.plant))view.burst(s.plant,'petals',2.5);
+      Sound.ritualChime();toast('<span>It burst into bloom</span>',3000,true);companion?.say('Look at that. A whole little bloom.',true);focusGarden.ack(s.id);
+    }
+    if(care)care.tick(0);
+    const visual=JSON.stringify([meta.current,room.items.filter(it=>CAT[it.t].focusGrowth).map(it=>[it.id,focusGarden.growth(meta.current,it.id).stage])]);if(visual!==gardenVisual){gardenVisual=visual;activity.wake();}
+    gardenUI.refresh();
+  }
   function updateRituals() {
     const result = rituals.tick();
+    updateFocusGarden();
     if (result.breathFinished) stopBreathing(true);
     const breath = rituals.breath;
     view.breathing = breath.active; view.breathLevel = breath.level;
@@ -2884,7 +2916,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

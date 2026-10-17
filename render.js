@@ -1439,6 +1439,7 @@
         if (!ud.boing && C.kind !== 'pet') ud.inner.scale.set(1, 1, 1);
       }
       const cv = (this.careVis && this.careVis.get(id));
+      if (C.focusGrowth && cv) for(let stage=1;stage<=4;stage++)if(ud.parts['growth'+stage])ud.parts['growth'+stage].visible=stage<=cv.stage;
       if (cv && cv.s !== undefined) {   // living plants: sprouts are small, forgotten ones droop
         if (!ud.boing) ud.inner.scale.set(cv.s, cv.s * cv.sag, cv.s);
         else ud.inner.scale.multiplyScalar(cv.s);
