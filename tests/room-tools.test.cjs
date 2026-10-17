@@ -49,3 +49,12 @@ test('tea focus presentation derives buttons, mascot and bounded progress withou
  const before=m.state;T.teaDisplay(m.tea,m.remaining);assert.deepEqual(m.state,before);f.advance(60000);assert.equal(m.poll().tea,true);d=T.teaDisplay(m.tea,m.remaining);assert.equal(d.label,'Enjoy the tea');assert.equal(d.mascot,'happy');assert.equal(d.progress,1);assert.equal(d.note,'Your tea is ready.');assert.equal(m.poll().tea,false);
  m.enjoyTea();d=T.teaDisplay(m.tea,m.remaining,2);assert.equal(d.state,'done');assert.equal(d.label,'Brew tea');assert.equal(d.mascot,'calm');assert.equal(d.progress,0);m.brew(3);m.cancelTea();assert.equal(T.teaDisplay(m.tea,m.remaining).state,'idle');
 });
+test('idea cards present newest-first, cycle, reveal the next after removal and keep model shake semantics',()=>{
+ const f=fixture(),m=f.model;assert.equal(T.ideaCards(m.state.ideas).top,null);assert.deepEqual(T.ideaCards(m.state.ideas).behind,[]);
+ for(const text of ['First spark','Second spark','Newest spark']){m.addIdea(text);f.advance(1000);}const snapshot=m.state;let c=T.ideaCards(m.state.ideas);assert.equal(c.top.text,'Newest spark');assert.equal(c.next.text,'Second spark');assert.equal(c.behind.length,2);assert.deepEqual(m.state,snapshot);
+ const a=m.shake();c=T.ideaCards(m.state.ideas,a.id);assert.equal(c.top.id,a.id);assert.equal(m.state.lastIdea,a.id);const b=m.shake();assert.notEqual(b.id,a.id);assert.equal(T.ideaCards(m.state.ideas,b.id).top.id,b.id);assert.equal(m.state.lastIdea,b.id);
+ const next=c.next.id;m.remove('ideas',c.top.id);assert.equal(T.ideaCards(m.state.ideas,next).top.id,next);while(m.state.ideas.length)m.remove('ideas',m.state.ideas[0].id);assert.equal(T.ideaCards(m.state.ideas,'gone').count,0);assert.equal(T.ideaCards(m.state.ideas).next,null);
+});
+test('idea stack limits peeking cards, preserves full text and uses the saved added date',()=>{
+ const f=fixture(),m=f.model;for(let i=0;i<8;i++)m.addIdea('PRIVATE_LONG_IDEA\n'+('A thought. '.repeat(100))+i);const c=T.ideaCards(m.state.ideas);assert.equal(c.count,8);assert.equal(c.behind.length,3);assert.equal(c.top.text,m.state.ideas[0].text);assert.ok(T.ideaAdded(c.top).startsWith('Added 15 '));assert.equal(T.ideaAdded({}),'Kept in your jar');
+});

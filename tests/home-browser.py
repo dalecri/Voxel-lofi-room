@@ -42,7 +42,7 @@ with sync_playwright() as p:
  # The prominent search preserves all existing destinations and private content.
  search('HOME_PRIVATE');assert body.locator('.home-result-group h3').all_text_contents()==['Letters','Scenes','Ideas'];assert 'PRIVATE_SEALED_BODY' not in body.inner_text()
  body.get_by_role('button',name='HOME_PRIVATE_LETTER',exact=True).click();assert page.locator('#letterBody').inner_text()=='Private home letter body';assert 'open' not in page.locator('#sheet').get_attribute('class');page.click('#letterClose')
- search('HOME_PRIVATE_IDEA');body.get_by_role('button',name='HOME_PRIVATE_IDEA',exact=True).click();assert body.locator('h2').inner_text()=='The idea jar';assert 'HOME_PRIVATE_IDEA' in body.inner_text();page.keyboard.press('Escape')
+ search('HOME_PRIVATE_IDEA');body.get_by_role('button',name='HOME_PRIVATE_IDEA',exact=True).click();assert body.locator('h2').inner_text().startswith('The idea jar');assert 'HOME_PRIVATE_IDEA' in body.inner_text();page.keyboard.press('Escape')
  search('loft');body.get_by_role('button',name='Mezzanine loft bed',exact=True).click();assert page.evaluate('__lr.state.add')=='loft';assert page.locator('#tray .swatch').count()==1
  page.get_by_role('button',name='Show all',exact=True).click();assert page.locator('#tray .swatch').count()>1
  add_search=page.get_by_role('searchbox',name='Search furniture',exact=True);assert add_search.is_visible();assert add_search.bounding_box()['y']<page.locator('#row').bounding_box()['y']

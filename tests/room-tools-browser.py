@@ -42,10 +42,10 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Hide translation',exact=True).click();assert translation not in page.locator('.roomtool-flashcard').inner_text();page.keyboard.press('Escape')
  print('PASS: fridge groceries add/check/clear/reload; French flashcard flips while its sticky widget stays intact',flush=True)
  # Idea jar handles empty state, two ideas and non-repeating shakes.
- page.evaluate("tapTool('ideajar')");assert page.get_by_role('button',name='Shake for an idea',exact=True).is_disabled()
+ page.evaluate("tapTool('ideajar')");assert page.get_by_role('button',name='Shake the jar',exact=True).is_disabled()
  for idea in ['PRIVATE_APP_IDEA','A tiny offline game']:
-  page.get_by_label('A little idea',exact=True).fill(idea);page.get_by_role('button',name='Drop in jar',exact=True).click()
- page.get_by_role('button',name='Shake for an idea',exact=True).click();first=page.locator('.roomtool-pick').inner_text();page.get_by_role('button',name='Shake for an idea',exact=True).click();assert page.locator('.roomtool-pick').inner_text()!=first;page.keyboard.press('Escape')
+  page.get_by_role('button',name='Drop in an idea',exact=True).click();page.get_by_label('A little idea',exact=True).fill(idea);page.get_by_role('button',name='Drop in jar',exact=True).click()
+ page.get_by_role('button',name='Shake the jar',exact=True).click();first=page.locator('.idea-card-text').inner_text();page.get_by_role('button',name='Shake the jar',exact=True).click();assert page.locator('.idea-card-text').inner_text()!=first;page.keyboard.press('Escape')
  # Savings uses cents and fills only private coin parts, not the room model.
  page.evaluate("tapTool('savingsjar');window.__wallet=__lr.shop.balance")
  page.get_by_label('Goal name',exact=True).fill('PRIVATE_GOAL');page.get_by_label('Target amount',exact=True).fill('100.00');page.get_by_role('button',name='Save goal',exact=True).click()

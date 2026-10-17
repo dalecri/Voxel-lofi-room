@@ -66,6 +66,9 @@
     return {send,poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,stroke,undoStroke,clearSketch,total,
       get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get strokes(){return copy(state.strokes);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
+  // Presentation order only. The model's newest-first list and lastIdea are untouched.
+  function ideaCards(ideas,frontId){const index=Math.max(0,ideas.findIndex(i=>i.id===frontId)),top=ideas[index] || null;return {top,count:ideas.length,index, next:ideas.length?ideas[(index+1)%ideas.length]:null,behind:Array.from({length:Math.min(3,Math.max(0,ideas.length-1))},(_,i)=>ideas[(index+i+1)%ideas.length])};}
+  function ideaAdded(idea){const date=new Date(idea?.createdAt);if(!Number.isFinite(date.getTime()))return 'Kept in your jar';const parts=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long'}).formatToParts(date);return `Added ${parts.find(p=>p.type==='day').value} ${parts.find(p=>p.type==='month').value}`;}
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
   function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{}}){
     let active=null,anchor=null,resize=null,liveStroke=null,canvas=null,status=null,frameTime=0;
@@ -126,10 +129,30 @@
       const flip=button(root,'Reveal translation',()=>{back.hidden=!back.hidden;flip.textContent=back.hidden?'Reveal translation':'Hide translation';flip.setAttribute('aria-pressed',String(!back.hidden));});flip.setAttribute('aria-pressed','false');button(root,'Back to groceries',groceries);
     });}
     function ideas(){shell('The idea jar','Drop in a thought. Shake for a spark. All yours, on this device.',root=>{
-      const input=field(root,'A little idea','textarea');input.rows=3;button(root,'Drop in jar',()=>{model.addIdea(input.value);sound.plop();ideas();});
-      const result=text(root,'','roomtool-pick');result.setAttribute('aria-live','polite');
-      const shake=button(root,'Shake for an idea',()=>{const idea=model.shake();if(!idea)return;result.textContent=idea.text;const v=renderer();if(anchor&&v.objs.has(anchor)){v.excite(anchor);v.burst(anchor,'magic',.8);}sound.rustle();});shake.disabled=!model.state.ideas.length;
-      for(const idea of model.state.ideas){const row=document.createElement('div');row.className='roomtool-card';text(row,idea.text);removeButton(row,()=>{model.remove('ideas',idea.id);ideas();});root.appendChild(row);}
+      root.classList.add('idea-jar');let frontId=null,reason='latest';
+      const count=document.createElement('small');count.className='idea-count';root.parentElement.querySelector(':scope > h2')?.appendChild(count);
+      const stack=document.createElement('div');stack.className='idea-stack';root.appendChild(stack);
+      const position=text(root,'','idea-position muted small');position.setAttribute('role','status');
+      const actions=document.createElement('div');actions.className='idea-actions';root.appendChild(actions);
+      const shake=button(actions,'Shake the jar',()=>{const idea=model.shake();if(!idea)return;frontId=idea.id;reason='shaken';draw('is-shaken');const v=renderer();if(anchor&&v.objs.has(anchor)){v.excite(anchor);v.burst(anchor,'magic',.8);}sound.rustle();},'chipbtn idea-shake');
+      const drop=button(actions,'Drop in an idea',()=>{form.hidden=!form.hidden;drop.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)input.focus();},'chipbtn');drop.setAttribute('aria-expanded','false');drop.setAttribute('aria-controls','ideaDropForm');
+      const form=document.createElement('form');form.id='ideaDropForm';form.className='idea-drop-form';form.hidden=true;root.appendChild(form);const input=field(form,'A little idea','textarea');input.rows=3;input.placeholder='Something worth keeping…';input.required=true;
+      const submit=button(form,'Drop in jar',()=>{});submit.type='submit';button(form,'Not now',()=>{form.hidden=true;drop.setAttribute('aria-expanded','false');drop.focus();});
+      form.onsubmit=e=>{e.preventDefault();run(()=>{model.addIdea(input.value);frontId=model.state.ideas[0].id;reason='latest';sound.plop();input.value='';form.hidden=true;drop.setAttribute('aria-expanded','false');draw('is-dropped');stack.querySelector('.idea-cycle')?.focus({preventScroll:true});});};
+      const reveal=()=>{form.hidden=false;drop.setAttribute('aria-expanded','true');input.focus();};
+      function draw(animation=''){
+        const cards=ideaCards(model.state.ideas,frontId);frontId=cards.top?.id || null;stack.replaceChildren();count.textContent=` · ${cards.count} spark${cards.count===1?'':'s'}`;shake.disabled=!cards.count;position.textContent=cards.count?`${cards.index+1} of ${cards.count} spark${cards.count===1?'':'s'} · Tap the card to browse`:'A little room for your next idea.';
+        for(let i=cards.behind.length-1;i>=0;i--){const back=document.createElement('div');back.className='idea-back idea-back-'+i;back.setAttribute('aria-hidden','true');text(back,'A LITTLE SPARK','idea-card-label');text(back,cards.behind[i].text,'idea-back-text');stack.appendChild(back);}
+        const front=document.createElement('article');front.className='idea-front '+animation;stack.appendChild(front);
+        if(!cards.top){const invite=button(front,'The jar is empty. Drop in your first spark.',reveal,'idea-cycle idea-invite');invite.setAttribute('aria-label','The jar is empty. Drop in your first spark.');return;}
+        front.dataset.idea=cards.top.id;
+        const cycle=button(front,'',()=>{frontId=ideaCards(model.state.ideas,frontId).next.id;reason='browse';draw('is-cycled');stack.querySelector('.idea-cycle')?.focus({preventScroll:true});},'idea-cycle');cycle.setAttribute('aria-label','Next idea');cycle.setAttribute('aria-describedby','ideaCardText');
+        const label=document.createElement('span');label.className='idea-card-label';label.textContent=reason==='shaken'?'LAST SHAKEN':cards.top.id===model.state.ideas[0]?.id?'LATEST DROP':'SAVED SPARK';
+        const body=document.createElement('span');body.className='idea-card-text';body.id='ideaCardText';body.textContent=cards.top.text;
+        const date=document.createElement('small');date.className='idea-card-date';date.textContent=ideaAdded(cards.top);cycle.append(label,body,date);
+        const remove=button(front,'×',()=>{const next=ideaCards(model.state.ideas,frontId).next;model.remove('ideas',frontId);frontId=next?.id;reason='browse';draw();stack.querySelector('.idea-cycle')?.focus({preventScroll:true});},'idea-remove');remove.setAttribute('aria-label','Remove idea');remove.title='Remove this idea';
+      }
+      draw();
     });}
     function tea(){model.poll(false);const saved=model.tea;if(saved?.minutes>=1&&saved.minutes<=10)teaMinutes=saved.minutes;shell('Tea','A quiet real-time steep. You can close this sheet and leave the room.',root=>{
       root.classList.add('tea-focus');const heading=root.parentElement.querySelector(':scope > h2'),description=root.previousElementSibling;if(description?.matches('p.muted'))description.remove();
@@ -237,5 +260,5 @@
       for(let z=1;z<8;z+=2)m.box(7,2,z,9,3,z+1,0x8c847a);m.box(12,2,1,13,3,7,0xd8a659);
     }});
   }
-  const api={KEY,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
+  const api={KEY,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,ideaCards,ideaAdded,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
 })(typeof window!=='undefined'?window:globalThis);

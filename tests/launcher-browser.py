@@ -27,7 +27,7 @@ with sync_playwright() as p:
  for id,title in expected.items():
   launch(id);assert title in body.inner_text(),(id,body.inner_text())
   if id=='ideas':
-   body.get_by_role('textbox',name='A little idea').fill('PRIVATE_HOME_TOOL_IDEA');body.get_by_role('button',name='Drop in jar',exact=True).click()
+   body.get_by_role('button',name='Drop in an idea',exact=True).click();body.get_by_role('textbox',name='A little idea').fill('PRIVATE_HOME_TOOL_IDEA');body.get_by_role('button',name='Drop in jar',exact=True).click()
   if id=='whiteboard':body.get_by_role('textbox',name='Whiteboard text').fill('PRIVATE_HOME_TOOL_BOARD')
   page.keyboard.press('Escape');assert not page.locator('#sheet').evaluate("e=>e.classList.contains('open')")
  launch('focus');assert page.evaluate('__lr.rituals.focus(__lr.meta.current,"control-center-focus").active');page.click('#focusSnuff');assert not page.evaluate('__lr.rituals.focus(__lr.meta.current,"control-center-focus").active')
