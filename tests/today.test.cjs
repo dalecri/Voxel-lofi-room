@@ -57,3 +57,8 @@ test('six daily defaults preserve the list, deduplicate normalized titles and aw
 test('individual starter picks and the bulk plan obey the existing 50-task limit without replacing tasks',()=>{
  const {store}=fixture(),m=T.create({store});for(let i=0;i<48;i++)m.add('Original task '+i);assert.equal(m.addStarters(['important']),1);assert.equal(m.list()[48].icon,'⭐');assert.equal(m.addStarters(),1);assert.equal(m.list().length,50);assert.equal(m.addStarters(),0);assert.equal(m.list()[0].text,'Original task 0');assert.equal(m.addStarters(['not-a-starter']),0);
 });
+test('Today presentation follows the existing four room phases without changing weather data',()=>{
+ for(const [phase,greeting] of [['morning','Good morning'],['day','Good afternoon'],['evening','Good evening'],['night','Good evening']]){assert.equal(T.daypart(phase).theme,phase);assert.equal(T.daypart(phase).greeting,greeting);assert.ok(T.daypart(phase).subline);}
+ assert.deepEqual(T.daypart('unknown'),T.daypart('day'));
+ const j=T.journey([{done:true},{done:false},{done:true},{done:false}]);assert.equal(j.checked,2);assert.equal(j.total,4);assert.equal(j.progress,.5);assert.equal(T.journey([]).progress,0);
+});

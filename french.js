@@ -302,7 +302,8 @@
       if (!card) return;
       btn.querySelector('b').textContent = card.fr;
       btn.querySelector('small').textContent = card.en;
-      btn.setAttribute('aria-label', `French word of the day: ${card.fr}, ${card.en}`);
+      if(btn.dataset.flip){btn.querySelector('.french-example').textContent=card.ex || card.en;btn.querySelector('.french-example-translation').textContent=card.exEn || '';btn.setAttribute('aria-pressed',String(btn.classList.contains('is-flipped')));}
+      btn.setAttribute('aria-label', btn.dataset.flip&&btn.classList.contains('is-flipped')?`${card.ex || card.en}${card.exEn?' · '+card.exEn:''}. Tap to return.`:`French word of the day: ${card.fr}, ${card.en}`+(btn.dataset.flip?'. Tap to flip.':''));
     }
     function checkedDecks() {
       return [...deckList.querySelectorAll('input')].filter(input => input.checked).map(input => input.value);
@@ -396,7 +397,7 @@
       overlay.hidden = true;
       if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
     }
-    function mountToday(host) {
+    function mountToday(host,{flip=false}={}) {
       if (!host) return;
       todayHost = host;
       let btn = host.querySelector('.french-today');
@@ -404,9 +405,11 @@
         btn = el('button', 'french-today');
         btn.type = 'button';
         btn.append(el('span', 'french-today-kicker', "Today's French word"), el('b', ''), el('small', ''));
-        btn.onclick = () => open();
+        if(flip){btn.dataset.flip='true';const front=el('span','french-front'),back=el('span','french-back');front.append(...btn.childNodes,el('span','french-flip-hint','tap to flip'));back.append(el('span','french-today-kicker','In a sentence'),el('span','french-example'),el('span','french-example-translation'),el('span','french-flip-hint','tap to return'));back.hidden=true;btn.append(front,back);btn.onclick=()=>{const on=btn.classList.toggle('is-flipped');front.hidden=on;back.hidden=!on;btn.setAttribute('aria-pressed',String(on));paintToday();};}
+        else btn.onclick = () => open();
         const sky = host.querySelector('.today-sky');
         if (sky) sky.insertAdjacentElement('afterend', btn);
+        else if(flip)host.appendChild(btn);
         else host.prepend(btn);
       }
       paintToday();

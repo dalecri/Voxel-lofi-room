@@ -235,7 +235,9 @@ function startLofiRooms() {
       },180);if(taskPortraits.size>=12)taskPortraits.delete(taskPortraits.keys().next().value);taskPortraits.set(key,src);
     }return taskPortraits.get(key);
   }
-  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
+  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus,daily:dailyInfo(),streak:store.get('lr.dailyStreak',{}).n||0,letterDraft:!!letters.model.get()?.body,ideaCount:roomTools.homeState.ideas.length}),
+    completeMoment:()=>{dailyCheck(dailyInfo().D.id);const top=$('#sheetBody').scrollTop;renderMenu();$('#sheetBody').scrollTop=top;const card=$('#menu-today .today-moment');card.tabIndex=-1;card.focus({preventScroll:true});},
+    openRitual:id=>{closeSheets();if(id==='garden'){const active=rituals.activeFocus.find(f=>f.kind==='garden'&&f.active),bed=room.items.find(i=>i.t==='focusgarden');gardenUI.open(active?.id || bed?.id || null);}else if(id==='letter')letters.open();else if(id==='ideas')launchTool({id:'ideas'});},
     portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
     celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
     hidden:()=>library.active || barnaby.active || frenchUI?.active || filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
@@ -2431,8 +2433,8 @@ function startLofiRooms() {
     const spotlight=homeSearch();body.insertBefore(spotlight,body.querySelector('[role=tablist]'));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
-    todayUI.mount(target);
-    frenchUI.mountToday(target.querySelector('.space-today'));
+    todayUI.mount(target,{greetingHost:body});
+    frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomVillage(target);

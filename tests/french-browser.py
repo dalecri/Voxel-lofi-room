@@ -62,8 +62,10 @@ with sync_playwright() as p:
  page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
  today=page.locator('.french-today')
  assert today.locator('b').inner_text() and today.locator('small').inner_text()
- today.click()
+ today.click();assert today.get_attribute('aria-pressed')=='true';assert today.locator('.french-example').is_visible()
+ page.evaluate('__lr.french.open()')
  page.locator('#frenchView').wait_for(state='visible')
+ page.get_by_role('button',name='Start studying',exact=True).click()
  for width in (320,390):
   page.set_viewport_size({'width':width,'height':844})
   assert page.evaluate('document.querySelector("#frenchView").scrollWidth<=document.querySelector("#frenchView").clientWidth+1 && document.documentElement.scrollWidth<=innerWidth+1')
