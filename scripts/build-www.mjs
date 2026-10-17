@@ -24,7 +24,7 @@ copyFileSync(nm('mediabunny/dist/bundles/mediabunny.min.mjs'), join(out, 'vendor
 
 // fonts: latin subsets of the weights the app uses
 let css = '';
-const fonts = { fredoka: [400, 500, 600], nunito: [400, 600, 700, 800] };
+const fonts = { fredoka: [400, 500, 600], nunito: [400, 600, 700, 800], vt323: [400] };   // VT323: the mailbox's retro pixel type
 for (const [family, weights] of Object.entries(fonts)) {
   for (const w of weights) {
     const src = readFileSync(nm(`@fontsource/${family}/latin-${w}.css`), 'utf8');
