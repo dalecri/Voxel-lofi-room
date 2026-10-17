@@ -1,0 +1,139 @@
+:root {
+    --font-pixel: 'Silkscreen', monospace;
+    --font-lcd: 'VT323', monospace;
+    --font-arcade: 'Press Start 2P', monospace;
+}
+body {
+    font-family: var(--font-pixel);
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+    background-color: #cbd89b;
+    background-image: radial-gradient(#b4c681 1.5px, transparent 1.5px);
+    background-size: 18px 18px;
+}
+.font-pixel {
+    font-family: var(--font-pixel);
+}
+.font-lcd {
+    font-family: var(--font-lcd);
+}
+.font-arcade {
+    font-family: var(--font-arcade);
+}
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    image-rendering: pixelated;
+}
+/* Crisp 16-bit floating square top-bar buttons */
+.pixel-top-btn {
+    background: #ffffff;
+    border: 2.5px solid #4a5568;
+    box-shadow: inset -2px -2px 0px #cbd5e1, 0 3px 0 rgba(0, 0, 0, 0.18);
+    image-rendering: pixelated;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.pixel-top-btn:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+.pixel-top-btn:active {
+    transform: translateY(2px);
+    box-shadow: inset 1px 1px 0px #cbd5e1, 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+/* Pastel Sage Handheld Shell */
+.handheld-deck {
+    background-color: #d6e49b;
+    border-top: 4px solid #b5c676;
+    box-shadow: inset 0 4px 0 #e6f2b5, 0 -6px 20px rgba(0, 0, 0, 0.12);
+}
+/* Recessed Monochrome Olive LCD Screen with classic curved bottom-right corner */
+.lcd-bezel {
+    background-color: #d1d6be;
+    border: 3px solid #9fa687;
+    border-radius: 18px 18px 42px 18px;
+    box-shadow:
+        inset 3px 4px 8px rgba(74, 83, 53, 0.28),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.6),
+        0 2px 0 #e8f3be;
+    color: #484f3e;
+    position: relative;
+}
+.lcd-divider {
+    width: 2.5px;
+    background-color: #9fa687;
+    opacity: 0.7;
+}
+/* Dark Pill Start/Select Utility Buttons */
+.pill-btn {
+    height: 16px;
+    min-width: 68px;
+    background: linear-gradient(180deg, #5c6066 0%, #323539 100%);
+    border: 2px solid #222426;
+    border-radius: 999px;
+    box-shadow:
+        0 3px 4px rgba(0, 0, 0, 0.35),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.28);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    cursor: pointer;
+}
+.pill-btn:active {
+    transform: translateY(2px);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.35),
+        inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+/* Magenta Action Button (P) */
+.magenta-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 32% 28%, #d9468f 0%, #b82973 58%, #911a57 100%);
+    border: 2.5px solid #6b113e;
+    box-shadow:
+        -3px 5px 8px rgba(0, 0, 0, 0.35),
+        inset 0 3px 3px rgba(255, 255, 255, 0.35),
+        inset 0 -3px 4px rgba(74, 12, 43, 0.5);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    cursor: pointer;
+}
+.magenta-btn:hover {
+    filter: brightness(1.05);
+}
+.magenta-btn:active, .magenta-btn.pressed {
+    transform: translate(-1px, 3px);
+    box-shadow:
+        -1px 2px 3px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+/* Physical Slide Switch for Pixel Shader */
+.retro-switch-track {
+    width: 38px;
+    height: 16px;
+    background: #a4ae84;
+    border: 2px solid #636b4c;
+    border-radius: 999px;
+    box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.35);
+    position: relative;
+    cursor: pointer;
+}
+.retro-switch-thumb {
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(180deg, #d9468f 0%, #9d1f5e 100%);
+    border: 2px solid #590d33;
+    border-radius: 4px;
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+.retro-switch-track.off .retro-switch-thumb {
+    transform: translateX(20px);
+    background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+    border-color: #1e293b;
+}

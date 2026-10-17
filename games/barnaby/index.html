@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Barnaby's Dandelion Odyssey</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Silkscreen, VT323 & Press Start 2P for authentic pixel-handheld console UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+    <!-- Tone.js for procedural whimsical sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Three.js for 3D WebGL World & Models -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Game styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="h-screen w-screen flex items-center justify-center p-0 sm:p-3 select-none">
+
+    <!-- Handheld Device Outer Frame -->
+    <div class="w-full h-full max-w-5xl flex flex-col rounded-none sm:rounded-[34px] overflow-hidden shadow-2xl border-0 sm:border-[6px] border-[#b5c676] bg-[#d6e49b]">
+
+        <!-- TOP HALF: Active Isometric 3D Voxel Sky Viewport -->
+        <main id="viewport-container" class="relative w-full flex-1 overflow-hidden bg-sky-200">
+            <!-- Three.js 3D WebGL Layer -->
+            <div id="three-container" class="absolute inset-0 w-full h-full"></div>
+            <!-- 2D HUD & Particle/Callout Overlay Canvas -->
+            <canvas id="gameCanvas" class="absolute inset-0 w-full h-full pointer-events-auto"></canvas>
+
+            <!-- Floating Top-Left Pixel Counters -->
+            <div class="absolute top-3 left-3 flex items-center gap-2.5 z-20 pointer-events-none">
+                <!-- Persistent Golden Acorn Currency Counter -->
+                <div class="pixel-top-btn px-2.5 h-10 rounded-lg flex items-center gap-2">
+                    <svg class="w-6 h-6 shrink-0" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 1H10V3H12V6H13V11H11V14H9V15H7V14H5V11H3V6H4V3H6V1Z" fill="#4A5568"/>
+                        <path d="M7 2H9V4H11V6H12V10H10V13H9V14H7V13H6V10H4V6H5V4H7V2Z" fill="#FACC15"/>
+                        <path d="M6 4H8V6H6V4ZM5 6H7V9H5V6Z" fill="#FEF08A"/>
+                        <path d="M8 9H11V11H9V13H8V9Z" fill="#D97706"/>
+                    </svg>
+                    <span id="hud-acorns-total" class="font-arcade text-sm sm:text-base text-[#2d3748] tracking-tighter">0</span>
+                </div>
+
+                <!-- Pixel Heart + Boosts Collected Counter -->
+                <div class="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-2.5 h-10 rounded-lg border-2 border-[#4a5568] shadow-sm">
+                    <svg class="w-6 h-6 shrink-0" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 3H6V4H7V5H9V4H10V3H14V4H15V9H14V10H13V11H12V12H10V13H9V14H7V13H6V12H4V11H3V10H2V9H1V4H2V3Z" fill="#4A5568"/>
+                        <path d="M3 4H6V5H7V6H9V5H10V4H13V5H14V8H13V9H12V10H11V11H9V12H7V11H5V10H4V9H3V8H2V5H3V4Z" fill="#F43F5E"/>
+                        <path d="M3 5H5V7H3V5Z" fill="#FDA4AF"/>
+                    </svg>
+                    <span id="hud-boosts-top" class="font-arcade text-sm sm:text-base text-[#2d3748] tracking-tighter">0</span>
+                </div>
+
+                <!-- Floating Best Record Badge -->
+                <div class="hidden sm:flex items-center gap-1.5 bg-white/80 backdrop-blur-sm px-2.5 h-10 rounded-lg border-2 border-[#4a5568] shadow-sm">
+                    <span class="font-pixel text-[11px] font-bold text-[#4a5568] uppercase">BEST:</span>
+                    <span id="hud-best" class="font-arcade text-xs text-[#2d3748]">0.0m</span>
+                </div>
+            </div>
+
+            <!-- Floating Top-Right Square Pixel Utility Buttons -->
+            <div class="absolute top-3 right-3 flex items-center gap-2 z-20">
+                <button id="btn-top-reset" class="pixel-top-btn w-10 h-10 rounded-lg flex items-center justify-center text-[#2d3748]" title="Quick Reset Run (R)">
+                    <i class="ph-bold ph-arrow-counter-clockwise text-lg text-[#2d3748]"></i>
+                </button>
+                <button id="btn-help" class="pixel-top-btn w-10 h-10 rounded-lg flex items-center justify-center text-[#2d3748]" title="Field Guide">
+                    <svg class="w-5 h-5" viewBox="0 0 16 16" fill="none">
+                        <rect x="6" y="2" width="4" height="3" fill="#2D3748"/>
+                        <rect x="7" y="3" width="2" height="1" fill="#FACC15"/>
+                        <rect x="5" y="6" width="5" height="2" fill="#2D3748"/>
+                        <rect x="6" y="8" width="4" height="5" fill="#2D3748"/>
+                        <rect x="5" y="12" width="6" height="2" fill="#2D3748"/>
+                        <rect x="7" y="7" width="2" height="5" fill="#FACC15"/>
+                    </svg>
+                </button>
+                <button id="btn-sound" class="pixel-top-btn w-10 h-10 rounded-lg flex items-center justify-center text-[#2d3748]" title="Toggle Audio">
+                    <i id="icon-sound" class="ph-fill ph-gear-six text-xl text-[#2d3748]"></i>
+                </button>
+            </div>
+
+            <!-- Subtle Pixel Prompt Toast in Sky -->
+            <div id="phase-banner" class="pointer-events-none absolute top-16 left-1/2 -translate-x-1/2 bg-[#d1d6be]/95 px-4 py-1.5 rounded-xl border-2 border-[#484f3e] shadow-md flex items-center gap-2 transition-opacity duration-300 z-10 whitespace-nowrap">
+                <span id="phase-dot" class="w-2.5 h-2.5 bg-[#b82973] inline-block animate-pulse"></span>
+                <span id="phase-text" class="font-pixel text-xs sm:text-sm font-bold text-[#383e30]">PRESS [P] OR SPACE AT GREEN PEAK TO DROP!</span>
+            </div>
+
+            <!-- Post-Run Retro LCD Results Modal Overlay -->
+            <div id="results-modal" class="hidden absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 z-30">
+                <div class="bg-[#d6e49b] rounded-3xl max-w-md w-full p-5 shadow-2xl border-4 border-[#636b4c] text-center">
+                    <div class="lcd-bezel p-4 mb-4 text-left">
+                        <div class="flex items-center justify-between border-b-2 border-[#9fa687] pb-2 mb-3">
+                            <div>
+                                <div id="new-record-badge" class="hidden font-arcade text-[10px] text-[#b82973] mb-1">★ NEW RECORD! ★</div>
+                                <h2 id="results-title" class="font-arcade text-base sm:text-lg text-[#383e30]">FLIGHT LOG</h2>
+                            </div>
+                            <span id="res-grade" class="font-pixel text-xs font-bold bg-[#484f3e] text-[#d1d6be] px-2 py-1 rounded">PERFECT!</span>
+                        </div>
+
+                        <p id="results-subtitle" class="font-pixel text-xs text-[#59614d] mb-3">Barnaby landed in the clover patch.</p>
+
+                        <div class="space-y-1.5 font-lcd text-2xl text-[#383e30]">
+                            <div class="flex justify-between items-center">
+                                <span>Distance</span>
+                                <span id="res-distance" class="font-bold">0.0 m</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Peak Alt</span>
+                                <span id="res-altitude" class="font-bold">0.0 m</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span>Items ♥</span>
+                                <span id="res-boosts" class="font-bold">0</span>
+                            </div>
+                            <div class="flex justify-between items-center border-t border-[#9fa687] pt-1 text-[#484f3e]">
+                                <span>Acorns Earned</span>
+                                <span id="res-acorns" class="font-bold">+0 ♦</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button id="btn-open-shop-modal" class="py-3 px-4 rounded-xl bg-[#484f3e] hover:bg-[#383e30] active:translate-y-0.5 text-[#d1d6be] font-arcade text-xs border-2 border-[#2b3022] shadow-md flex items-center justify-center gap-1.5">
+                            <span>SHOP ♦</span>
+                        </button>
+                        <button id="btn-relaunch-modal" class="flex-1 py-3 px-4 rounded-xl bg-[#b82973] hover:bg-[#c93380] active:translate-y-0.5 text-white font-arcade text-xs sm:text-sm border-2 border-[#6b113e] shadow-md flex items-center justify-center gap-2">
+                            <span>LAUNCH AGAIN [P]</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Retro LCD Name Editor Modal -->
+            <div id="name-modal" class="hidden absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 z-30">
+                <div class="bg-[#d6e49b] rounded-3xl max-w-sm w-full p-5 shadow-2xl border-4 border-[#636b4c]">
+                    <h3 class="font-arcade text-xs sm:text-sm text-[#383e30] mb-3 text-center">NAME YOUR GNOME</h3>
+                    <div class="lcd-bezel p-4 mb-4">
+                        <label class="block font-pixel text-[11px] text-[#59614d] mb-1 uppercase">Pocket Pet ID (Max 10 chars):</label>
+                        <input id="input-gnome-name" type="text" maxlength="10" value="Barnaby" class="w-full bg-[#bcc2a6] border-2 border-[#484f3e] rounded px-2.5 py-1.5 font-arcade text-sm text-[#2b3022] focus:outline-none" />
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="btn-cancel-name" class="flex-1 py-2.5 rounded-xl bg-[#636b4c] text-white font-arcade text-xs border-2 border-[#383e30]">
+                            CANCEL
+                        </button>
+                        <button id="btn-save-name" class="flex-1 py-2.5 rounded-xl bg-[#b82973] text-white font-arcade text-xs border-2 border-[#6b113e]">
+                            SAVE
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How-to-Play Retro Manual Modal -->
+            <div id="help-modal" class="hidden absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 z-30">
+                <div class="bg-[#d6e49b] rounded-3xl max-w-lg w-full p-5 shadow-2xl border-4 border-[#636b4c]">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-arcade text-sm sm:text-base text-[#383e30]">GNOME POCKET MANUAL</h3>
+                        <button id="btn-close-help" class="pixel-top-btn w-8 h-8 rounded flex items-center justify-center text-[#2d3748] font-bold">
+                            ✕
+                        </button>
+                    </div>
+                    <div class="lcd-bezel p-4 space-y-2.5 text-xs sm:text-sm font-pixel text-[#383e30]">
+                        <div><b>1. DROP [P / SPACE]:</b> Watch the power bar by the watering can. Press when it hits the top green zone!</div>
+                        <div><b>2. GLIDE [HOLD P / SPACE]:</b> Hold in mid-air to unfold Barnaby's Maple Leaf and ride warm air currents.</div>
+                        <div><b>3. BOOSTERS:</b> Catch Dandelion Updrafts, Fizzy Soda Rockets, Gold Rings & Acorns to restore Leaf Stamina ♥.</div>
+                        <div><b>4. HAZARDS:</b> Bounce off Red Toadstools and dodge Grumpy Bees!</div>
+                    </div>
+                    <button id="btn-close-help-bottom" class="mt-4 w-full py-2.5 rounded-xl bg-[#b82973] text-white font-arcade text-xs border-2 border-[#6b113e] shadow-md">
+                        GOT IT!
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- BOTTOM HALF: Pastel Sage Handheld Console Deck -->
+        <footer class="handheld-deck w-full px-4 sm:px-8 pt-3.5 pb-4 sm:pb-5 flex flex-col gap-3 z-20 shrink-0">
+
+            <!-- Recessed Monochrome Olive LCD Screen -->
+            <div class="lcd-bezel w-full max-w-3xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-6 min-h-[96px]">
+
+                <!-- Left Column: Interactive Monochrome Pixel Gnome Avatar + Editable Nameplate -->
+                <div class="flex flex-col items-center justify-center min-w-[108px] sm:min-w-[142px]">
+                    <div class="relative flex items-center justify-center">
+                        <svg id="lcd-gnome-sprite" class="w-11 h-11 sm:w-12 sm:h-12 mb-0.5 transition-transform duration-150 cursor-pointer" viewBox="0 0 16 16" fill="none" title="Click to rename!">
+                            <path d="M7 1H9V3H10V5H11V7H5V5H6V3H7V1Z" fill="#5a634e"/>
+                            <rect x="4" y="7" width="8" height="1" fill="#383e30"/>
+                            <rect x="5" y="8" width="6" height="2" fill="#8b947c"/>
+                            <rect id="lcd-eye-l" x="6" y="8" width="1" height="1" fill="#383e30"/>
+                            <rect id="lcd-eye-r" x="9" y="8" width="1" height="1" fill="#383e30"/>
+                            <rect x="7" y="9" width="2" height="1" fill="#383e30"/>
+                            <path d="M4 10H12V12H11V13H9V14H7V13H5V12H4V10Z" fill="#e2e6d5"/>
+                            <rect x="5" y="13" width="6" height="2" fill="#5a634e"/>
+                            <rect x="5" y="15" width="2" height="1" fill="#383e30"/>
+                            <rect x="9" y="15" width="2" height="1" fill="#383e30"/>
+                        </svg>
+                        <span id="lcd-mood-badge" class="font-arcade text-[10px] text-[#383e30] absolute -top-1 -right-3 animate-bounce"></span>
+                    </div>
+
+                    <button id="btn-edit-name" class="flex items-center gap-1 font-pixel text-[11px] sm:text-xs font-bold tracking-tight text-[#383e30] hover:opacity-75 active:translate-y-0.5 cursor-pointer" title="Click to rename your Gnome">
+                        <span id="lcd-status-name">Barnaby</span>
+                        <svg class="w-3 h-3 opacity-80 shrink-0" viewBox="0 0 12 12" fill="none">
+                            <path d="M8 1L11 4L4 11H1V8L8 1Z" fill="#484f3e"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Vertical LCD Divider Line -->
+                <div class="lcd-divider self-stretch my-1"></div>
+
+                <!-- Right Column Mode A: Live Retro LCD Telemetry Rows -->
+                <div id="lcd-telemetry-panel" class="flex-1 grid grid-cols-1 gap-y-0.5 text-xs sm:text-sm font-pixel text-[#383e30]">
+                    <div class="flex items-center justify-between">
+                        <span class="opacity-80">Dist</span>
+                        <div class="flex items-center gap-2 sm:gap-3">
+                            <span id="hud-distance" class="font-bold">0.0 m</span>
+                            <span class="text-[11px] opacity-75">(<span id="hud-altitude">0.0 m</span>▲)</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="opacity-80">Leaf</span>
+                        <div class="flex items-center gap-2">
+                            <div id="lcd-hearts" class="flex items-center gap-1 font-arcade text-xs sm:text-sm tracking-widest text-[#383e30]">
+                                ♥♥♥♥
+                            </div>
+                            <span id="hud-stamina-text" class="text-[10px] opacity-75 w-8 text-right">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="opacity-80">Speed</span>
+                        <div class="flex items-center gap-2">
+                            <span id="lcd-targets" class="text-xs sm:text-sm tracking-widest">◎◎</span>
+                            <span id="hud-speed" class="font-bold">0 m/s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column Mode B: Monochrome LCD Acorn Upgrade Shop -->
+                <div id="lcd-shop-panel" class="hidden flex-1 flex flex-col justify-between gap-1 text-[11px] sm:text-xs font-pixel text-[#383e30]">
+                    <div class="flex items-center justify-between border-b border-[#9fa687] pb-0.5 mb-0.5">
+                        <span class="font-bold uppercase tracking-tight">GNOME UPGRADE SHOP</span>
+                        <span id="shop-acorn-balance" class="font-arcade text-[10px] text-[#383e30]">0♦</span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-1">
+                        <div class="truncate">
+                            <span class="font-bold">1.Heavy Can</span>
+                            <span id="upg-lvl-can" class="opacity-75 text-[10px] ml-1">Lv.1</span>
+                        </div>
+                        <button id="btn-buy-can" class="px-2 py-0.5 rounded bg-[#484f3e] text-[#d1d6be] hover:bg-[#2b3022] active:translate-y-0.5 font-arcade text-[9px] shrink-0">
+                            5♦
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-1">
+                        <div class="truncate">
+                            <span class="font-bold">2.Leaf Wax</span>
+                            <span id="upg-lvl-leaf" class="opacity-75 text-[10px] ml-1">Lv.1</span>
+                        </div>
+                        <button id="btn-buy-leaf" class="px-2 py-0.5 rounded bg-[#484f3e] text-[#d1d6be] hover:bg-[#2b3022] active:translate-y-0.5 font-arcade text-[9px] shrink-0">
+                            5♦
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-1">
+                        <div class="truncate">
+                            <span class="font-bold">3.Boots</span>
+                            <span id="upg-lvl-boots" class="opacity-75 text-[10px] ml-1">Lv.1</span>
+                        </div>
+                        <button id="btn-buy-boots" class="px-2 py-0.5 rounded bg-[#484f3e] text-[#d1d6be] hover:bg-[#2b3022] active:translate-y-0.5 font-arcade text-[9px] shrink-0">
+                            5♦
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lower Handheld Physical Controls Row -->
+            <div class="w-full max-w-3xl mx-auto flex items-center justify-between gap-4 pt-0.5">
+
+                <!-- Left Side: Pixel Shader Toggle Switch + Dark Pill Buttons -->
+                <div class="flex flex-col gap-2.5">
+                    <div id="btn-pixel-mode" class="flex items-center gap-2.5 cursor-pointer select-none group">
+                        <span class="font-pixel text-xs sm:text-sm font-bold text-[#2b3022] tracking-tight">Pixel shader</span>
+                        <div id="pixel-switch-track" class="retro-switch-track">
+                            <div class="retro-switch-thumb"></div>
+                        </div>
+                        <span id="pixel-mode-label" class="font-pixel text-[10px] font-bold text-[#555e43] uppercase">ON</span>
+                    </div>
+
+                    <div class="flex items-center gap-4 sm:gap-6">
+                        <div class="flex flex-col items-center gap-1">
+                            <button id="btn-shop-toggle" class="pill-btn" title="Toggle LCD Upgrade Shop"></button>
+                            <span id="shop-pill-label" class="font-pixel text-[11px] sm:text-xs font-bold text-[#2b3022]">Shop</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-1">
+                            <button id="btn-cam-tilt" class="pill-btn" title="Cycle Backyard Time of Day"></button>
+                            <span id="cam-tilt-label" class="font-pixel text-[11px] sm:text-xs font-bold text-[#2b3022]">Scenes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side: Single Magenta Round Action Button (P) -->
+                <div class="relative flex flex-col items-center pr-3 sm:pr-6">
+                    <div class="p-2 rounded-full bg-[#a8b86c]/45 shadow-inner">
+                        <button id="btn-main-action" class="magenta-btn flex items-center justify-center" title="Drop Can / Hold to Glide">
+                            <span class="sr-only">Action</span>
+                        </button>
+                    </div>
+                    <span class="mt-1 font-pixel text-xs font-bold text-[#4a5335] pointer-events-none">P</span>
+                </div>
+
+            </div>
+        </footer>
+    </div>
+
+    <!-- Game scripts (order matters: config -> sound -> world -> game) -->
+    <script src="js/config.js"></script>
+    <script src="js/sound.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

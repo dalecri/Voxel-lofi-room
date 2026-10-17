@@ -1,0 +1,29 @@
+/* Cabinet game. The page underneath is the game's own layout; this is only the room's frame. */
+#barnabyView {
+  position: fixed; inset: 0; z-index: 56;
+  display: grid; grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--panel-solid); color: var(--ink);
+  font-family: var(--font);
+}
+#barnabyView[hidden] { display: none; }
+.barnaby-chrome {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+  background: var(--panel-solid); border-bottom: 1px solid var(--line);
+}
+.barnaby-chrome h2 {
+  margin: 0; flex: 1; min-width: 0;
+  font-family: var(--display); font-weight: 600; font-size: 18px; line-height: 1.2;
+}
+#barnabyView .barnaby-close {
+  flex: none; width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center; text-align: center;
+  background: var(--chip); border: 1px solid var(--line); color: var(--ink);
+  font-size: 28px; line-height: 1; cursor: pointer;
+}
+#barnabyView .barnaby-close:hover, #barnabyView .barnaby-close:focus-visible { background: var(--accent); color: #fffaf3; }
+#barnabyView .barnaby-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.barnaby-stage { min-height: 0; background: #d6e49b; }
+.barnaby-frame { display: block; width: 100%; height: 100%; border: 0; background: #d6e49b; }

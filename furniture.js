@@ -361,6 +361,38 @@
       m.box(3, 3, 6, 5, 6, 7, 0x1e1e24); m.set(4, 5, 7, 0xffa040, true);
     },
   });
+  // A cabinet for one full game. The screen, marquee, coin slot and side art are voxels;
+  // tapping opens the game, it does not cycle the little in-world arcade channel.
+  def('barnaby', {
+    name: "Barnaby's arcade", kind: 'floor', group: 'tech', size: [1, 1], wallish: true, tap: 'barnaby', on: true,
+    light: { at: [4, 23, 8], color: 0xf2c14e, i: 1.6, d: 5 },
+    vars: [[WOOD.oak, 0xf07a5a, 0xf2c14e], [WOOD.walnut, 0x6abf7a, 0xffe08a], [0xf2efe8, 0xf07a5a, 0x8ecf6a], [0x3c3a8a, 0xffd27a, 0xf07a5a]],
+    build(m, [body, accent, glow]) {
+      const wood = grain(body), ink = 0x2a2428, cream = 0xfffaf3, leaf = 0x3f8a3a;
+      m.box(0, 0, 1, 8, 2, 8, shade(body, 0.72));
+      m.box(0, 2, 1, 8, 22, 7, wood);
+      m.box(0, 21, 1, 8, 22, 8, shade(body, 0.85));
+      m.box(0, 22, 1, 8, 26, 7, accent);
+      m.box(1, 23, 6, 7, 25, 7, glow, true);
+      m.set(2, 24, 7, cream); m.set(3, 24, 7, glow, true); m.set(4, 24, 7, leaf);
+      m.set(4, 23, 7, cream); m.set(5, 24, 7, glow, true);
+      m.box(1, 11, 6, 7, 21, 7, ink);
+      m.box(2, 12, 7, 6, 20, 8, 0x163028);
+      m.set(3, 18, 8, 0x9fd4ee); m.set(4, 18, 8, 0xb7e3f5);
+      m.set(3, 17, 8, glow, true); m.set(4, 17, 8, cream); m.set(5, 17, 8, glow, true);
+      m.set(4, 16, 8, 0x6abf7a); m.set(4, 15, 8, 0x6abf7a); m.set(3, 14, 8, 0x8ecf6a);
+      m.box(0, 7, 6, 8, 11, 8, shade(body, 0.88));
+      m.set(2, 9, 8, ink); m.set(2, 10, 8, accent);
+      m.set(5, 9, 8, accent, true); m.set(6, 9, 8, 0x6abf7a, true);
+      m.box(3, 3, 7, 5, 6, 8, ink); m.set(3, 5, 8, 0xd4af37); m.set(4, 5, 8, 0xd4af37);
+      for (const x of [0, 7]) {
+        for (let y = 8; y <= 16; y++) m.set(x, y, 4, leaf);
+        m.set(x, 16, 3, 0x6abf7a); m.set(x, 16, 5, 0x6abf7a);
+        m.set(x, 17, 3, cream); m.set(x, 17, 4, glow, true); m.set(x, 17, 5, cream);
+        m.set(x, 18, 3, glow, true); m.set(x, 18, 4, cream); m.set(x, 18, 5, glow, true);
+      }
+    },
+  });
   def('speaker', {
     name: 'Speaker', kind: 'floor', group: 'tech', size: [1, 1], tap: 'music', anim: 'speaker',
     vars: [[WOOD.walnut], [0x26262e], [0xf2efe8], [0xd9784a]],
