@@ -53,7 +53,9 @@
     function mount(host,{beforeTasks}={}){
       const panel=el('div','space-today'),sky=el('section','today-sky'),art=el('span','today-sky-icon'),copy=el('div','today-sky-copy'),date=el('p','today-date'),clock=el('b','today-clock'),phase=el('p','muted'),condition=el('p','today-condition'),chance=el('p','today-chance'),drops=el('div','today-drops'),updated=el('small','muted');sky.setAttribute('aria-label','Your sky today');art.setAttribute('aria-hidden','true');drops.setAttribute('aria-hidden','true');
       for(let i=0;i<10;i++)drops.appendChild(el('span','','💧'));
-      copy.append(date,clock,phase,condition,chance,drops,updated);sky.append(art,copy);panel.appendChild(sky);
+      const skyDude=el('div','today-sky-dude'),skyImage=el('img');
+      skyImage.alt='';skyImage.width=72;skyImage.height=72;skyDude.setAttribute('aria-hidden','true');skyDude.appendChild(skyImage);
+      copy.append(date,clock,phase,condition,chance,drops,updated);sky.append(art,copy,skyDude);panel.appendChild(sky);
       if(beforeTasks)beforeTasks(panel);
       const section=el('section','today-tasks'),header=el('div','task-journey'),title=el('h3','','Little things'),summary=el('p','task-journey-summary'),track=el('div','task-day-path'),dude=el('div','task-journey-dude'),image=el('img'),sleep=el('span','task-journey-zzz','Zzz');
       image.alt='Your little roommate';image.width=84;image.height=84;dude.append(image,sleep);sleep.hidden=true;track.setAttribute('aria-hidden','true');
@@ -66,6 +68,7 @@
       const entry={panel,refresh(){const ctx=context(),w=weather(ctx.meta,ctx.now || new Date());art.textContent=w.icon;sky.dataset.sky=ctx.meta.weather || 'clear';date.textContent=w.date;clock.textContent=w.time;phase.textContent=w.phase;condition.textContent=w.label+(w.temperature?' · '+w.temperature:'');chance.textContent=w.chance;updated.textContent=w.fetched+(w.stale?' · cached':'');drops.hidden=w.probability===null;[...drops.children].forEach((d,i)=>{d.classList.toggle('wet',i<w.probability/10);d.textContent=ctx.meta.weather==='snow'?'❄':'💧';});
         const tasks=model.list(),j=journey(tasks),key=JSON.stringify(tasks.map(t=>[t.id,t.text,t.icon]));empty.hidden=tasks.length>0;if(summary.textContent!==j.title)summary.textContent=j.title;header.dataset.stage=j.stage;header.dataset.pose=j.pose;header.dataset.remaining=String(j.left);track.style.setProperty('--task-progress',String(j.progress));sleep.hidden=!j.done;
         const pk=portraitKey()+':'+j.pose;if(pk!==lastPortrait){lastPortrait=pk;const src=portrait(j.pose);image.hidden=!src;if(src)image.src=src;}
+        const skyKey=portraitKey()+':idle';if(skyImage.dataset.key!==skyKey){skyImage.dataset.key=skyKey;const src=portrait('idle');skyImage.hidden=!src;skyDude.hidden=!src;if(src)skyImage.src=src;}
         if(signature!==key){signature=key;list.replaceChildren();for(const t of tasks){
           const row=el('div','today-task'),icon=el('button','today-task-icon',t.icon),copy=el('div','today-task-copy'),text=el('span','today-task-text',t.text),remove=el('button','today-task-remove','Remove'),check=el('button','today-task-check'),mark=el('span','task-checkmark'),reward=el('span','task-check-reward'),picker=el('div','today-icon-picker');
           icon.type='button';icon.setAttribute('aria-label','Icon for task: '+t.text);icon.setAttribute('aria-expanded','false');picker.hidden=true;picker.setAttribute('role','group');picker.setAttribute('aria-label','Choose a task icon');
