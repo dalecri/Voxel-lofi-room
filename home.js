@@ -5,9 +5,10 @@
   const PHASES={morning:'Morning',day:'Afternoon',evening:'Evening',night:'Night'};
   const day=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const reducedMotion=(store,system=false)=>store.get(MOTION_KEY,null) ?? system;
-  function search(query,{CAT={},letters=[],scenes=[],ideas=[]}) {
+  function search(query,{CAT={},letters=[],scenes=[],ideas=[],rooms=[]}) {
     const q=String(query).trim().toLocaleLowerCase();if(!q)return [];
     return [
+      ['Rooms',rooms.map(r=>({id:r.id,title:r.name}))],
       ['Furniture',Object.entries(CAT).map(([id,c])=>({id,title:c.name}))],
       ['Letters',letters.map(l=>({id:l.id,title:l.title || 'Untitled letter'}))],
       ['Scenes',scenes.map(s=>({id:s.id,title:s.title || 'Untitled scene'}))],

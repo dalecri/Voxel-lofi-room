@@ -1877,10 +1877,51 @@
   };
 
   // ---- photos and catalog thumbnails ----
-  R.snapshot = function () {
+  R.snapshot = function (maxPixels, phase) {
     const restore=this.hidePrivateToolParts();
-    try { this.draw(); return this.r.domElement.toDataURL('image/png'); }
-    finally { restore(); }
+    // Saved room cards keep four lit PNGs. Relight the existing scene only; no
+    // second renderer, simulation tick, room switch, or catalog reconstruction.
+    const relight=phase && PHASES[phase],saved=relight?{
+      phase:this.phase,from:this.phaseFrom,to:this.phaseTo,t:this.phaseT,ph:{...this.ph,dir:this.ph.dir.slice()},
+      sky:this.sky,hook:this.hooks.sky,glow:this.glowK,
+      lights:this.pool.map(l=>[l,l.intensity]),
+    }:null;
+    if(saved){
+      this.hooks.sky=null;this.setPhase(phase,true);
+      const ratio=this.ph.lamp/Math.max(.01,saved.ph.lamp);
+      for(const [light,intensity] of saved.lights)light.intensity=intensity*ratio;
+      this.glowK=this.glowOn && this.composer?Math.max(0,(this.ph.night-.2)/.8):0;
+    }
+    try {
+      this.draw();
+      const source=this.r.domElement;
+      if(!maxPixels)return source.toDataURL('image/png');
+      // Card previews crop the real photo to the room, excluding the large
+      // mobile sky margins. Full-size photos (no maxPixels) stay unchanged.
+      const bounds=new THREE.Box3().setFromObject(this.shell);
+      for(const obj of this.objs.values())if(obj.visible)bounds.union(new THREE.Box3().setFromObject(obj));
+      const pixels=new THREE.Box2();
+      for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
+        const p=new THREE.Vector3(x,y,z).project(this.cam);
+        pixels.expandByPoint(new THREE.Vector2((p.x+1)*source.width/2,(1-p.y)*source.height/2));
+      }
+      const pad=14*this.r.getPixelRatio(),x=Math.max(0,Math.floor(pixels.min.x-pad)),y=Math.max(0,Math.floor(pixels.min.y-pad));
+      const w=Math.max(1,Math.min(source.width,pixels.max.x+pad)-x),h=Math.max(1,Math.min(source.height,pixels.max.y+pad)-y);
+      const scale=Math.min(1,maxPixels/Math.max(w,h)),canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+      canvas.getContext('2d').drawImage(source,x,y,w,h,0,0,canvas.width,canvas.height);
+      return canvas.toDataURL('image/png');
+    }
+    finally {
+      if(saved){
+        this.phase=saved.phase;this.phaseFrom=saved.from;this.phaseTo=saved.to;this.phaseT=saved.t;
+        this.applyPhase(saved.t);Object.assign(this.ph,saved.ph);this.placeSun();
+        this.sky=saved.sky;this.hooks.sky=saved.hook;this.glowK=saved.glow;
+        for(const [light,intensity] of saved.lights)light.intensity=intensity;
+        this.draw(); // Keep the displayed canvas in its original daypart.
+      }
+      restore();
+    }
   };
   R.ensureThumbs = function () {
     if (!this.thumbR) {

@@ -166,6 +166,8 @@ function startLofiRooms() {
     },
     lift() { return liftNow; },
   });
+  const roomSnapshots=LRRoomViews.createSnapshots({store,hash:LRVillage.decorHash});
+  let snapshotRoomId=null;
   view.activity = activity;
   view.fx.activity = view.glowFx.activity = activity;
   view.glowOn = meta.glow !== false;
@@ -244,7 +246,7 @@ function startLofiRooms() {
     notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),
     openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});else if(row.target==='garden')gardenUI.open(row.focus.id);},
   });
-  const spaceSources=()=>({CAT:Object.fromEntries(Object.entries(CAT).map(([id,C])=>[id,{name:C.name}])),letters:letters.model.list().map(l=>({id:l.id,title:l.title})),scenes:files.list('Scenes').map(f=>({id:f.id,title:f.title})),ideas:roomTools.homeState.ideas});
+  const spaceSources=()=>({rooms:rooms.map(r=>({id:r.id,name:r.id===meta.current?room.name:r.name})),CAT:Object.fromEntries(Object.entries(CAT).map(([id,C])=>[id,{name:C.name}])),letters:letters.model.list().map(l=>({id:l.id,title:l.title})),scenes:files.list('Scenes').map(f=>({id:f.id,title:f.title})),ideas:roomTools.homeState.ideas});
   function navigateSpace(target,item) {
     closeSheets();
     if(target==='settings'){store.set('lr.menuTab','Settings');renderMenu();openSheet();}
@@ -252,6 +254,7 @@ function startLofiRooms() {
     else if(target==='merchant')openShop();
     else if(target==='tea')roomToolsUI.open('tea',room.items.find(i=>i.t==='kettle')?.id || null);
     else if(target==='mailbox')roomToolsUI.open('mailbox',room.items.find(i=>['mailbox','letterbox'].includes(i.t))?.id || null);
+    else if(target==='Rooms')switchRoom(item.id);
     else if(target==='Ideas')roomToolsUI.open('ideas',room.items.find(i=>i.t==='ideajar')?.id || null);
     else if(target==='Letters'){const f=letters.model.list().find(l=>l.id===item.id);if(f)dashboard.openFile('Letters',f);}
     else if(target==='Scenes'){const f=files.list('Scenes').find(f=>f.id===item.id);if(f)dashboard.openFile('Scenes',f);}
@@ -519,7 +522,7 @@ function startLofiRooms() {
     if (undo.length > 40) undo.shift();
   }
   function changed() {
-    view.sync(room); driftPaper?.update();villageView?.refresh();
+    view.sync(room); snapshotRoomId=meta.current; driftPaper?.update();villageView?.refresh();
     dirty = true;
     checkRoomMoments();
     updateSaveChip();
@@ -1798,6 +1801,7 @@ function startLofiRooms() {
     updateHeader();
     if (!quiet) toast(`<span>${PHASE_NAMES[p]}${meta.realtime ? '' : ' · Settings has “Follow the clock”'}</span>`, 1300);
     setTimeout(checkRoomMoments, 2600);
+    setTimeout(()=>villageView?.refresh(),2600);
   }
   $('#bTime').onclick = () => { meta.realtime = false; setPhase(PHASE_ORDER[(PHASE_ORDER.indexOf(meta.phase) + 1) % 4]); Sound.turn(); };
   // Background weather supports clear, rain, storm and snow.
@@ -2417,17 +2421,18 @@ function startLofiRooms() {
     rooms = rooms.filter(x => x.id !== id);
     if(store.get('lr.mainBedroom',null)===id)store.del('lr.mainBedroom');
     store.del('lr.room.' + id);
+    roomSnapshots.remove(id);
     if (id === meta.current) { loadRoom(rooms[0].id); baseSig = sig(); undo.length = 0; changed(); save(); updateHeader(); }
     saveIndex(); saveMeta(); renderMenu();
   }
   function roomVillage(parent) {
     const newFlow=()=>{const sec=[...$('#sheetBody').querySelectorAll('h2')].find(e=>/Start a new room/.test(e.textContent));if(sec){sec.scrollIntoView({behavior:view.reducedMotion?'auto':'smooth',block:'start'});sec.classList.remove('flash');void sec.offsetWidth;sec.classList.add('flash');}Sound.blip();};
-    villageView=LRVillage.mount({parent,CAT,current:()=>meta.current,
+    villageView=LRRoomViews.mount({parent,store,CAT,current:()=>meta.current,phase:()=>meta.phase,
       rooms:()=>{
-        const list=rooms.slice().sort((a,b)=>a.id-b.id).map(r=>({...((r.id===meta.current?room.serialize():store.get('lr.room.'+r.id,null)) || {items:[]}),id:r.id,name:r.id===meta.current?room.name:r.name}));
+        const list=rooms.slice().sort((a,b)=>a.id-b.id).map(r=>({...r,...((r.id===meta.current?room.serialize():store.get('lr.room.'+r.id,null)) || {items:[]}),id:r.id,name:r.id===meta.current?room.name:r.name}));
         if(!isSaved())list.push({...room.serialize(),id:meta.current,draft:true});
         return list;
-      },thumb:d=>view.roomThumb(d),travel:r=>{closeSheets();if(r.id!==meta.current)switchRoom(r.id);},
+      },thumb:d=>d.id===meta.current?captureRoomSnapshot(true):roomSnapshots.get(d.id,meta.phase)?.url,travel:r=>{closeSheets();if(r.id!==meta.current)switchRoom(r.id);},
       save:()=>{commit();renderMenu();},remove:deleteRoom,newRoom:newFlow});
   }
   function homeSearch() { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace}); }
@@ -2443,6 +2448,7 @@ function startLofiRooms() {
     body.innerHTML = '';
     const sections = LRDashboard.menu(body, store, closeSheets);
     const spotlight=homeSearch();body.insertBefore(spotlight,body.querySelector('[role=tablist]'));
+    spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     todayUI.mount(target,{greetingHost:body});
@@ -2772,11 +2778,21 @@ function startLofiRooms() {
   let dirty = fresh || (isSaved() && isEdited());
   function saveMeta() { store.set('lr.meta', meta); }
   function saveIndex() { store.set('lr.rooms', rooms); }
+  // One shared saved-photo cache for room cards and future room pickers. Use the
+  // photo capture path (which hides private tool surfaces), never redraw decor.
+  function captureRoomSnapshot(force=false) {
+    if(!view.room || view.room!==room || snapshotRoomId!==meta.current || view.capturing)return null;
+    if(force)return view.snapshot(360);
+    return roomSnapshots.capture({...room.serialize(),id:meta.current},meta.phase,()=>{
+      return Object.fromEntries(['morning','day','evening','night'].map(p=>[p,view.snapshot(240,p)]));
+    },force);
+  }
   // Saved every three real seconds; also flushed before travel, on pause and on close.
   function save() {
     if (care) care.flush();
     if(isSaved()){
       store.set('lr.room.'+meta.current,room.serialize());
+      captureRoomSnapshot();
       const entry=rooms.find(r=>r.id===meta.current);entry.name=room.name;entry.n=room.items.filter(i=>!i.visitor).length;
       baseSig=sig();saveIndex();updateSaveChip();
     }

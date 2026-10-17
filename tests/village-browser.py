@@ -1,5 +1,5 @@
-"""npm run build && python3 tests/village-browser.py"""
-import functools,json
+"""npm run build && python3 tests/village-browser.py. Native Rooms layouts replace the village."""
+import functools
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 from threading import Thread
@@ -12,44 +12,59 @@ Thread(target=server.serve_forever,daemon=True).start()
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(reduced_motion='reduce',viewport={'width':390,'height':844})
- context.add_init_script('''if(!sessionStorage.villageFixture){sessionStorage.villageFixture='true';const rooms=[{id:101,name:'Little bedroom'},{id:102,name:'Tea room'},{id:103,name:'Reading nook'},{id:104,name:'Garden plot'}];
- for(const [k,v] of Object.entries({'lr.intro':true,'lr.mode':'explore','lr.rooms':rooms.map(r=>({...r,n:0})),'lr.meta':{current:101,realtime:false,phase:'day',dreamy:false,visitors:false,mischief:false,calmPerformance:true}}))localStorage.setItem(k,JSON.stringify(v));
- for(let i=0;i<rooms.length;i++)localStorage.setItem('lr.room.'+rooms[i].id,JSON.stringify({v:1,name:rooms[i].name,n:10,wall:{style:'paint',color:i},floor:{style:'oak'},items:[]}));}''')
- context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort());page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(25000)
+ context.add_init_script('''if(!sessionStorage.roomsFixture){sessionStorage.roomsFixture='true';const rows=[{id:101,name:'Little bedroom',floorLevel:'Upstairs'},{id:102,name:'Tea room',floorLevel:'Ground floor'},{id:103,name:'Reading nook',floorLevel:'Upstairs'}];
+ for(const [k,v] of Object.entries({'lr.intro':true,'lr.rooms':rows,'lr.meta':{current:101,realtime:false,phase:'day',visitors:false,mischief:false,calmPerformance:true}}))localStorage.setItem(k,JSON.stringify(v));
+ for(let i=0;i<rows.length;i++){const r={v:1,name:rows[i].name,n:10,wall:{style:'paint',color:i},floor:{style:'oak'},items:[]};localStorage.setItem('lr.room.'+rows[i].id,JSON.stringify(r));}}''')
+ context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort());page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(20000)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.view')
- # Saved-room fixtures include tabletop, wall furniture, open plots and private
- # surfaces. Use the real placement model so the thumbnail follows its transforms.
- page.evaluate('''() => {const a=__lr,C=LR.CAT,configs=[['bed','gamingdesk','typewriter','filecab'],['talaveratable','kettle','minifridge'],['libcase','armchair','whiteboard'],['sakura','terrarium']];
- for(let i=0;i<a.rooms.length;i++){const r=new LR.Room();r.name=a.rooms[i].name;r.wall={style:i===3?'none':'paint',color:i};r.floor={style:'oak'};const types=configs[i].filter(t=>C[t]);for(let j=0;j<types.length;j++){const it=r.make(types[j],C[types[j]].kind==='wall'?{k:0,u:2,e:2,c:0}:{x:(j%2)*4+1,z:Math.floor(j/2)*4+1,c:0});r.add(it);
- if(types[j]==='typewriter'){const desk=r.items.find(i=>i.t==='gamingdesk');if(desk)Object.assign(it,{p:desk.id,lx:0,lz:0});}}
- localStorage.setItem('lr.room.'+a.rooms[i].id,JSON.stringify(r.serialize()));}
- a.room.load(JSON.parse(localStorage.getItem('lr.room.101')));a.changed();
- window.thumbCalls=0;const fn=a.view.roomThumb;a.view.roomThumb=function(...args){window.thumbCalls++;return fn.apply(this,args);};}''')
- def menu():page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click()
- def esc():page.keyboard.press('Escape')
- menu();assert page.locator('.stackwrap,.isostage,.slice').count()==0;assert page.locator('.village-room').count()==4;assert page.locator('.village-room.here').inner_text().startswith('Little bedroom');assert 'you are here' in page.locator('.village-room.here').inner_text()
- assert page.locator('.village-bridge').count()==0
- for name in ['Little bedroom','Tea room','Reading nook','Garden plot']:assert page.get_by_role('button',name=name,exact=False).count()>=1
- page.wait_for_function('document.querySelector(".village-room img")?.naturalWidth===240')
- # Laziness: the bottom-most diorama is outside the scroll viewport and is not rendered.
- assert page.locator('.village-room').last.locator('img').get_attribute('src') is None
- for card in page.locator('.village-room').all():card.scroll_into_view_if_needed();card.locator('img').wait_for(state='visible');page.wait_for_function('id=>document.querySelector(`[data-room-id="${id}"] img`).naturalWidth===240',arg=card.get_attribute('data-room-id'))
- assert page.locator('.village-room.ready').count()==4
- print('lazy dioramas rendered',flush=True)
- result=page.evaluate('''() => {const v=__lr.view,r={...__lr.room.serialize(),id:101};const a=v.roomThumb(r),n=v.thumbR.info.render.frame;const b=v.roomThumb(structuredClone(r));if(a!==b||v.thumbR.info.render.frame!==n)throw Error('Not cached');r.items[0].c=1;const c=v.roomThumb(r);if(v.thumbR.info.render.frame!==n+1||a===c)throw Error('Decor not regenerated');const state=[v.size(),v.room,v.root.children.length];v.roomThumb({...r,id:500,n:24});if(v.size()!==state[0]||v.room!==state[1]||v.root.children.length!==state[2])throw Error('Live room mutated');const oldView=LR.viewNow,windowType=Object.keys(LR.CAT).find(t=>LR.CAT[t].dyn&&LR.CAT[t].kind==='wall');const windowRoom={...r,id:700,items:[{id:1,t:windowType,c:0,on:true,k:0,u:2,e:1,seed:123}]};const city=v.roomThumb({...windowRoom,view:'city'}),forest=v.roomThumb({...windowRoom,view:'forest'});if(city===forest||LR.viewNow!==oldView)throw Error('Window view polluted');v.thumb(r.items[0]);if(v.thumbR.domElement.width!==120)throw Error('Picker size polluted');return true;}''');assert result
- # Link/unlink updates a currently open map through changed(), not only on reopen.
- page.evaluate('''() => {const a=__lr,t=Object.keys(LR.CAT).find(k=>LR.CAT[k].tap==='portal'&&LR.CAT[k].kind==='floor');window.testDoor=a.room.add(a.room.make(t,{x:7,z:7,link:102}));testDoor.link=102;a.changed();}''');page.wait_for_function('document.querySelectorAll(".village-bridge").length===1')
- assert page.locator('.village-bridge').get_attribute('data-from')=='101';assert page.locator('.village-bridge').get_attribute('data-to')=='102'
- page.evaluate('testDoor.link=0;__lr.changed()');page.wait_for_function('document.querySelectorAll(".village-bridge").length===0');page.evaluate('testDoor.link=102;__lr.changed()');page.wait_for_function('document.querySelectorAll(".village-bridge").length===1')
- for width in [320,390,960]:
-  page.set_viewport_size({'width':width,'height':844});page.wait_for_timeout(300)
-  assert page.evaluate('''() => {const cards=[...document.querySelectorAll('.village-room')].map(e=>e.getBoundingClientRect());return cards.every((a,i)=>cards.slice(i+1).every(b=>a.right<=b.left+.1||b.right<=a.left+.1||a.bottom<=b.top+.1||b.bottom<=a.top+.1)) && document.documentElement.scrollWidth<=innerWidth;}''')
-  page.locator('.village-room').first.scroll_into_view_if_needed();page.screenshot(path=f'/tmp/village-day-{width}.png')
- page.locator('[data-room-id="102"] .village-visit').click();page.wait_for_function('__lr.meta.current===102');assert not page.locator('#sheet').evaluate("e=>e.classList.contains('open')");assert not page.locator('#lvSave').count()
- menu();assert page.locator('[data-room-id="102"]').evaluate("e=>e.classList.contains('here')");assert page.locator('.village-bridge').count()==1
- page.evaluate("__lr.setPhase('night',true);__lr.view.setPhase('night',true)");page.set_viewport_size({'width':390,'height':844});page.locator('[data-room-id="102"]').scroll_into_view_if_needed();page.screenshot(path='/tmp/village-night-390.png');esc();assert not errors,errors
- # Reopening the map restores the current room's cached picture.
- menu();page.locator('[data-room-id="102"]').scroll_into_view_if_needed();page.wait_for_function('document.querySelector(`[data-room-id="102"] img`).naturalWidth===240');esc();assert not errors,errors
- print('PASS: cached 240px room decor, invalidation, lazy loading, unchanged live room/picker, door bridges/update/unlink, non-overlap at desktop/mobile, real travel and day/night/Escape without errors',flush=True)
+ # Distinct real decor proves previews capture each room, rather than the scene
+ # that happened to be on the canvas just before a room switch.
+ page.evaluate('''()=>{const a=__lr;for(const [id,type] of [[101,'bed'],[102,'armchair'],[103,'floorlamp']]){const r=new LR.Room();r.load(JSON.parse(localStorage.getItem('lr.room.'+id)));r.add(r.make(type,{x:3,z:3,on:true}));localStorage.setItem('lr.room.'+id,JSON.stringify(r.serialize()));}a.room.load(JSON.parse(localStorage.getItem('lr.room.101')));a.changed();}''')
+ def menu():
+  page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click()
+ def mode(name):page.get_by_role('button',name=name,exact=True).click()
+ def travel(id):
+  page.locator(f'.rooms-grid [data-room-id="{id}"] .rooms-visit').click();page.wait_for_function('id=>__lr.meta.current===id',arg=id)
+ menu();assert page.locator('.rooms-card').count()==3;assert page.locator('.village-map').count()==0
+ assert page.get_by_role('button',name='Diorama grid',exact=True).get_attribute('aria-pressed')=='true'
+ page.wait_for_function('document.querySelector(".rooms-card.here img")?.naturalWidth>0')
+ # Unsaved historic rooms invite a visit instead of inventing a preview. Visiting
+ # and leaving saves the real renderer PNG, shared across all three layouts.
+ assert page.locator('[data-room-id="102"] .rooms-preview-hint').count()==1
+ travel(102);menu();travel(103);menu();travel(101);menu()
+ page.wait_for_function('[...document.querySelectorAll(".rooms-grid img")].every(i=>i.naturalWidth>0)')
+ assert page.evaluate('Object.keys(JSON.parse(localStorage.getItem("lr.roomSnapshots"))).length')==3
+ assert page.evaluate('''() => {const v=__lr.view,s=()=>JSON.stringify([v.phase,v.phaseT,v.ph,v.pool.map(l=>l.intensity),v.sun.color.getHex(),v.sun.intensity,v.r.toneMappingExposure,v.env,v.sky]),before=s();const day=v.snapshot(120,'day'),night=v.snapshot(120,'night');if(before!==s())throw Error('Snapshot altered live lighting');return day!==night && JSON.parse(localStorage.getItem('lr.roomSnapshots'))['102'].shots.day!==JSON.parse(localStorage.getItem('lr.roomSnapshots'))['102'].shots.night;}''')
+ assert page.evaluate('''()=>{const c=JSON.parse(localStorage.getItem('lr.roomSnapshots'));return Object.values(c).every(e=>Object.keys(e.shots).length===4) && new Set(Object.values(c).map(e=>e.shots.day)).size===3;}''')
+ assert page.get_by_label('Main bedroom',exact=True).count()==1
+ # Existing portal routing is preserved; map connectors follow actual linked doors.
+ page.evaluate('''() => {const a=__lr,t=Object.keys(LR.CAT).find(k=>LR.CAT[k].tap==='portal'&&LR.CAT[k].kind==='floor');window.testDoor=a.room.add(a.room.make(t,{x:7,z:7}));testDoor.link=102;a.changed();}''')
+ mode('House map');assert page.locator('.rooms-connectors path').count()==1
+ assert page.locator('.rooms-floor-heading').all_text_contents()==['Upstairs','Ground floor']
+ page.evaluate('testDoor.link=0;__lr.changed()');assert page.locator('.rooms-connectors path').count()==0
+ page.evaluate('testDoor.link=102;__lr.changed()');assert page.locator('.rooms-connectors path').count()==1
+ # Shared spotlight filters every view without introducing another input.
+ search=page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True)
+ for name in ['Diorama grid','House map','Showcase']:
+  mode(name);search.fill('Tea room');assert page.locator('.rooms-card').count()==1;assert page.locator('.rooms-card').get_attribute('data-room-id')=='102';search.fill('')
+ mode('Showcase');page.locator('.rooms-list [data-room-id="102"] .rooms-visit').click();assert page.locator('.rooms-hero').get_attribute('data-room-id')=='102';assert page.get_by_role('button',name='Step inside',exact=True).is_visible()
+ page.get_by_role('button',name='Step inside',exact=True).click();page.wait_for_function('__lr.meta.current===102');menu();assert page.locator('.rooms-views').get_attribute('data-view')=='showcase';assert page.get_by_role('button',name='Step inside',exact=True).count()==0
+ page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');menu();assert page.locator('.rooms-views').get_attribute('data-view')=='showcase'
+ for phase in ['day','night']:
+  page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
+  for width in [320,390,1280]:
+   page.set_viewport_size({'width':width,'height':844})
+   for name in ['Diorama grid','House map','Showcase']:
+    mode(name);page.wait_for_timeout(200)
+    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+    assert page.locator('.rooms-content').evaluate('e=>e.scrollWidth<=e.clientWidth+1')
+    if width<600 and name=='Diorama grid':assert page.locator('.rooms-grid').evaluate('e=>getComputedStyle(e).gridTemplateColumns.split(" ").length')==1
+    if width<600 and name=='Showcase':assert page.locator('.rooms-showcase').evaluate('e=>getComputedStyle(e).gridTemplateColumns.split(" ").length')==1
+    if width==390:page.locator('.rooms-views').scroll_into_view_if_needed();page.screenshot(path=f'/tmp/rooms-{phase}-{name.split()[0]}.png')
+ page.keyboard.press('Escape');menu();mode('Diorama grid');page.locator('.rooms-new').click();assert page.locator('details').count()>0
+ # Snapshot caches and view preference are private; room serialization is unchanged.
+ decoded=page.evaluate('async()=>__lr.readCode(await __lr.roomCode())');assert 'roomSnapshots' not in str(decoded);assert 'roomsView' not in str(decoded)
+ assert not errors,errors
+ print('PASS: three native layouts, saved real PNGs, lazy preview loading, shared search, grouped floors and live portal connectors, travel, preference reload, bedroom picker, new-room flow, day/night mobile/desktop and no console errors',flush=True)
  browser.close()
 server.shutdown()
