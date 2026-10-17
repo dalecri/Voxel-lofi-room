@@ -48,3 +48,57 @@ body.night .idea-jar{--idea-amber:#e4bf68}
 #sheetBody:has(.pixel-maker){width:min(920px,calc(100% - 32px));max-width:none}.pixel-maker{clear:both;display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:20px;align-items:start}.pixel-drawing{min-width:0}.roomtool .pixel-grid{aspect-ratio:1;border:3px solid var(--ink-dim);border-radius:10px;image-rendering:pixelated;touch-action:none;margin:0;box-sizing:border-box}.pixel-grid:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.pixel-device{background:var(--chip);border:3px solid var(--line);border-radius:24px;padding:14px;box-shadow:inset 0 4px 0 #ffffff35,0 5px 0 var(--line);min-width:0}.pixel-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}.pixel-toolbar.three{grid-template-columns:repeat(3,minmax(0,1fr))}.roomtool .pixel-control{display:grid;place-items:center;margin:0;min-height:46px;border:2px solid var(--line);border-radius:12px;background:var(--panel-solid);color:var(--ink);font:800 12px Nunito,sans-serif;padding:7px}.roomtool .pixel-control[aria-pressed=true]{background:var(--panel-solid);color:var(--ink);outline:2px solid var(--accent);outline-offset:1px}.pixel-control:disabled{opacity:.35;cursor:default}.pixel-control:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.pixel-brush-square{display:block;background:currentColor;border-radius:2px}.roomtool .pixel-control[aria-label="Clear page"]{background:#ed776633;color:var(--ink)}.pixel-dimensions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.pixel-palette{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:16px 0}.roomtool .pixel-color,.roomtool .pixel-color[aria-pressed=true]{background:var(--pixel-color);min-height:42px;border:2px solid #3b31454a}.roomtool .pixel-color[aria-pressed=true]{outline:3px solid var(--ink);outline-offset:2px;box-shadow:inset 0 0 0 2px var(--panel-solid)}.pixel-current{display:block;border:3px solid var(--line);border-radius:12px;min-height:46px;box-shadow:inset 0 0 0 3px var(--panel-solid)}.pixel-printer-slot{height:10px;border:3px solid var(--ink-dim);border-radius:6px;background:var(--ink);margin:18px 0 0}.pixel-receipt{padding:12px;background:#fff9ed;border:1px solid #ddcfb8;border-top:0;color:#44382d;transform-origin:top;overflow:hidden;box-shadow:0 4px 6px #0002}.pixel-receipt img{width:100%;display:block;image-rendering:pixelated;background:repeating-conic-gradient(#fff9ed 0% 25%,#efe5d7 0% 50%) 50% / 12px 12px}.pixel-print-actions{display:grid;gap:5px;margin-top:10px}.roomtool .pixel-print-actions button{margin:0;color:#44382d;background:#efe5d7}.pixel-receipt.printing{animation:pixel-print .65s ease-out}.pixel-print-actions[hidden],.pixel-receipt[hidden]{display:none}@keyframes pixel-print{from{clip-path:inset(0 0 100%);transform:translateY(-12px);opacity:.6}to{clip-path:inset(0);transform:none;opacity:1}}
 @media(max-width:650px){.pixel-maker{grid-template-columns:minmax(0,1fr);gap:12px}.pixel-device{max-width:360px;box-sizing:border-box;width:100%;margin:auto}.pixel-palette{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.pixel-receipt{animation:none!important}}
+
+/* Letters to future you: a retro pixel email window */
+.mailwin { --mw-ink:#2a2628; --mw-paper:#f5f2ef; --mw-chrome:#dcd8de; --mw-font:'VT323',ui-monospace,'Courier New',monospace;
+  margin:6px 2px 18px; background:var(--mw-paper); color:var(--mw-ink); border:2px solid var(--mw-ink); border-radius:3px; box-shadow:4px 4px 0 var(--mw-ink); font-family:var(--mw-font); image-rendering:pixelated; }
+.mailwin-bar { display:flex; align-items:center; gap:8px; height:30px; padding:0 8px; background:var(--mw-chrome); border-bottom:2px solid var(--mw-ink); }
+.mailwin-bar i { display:block; flex:none; }
+.mailwin-stripes { flex:1 1 auto !important; min-width:12px; height:14px; background:repeating-linear-gradient(180deg,#8f8a95 0 2px,transparent 2px 4px); }
+.mailwin-close, .mailwin-zoom, .mailwin-shade { width:16px; height:16px; border:2px solid var(--mw-ink); background:var(--mw-paper); box-sizing:border-box; }
+.mailwin-zoom { background:linear-gradient(var(--mw-ink),var(--mw-ink)) 2px 2px / 7px 7px no-repeat, var(--mw-paper); }
+.mailwin-shade { background:repeating-linear-gradient(180deg,transparent 0 3px,var(--mw-ink) 3px 5px) 2px 1px / 8px 11px no-repeat, var(--mw-paper); }
+.mailwin-name { display:flex; align-items:center; gap:6px; font:400 21px/1 var(--mw-font); color:#6a6370; letter-spacing:.02em; white-space:nowrap; }
+.mailwin-envelope { width:18px; height:13px; border:2px solid var(--mw-ink); background:linear-gradient(35deg,transparent 46%,var(--mw-ink) 46% 56%,transparent 56%) left/50% 100% no-repeat, linear-gradient(-35deg,transparent 46%,var(--mw-ink) 46% 56%,transparent 56%) right/50% 100% no-repeat, #f2c56a; box-sizing:border-box; }
+.mailwin-head { padding:10px 12px 8px; border-bottom:2px solid var(--mw-ink); }
+.mailwin-row { display:grid; grid-template-columns:88px minmax(0,1fr); align-items:center; gap:6px; min-height:32px; }
+.mailwin-key { font:400 21px/1 var(--mw-font); }
+.roomtool .mailwin input.mailwin-val { width:100%; min-width:0; border:0; border-radius:0; padding:3px 4px; background:transparent; color:var(--mw-ink); font:400 21px/1.15 var(--mw-font); text-overflow:ellipsis; cursor:text; box-shadow:none; }
+.roomtool .mailwin input.mailwin-val:hover { background:#ece7f0; }
+.roomtool .mailwin input.mailwin-val:focus { outline:2px dotted var(--mw-ink); outline-offset:-2px; background:#fff; }
+.mailwin-page { display:grid; grid-template-columns:minmax(0,1fr) 18px; }
+.roomtool .mailwin-body { min-height:210px; border:0; border-radius:0; padding:14px 12px; background:var(--mw-paper); color:var(--mw-ink); font:400 24px/1.45 var(--mw-font); resize:vertical; }
+.roomtool .mailwin-body:focus { outline:2px dotted var(--mw-ink); outline-offset:-4px; }
+.roomtool .mailwin-body[readonly] { color:#5a5258; }
+.mailwin-scroll { display:flex; flex-direction:column; border-left:2px solid var(--mw-ink); background:#ebe7ee; }
+.mailwin-scroll i { display:block; }
+.mailwin-scroll .thumb { flex:1; }
+.mailwin-scroll .up, .mailwin-scroll .down { height:18px; border-top:2px solid var(--mw-ink); background:#f5f2ef; position:relative; }
+.mailwin-scroll .up { border-top:0; border-bottom:2px solid var(--mw-ink); }
+.mailwin-scroll .up::after, .mailwin-scroll .down::after { content:''; position:absolute; left:4px; top:5px; border:5px solid transparent; }
+.mailwin-scroll .up::after { border-bottom:6px solid #9a94a0; top:1px; }
+.mailwin-scroll .down::after { border-top:6px solid #9a94a0; top:6px; }
+.mailwin-foot { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:10px 12px; border-top:2px solid var(--mw-ink); background:#efebf1; }
+.mailwin-due { display:flex; align-items:center; gap:8px; font:400 20px/1 var(--mw-font); }
+.roomtool .mailwin-due input { width:auto; padding:5px 6px; border:2px solid var(--mw-ink); border-radius:0; background:#fff; color:var(--mw-ink); font:400 18px/1 var(--mw-font); }
+.mailwin-hint { flex-basis:100%; margin:0; font:400 17px/1.3 var(--mw-font); color:#6a6370; }
+.mailwin-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:10px; padding:10px 12px 14px; border-top:2px solid var(--mw-ink); }
+.mailwin-saved { margin:0 auto 0 0; font:400 18px/1.1 var(--mw-font); color:#6a6370; }
+.mailwin-saved:empty { display:none; }
+.roomtool .mailwin-btn { margin:0; padding:9px 16px 8px; border:2px solid var(--mw-ink); border-radius:0; background:var(--mw-paper); color:var(--mw-ink); box-shadow:3px 3px 0 var(--mw-ink); font:400 21px/1 var(--mw-font); letter-spacing:.03em; cursor:pointer; transition:transform .05s, box-shadow .05s; }
+.roomtool .mailwin-btn:hover { background:#fff; }
+.roomtool .mailwin-btn:active { transform:translate(2px,2px); box-shadow:1px 1px 0 var(--mw-ink); }
+.roomtool .mailwin-btn:focus-visible { outline:2px dotted var(--mw-ink); outline-offset:3px; }
+.roomtool .mailwin-send { background:#f2c56a; }
+.roomtool .mailwin-send:hover { background:#f6d48a; }
+.roomtool .mailwin-small { padding:7px 10px 6px; font-size:18px; box-shadow:2px 2px 0 var(--mw-ink); }
+.mailwin-listhead { margin:20px 2px 6px; font:400 21px/1 'VT323',ui-monospace,'Courier New',monospace; }
+.roomtool .mailwin-letter { margin:10px 2px; padding:10px 12px 8px; border:2px solid #2a2628; border-radius:2px; box-shadow:3px 3px 0 #2a262833; background:#fbf8f4; color:#2a2628; }
+.roomtool .mailwin-letter .roomtool-title { margin:0 0 4px; font:400 22px/1.2 'VT323',ui-monospace,'Courier New',monospace; }
+.roomtool .mailwin-letter .muted { font:400 17px/1.2 'VT323',ui-monospace,monospace; color:#6a6370; }
+.roomtool .mailwin-letter button { margin:6px 8px 2px 0; padding:6px 12px 5px; border:2px solid #2a2628; border-radius:0; background:#f5f2ef; color:#2a2628; box-shadow:2px 2px 0 #2a2628; font:400 18px/1 'VT323',ui-monospace,monospace; }
+.roomtool .mailwin-letter button:active { transform:translate(1px,1px); box-shadow:1px 1px 0 #2a2628; }
+.mailwin-readhead { display:grid; grid-template-columns:auto minmax(0,1fr); gap:4px 14px; margin:0 0 12px; padding:10px 12px; border:2px solid #2a2628; background:#f5f2ef; color:#2a2628; font:400 19px/1.25 'VT323',ui-monospace,'Courier New',monospace; }
+.mailwin-readhead dt { color:#6a6370; } .mailwin-readhead dd { margin:0; overflow-wrap:anywhere; }
+@media (max-width:420px){ .mailwin-row { grid-template-columns:78px minmax(0,1fr); } .mailwin-key, .roomtool .mailwin input.mailwin-val { font-size:20px; } .roomtool .mailwin-body { font-size:22px; min-height:190px; } }
+@media (prefers-reduced-motion:reduce){ .roomtool .mailwin-btn { transition:none; } }

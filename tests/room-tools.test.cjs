@@ -57,3 +57,17 @@ test('idea cards present newest-first, cycle, reveal the next after removal and 
 test('idea stack limits peeking cards, preserves full text and uses the saved added date',()=>{
  const f=fixture(),m=f.model;for(let i=0;i<8;i++)m.addIdea('PRIVATE_LONG_IDEA\n'+('A thought. '.repeat(100))+i);const c=T.ideaCards(m.state.ideas);assert.equal(c.count,8);assert.equal(c.behind.length,3);assert.equal(c.top.text,m.state.ideas[0].text);assert.ok(T.ideaAdded(c.top).startsWith('Added 15 '));assert.equal(T.ideaAdded({}),'Kept in your jar');
 });
+test('mailbox compose window: From defaults and persists, Subject becomes the envelope title, drafts round-trip and Send clears them',()=>{
+ const f=fixture(),m=f.model;let c=m.compose();
+ assert.equal(c.from,'crisdalessio@gmail.com');assert.equal(c.to,'Future me');assert.equal(c.subject,'A note for future me');assert.equal(c.body,'');assert.equal(c.deliverOn,'2026-10-22');assert.equal(c.draft,false);
+ m.setFrom('  PRIVATE_SENDER@example.com ');assert.equal(f.reload().compose().from,'PRIVATE_SENDER@example.com');
+ const d={from:'PRIVATE_SENDER@example.com',to:'Me in winter',subject:'PRIVATE_SUBJECT',body:'PRIVATE_DRAFT\nsecond line',deliverOn:'2026-11-01'};m.saveDraft(d);
+ c=f.reload().compose();for(const k of Object.keys(d))assert.equal(c[k],d[k]);assert.equal(c.draft,true);
+ m.saveDraft({...d,deliverOn:'2026-10-15'});assert.equal(f.reload().compose().deliverOn,'2026-10-22');                 // a stale date falls back to a week out
+ for(const deliverOn of ['2026-10-15','2026-10-14'])assert.throws(()=>m.send({title:d.subject,body:d.body,deliverOn,from:d.from,to:d.to}),/future date/);
+ assert.ok(f.reload().mailDraft,'a failed send keeps the draft');
+ const l=f.reload().send({title:d.subject,body:d.body,deliverOn:'2026-10-16',from:d.from,to:d.to});
+ assert.equal(l.title,'PRIVATE_SUBJECT');assert.equal(l.from,'PRIVATE_SENDER@example.com');assert.equal(l.to,'Me in winter');assert.equal(l.status,'sealed');
+ const after=f.reload();assert.equal(after.mailDraft,null);c=after.compose();assert.equal(c.draft,false);assert.equal(c.from,'PRIVATE_SENDER@example.com');assert.equal(c.subject,'A note for future me');assert.equal(c.body,'');
+ assert.equal(f.reload().send({body:'x',deliverOn:'2026-10-20'}).title,'A note for future me');assert.deepEqual(Object.keys(f.data),['lr.tools']);
+});

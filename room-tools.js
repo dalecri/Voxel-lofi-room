@@ -9,6 +9,9 @@
     if(!Number.isSafeInteger(n)||n<=0)throw Error('Use a positive amount.');return n;
   }
   const amount=n=>(n/100).toFixed(2);
+  // The mailbox compose window's starting header, before any edit or saved draft.
+  const MAIL_DEFAULTS={from:'crisdalessio@gmail.com',to:'Future me',subject:'A note for future me'};
+  const clip=(v,n)=>String(v??'').slice(0,n);
   const TEA_PRESETS=[{name:'Green tea',minutes:2},{name:'Black tea',minutes:3},{name:'Herbal',minutes:5}];
   // Clockwise from twelve o'clock: 1 at 36 degrees, 10 at the top.
   function dialMinutes(x,y){const turn=(Math.atan2(x,-y)+Math.PI*2)%(Math.PI*2);return Math.round(turn/(Math.PI*2)*10)||10;}
@@ -26,15 +29,22 @@
     const old=store.get(KEY,{})||{},copy=a=>JSON.parse(JSON.stringify(a));
     const state={v:1,next:Number.isSafeInteger(old.next)&&old.next>0?old.next:1,
       mail:Array.isArray(old.mail)?old.mail:[],groceries:Array.isArray(old.groceries)?old.groceries:[],ideas:Array.isArray(old.ideas)?old.ideas:[],
-      lastIdea:old.lastIdea||null,tea:old.tea||null,goal:old.goal||null,deposits:Array.isArray(old.deposits)?old.deposits:[],pixel:Pixel.normalize(old.pixel),pixelPosters:old.pixelPosters&&typeof old.pixelPosters==='object'?old.pixelPosters:{}};
+      lastIdea:old.lastIdea||null,tea:old.tea||null,mailFrom:typeof old.mailFrom==='string'?old.mailFrom:null,mailDraft:old.mailDraft&&typeof old.mailDraft==='object'?old.mailDraft:null,goal:old.goal||null,deposits:Array.isArray(old.deposits)?old.deposits:[],pixel:Pixel.normalize(old.pixel),pixelPosters:old.pixelPosters&&typeof old.pixelPosters==='object'?old.pixelPosters:{}};
     const save=()=>{store.set(KEY,state);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(state))throw Error('Could not save on this device.');};
     const id=prefix=>prefix+'-'+now().getTime().toString(36)+'-'+state.next++;
-    function send({title,body,html='',letterhead='',deliverOn}){
+    function send({title,body,html='',letterhead='',deliverOn,from,to}){
       if(!validDate(deliverOn)||deliverOn<=day(now()))throw Error('Choose a future date.');
       if(!String(body||'').trim())throw Error('Put a little something in the envelope.');
-      const letter={id:id('mail'),title:String(title||'').trim()||'A note for future me',body:String(body||''),html:String(html),letterhead:String(letterhead),deliverOn,status:'sealed',read:false,notified:false,createdAt:now().getTime()};
-      state.mail.unshift(letter);save();return copy(letter);
+      const letter={id:id('mail'),title:String(title||'').trim()||MAIL_DEFAULTS.subject,body:String(body||''),html:String(html),letterhead:String(letterhead),deliverOn,
+        from:clip(String(from??'').trim()||MAIL_DEFAULTS.from,120),to:clip(String(to??'').trim()||MAIL_DEFAULTS.to,120),status:'sealed',read:false,notified:false,createdAt:now().getTime()};
+      state.mail.unshift(letter);state.mailFrom=letter.from;state.mailDraft=null;save();return copy(letter);   // sending clears the draft, keeps the sender
     }
+    // The compose window: a saved draft, and the sender remembered between letters.
+    function saveDraft(d){state.mailDraft={from:clip(d?.from,120),to:clip(d?.to,120),subject:clip(d?.subject,200),body:clip(d?.body,20000),deliverOn:clip(d?.deliverOn,10),savedAt:now().getTime()};save();return copy(state.mailDraft);}
+    function clearDraft(){if(state.mailDraft){state.mailDraft=null;save();}}
+    function setFrom(v){const from=clip(String(v??'').trim(),120);if(from===(state.mailFrom??MAIL_DEFAULTS.from))return;state.mailFrom=from||null;save();}
+    function compose(){const d=state.mailDraft,date=new Date(now());date.setDate(date.getDate()+7);
+      return {from:d?d.from:state.mailFrom??MAIL_DEFAULTS.from,to:d?d.to:MAIL_DEFAULTS.to,subject:d?d.subject:MAIL_DEFAULTS.subject,body:d?d.body:'',deliverOn:d&&validDate(d.deliverOn)&&d.deliverOn>day(now())?d.deliverOn:day(date),draft:!!d};}
     function poll(notices=true){
       let changed=false;const events={mail:[],tea:false},date=day(now()),time=now().getTime();
       for(const l of state.mail){
@@ -60,7 +70,7 @@
     function deposit(value,note=''){if(!state.goal)throw Error('Set a goal first.');const n=cents(value);if(!Number.isSafeInteger(total()+n))throw Error('That total is too large for this jar.');state.deposits.unshift({id:id('deposit'),cents:n,note:String(note).trim(),date:day(now())});save();}
     if('strokes' in old)save(); // Retire the private freehand format; pixel sketches start fresh.
     const pixels=Pixel.create({read:()=>state.pixel,write:g=>{const before=state.pixel;state.pixel=g;try{save();}catch(e){state.pixel=before;throw e;}}});
-    return {send,poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,pixels,pinPixel(room,id,grid){state.pixelPosters[`${room}:${id}`]=Pixel.normalize(grid);save();},pixelPoster(room,id){const g=state.pixelPosters[`${room}:${id}`];return g?Pixel.normalize(g):null;},total,
+    return {send,saveDraft,clearDraft,setFrom,compose,get mailDraft(){return state.mailDraft?copy(state.mailDraft):null;},poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,pixels,pinPixel(room,id,grid){state.pixelPosters[`${room}:${id}`]=Pixel.normalize(grid);save();},pixelPoster(room,id){const g=state.pixelPosters[`${room}:${id}`];return g?Pixel.normalize(g):null;},total,
       get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
   // Presentation order only. The model's newest-first list and lastIdea are untouched.
@@ -86,16 +96,32 @@
     function open(tool,id=anchor){anchor=id;
       if(tool==='mailbox')mailbox();else if(tool==='groceries')groceries();else if(tool==='ideas')ideas();else if(tool==='tea')tea();else if(tool==='savings')savings();else if(tool==='sketch')sketch();
     }
+    // A retro pixel email window: inline-editable header rows, a monospace body, Save draft and Send.
     function mailbox(){
       model.poll(false);shell('Letters to future you','A little time capsule, private to this device. It arrives on its date when you next visit your room.',root=>{
-        const form=document.createElement('form');root.appendChild(form);
-        const title=field(form,'Envelope title','text','A note for future me'),body=field(form,'Note to future me','textarea');body.rows=4;
-        const date=new Date();date.setDate(date.getDate()+7);const due=field(form,'Deliver on','date',day(date)),tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);due.min=day(tomorrow);due.required=true;
+        const c=model.compose(),win=document.createElement('form');win.className='mailwin';win.noValidate=false;win.setAttribute('aria-label','Compose a letter to future you');win.onsubmit=e=>e.preventDefault();root.appendChild(win);
+        const bar=document.createElement('div');bar.className='mailwin-bar';bar.setAttribute('aria-hidden','true');
+        bar.innerHTML='<i class="mailwin-close"></i><i class="mailwin-stripes"></i><b class="mailwin-name"><i class="mailwin-envelope"></i>Email</b><i class="mailwin-stripes"></i><i class="mailwin-zoom"></i><i class="mailwin-shade"></i>';win.appendChild(bar);
+        const head=document.createElement('div');head.className='mailwin-head';win.appendChild(head);
+        const row=(key,value,max)=>{const r=document.createElement('label');r.className='mailwin-row';const k=document.createElement('span');k.className='mailwin-key';k.textContent=key;const v=document.createElement('input');v.className='mailwin-val';v.type='text';v.value=value;v.maxLength=max;v.spellcheck=false;v.setAttribute('aria-label',key);r.append(k,v);head.appendChild(r);return v;};
+        const from=row('From',c.from,120),to=row('To',c.to,120),title=row('Subject',c.subject,200);
+        from.addEventListener('change',()=>run(()=>model.setFrom(from.value)));   // the sender is remembered even without a draft
+        const page=document.createElement('div');page.className='mailwin-page';win.appendChild(page);
+        const body=document.createElement('textarea');body.className='mailwin-body';body.value=c.body;body.rows=8;body.setAttribute('aria-label','Message');body.placeholder='Hey future me!';page.appendChild(body);
+        const scroll=document.createElement('div');scroll.className='mailwin-scroll';scroll.setAttribute('aria-hidden','true');scroll.innerHTML='<i class="up"></i><i class="thumb"></i><i class="down"></i>';page.appendChild(scroll);
+        const foot=document.createElement('div');foot.className='mailwin-foot';win.appendChild(foot);
+        const dueRow=document.createElement('label');dueRow.className='mailwin-due';const dueKey=document.createElement('span');dueKey.textContent='Deliver on';
+        const due=document.createElement('input');due.type='date';due.value=c.deliverOn;due.setAttribute('aria-label','Deliver on');const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);due.min=day(tomorrow);due.required=true;dueRow.append(dueKey,due);foot.appendChild(dueRow);
         let snapshot=null;const draft=letters.model.get();
-        if(draft)button(form,'Use my current typewriter letter',()=>{letters.flush();snapshot=letters.model.get();const template=document.createElement('template');template.innerHTML=LRLetters.sanitizeHTML(snapshot.body);body.value=template.content.textContent;body.readOnly=true;title.value=snapshot.title;text(form,'Typewriter formatting will travel inside this envelope.');});
-        button(form,'Seal for later',()=>{if(!form.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value});sound.rustle();mailbox();});
+        if(draft)button(foot,'Use my current typewriter letter',()=>{letters.flush();snapshot=letters.model.get();const template=document.createElement('template');template.innerHTML=LRLetters.sanitizeHTML(snapshot.body);body.value=template.content.textContent;body.readOnly=true;title.value=snapshot.title;text(foot,'Typewriter formatting will travel inside this envelope.','mailwin-hint');},'mailwin-btn mailwin-small');
+        const saved=document.createElement('p');saved.className='mailwin-saved';saved.setAttribute('role','status');if(c.draft)saved.textContent='Draft restored';
+        const actions=document.createElement('div');actions.className='mailwin-actions';win.appendChild(actions);actions.appendChild(saved);
+        const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,deliverOn:due.value});
+        button(actions,'Save draft',()=>{model.saveDraft(state());model.setFrom(from.value);const t=new Date();saved.textContent=`Draft saved ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;},'mailwin-btn');
+        button(actions,'Send',()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value});sound.rustle();mailbox();},'mailwin-btn mailwin-send');
+        if(model.state.mail.length){const h=document.createElement('p');h.className='mailwin-listhead';h.textContent='Your envelopes';root.appendChild(h);}
         for(const l of model.state.mail){
-          const row=document.createElement('section');row.className='roomtool-card';row.dataset.mail=l.id;row.dataset.mailStatus=l.status;root.appendChild(row);text(row,l.title,'roomtool-title');
+          const row=document.createElement('section');row.className='roomtool-card mailwin-letter';row.dataset.mail=l.id;row.dataset.mailStatus=l.status;root.appendChild(row);text(row,l.title,'roomtool-title');
           text(row,l.status==='sealed'?`Sealed until ${l.deliverOn}`:l.read?`Opened · ${l.deliverOn}`:`Arrived · ${l.deliverOn}`,'muted');
           if(l.status==='arrived')button(row,'Read letter',()=>{const letter=model.read(l.id);if(letter)readMail(letter);});
           removeButton(row,()=>{model.remove('mail',l.id);mailbox();});
@@ -103,6 +129,7 @@
       });
     }
     function readMail(l){shell(l.title,l.letterhead || `A note from your past self · ${l.deliverOn}`,root=>{
+      if(l.from||l.to){const head=document.createElement('dl');head.className='mailwin-readhead';for(const [k,v] of [['From',l.from],['To',l.to],['Subject',l.title]])if(v){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v;head.append(dt,dd);}root.appendChild(head);}
       const paper=document.createElement('article');paper.className='roomtool-letter';if(l.html)paper.innerHTML=LRLetters.sanitizeHTML(l.html);else paper.textContent=l.body;root.appendChild(paper);button(root,'Back to mailbox',mailbox);
     });}
     function groceries(){shell('On the fridge door','Your grocery list, private to this device.',root=>{
@@ -247,5 +274,5 @@
       for(let z=1;z<8;z+=2)m.box(7,2,z,9,3,z+1,0x8c847a);m.box(12,2,1,13,3,7,0xd8a659);
     }});
   }
-  const api={KEY,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,ideaCards,ideaAdded,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
+  const api={KEY,MAIL_DEFAULTS,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,ideaCards,ideaAdded,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
 })(typeof window!=='undefined'?window:globalThis);

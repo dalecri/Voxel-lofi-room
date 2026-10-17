@@ -13,7 +13,7 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(viewport={'width':390,'height':844})
  context.add_init_script('''const RealDate=Date;window.__clock=new RealDate('2026-10-15T14:00:00').getTime();window.Date=class extends RealDate{constructor(...a){super(...(a.length?a:[window.__clock]))}static now(){return window.__clock}};localStorage.setItem('lr.intro','true')''')
- page=context.new_page();errors=[];external=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:external.append(r.url) if not r.url.startswith(('http://127.0.0.1:','data:','blob:')) else None)
+ page=context.new_page();errors=[];external=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append('console: '+m.text) if m.type=='error' else None);page.on('request',lambda r:external.append(r.url) if not r.url.startswith(('http://127.0.0.1:','data:','blob:')) else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
  page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.name='Tool Room';a.room.n=10;a.meta.visitors=false;a.meta.realtime=false;a.meta.phase='day';a.setMode('explore',true);
   for(const [t,x,z] of [['letterbox',1,1],['minifridge',3,1],['ideajar',5,1],['kettle',7,1],['savingsjar',1,4],['sketchbook',4,4]])a.room.add(a.room.make(t,{x,z}));a.changed();a.roomToolsUI.frame(1);window.__decor=JSON.stringify(a.room.serialize());
@@ -21,8 +21,8 @@ with sync_playwright() as p:
  }''')
  # Mail snapshots a typewriter letter and hides it until its local delivery date.
  page.evaluate('''() => {__lr.letters.model.add('Tools');__lr.letters.model.update({letterhead:'PRIVATE_LETTERHEAD',body:'<b>PRIVATE_FUTURE_LETTER</b> with a little <i>hope</i>.'});tapTool('letterbox')}''')
- page.get_by_role('button',name='Use my current typewriter letter',exact=True).click();page.get_by_label('Envelope title',exact=True).fill('<img src="https://example.com/PRIVATE_TITLE_LEAK" onerror="window.__toolUnsafe=true"> PRIVATE_ENVELOPE');page.get_by_label('Deliver on',exact=True).fill('2026-10-16')
- page.get_by_role('button',name='Seal for later',exact=True).click();assert page.get_by_role('button',name='Read letter',exact=True).count()==0
+ page.get_by_role('button',name='Use my current typewriter letter',exact=True).click();page.get_by_label('Subject',exact=True).fill('<img src="https://example.com/PRIVATE_TITLE_LEAK" onerror="window.__toolUnsafe=true"> PRIVATE_ENVELOPE');page.get_by_label('Deliver on',exact=True).fill('2026-10-16')
+ page.get_by_role('button',name='Send',exact=True).click();assert page.get_by_role('button',name='Read letter',exact=True).count()==0
  assert 'Sealed until 2026-10-16' in page.locator('#sheetBody').inner_text();assert 'PRIVATE_FUTURE_LETTER' not in page.locator('#sheetBody').inner_text()
  page.evaluate('__lr.letters.model.update({letterhead:"Changed",body:"Changed after sealing"})')
  page.keyboard.press('Escape');page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
@@ -30,6 +30,32 @@ with sync_playwright() as p:
  assert 'Sealed until' in page.locator('#sheetBody').inner_text();assert page.get_by_role('button',name='Read letter',exact=True).count()==0
  page.keyboard.press('Escape')
  print('PASS: mailbox seals a private formatted snapshot, retains it across reload and hides the body before delivery',flush=True)
+ # The retro email window: header defaults, inline edits, Save draft round-trips the whole compose state, Send seals and clears it.
+ page.evaluate("tapTool('letterbox')");win=page.locator('.mailwin')
+ assert win.locator('.mailwin-bar').inner_text().strip()=='Email'
+ assert page.get_by_label('From',exact=True).input_value()=='crisdalessio@gmail.com';assert page.get_by_label('To',exact=True).input_value()=='Future me';assert page.get_by_label('Subject',exact=True).input_value()=='A note for future me'
+ assert page.get_by_label('Deliver on',exact=True).input_value()=='2026-10-22'
+ page.get_by_label('From',exact=True).click();page.get_by_label('From',exact=True).fill('PRIVATE_FROM@example.com');page.get_by_label('To',exact=True).fill('Me, next spring')
+ page.get_by_label('Subject',exact=True).fill('PRIVATE_DRAFT_SUBJECT');page.get_by_label('Message',exact=True).fill('Hey!\n\nPRIVATE_DRAFT_BODY. Stay tuned!');page.get_by_label('Deliver on',exact=True).fill('2026-10-20')
+ page.get_by_role('button',name='Save draft',exact=True).click();assert 'Draft saved' in win.inner_text()
+ page.screenshot(path='/tmp/mailbox-compose-mobile.png')
+ page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
+ page.evaluate("window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);tapTool('letterbox')")
+ assert 'Draft restored' in page.locator('.mailwin').inner_text()
+ for label,value in [('From','PRIVATE_FROM@example.com'),('To','Me, next spring'),('Subject','PRIVATE_DRAFT_SUBJECT'),('Message','Hey!\n\nPRIVATE_DRAFT_BODY. Stay tuned!'),('Deliver on','2026-10-20')]:
+  assert page.get_by_label(label,exact=True).input_value()==value,(label,page.get_by_label(label,exact=True).input_value())
+ # Today and past dates are refused by the date picker; nothing is sealed and the draft stays.
+ before=page.locator('.mailwin-letter').count()
+ for bad in ['2026-10-15','2026-10-01']:
+  page.get_by_label('Deliver on',exact=True).fill(bad);page.get_by_role('button',name='Send',exact=True).click();assert page.locator('.mailwin-letter').count()==before;assert page.evaluate('!!__lr.roomTools.mailDraft')
+ page.get_by_label('Deliver on',exact=True).fill('2026-10-20');page.get_by_role('button',name='Send',exact=True).click()
+ card=page.locator('.mailwin-letter',has_text='PRIVATE_DRAFT_SUBJECT');assert card.count()==1;assert 'Sealed until 2026-10-20' in card.inner_text();assert 'PRIVATE_DRAFT_BODY' not in page.locator('#sheetBody').inner_text()
+ assert page.evaluate('__lr.roomTools.mailDraft')==None;assert page.get_by_label('Subject',exact=True).input_value()=='A note for future me';assert page.get_by_label('Message',exact=True).input_value()==''
+ assert page.get_by_label('From',exact=True).input_value()=='PRIVATE_FROM@example.com'
+ assert page.evaluate("document.documentElement.scrollWidth<=innerWidth && document.querySelector('.mailwin').getBoundingClientRect().right<=innerWidth")
+ page.screenshot(path='/tmp/mailbox-sent-mobile.png');page.keyboard.press('Escape')
+ assert not errors,errors
+ print('PASS: retro email window: defaults, inline edits, Save draft restores across reload, past dates refused, Send seals and clears the draft at 390px',flush=True)
  # Groceries and the French card share the fridge without losing either entry point.
  page.evaluate("tapTool('minifridge')");page.get_by_label('Add groceries',exact=True).fill('PRIVATE_MILK');page.get_by_role('button',name='Add to list',exact=True).click()
  page.get_by_label('Add groceries',exact=True).fill('Eggs');page.get_by_role('button',name='Add to list',exact=True).click();page.get_by_role('checkbox',name='PRIVATE_MILK',exact=True).check()
