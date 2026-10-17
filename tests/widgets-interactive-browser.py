@@ -30,11 +30,11 @@ with sync_playwright() as p:
     page.wait_for_function('!!window.__lr?.widgets')
     page.evaluate('''() => {
       const a=__lr;a.room.items=[];a.room.n=10;a.room.name='All widgets';
-      for(const [t,o] of [['minifridge',{x:0,z:0}],['newspaper',{x:3,z:4}],['tstcorkboard',{k:0,u:3,e:3}],['pomodorocandle',{x:5,z:5}],['crt',{x:4,z:0}],['libcase',{x:7,z:0}],['gamingdesk',{x:0,z:4}],['arcade',{x:7,z:3}]]) a.room.add(a.room.make(t,o));
+      for(const [t,o] of [['minifridge',{x:0,z:0}],['newspaper',{x:3,z:4}],['tstcorkboard',{k:0,u:3,e:3}],['pomodorocandle',{x:5,z:5}],['crt',{x:4,z:0}],['libcase',{x:7,z:0}],['gamingdesk',{x:0,z:4}],['arcade',{x:7,z:3}],['terrarium',{x:6,z:6}]]) a.room.add(a.room.make(t,o));
       a.changed();a.setMode('edit',true);
     }''')
     try:
-        page.wait_for_function('document.querySelectorAll(".widget-private:not([hidden])").length===8 && __lr.widgets.data("newspaper").headlines.length===1',timeout=12000)
+        page.wait_for_function('document.querySelectorAll(".widget-private:not([hidden])").length===9 && __lr.widgets.data("newspaper").headlines.length===1',timeout=12000)
     except Exception:
         print('startup diagnostics',errors,page.evaluate('({badges:document.querySelectorAll(".widget-private").length,state:__lr.widgets.state})'),flush=True)
         page.screenshot(path='/tmp/widgets-phase2-error.png')
@@ -57,7 +57,7 @@ with sync_playwright() as p:
         with context.expect_page() as opened: link.click()
         tab=opened.value;tab.wait_for_load_state();assert tab.url==url;assert tab.evaluate('window.opener===null');tab.close()
     page.evaluate('document.querySelector("#sheet").classList.remove("open")')
-    print('PASS: posting plan renders, eight private badges, portal shimmer and both exact social links open isolated tabs',flush=True)
+    print('PASS: posting plan renders, nine private badges, portal shimmer and both exact social links open isolated tabs',flush=True)
     # A real candle tap starts the flame feedback before window.open runs.
     point=page.evaluate('''() => {
       const a=__lr,it=a.room.items.find(i=>i.t==='pomodorocandle');
@@ -73,7 +73,11 @@ with sync_playwright() as p:
     assert page.evaluate('!LR.CAT.pomodorocandle.focusRitual')
     for portal in page.evaluate('LRWidgets.PORTALS'):
         if portal['furnitureId']=='arcade':continue
-        with context.expect_page() as opened:tap(portal['furnitureId'])
+        if page.evaluate('type=>LRAtlas.BOOKSHELVES.includes(type)',portal['furnitureId']):
+            tap(portal['furnitureId'])
+            with context.expect_page() as opened:body.get_by_role('link',name=portal['label'],exact=True).click()
+        else:
+            with context.expect_page() as opened:tap(portal['furnitureId'])
         tab=opened.value;tab.wait_for_load_state();assert tab.url==portal['url'];assert tab.evaluate('window.opener===null');tab.close()
     # Native arcade gameplay wins over the configured outbound portal.
     pages=len(context.pages)
@@ -90,14 +94,14 @@ with sync_playwright() as p:
     with context.expect_page() as opened:body.get_by_role('link',name='Second channel').click()
     tab=opened.value;tab.wait_for_load_state();assert tab.url=='https://example.com/second-channel';tab.close()
     assert page.evaluate('JSON.stringify(__lr.room.serialize())')==before
-    print('PASS: real candle tap, flame feedback before launch, all three retargeted portals and native arcade gameplay, multi-link picker and mobile layout; decor untouched',flush=True)
+    print('PASS: real candle tap, flame feedback before launch, all four outbound portals and native arcade gameplay, multi-link picker and mobile layout; decor untouched',flush=True)
     # Put unique private text and URLs in the state before exercising the actual encoder.
     page.evaluate("LRWidgets.TST_CONTENT.nextPost='PRIVATE_PHASE2_PLAN';LRWidgets.TST_CONTENT.links.push({label:'Private draft',url:'https://example.com/PRIVATE_PHASE2_LINK'});__lr.widgets.refresh(__lr.room.items.map(i=>i.t))")
     private=page.evaluate('localStorage.getItem("lr.widgets")')
     assert 'PRIVATE_PHASE2_PLAN' in private and 'PRIVATE_PHASE2_LINK' in private
     code=page.evaluate('__lr.roomCode()');assert code.startswith('LR1.')
     decoded=page.evaluate('code=>__lr.readCode(code)',code)
-    assert len(decoded['items'])==8
+    assert len(decoded['items'])==9
     assert 'widgets' not in decoded and all('widgets' not in item for item in decoded['items'])
     for value in ['PRIVATE_PHASE2','headlines','fetchedAt','twice weekly','https:']:
         assert value not in str(decoded),value
@@ -109,7 +113,7 @@ with sync_playwright() as p:
     recipient=fresh.new_page();recipient.on('pageerror',lambda e:errors.append(str(e)))
     recipient.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');recipient.wait_for_function('!!window.__lr')
     recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.wait_for_function('__lr.room.name==="All widgets"')
-    assert recipient.evaluate('__lr.room.items.length')==8
+    assert recipient.evaluate('__lr.room.items.length')==9
     assert 'PRIVATE_PHASE2' not in recipient.evaluate('JSON.stringify(localStorage)')
     assert not errors,errors
     print('PASS: all five widget types active in LR1/LR0 round trips and fresh-session UI import; no private payload or extra fetches',flush=True)

@@ -1818,11 +1818,14 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Rooms list & menu
   const sheet = $('#sheet');
+  let shareQR=null,roomScanner=null;
+  function releaseRoomQR(){shareQR?.destroy();shareQR=null;roomScanner?.destroy();roomScanner=null;}
   function openSheet() {
     sheet.inert = false; sheet.setAttribute('aria-hidden','false'); sheet.classList.add('open');
     $('#bMenu').setAttribute('aria-expanded',String(!!$('#menu-today')));
   }
   function closeSheets() {
+    releaseRoomQR();
     villageView?.destroy(); villageView=null;
     roomToolsUI.close();
     const open = sheet.classList.contains('open');
@@ -2113,6 +2116,7 @@ function startLofiRooms() {
     return d;
   }
   function codeSheet(title, sub, build) {
+    releaseRoomQR();
     home.close(false);
     roomToolsUI.close();
     const body = $('#sheetBody'); body.innerHTML = '';
@@ -2187,12 +2191,15 @@ function startLofiRooms() {
         } catch (e) { /* cancelled */ }
       };
       ta.onclick = () => ta.select();
+      shareQR=LRRoomQR.createView({host:$('#sheetBody'),code,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
     });
   }
   function importSheet() {
     codeSheet('Open a friend’s room', 'Paste a room code to visit a friend’s room (nothing of yours is replaced), or a note code to add their guest book note to your room.', h => {
       const ta = h('textarea', 'code'); ta.rows = 4; ta.placeholder = 'LR1.…';
-      const row = h('div', 'rowbtns'); row.innerHTML = '<button class="chipbtn" id="bOpenCode">Open room</button>';
+      const row = h('div', 'rowbtns'); row.innerHTML = '<button class="chipbtn" id="bOpenCode">Open room</button><button type="button" class="chipbtn" id="bScanRoom">Scan with camera</button>';
+      roomScanner=LRRoomQR.scanner({host:$('#sheetBody'),onCode:code=>{ta.value=code;row.querySelector('#bOpenCode').click();},notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
+      row.querySelector('#bScanRoom').onclick=()=>roomScanner.start();
       row.querySelector('#bOpenCode').onclick = async () => {
         if (/^\s*LRG[01]\./.test(ta.value)) { try { await receiveNote(ta.value); closeSheets(); } catch (e) { Sound.nope(); toast('<span>That note code doesn’t look right</span>', 1600); } return; }
         try {
@@ -2421,6 +2428,7 @@ function startLofiRooms() {
   }
   function homeSearch() { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace}); }
   function renderMenu() {
+    releaseRoomQR();
     villageView?.destroy(); villageView=null;
     home.close(false);
     roomToolsUI.close();
