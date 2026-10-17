@@ -12,6 +12,7 @@
   // The mailbox compose window's starting header, before any edit or saved draft.
   const MAIL_DEFAULTS={from:'crisdalessio@gmail.com',to:'Future me',subject:'A note for future me'};
   const clip=(v,n)=>String(v??'').slice(0,n);
+  const TALLY_GOAL=50;
   const TEA_PRESETS=[{name:'Green tea',minutes:2},{name:'Black tea',minutes:3},{name:'Herbal',minutes:5}];
   // Clockwise from twelve o'clock: 1 at 36 degrees, 10 at the top.
   function dialMinutes(x,y){const turn=(Math.atan2(x,-y)+Math.PI*2)%(Math.PI*2);return Math.round(turn/(Math.PI*2)*10)||10;}
@@ -25,13 +26,23 @@
       note:state==='ready'?'Your tea is ready.':state==='brewing'?'A quiet moment to steep.':'Make a little time for tea.'};
   }
 
-  function create({store,now=()=>new Date(),random=Math.random,onBrew=()=>{}}){
+  function create({store,now=()=>new Date(),random=Math.random,onBrew=()=>{},onTallyGoal=()=>{}}){
     const old=store.get(KEY,{})||{},copy=a=>JSON.parse(JSON.stringify(a));
     const state={v:1,next:Number.isSafeInteger(old.next)&&old.next>0?old.next:1,
       mail:Array.isArray(old.mail)?old.mail:[],groceries:Array.isArray(old.groceries)?old.groceries:[],ideas:Array.isArray(old.ideas)?old.ideas:[],
+      // Tally lives inside lr.tools, never a separate lr.tally storage key.
+      tally:old.tally&&validDate(old.tally.date)?{date:old.tally.date,count:Number.isSafeInteger(old.tally.count)&&old.tally.count>=0?old.tally.count:0,completed:!!old.tally.completed||(Number.isSafeInteger(old.tally.count)&&old.tally.count>=TALLY_GOAL)}:null,
       lastIdea:old.lastIdea||null,tea:old.tea||null,mailFrom:typeof old.mailFrom==='string'?old.mailFrom:null,mailDraft:old.mailDraft&&typeof old.mailDraft==='object'?old.mailDraft:null,goal:old.goal||null,deposits:Array.isArray(old.deposits)?old.deposits:[],pixel:Pixel.normalize(old.pixel),pixelPosters:old.pixelPosters&&typeof old.pixelPosters==='object'?old.pixelPosters:{}};
     const save=()=>{store.set(KEY,state);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(state))throw Error('Could not save on this device.');};
     const id=prefix=>prefix+'-'+now().getTime().toString(36)+'-'+state.next++;
+    function tally(){const date=day(now());if(!state.tally||state.tally.date!==date){const before=state.tally;state.tally={date,count:0,completed:false};try{save();}catch(e){state.tally=before;throw e;}}return copy(state.tally);}
+    function countRep(delta=1){
+      if(delta!==1&&delta!==-1)throw Error('Count one rep at a time.');
+      const before=tally(),count=Math.max(0,before.count+delta);if(!Number.isSafeInteger(count))throw Error('This counter is full.');if(count===before.count)return copy(before);
+      // Undo corrects reps; the day's earned milestone stays once-only across reloads.
+      const hit=!before.completed&&count>=TALLY_GOAL;state.tally={date:before.date,count,completed:before.completed||hit};try{save();}catch(e){state.tally=before;throw e;}
+      if(hit)onTallyGoal(copy(state.tally));return copy(state.tally);
+    }
     function send({title,body,html='',letterhead='',deliverOn,from,to}){
       if(!validDate(deliverOn)||deliverOn<=day(now()))throw Error('Choose a future date.');
       if(!String(body||'').trim())throw Error('Put a little something in the envelope.');
@@ -46,6 +57,7 @@
     function compose(){const d=state.mailDraft,date=new Date(now());date.setDate(date.getDate()+7);
       return {from:d?d.from:state.mailFrom??MAIL_DEFAULTS.from,to:d?d.to:MAIL_DEFAULTS.to,subject:d?d.subject:MAIL_DEFAULTS.subject,body:d?d.body:'',deliverOn:d&&validDate(d.deliverOn)&&d.deliverOn>day(now())?d.deliverOn:day(date),draft:!!d};}
     function poll(notices=true){
+      if(state.tally&&state.tally.date!==day(now()))tally();
       let changed=false;const events={mail:[],tea:false},date=day(now()),time=now().getTime();
       for(const l of state.mail){
         if(l.status==='sealed'&&l.deliverOn<=date){l.status='arrived';changed=true;}
@@ -70,7 +82,7 @@
     function deposit(value,note=''){if(!state.goal)throw Error('Set a goal first.');const n=cents(value);if(!Number.isSafeInteger(total()+n))throw Error('That total is too large for this jar.');state.deposits.unshift({id:id('deposit'),cents:n,note:String(note).trim(),date:day(now())});save();}
     if('strokes' in old)save(); // Retire the private freehand format; pixel sketches start fresh.
     const pixels=Pixel.create({read:()=>state.pixel,write:g=>{const before=state.pixel;state.pixel=g;try{save();}catch(e){state.pixel=before;throw e;}}});
-    return {send,saveDraft,clearDraft,setFrom,compose,get mailDraft(){return state.mailDraft?copy(state.mailDraft):null;},poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,pixels,pinPixel(room,id,grid){state.pixelPosters[`${room}:${id}`]=Pixel.normalize(grid);save();},pixelPoster(room,id){const g=state.pixelPosters[`${room}:${id}`];return g?Pixel.normalize(g):null;},total,
+    return {get tally(){return tally();},countRep,send,saveDraft,clearDraft,setFrom,compose,get mailDraft(){return state.mailDraft?copy(state.mailDraft):null;},poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,pixels,pinPixel(room,id,grid){state.pixelPosters[`${room}:${id}`]=Pixel.normalize(grid);save();},pixelPoster(room,id){const g=state.pixelPosters[`${room}:${id}`];return g?Pixel.normalize(g):null;},total,
       get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
   // Presentation order only. The model's newest-first list and lastIdea are untouched.
@@ -94,7 +106,7 @@
       close();sheet(LRLetters.escapeHTML(title),LRLetters.escapeHTML(sub),h=>{const root=h('div','roomtool');root.dataset.roomTool='true';status=document.createElement('p');status.className='roomtool-status muted';status.setAttribute('role','status');status.setAttribute('aria-live','polite');root.appendChild(status);active=root;build(root);});
     }
     function open(tool,id=anchor){anchor=id;
-      if(tool==='mailbox')mailbox();else if(tool==='groceries')groceries();else if(tool==='ideas')ideas();else if(tool==='tea')tea();else if(tool==='savings')savings();else if(tool==='sketch')sketch();
+      if(tool==='mailbox')mailbox();else if(tool==='groceries')groceries();else if(tool==='ideas')ideas();else if(tool==='tea')tea();else if(tool==='savings')savings();else if(tool==='sketch')sketch();else if(tool==='tally')tally();
     }
     // The same pixel email window the typewriter writes in. Rich text stays off here.
     let pendingSeal=null;
@@ -152,6 +164,14 @@
       const add=()=>{model.addGrocery(input.value);groceries();active.querySelector('input:not([type=checkbox])').focus();};form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add,'grocery-add-button');
       button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});button(root,'French word flashcard',flashcard);if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
     });}
+    function tally(){shell('Pushup tally','One rep at a time. Just yours, on this device.',root=>{
+      root.classList.add('pushup-tally');text(root,'Creatine 5g · 50 pushups a day','muted small tally-habit');
+      const tap=button(root,'',()=>{model.countRep(1);updateTally();try{sound.click(true);}catch(e){/* optional mechanical sound */}},'tally-clicker');tap.setAttribute('aria-label','Add one pushup');
+      const count=document.createElement('output');count.className='tally-count';count.setAttribute('aria-live','polite');count.setAttribute('aria-atomic','true');tap.append(count);const plus=document.createElement('span');plus.className='tally-plus';plus.textContent='+1';tap.appendChild(plus);
+      const progress=text(root,'','tally-progress');progress.setAttribute('aria-live','polite');const bar=document.createElement('progress');bar.className='tally-bar';bar.max=TALLY_GOAL;bar.setAttribute('aria-label','Daily pushup progress');root.appendChild(bar);
+      const undo=button(root,'−1 · Undo',()=>{model.countRep(-1);updateTally();},'chipbtn tally-undo');undo.setAttribute('aria-label','Undo one pushup');text(root,'','tally-note muted');updateTally();
+    });}
+    function updateTally(){if(!active?.classList.contains('pushup-tally'))return;const data=model.tally;active.querySelector('.tally-count').textContent=String(data.count);active.querySelector('.tally-progress').textContent=`${data.count} / ${TALLY_GOAL}`;active.querySelector('.tally-bar').value=Math.min(TALLY_GOAL,data.count);active.querySelector('.tally-undo').disabled=data.count===0;active.querySelector('.tally-note').textContent=data.count>=TALLY_GOAL?'Daily 50 reached. Nicely done.':'Every rep belongs here.';}
     function flashcard(){const data=word();shell('Un mot par jour','A little French, on the fridge.',root=>{
       const card=document.createElement('div');card.className='roomtool-flashcard';text(card,data.word,'roomtool-title');const back=document.createElement('div');back.hidden=true;text(back,data.translation);text(back,data.example,'muted');card.appendChild(back);root.appendChild(card);
       const flip=button(root,'Reveal translation',()=>{back.hidden=!back.hidden;flip.textContent=back.hidden?'Reveal translation':'Hide translation';flip.setAttribute('aria-pressed',String(!back.hidden));});flip.setAttribute('aria-pressed','false');button(root,'Back to groceries',groceries);
@@ -240,7 +260,7 @@
       const events=model.poll(allowed);if(events.mail.length)notice(`${events.mail.length===1?'A letter from your past self has':'Letters from your past self have'} arrived.`);
       if(events.tea){sound.ritualChime();notice('Your tea is ready. Take a little pause.');}
       if(active?.isConnected)for(const l of model.state.mail){const row=[...active.querySelectorAll('[data-mail]')].find(r=>r.dataset.mail===l.id);if(row&&l.status==='arrived'&&row.dataset.mailStatus!=='arrived'){row.dataset.mailStatus='arrived';row.querySelector('.muted').textContent=`Arrived · ${l.deliverOn}`;button(row,'Read letter',()=>{const letter=model.read(l.id);if(letter)readMail(letter);});}}
-      updateClock();
+      updateClock();updateTally();
     }
     function frame(dt){
       frameTime+=dt;if(frameTime<.2)return;frameTime=0;const v=renderer(),r=room(),state=model.visual,level=state.level,show=!hidden()&&!v.capturing,alive=new Set();
@@ -268,6 +288,13 @@
       m.box(1,0,1,7,1,7,c).box(1,1,1,2,8,7,c).box(6,1,1,7,8,7,c).box(2,1,1,6,8,2,c).box(1,8,1,7,9,7,0xc5a57d).box(1,1,6,7,2,7,c);
       m.part('privateIdeas',[0,0,0]);m.box(2,2,3,5,5,5,0xf8e5ad).box(4,3,5,6,6,6,0xf0c5bf);m.main();
     }});
+    def('tallycounter',{name:'Pushup tally counter',kind:'small',group:'cozy',size:[1,1],tap:'roomtool',privateTool:'tally',vars:[[0xc9c5b8,0xd59563],[0x9aada8,0xc5a466],[0xa79db4,0xd49ba1]],build(m,[c,accent]){
+      // Stubby metal clicker, inset number reels, side reset knob and thumb lever.
+      m.box(1,0,1,7,1,7,0x665a50).box(1,1,1,7,4,7,c).box(2,4,2,6,5,6,c).box(1,2,0,7,4,1,0x524b48);
+      for(let x=2;x<=5;x++){m.set(x,2,0,0xfff1d4);m.set(x,3,0,0xe3dac6);}
+      m.box(2,5,3,6,6,5,accent).box(3,4,3,5,5,5,0x665a50).box(7,2,3,8,4,5,accent);
+      m.box(0,1,5,1,4,7,c).box(0,4,5,3,5,7,c);
+    }});
     def('savingsjar',{name:'Savings jar',kind:'small',group:'cozy',size:[1,1],tap:'roomtool',privateTool:'savings',vars:[[0xa9c5d2]],build(m,[c]){
       m.box(1,0,1,7,1,7,c).box(1,1,1,2,11,7,c).box(6,1,1,7,11,7,c).box(2,1,1,6,11,2,c).box(1,11,1,7,12,7,0xc5a57d).box(3,12,3,5,13,4,0x79634b);
       for(let n=0;n<8;n++){m.part('privateCoin'+n,[4,1,4]);m.box(2,1+n,3,6,2+n,6,n%2?0xe3ba60:0xf4d17d);}m.main();
@@ -278,5 +305,5 @@
       for(let z=1;z<8;z+=2)m.box(7,2,z,9,3,z+1,0x8c847a);m.box(12,2,1,13,3,7,0xd8a659);
     }});
   }
-  const api={KEY,MAIL_DEFAULTS,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,ideaCards,ideaAdded,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
+  const api={KEY,TALLY_GOAL,MAIL_DEFAULTS,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,ideaCards,ideaAdded,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
 })(typeof window!=='undefined'?window:globalThis);

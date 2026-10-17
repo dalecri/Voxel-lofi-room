@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const T=require('../room-tools.js'),L=require('../room.js'),W=require('../widgets.js');require('../furniture.js');require('../scene.js');
-function fixture(){const data={};let date=new Date(2026,9,15,14);const store={get:(k,d)=>structuredClone(data[k]??d),set:(k,v)=>data[k]=structuredClone(v)};const reload=()=>T.create({store,now:()=>date,random:()=>.25});return {data,store,reload,model:reload(),at:d=>date=new Date(d),advance:n=>date=new Date(+date+n)};}
+function fixture(){const data={};let date=new Date(2026,9,15,14);const store={get:(k,d)=>structuredClone(data[k]??d),set:(k,v)=>data[k]=structuredClone(v)};const reload=()=>T.create({store,now:()=>date,random:()=>.25});return {data,store,reload,model:reload(),now:()=>new Date(date),at:d=>date=new Date(d),advance:n=>date=new Date(+date+n)};}
 test('future letters validate local dates, stay sealed, arrive once across reload and survive clock rollback',()=>{
  const f=fixture(),m=f.model;
  for(const deliverOn of ['2026-02-30','2026-10-15','bad'])assert.throws(()=>m.send({body:'note',deliverOn}));
@@ -89,4 +89,19 @@ test('a typewriter letter sealed into the mailbox is a snapshot later edits cann
  assert.equal(letters.get().body,'<i>EDITED_LATER</i>');
  assert.ok(!JSON.stringify(f.data['lr.tools']).includes('EDITED_LATER'));
  assert.ok(JSON.stringify(f.data['lr.tools']).includes('PRIVATE_SNAPSHOT'));
+});
+test('pushup tally persists privately, undoes without going negative and resets on a local date change',()=>{
+ const f=fixture(),m=f.model;assert.deepEqual(m.tally,{date:'2026-10-15',count:0,completed:false});m.countRep();m.countRep();assert.equal(f.reload().tally.count,2);m.countRep(-1);assert.equal(f.reload().tally.count,1);m.countRep(-1);m.countRep(-1);assert.equal(m.tally.count,0);assert.throws(()=>m.countRep(3));
+ f.at(new Date(2026,9,15,23,59,59));m.countRep();assert.equal(m.tally.count,1);f.advance(1000);m.poll(false);assert.deepEqual(m.tally,{date:'2026-10-16',count:0,completed:false});assert.equal(f.reload().tally.count,0);assert.deepEqual(Object.keys(f.data),['lr.tools']);assert.equal(f.data['lr.tools'].tally.date,'2026-10-16');
+ m.countRep();f.at(new Date(2026,9,17,8));assert.equal(f.reload().tally.count,0);assert.equal(m.tally.count,0);
+});
+test('50 pushups celebrates and logs once per day, including undo/recheck and reload',()=>{
+ const Calendar=require('../calendar.js'),f=fixture(),events=[],calendar=Calendar.create({store:f.store});const reload=()=>T.create({store:f.store,now:f.now,onTallyGoal:t=>{events.push(t);calendar.append('pushups',{date:t.date,id:t.date});}});let m=reload();
+ for(let n=0;n<49;n++)m.countRep();assert.equal(events.length,0);assert.equal(m.countRep().count,50);assert.equal(events.length,1);assert.equal(m.tally.completed,true);assert.deepEqual(calendar.activity()[0].events,['pushups']);assert.deepEqual(Calendar.activityWords(calendar.activity()[0].events),['Reached 50 pushups']);
+ m.countRep(-1);m.countRep();m.countRep();assert.equal(events.length,1);assert.equal(m.tally.count,51);m=reload();m.countRep(-1);m.countRep(-1);m.countRep();assert.equal(events.length,1);assert.equal(calendar.activity()[0].events.length,1);
+ f.at(new Date(2026,9,16,8));m=reload();for(let n=0;n<50;n++)m.countRep();assert.equal(events.length,2);assert.equal(calendar.activity().length,2);assert.ok(calendar.activity().every(r=>r.events.length===1));
+});
+test('tally clicker builds every variant and room share output contains decor but no tally state',()=>{
+ T.register(L);const C=L.CAT.tallycounter;assert.equal(C.name,'Pushup tally counter');assert.equal(C.kind,'small');assert.equal(C.group,'cozy');assert.deepEqual(C.size,[1,1]);assert.equal(C.tap,'roomtool');assert.equal(T.kind({t:'tallycounter'},C),'tally');for(const vars of C.vars){const m=new L.Model();C.build(m,vars);assert.ok(Object.values(m.parts).some(p=>p.vox.size));}
+ const f=fixture();f.model.countRep();const d=W.shareDecor({...new L.Room().serialize(),tally:f.model.tally,tools:f.model.state,items:[{id:1,t:'tallycounter',x:2,z:2,tally:f.model.tally}]});assert.equal(d.items[0].t,'tallycounter');assert.ok(!JSON.stringify(d).includes('tally":'));assert.ok(!JSON.stringify(d).includes('completed'));assert.ok(!('tools' in d));
 });

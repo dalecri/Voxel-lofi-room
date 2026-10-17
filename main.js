@@ -26,7 +26,7 @@ function startLofiRooms() {
   let companion = null, widgetView = null, frenchUI = null;
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
-  const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}) });
+  const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}),onTallyGoal:t=>{remember('pushups',{date:t.date,id:t.date});try{Sound.init();if(Sound.on)Sound.chime();}catch(e){/* quiet reps still count */}if(companion)companion.hop();} });
   const letters = LRLetters.createView({ store,onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); } });
 
   // ---------------------------------------------------------------
@@ -336,7 +336,7 @@ function startLofiRooms() {
   function launchTool(p) {
     if(p.url){dashboard.launch(p);return;}
     const find=(...types)=>room.items.find(i=>types.includes(i.t));
-    const tools={mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
+    const tools={tally:['tallycounter'],mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
     if(p.id==='library')library.open();
     else if(p.id==='typewriter')letters.open();
