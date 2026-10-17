@@ -1418,8 +1418,7 @@
     for (const L of this.pool) {
       if (!L.userData.it) continue;
       let i = L.userData.base * lampK;
-      const cv = (this.focusRituals && this.focusRituals.get(L.userData.it.id)) || (this.careVis && this.careVis.get(L.userData.it.id));
-      if (CAT[L.userData.it.t].focusRitual && cv) L.position.copy(this.itemPoint(L.userData.it.id, [4, 4 + 14 * (0.2 + 0.8 * cv.fraction), 4]));
+      const cv = (this.careVis && this.careVis.get(L.userData.it.id));
       if (cv && cv.level !== undefined) i *= 0.35 + 0.9 * cv.level;                 // a roaring fire lights the room, embers barely
       if (cv && cv.gutter) i *= 0.55 + 0.3 * Math.sin(t * 9 + L.id) * Math.sin(t * 23);   // a candle guttering
       if (L.userData.flicker && !this.reducedMotion) i *= 0.82 + 0.12 * Math.sin(t * 13 + L.id) + 0.08 * Math.sin(t * 31 + L.id * 2);
@@ -1439,12 +1438,7 @@
         ud.boing = Math.max(0, b - dt * 2.4);
         if (!ud.boing && C.kind !== 'pet') ud.inner.scale.set(1, 1, 1);
       }
-      const cv = (this.focusRituals && this.focusRituals.get(id)) || (this.careVis && this.careVis.get(id));
-      if (C.focusRitual && cv) {
-        const height = 0.2 + 0.8 * cv.fraction;
-        if (ud.parts.wax) ud.parts.wax.scale.y = height;
-        if (ud.parts.focusflame) ud.parts.focusflame.position.y = (2 + 14 * height) * S;
-      }
+      const cv = (this.careVis && this.careVis.get(id));
       if (cv && cv.s !== undefined) {   // living plants: sprouts are small, forgotten ones droop
         if (!ud.boing) ud.inner.scale.set(cv.s, cv.s * cv.sag, cv.s);
         else ud.inner.scale.multiplyScalar(cv.s);

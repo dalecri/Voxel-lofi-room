@@ -20,7 +20,7 @@ function startLofiRooms() {
   const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); }, onPurchase: item => {
     if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setSlots(wardrobe.slots); companion.frame(0); } }
   } });
-  const rituals = LRRituals.create({ store,onComplete:c=>remember('focus',{date:LRCalendar.day(new Date(c.end)),id:c.room+':'+c.id+':'+c.start}) });
+  const rituals = LRRituals.create({ store });
   let breathCamera = null;
   let companion = null, widgetView = null;
   const widgets = LRWidgets.create({ store });
@@ -218,13 +218,13 @@ function startLofiRooms() {
       },180);if(taskPortraits.size>=12)taskPortraits.delete(taskPortraits.keys().next().value);taskPortraits.set(key,src);
     }return taskPortraits.get(key);
   }
-  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus}),
+  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea}),
     portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
     celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
     settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();openSheet();},
     hidden:()=>filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),
-    openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});else focusSheet(row.focus,row.focus.room);},
+    openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});},
   });
   const spaceSources=()=>({CAT:Object.fromEntries(Object.entries(CAT).map(([id,C])=>[id,{name:C.name}])),letters:letters.model.list().map(l=>({id:l.id,title:l.title})),scenes:files.list('Scenes').map(f=>({id:f.id,title:f.title})),ideas:roomTools.homeState.ideas});
   function navigateSpace(target,item) {
@@ -308,13 +308,6 @@ function startLofiRooms() {
     if(p.id==='typewriter')letters.open();
     else if(p.id==='french')roomToolsUI.flashcard();
     else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
-    else if(p.id==='focus'){
-      const active=rituals.activeFocus.find(c=>c.room===meta.current) || rituals.activeFocus[0];
-      if(active){focusSheet(active,active.room);return;}
-      const it=find('focuscandle') || {id:'control-center-focus'};
-      if(!rituals.focus(meta.current,it.id).active){rituals.light(meta.current,it.id);Sound.matchStrike();updateRituals();}
-      focusSheet(it);
-    }
     else if(p.id==='breathing')breathingSheet();
     else if(p.id==='wardrobe')wardrobeSheet();
     else if(p.id==='merchant')openShop();
@@ -856,11 +849,6 @@ function startLofiRooms() {
       roomToolsUI.open(privateTool,id); return;
     }
     if (tap === 'wardrobe') { wardrobeSheet(); return; }
-    if (tap === 'focus') {
-      if (rituals.focus(meta.current, id).active) focusSheet(it);
-      else { rituals.light(meta.current, id); Sound.matchStrike(); updateRituals(); toast('<span>A little flame for 25 quiet minutes. Tap it again to snuff it whenever you like.</span>', 3200); }
-      return;
-    }
     if (tap === 'newspaper') { newspaperSheet(); return; }
     if (tap === 'shop') { openShop(id); return; }
     if (tap === 'crown') { crownSheet(); return; }
@@ -1537,7 +1525,6 @@ function startLofiRooms() {
       pushUndo();
       view.poof(id, [0xf4e6d0, 0xffffff, 0xd8c8b8]);
       const gone = room.remove(id);
-      gone.filter(i => CAT[i.t].focusRitual).forEach(i => rituals.snuff(meta.current, i.id));
       changed(); Sound.poof(); haptic(8);
       if (gone.length > 1) toast(`<span>Put away ${C.name.toLowerCase()} and ${gone.length - 1} thing${gone.length > 2 ? 's' : ''} on it</span>`, 1600);
     } else if (state.tool === 'paint') {
@@ -1806,13 +1793,6 @@ function startLofiRooms() {
     // Dismissal and the pending room transition must survive an unavailable audio device.
     if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
   }
-  function focusSheet(it, roomId=meta.current) {
-    const body = $('#sheetBody'); body.dataset.merchant = '';
-    const minutes = Math.ceil(rituals.focus(roomId, it.id).remaining / 60000);
-    body.innerHTML = `<div class="grab"></div><h2>A little time to focus</h2><p class="muted">Your candle has about ${minutes} minute${minutes === 1 ? '' : 's'} left. It will gutter out with a soft chime. Nothing to finish, nothing to earn.</p><div class="rowbtns"><button class="chipbtn" id="focusSnuff">Snuff the candle</button><button class="chipbtn primary" id="focusContinue">Let it glow</button></div>`;
-    $('#focusSnuff').onclick = () => { rituals.snuff(roomId, it.id); updateRituals(); closeSheets(); };
-    $('#focusContinue').onclick = closeSheets; openSheet();
-  }
   function breathingSheet() {
     const body = $('#sheetBody'); body.dataset.merchant = '';
     body.innerHTML = '<div class="grab"></div><h2>Ten minutes in your room</h2><p class="muted">Moon-blue light, a slow circle, a gentle tone. Breathe in as it opens, out as it softens. Four seconds in, six out, or simply follow at your own pace. Keep your eyes open. Leave whenever you like.</p><div class="rowbtns"><button class="chipbtn primary" id="breathStart">Settle in</button><button class="chipbtn" id="breathNotNow">Back</button></div>';
@@ -1839,14 +1819,6 @@ function startLofiRooms() {
   }
   function updateRituals() {
     const result = rituals.tick();
-    let touched = false;
-    view.focusRituals = new Map();
-    for (const it of room.items.filter(i => CAT[i.t].focusRitual)) {
-      const f = rituals.focus(meta.current, it.id); view.focusRituals.set(it.id, f);
-      if (!!it.on !== f.active) { it.on = f.active; touched = true; }
-    }
-    if (touched) { view.sync(room); dirty = true; }
-    if (result.finished.length) { Sound.ritualChime(); toast('<span>Your focus candle has finished its 25 minutes. A little space to rest.</span>', 3500); }
     if (result.breathFinished) stopBreathing(true);
     const breath = rituals.breath;
     view.breathing = breath.active; view.breathLevel = breath.level;

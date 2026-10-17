@@ -911,7 +911,8 @@
     if (!WALLS[this.wall.style]) this.wall.style = 'paint';
     this.floor = Object.assign({ style: 'oak' }, d.floor);
     if (!FLOORS[this.floor.style]) this.floor.style = 'oak';
-    this.items = d.items.filter(i => CAT[i.t]).map(i => Object.assign({}, i));
+    // The retired 25-minute candle becomes ordinary decor without losing its placement.
+    this.items = d.items.map(i => Object.assign({}, i, i.t === 'focuscandle' ? { t: 'candle' } : {})).filter(i => CAT[i.t]);
     this.items.forEach(i => { i.c = Math.min(i.c | 0, CAT[i.t].vars.length - 1); });
     this.next = Math.max(d.next || 1, ...this.items.map(i => i.id + 1), 1);
     this.seed = d.seed || 1;

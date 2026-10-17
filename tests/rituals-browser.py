@@ -41,40 +41,9 @@ with sync_playwright() as p:
     page.on('requestfailed', lambda r: failed.append(r.url))
     page.goto(f'http://127.0.0.1:{server.server_port}', wait_until='networkidle')
     page.wait_for_function('!!window.__lr')
-    page.evaluate("__lr.state.group='lights'; __lr.setMode('edit',true)")
-    page.locator('#row .swatch').filter(has_text='Focus ritual candle').click()
-    assert page.evaluate("!LR.CAT.focuscandle.shop && __lr.state.add==='focuscandle'")
-    page.evaluate('''() => {
-      const a=__lr;
-      const it=a.room.add(a.room.make('focuscandle',{x:8,z:8})); window.__focusId=it.id;
-      const ordinary=a.room.add(a.room.make('candle',{x:7,z:8})); window.__ordinaryId=ordinary.id;
-      a.changed(); a.care.tick(0); a.interact(it.id);
-    }''')
-    assert page.evaluate('__lr.rituals.focus(__lr.meta.current,__focusId).remaining') == 1500000
-    page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()")
-    page.evaluate('__advance(750000); __lr.updateRituals(); __lr.view.frame(.1,__lr.view.t+.1)')
-    assert abs(page.evaluate('__lr.view.objs.get(__focusId).userData.parts.wax.scale.y') - .6) < 1e-8
-    assert page.evaluate('__lr.room.get(__focusId).on')
-    page.reload(wait_until='networkidle'); page.wait_for_function('!!window.__lr')
-    page.evaluate("() => { window.__focusId=__lr.room.items.find(i=>i.t==='focuscandle').id; window.__ordinaryId=__lr.room.items.find(i=>i.t==='candle').id; window.__chimes=0; const original=__lr.Sound.ritualChime.bind(__lr.Sound); __lr.Sound.ritualChime=()=>{__chimes++;original();}; }")
-    assert page.evaluate('__lr.rituals.focus(__lr.meta.current,__focusId).remaining') == 750000
-    page.evaluate('__advance(730000); __lr.updateRituals()')
-    assert page.evaluate('__lr.rituals.focus(__lr.meta.current,__focusId).gutter')
-    page.evaluate('__advance(20000); __lr.updateRituals(); __lr.updateRituals()')
-    assert page.evaluate('__chimes') == 1
-    assert not page.evaluate('__lr.room.get(__focusId).on')
-    assert page.evaluate('__lr.room.get(__ordinaryId).on')  # ordinary three-hour candles are unaffected
-    page.reload(wait_until='networkidle'); page.wait_for_function('!!window.__lr')
-    assert page.evaluate("Object.values(JSON.parse(localStorage.getItem('lr.focusRituals'))).every(c=>c.finished)")
-    page.evaluate("window.__focusId=__lr.room.items.find(i=>i.t==='focuscandle').id; __lr.interact(__focusId); __advance(60000); __lr.interact(__focusId)")
-    page.click('#focusSnuff')
-    assert not page.evaluate('__lr.room.get(__focusId).on')
-    page.evaluate('__advance(1800000); __lr.updateRituals()')
-    assert page.evaluate("Object.values(JSON.parse(localStorage.getItem('lr.focusRituals'))).every(c=>c.cancelled)")
-    print('PASS: free candle, shrinking wax, 25-minute timing, gutter, one completion, persistence, snuff and ordinary candle compatibility')
-
+    assert page.evaluate('!LR.CAT.focuscandle && !LRLauncher.TOOLS.some(t=>t.id==="focus")')
     page.evaluate("__lr.setMode('explore',true); __lr.setPhase('day',true); __lr.view.setPhase('day',true); window.__phase=__lr.meta.phase; window.__weather=__lr.meta.weather; window.__baseExposure=__lr.view.r.toneMappingExposure")
-    page.click('#bHome');page.locator('#homeView [data-app=breathing]').click(); page.click('#breathStart')
+    page.evaluate('__lr.dashboard.launcher()');page.get_by_role('button',name='Breathing room',exact=True).click(); page.click('#breathStart')
     page.wait_for_function('!!window.__lr.Sound.breathVoice')
     page.evaluate('__lr.view.frame(1,__lr.view.t+1)')
     assert page.locator('#breathingHud').is_visible()
@@ -100,7 +69,7 @@ with sync_playwright() as p:
     print('PASS: breathing circle, moon-blue dimming, synchronized phase and tone, blocked editing, Escape, lighting and control restoration')
 
     page.evaluate("() => { window.__chimes=0; const chime=__lr.Sound.ritualChime.bind(__lr.Sound); __lr.Sound.ritualChime=()=>{__chimes++;chime();}; }")
-    page.click('#bHome');page.locator('#homeView [data-app=breathing]').click(); page.click('#breathStart')
+    page.evaluate('__lr.dashboard.launcher()');page.get_by_role('button',name='Breathing room',exact=True).click(); page.click('#breathStart')
     page.evaluate('__advance(599999); __lr.updateRituals()')
     assert page.locator('#breathingHud').is_visible()
     page.evaluate('__advance(1); __lr.updateRituals(); __lr.updateRituals()')
@@ -109,7 +78,7 @@ with sync_playwright() as p:
     assert not page.evaluate('__lr.Sound.breathVoice')
     # A muted session remains fully usable and never creates a breathing oscillator.
     page.evaluate('__lr.Sound.on=false')
-    page.click('#bHome');page.locator('#homeView [data-app=breathing]').click(); page.click('#breathStart')
+    page.evaluate('__lr.dashboard.launcher()');page.get_by_role('button',name='Breathing room',exact=True).click(); page.click('#breathStart')
     assert page.evaluate('__lr.rituals.breath.active && !__lr.Sound.breathVoice')
     page.click('#breathStop')
     assert not page.evaluate('__lr.rituals.breath.active')

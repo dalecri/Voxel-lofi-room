@@ -42,8 +42,8 @@ with sync_playwright() as p:
  before=img.get_attribute('src');page.evaluate('typewriter.c=2;__lr.changed()');page.wait_for_function('old=>document.querySelector("[data-app=typewriter] img").src!==old',arg=before)
  page.evaluate('__lr.room.remove(typewriter.id);__lr.changed()');page.wait_for_function('document.querySelector("[data-app=typewriter] img").classList.contains("absent")');assert tile.is_enabled();esc()
  # Timers stay visible across Home/menu, count down in real time, and navigate to
- # the correct focus timer even when it belongs to another room.
- page.evaluate("__lr.roomTools.brew(3);__lr.rituals.light(9988,'elsewhere')");page.wait_for_function('!document.querySelector("#timerBadges").hidden');badges=page.locator('#timerBadges');assert badges.locator('button').count()==2;value=badges.locator('[data-timer=tea] .timer-value').inner_text();page.wait_for_function('old=>document.querySelector("[data-timer=tea] .timer-value").textContent!==old',arg=value)
+ # the tea timer.
+ page.evaluate("__lr.roomTools.brew(3)");page.wait_for_function('!document.querySelector("#timerBadges").hidden');badges=page.locator('#timerBadges');assert badges.locator('button').count()==1;value=badges.locator('[data-timer=tea] .timer-value').inner_text();page.wait_for_function('old=>document.querySelector("[data-timer=tea] .timer-value").textContent!==old',arg=value)
  for width in [320,390,1280]:
   page.set_viewport_size({'width':width,'height':844})
   for mode in ['edit','explore']:
@@ -51,7 +51,7 @@ with sync_playwright() as p:
    page.wait_for_function("""() => {__lr.todayUI.refresh();const overlap=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;const controls=[...document.querySelectorAll('.rot button,.explorebar,.tools,#tray')].filter(n=>{const s=getComputedStyle(n);return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)>.9}).map(n=>n.getBoundingClientRect());return [...document.querySelectorAll('.timer-badge')].every(n=>controls.every(b=>!overlap(n.getBoundingClientRect(),b)));}""")
    if mode=='explore':page.screenshot(path=f'/tmp/timer-dock-{width}.png')
  page.set_viewport_size({'width':390,'height':844})
- page.click('#bHome');assert page.locator('#homeView [data-app=breathing]').count()==0;assert badges.is_visible();badges.locator('[data-timer=focus]').click();assert page.locator('#focusSnuff').is_visible();page.click('#focusSnuff');page.wait_for_function('!document.querySelector("[data-timer=focus]")');assert not page.evaluate('__lr.rituals.focus(9988,"elsewhere").active')
+ page.click('#bHome');assert page.locator('#homeView [data-app=breathing]').count()==0;assert badges.is_visible()
  badges.locator('[data-timer=tea]').click();assert 'Tea' in page.locator('#sheetBody').inner_text();page.get_by_role('button',name='Cancel steep',exact=True).click();page.keyboard.press('Escape');page.wait_for_function('document.querySelector("#timerBadges").hidden')
  # Exercise the Ready badge without waiting for a real three-minute steep.
  page.evaluate('''() => {const RealDate=Date;__lr.roomTools.brew(1);window.Date=class extends RealDate{constructor(...a){super(...(a.length?a:[RealDate.now()+61000]));}static now(){return RealDate.now()+61000;}};window.restoreNow=()=>{window.Date=RealDate;};}''');page.wait_for_function('document.querySelector("[data-timer=tea] .timer-value")?.textContent==="Ready"');badges.locator('[data-timer=tea]').click();page.get_by_role('button',name='Enjoy the tea',exact=True).click();esc();page.evaluate('restoreNow()');page.wait_for_function('document.querySelector("#timerBadges").hidden')
@@ -62,6 +62,6 @@ with sync_playwright() as p:
  code=page.evaluate('__lr.roomCode()');decoded=page.evaluate('c=>__lr.readCode(c)',code);raw=json.dumps(decoded)
  for text in ['PRIVATE_CUTE','weatherDetails','todayTasks','probabilityAt']:assert text not in raw
  menu();panel.get_by_role('button',name='Remove task: PRIVATE_CUTE_TASK',exact=True).click();assert panel.get_by_role('checkbox').count()==0;esc();assert not errors,errors
- print('PASS: Your Space/Today sky and local checklist, shared private tasks after reload, forecast and measured rain density, absent/present live variant previews without disabled tools, cross-room focus/tea countdown and Ready badges, quick navigation, mobile/day/night/Escape and private shares',flush=True)
+ print('PASS: Your Space/Today sky and local checklist, shared private tasks after reload, forecast and measured rain density, absent/present live variant previews without disabled tools, tea countdown and Ready badges, quick navigation, mobile/day/night/Escape and private shares',flush=True)
  browser.close()
 server.shutdown()

@@ -42,11 +42,9 @@
       remove(id){const d=read();d.items=d.items.filter(t=>t.id!==id);write(d);},
     };
   }
-  function timers({tea,focus=[],now=Date.now()}) {
+  function timers({tea,now=Date.now()}) {
     const rows=[];
     if(tea?.status==='brewing'||tea?.status==='ready')rows.push({id:'tea',icon:'🫖',title:'Tea',value:tea.status==='ready'||tea.endAt<=now?'Ready':countdown(tea.endAt-now),target:'tea'});
-    const active=focus.filter(c=>c.active&&c.remaining>0);
-    if(active.length)rows.push({id:'focus',icon:'🕯',title:'Focus',value:countdown(active[0].remaining)+(active.length>1?` +${active.length-1}`:''),target:'focus',focus:active[0]});
     return rows;
   }
   function createView({model,context,settings,openTimer,portrait=()=>null,portraitKey=()=>'',celebrate=()=>{},hidden=()=>false,notice=()=>{}}) {

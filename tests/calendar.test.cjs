@@ -6,13 +6,12 @@ test('activity appends known kinds, counts tasks and deduplicates identity withi
  assert.ok(C.activityWords(m.activity()[0].events).includes('Finished 3 tasks'));
  for(let i=0;i<450;i++)m.append('tea',{date:C.day(new Date(2026,0,i+1))});const rows=m.activity();assert.equal(rows.length,400);assert.ok(rows.every((r,i)=>i===0||r.date>rows[i-1].date));assert.equal(C.create({store}).activity().length,400);
 });
-test('real model hooks record changed letters, checked tasks, brews and completed focus only once',()=>{
- const {store}=fixture();let time=Date.UTC(2026,9,16,14);const now=()=>new Date(time),m=C.create({store,now}),L=require('../letters.js'),T=require('../today.js'),R=require('../rituals.js'),Tools=require('../room-tools.js');
+test('real model hooks record changed letters, checked tasks, brews only once',()=>{
+ const {store}=fixture();let time=Date.UTC(2026,9,16,14);const now=()=>new Date(time),m=C.create({store,now}),L=require('../letters.js'),T=require('../today.js'),Tools=require('../room-tools.js');
  const letters=L.create({store,now,clean:s=>s,onSaved:l=>m.append('letter',{id:l.id})});letters.add('Room');letters.update({letterhead:'Room',body:'A real letter'});letters.update({letterhead:'Room',body:'A real letter'});letters.update({letterhead:'Room',body:'A longer letter'});
  const tasks=T.create({store,onChecked:t=>m.append('tasks',{id:t.id})});tasks.add('Tea');const id=tasks.list()[0].id;tasks.check(id,true);tasks.check(id,true);tasks.check(id,false);tasks.check(id,true);
  const tools=Tools.create({store,now,onBrew:t=>m.append('tea',{id:t.endAt})});tools.brew(3);
- const r=R.create({store,now:()=>time,onComplete:c=>m.append('focus',{date:C.day(new Date(c.end)),id:c.start})});r.light('room',1);time+=R.FOCUS;r.tick();r.tick();
- assert.deepEqual(m.activity()[0].events,['letter','tasks','tea','focus']);
+ assert.deepEqual(m.activity()[0].events,['letter','tasks','tea']);
 });
 test('dots, holiday markers and private event CRUD map to exact local dates',()=>{
  const {store}=fixture(),m=C.create({store});const event=m.add({title:' PRIVATE_EVENT ',date:'2026-10-16'});m.edit(event.id,{title:'Edited',date:'2026-10-17'});assert.deepEqual(C.create({store}).events().map(e=>[e.title,e.date]),[['Edited','2026-10-17']]);assert.throws(()=>m.add({title:'bad',date:'2026-02-30'}));m.append('cat',{date:'2026-10-17'});m.append('tea',{date:'2026-10-17'});m.append('cat',{date:'2026-10-17'});

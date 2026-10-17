@@ -1,50 +1,19 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { create, FOCUS, BREATH } = require('../rituals.js');
+const { create, BREATH } = require('../rituals.js');
 
 function fixture() {
   const db = new Map(); let time = 100000;
-  const store = { get: (k, d) => db.has(k) ? structuredClone(db.get(k)) : d, set: (k, v) => db.set(k, structuredClone(v)) };
+  const store = { get: (k, d) => db.has(k) ? structuredClone(db.get(k)) : d, set: (k, v) => db.set(k, structuredClone(v)), del: k => db.delete(k) };
   return { reload: () => create({ store, now: () => time }), advance(ms) { time += ms; }, db };
 }
 
-test('focus burns for exactly 25 minutes, gutters near the end and completes only once', () => {
-  const f = fixture(), r = f.reload();
-  assert.equal(r.focus(1, 2).fraction, 1);
-  assert.equal(r.light(1, 2), true);
-  assert.equal(r.light(1, 2), false); // tapping a burning candle never resets it
-  f.advance(FOCUS / 2);
-  assert.equal(r.focus(1, 2).fraction, .5);
-  assert.equal(f.reload().focus(1, 2).remaining, FOCUS / 2);
-  f.advance(FOCUS / 2 - 30000);
-  assert.equal(r.focus(1, 2).gutter, true);
-  f.advance(29999); assert.equal(r.focus(1, 2).active, true);
-  f.advance(1);
-  assert.deepEqual(r.tick().finished, [{ room: 1, id: 2 }]);
-  assert.equal(r.focus(1, 2).active, false);
-  assert.equal(r.focus(1, 2).fraction, 0);
-  assert.deepEqual(r.tick().finished, []);
-  assert.deepEqual(f.reload().tick().finished, []);
-});
-
-test('snuffing keeps the burned height, survives reload, never chimes, and can restart', () => {
-  const f = fixture(), r = f.reload();
-  r.light(1, 2); f.advance(FOCUS / 2); r.snuff(1, 2);
-  f.advance(FOCUS);
-  assert.equal(f.reload().focus(1, 2).fraction, .5);
-  assert.equal(f.reload().focus(1, 2).active, false);
-  assert.deepEqual(r.tick().finished, []);
-  assert.equal(r.light(1, 2), true);
-  assert.equal(r.focus(1, 2).fraction, 1);
-});
-
-test('focus timing belongs to a candle in a room and completes after time spent away', () => {
-  const f = fixture(), r = f.reload();
-  r.light(1, 2); f.advance(60000); r.light(2, 2);
-  assert.equal(r.focus(3, 2).active, false);
-  f.advance(FOCUS);
-  assert.equal(f.reload().tick().finished.length, 2);
-  assert.equal(f.reload().tick().finished.length, 0);
+test('retired focus timers and shortcuts clear silently; legacy candle placements become ordinary candles', () => {
+  const f=fixture();f.db.set('lr.focusRituals',{'1:2':{end:9999999}});f.db.set('lr.appShortcut','focus');
+  const r=f.reload();assert.equal(f.db.has('lr.focusRituals'),false);assert.equal(f.db.has('lr.appShortcut'),false);assert.equal(r.light,undefined);assert.deepEqual(r.tick(),{breathFinished:false});
+  const LR=require('../room.js'),room=new LR.Room();assert.equal(LR.CAT.focuscandle,undefined);
+  assert.ok(room.load({v:1,items:[{id:2,t:'focuscandle',x:2,z:3,on:true,c:1}]}));
+  assert.equal(room.items[0].t,'candle');assert.equal(room.items[0].id,2);assert.equal(room.items[0].x,2);assert.equal(room.items[0].z,3);assert.equal(room.items[0].on,true);assert.ok(!LR.CAT.candle.focusRitual);
 });
 
 test('breathing follows four seconds in, six out, with smooth shared visual/audio level', () => {

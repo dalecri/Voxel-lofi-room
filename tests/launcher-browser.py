@@ -23,14 +23,13 @@ with sync_playwright() as p:
  view=page.locator('#homeView');body=page.locator('#sheetBody')
  def launch(id):page.click('#bHome');view.locator('[data-app="'+id+'"]').click();assert not page.evaluate('__lr.home.active')
  launch('typewriter');page.locator('#letterBody').fill('PRIVATE_HOME_TOOL_LETTER');page.click('#letterClose')
- expected={'mailbox':'Letters to future you','groceries':'On the fridge','ideas':'The idea jar','tea':'Tea','savings':'A little savings jar','sketch':'Pixel maker','french':'A little French','whiteboard':'A little whiteboard','focus':'A little time to focus','wardrobe':'A little wardrobe','tst':'TwoStoryTails'}
+ expected={'mailbox':'Letters to future you','groceries':'On the fridge','ideas':'The idea jar','tea':'Tea','savings':'A little savings jar','sketch':'Pixel maker','french':'A little French','whiteboard':'A little whiteboard','wardrobe':'A little wardrobe','tst':'TwoStoryTails'}
  for id,title in expected.items():
   launch(id);assert title in body.inner_text(),(id,body.inner_text())
   if id=='ideas':
    body.get_by_role('button',name='Drop in an idea',exact=True).click();body.get_by_role('textbox',name='A little idea').fill('PRIVATE_HOME_TOOL_IDEA');body.get_by_role('button',name='Drop in jar',exact=True).click()
   if id=='whiteboard':body.get_by_role('textbox',name='Whiteboard text').fill('PRIVATE_HOME_TOOL_BOARD')
   page.keyboard.press('Escape');assert not page.locator('#sheet').evaluate("e=>e.classList.contains('open')")
- launch('focus');assert page.evaluate('__lr.rituals.focus(__lr.meta.current,"control-center-focus").active');page.click('#focusSnuff');assert not page.evaluate('__lr.rituals.focus(__lr.meta.current,"control-center-focus").active')
  for id,tab in [('letters','Letters'),('scenes','Scenes'),('photos','Photos')]:
   launch(id);assert page.get_by_role('tab',selected=True).inner_text()==tab;page.keyboard.press('Escape')
  for id,tab in [('sound','Sound')]:
