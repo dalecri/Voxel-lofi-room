@@ -2536,7 +2536,6 @@ function startLofiRooms() {
     const sl = h('div', 'stations');
     const icons=['📻','🌙','☕','🌧','🌿','🎷','🎹','🌊','🌸','✨','🎧','🔥'];
     const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">'+(kind==='stop'?'<rect x="6" y="6" width="12" height="12" rx="2"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';
-    const stationIcons=(select,value='📻')=>{icons.forEach(icon=>{const o=document.createElement('option');o.value=icon;o.textContent=icon;select.appendChild(o);});select.value=icons.includes(value)?value:'📻';};
     {
       const list=stationList(),wanted=meta.music?meta.station:meta.lastStation;
       const index=Number.isInteger(wanted)&&wanted>=0&&wanted<list.length?wanted:0,st=list[index];
@@ -2570,13 +2569,12 @@ function startLofiRooms() {
       r.append(copy,iconPicker,tuner,row);if(remove)r.appendChild(remove);sl.appendChild(r);
     }
     const add = h('div', 'addstation');
-    add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><label class="station-icon-label">Icon<select id="stIcon" aria-label="New station icon"></select></label><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
-    stationIcons(add.querySelector('#stIcon'));
+    add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
     add.querySelector('#stAdd').onclick = () => {
       const url = add.querySelector('#stUrl').value.trim(), name = add.querySelector('#stName').value.trim() || 'My station';
       if (!/^https?:\/\//i.test(url)) { Sound.nope(); toast('<span>Paste a link that starts with http</span>', 1600, true); return; }
       if (/youtube\.com|youtu\.be/i.test(url)) { Sound.nope(); toast('<span>YouTube can’t play inside the app. Try a direct radio stream link.</span>', 2600, true); return; }
-      (meta.stations || (meta.stations = [])).push({ name, url, icon:add.querySelector('#stIcon').value }); saveMeta(); Sound.chime();
+      (meta.stations || (meta.stations = [])).push({ name, url, icon:icons[Math.floor(Math.random()*icons.length)] }); saveMeta(); Sound.chime();
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Use the arrows to tune in.</span>`, 2000, true); renderMenu();
     };
     atlasUI.mountRadio(target);
