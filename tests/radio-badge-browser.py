@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/radio-badge-browser.py. Compact Daily moment badge and miniature radio controls."""
+"""npm run build && python3 tests/radio-badge-browser.py. Journal without duplicate daily controls and miniature radio controls."""
 import functools,json
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -21,8 +21,8 @@ with sync_playwright() as p:
  def esc():page.keyboard.press('Escape')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  assert page.evaluate('__lr.meta.current')==101;assert page.evaluate('JSON.parse(localStorage.getItem("lr.room.102")).name')=='Living draft restored'
- menu('Today');assert page.locator('#menu-today .daily-notice').count()==0
- page.get_by_role('tab',name='Journal',exact=True).click();badge=page.locator('#menu-journal .daily-badge');assert badge.is_visible();assert page.locator('#menu-journal .journal-streak').is_visible();assert page.locator('.daily-notice').get_attribute('open') is None;badge.click();assert page.locator('.daily-notice-copy').is_visible();badge.click();esc()
+ menu('Today');assert page.locator('#menu-today .daily-notice').count()==0;assert page.locator('#menu-today .today-got').is_visible()
+ page.get_by_role('tab',name='Journal',exact=True).click();assert page.locator('#menu-journal .daily-notice,#menu-journal .journal-streak').count()==0;assert page.locator('#bMomentDiary').is_visible();assert page.locator('#bCatDiary').is_visible();esc()
  def set_icon(name,icon):
   page.get_by_role('button',name='Edit icon for '+name,exact=True).click();page.get_by_role('button',name='Use '+icon+' for '+name,exact=True).click()
  page.evaluate("HTMLMediaElement.prototype.play=function(){return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){}")
@@ -45,6 +45,6 @@ with sync_playwright() as p:
  page.locator('.station-prev').click();assert page.locator('.station-dial').inner_text()=='🌙';page.get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-copy b').inner_text()=='Lofi radio';assert page.evaluate('__lr.meta.stations.length')==1
  page.locator('.station-next').click();page.get_by_role('button',name='Remove',exact=True).click();assert page.locator('.station-card').count()==1;assert page.evaluate('__lr.meta.stations.length')==0;assert page.locator('.station-prev').is_disabled();assert page.locator('.station-next').is_disabled();esc()
  assert not errors,errors
- print('PASS one radio, next/previous wrap and focus, play/stop, selected channel/icon persistence, removal, single-channel controls, compact daily badge, mobile/day/night',flush=True)
+ print('PASS one radio, next/previous wrap and focus, play/stop, selected channel/icon persistence, removal, single-channel controls, Journal without duplicate daily controls, mobile/day/night',flush=True)
  browser.close()
 server.shutdown()
