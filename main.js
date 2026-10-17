@@ -224,7 +224,6 @@ function startLofiRooms() {
   const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea}),
     portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
     celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
-    settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();openSheet();},
     hidden:()=>library.active || filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),
     openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});},

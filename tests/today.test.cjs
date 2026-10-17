@@ -47,13 +47,13 @@ test('journey frames remaining counts positively, advances through dayparts, res
  const tasks=[{done:false},{done:false},{done:false}];assert.equal(T.journey(tasks).title,'3 little things left!');assert.equal(T.journey(tasks).stage,'morning');tasks[0].done=true;assert.equal(T.journey(tasks).stage,'morning');tasks[1].done=true;assert.equal(T.journey(tasks).title,'1 little thing left!');assert.equal(T.journey(tasks).stage,'afternoon');tasks[2].done=true;assert.equal(T.journey(tasks).title,'All done. Rest now.');assert.equal(T.journey(tasks).pose,'sleep');assert.equal(T.journey(tasks).progress,1);assert.equal(T.journey(tasks).stage,'evening');assert.equal(T.journey([]).done,false);assert.equal(T.journey([]).pose,'idle');
  const {store}=fixture(),m=T.create({store});for(let i=0;i<50;i++)m.add('A small thing');assert.throws(()=>m.add('Too many'),/50/);
 });
-test('seven optional starter goals preserve the list, deduplicate normalized titles and award only on check',()=>{
- const {store}=fixture();let earned=0;const m=T.create({store,now:()=>123,earn:()=>{earned++;return 3;}});m.add('  BRUSH   TEETH  ');m.add('My own little thing');m.check(m.list()[0].id,true);earned=0;
- assert.equal(T.STARTERS.length,7);assert.equal(m.addStarters(),6);assert.equal(m.list().length,8);assert.equal(m.list()[0].done,true);assert.equal(m.list()[1].text,'My own little thing');assert.equal(earned,0);assert.equal(m.addStarters(),0);
- const restored=T.create({store});for(const s of T.STARTERS){const task=restored.list().find(t=>t.text.toLowerCase()===s.text.toLowerCase());assert.ok(task,s.text);assert.ok(T.ICONS.includes(task.icon));if(s.id!=='teeth')assert.equal(task.icon,s.icon);}
- const water=m.list().find(t=>t.text==='Drink water');assert.equal(m.check(water.id,true),3);assert.equal(earned,1);
+test('six daily defaults preserve the list, deduplicate normalized titles and award only on check',()=>{
+ const {store}=fixture();let earned=0;const m=T.create({store,now:()=>123,earn:()=>{earned++;return 3;}});m.add('  TAKE DAILY   SUPPLEMENTS  ');m.add('My own little thing');m.check(m.list()[0].id,true);earned=0;
+ assert.deepEqual(T.STARTERS.map(s=>s.text),['Take daily supplements','Scoop cat litter','Daily home chore','Workout','One important thing','TwoStoryTails Post']);assert.equal(T.STARTERS.length,6);assert.equal(m.addStarters(),5);assert.equal(m.list().length,7);assert.equal(m.list()[0].done,true);assert.equal(m.list()[1].text,'My own little thing');assert.equal(earned,0);assert.equal(m.addStarters(),0);
+ const restored=T.create({store});for(const s of T.STARTERS){const task=restored.list().find(t=>t.text.toLowerCase()===s.text.toLowerCase());assert.ok(task,s.text);assert.ok(T.ICONS.includes(task.icon));if(s.id!=='supplements')assert.equal(task.icon,s.icon);}
+ const workout=m.list().find(t=>t.text==='Workout');assert.equal(m.check(workout.id,true),3);assert.equal(earned,1);
  assert.equal(JSON.stringify(W.shareDecor({...new LR.Room().serialize(),todayTasks:store.get(T.KEY)})).includes('My own little thing'),false);
 });
 test('individual starter picks and the bulk plan obey the existing 50-task limit without replacing tasks',()=>{
- const {store}=fixture(),m=T.create({store});for(let i=0;i<48;i++)m.add('Original task '+i);assert.equal(m.addStarters(['happy']),1);assert.equal(m.list()[48].icon,'😊');assert.equal(m.addStarters(),1);assert.equal(m.list().length,50);assert.equal(m.addStarters(),0);assert.equal(m.list()[0].text,'Original task 0');assert.equal(m.addStarters(['not-a-starter']),0);
+ const {store}=fixture(),m=T.create({store});for(let i=0;i<48;i++)m.add('Original task '+i);assert.equal(m.addStarters(['important']),1);assert.equal(m.list()[48].icon,'⭐');assert.equal(m.addStarters(),1);assert.equal(m.list().length,50);assert.equal(m.addStarters(),0);assert.equal(m.list()[0].text,'Original task 0');assert.equal(m.addStarters(['not-a-starter']),0);
 });
