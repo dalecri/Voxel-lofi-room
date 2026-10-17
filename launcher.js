@@ -3,6 +3,7 @@
 (function(root) {
   const TOOLS=[
     ['typewriter','Typewriter','⌨','Write a letter'],
+    ['digest','Daily Drift','▤','Your week, gently folded'],
     ['library','My Library','📖','Letters, sparks, and quick notes'],
     ['mailbox','Future-self mailbox','✉','Send a note to later'],
     ['groceries','Grocery list','🥬','A little less to remember'],

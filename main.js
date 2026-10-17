@@ -23,7 +23,7 @@ function startLofiRooms() {
   const rituals = LRRituals.create({ store });
   const focusGarden = LRFocusGarden.create({store,rituals});
   let breathCamera = null;
-  let companion = null, widgetView = null, frenchUI = null;
+  let companion = null, widgetView = null, frenchUI = null, driftPaper = null;
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
   const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}),onTallyGoal:t=>{remember('pushups',{date:t.date,id:t.date});try{Sound.init();if(Sound.on)Sound.chime();}catch(e){/* quiet reps still count */}if(companion)companion.hop();} });
@@ -339,6 +339,7 @@ function startLofiRooms() {
     const tools={tally:['tallycounter'],mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
     if(p.id==='library')library.open();
+    else if(p.id==='digest')digestUI.open();
     else if(p.id==='typewriter')letters.open();
     else if(p.id==='french')roomToolsUI.flashcard();
     else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
@@ -518,7 +519,7 @@ function startLofiRooms() {
     if (undo.length > 40) undo.shift();
   }
   function changed() {
-    view.sync(room); villageView?.refresh();
+    view.sync(room); driftPaper?.update();villageView?.refresh();
     dirty = true;
     checkRoomMoments();
     updateSaveChip();
@@ -760,7 +761,7 @@ function startLofiRooms() {
     document.body.classList.toggle('exploring', mode === 'explore');
     state.drag = null; view.setGhost(null); setHidden(0);
     view.petsPaused = mode === 'edit';
-    renderTray();
+    renderTray();driftPaper?.update();
     if (quiet) return;
     haptic(6);
     if (mode === 'edit' && !store.get('lr.tipEdit', false)) {
@@ -1610,8 +1611,10 @@ function startLofiRooms() {
     if (e.button === 2 || e.button === 1 || e.altKey) { orbit = { x: e.clientX, y: e.clientY, pan: e.button === 1 }; return; }
     if (state.mode === 'explore') {
       const hit = view.pickItem(e.clientX, e.clientY);
-      const botTap = companion && companion.hit(e.clientX, e.clientY);
-      startOrbit(e, !botTap && hit && !hit.behindWall ? hit.id : 0);
+      const paperTap=driftPaper.hit(e.clientX,e.clientY);
+      const botTap = !paperTap && companion && companion.hit(e.clientX, e.clientY);
+      startOrbit(e, !paperTap && !botTap && hit && !hit.behindWall ? hit.id : 0);
+      if(paperTap)orbit.digest=true;
       if (botTap) orbit.companion = true;
       return;
     }
@@ -1667,14 +1670,15 @@ function startLofiRooms() {
     } else {
       view.setHover(0);
       const it = id && room.get(id);
-      canvas.style.cursor = (it && CAT[it.t].tap) || (companion && companion.hit(mouse.x, mouse.y)) ? 'pointer' : 'grab';
+      canvas.style.cursor = (it && CAT[it.t].tap) || (companion && companion.hit(mouse.x, mouse.y)) || driftPaper.hit(mouse.x,mouse.y) ? 'pointer' : 'grab';
     }
   }
   const up = e => {
     pointers.delete(e.pointerId);
     if (pointers.size < 2) gesture = null;
     if (orbit && orbit.t0 && e.type === 'pointerup' && pointers.size === 0 && !orbit.moved && performance.now() - orbit.t0 < 450) {
-      if (orbit.tapId) {
+      if(orbit.digest){driftPaper.open();lastTap=null;}
+      else if (orbit.tapId) {
         if (state.mode === 'explore') interact(orbit.tapId, view.pickItem(e.clientX, e.clientY)); else tapEdit(orbit.tapId);
         lastTap = null;
       } else if (orbit.companion && companion) {
@@ -2851,7 +2855,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); liveWeather.refresh(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !library.active && !letters.active && !barnaby.active && !frenchUI?.active && !rituals.breath.active && !filming); worldT = 0; }
+    if (worldT >= 1) { driftPaper.update();calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !library.active && !letters.active && !barnaby.active && !frenchUI?.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
@@ -2895,6 +2899,10 @@ function startLofiRooms() {
   });
   const googleCalendar=LRCalendar.createGoogle();
   const calendar=LRCalendar.createView({model:calendarModel,google:googleCalendar,sheet:codeSheet,atlas,meta,scenes:()=>files.list('Scenes'),seasons:LR.SEASONS || [],thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s)});
+  const digest=LRDigest.create({store,sources:()=>({activity:calendarModel.activity(),scenes:files.list('Scenes'),ideas:roomTools.state.ideas,streak:store.get('lr.dailyStreak',{}),guestbook:store.get('lr.guestbook',[]),catLog:catJournal.entries,events:calendarModel.events()})});
+  const digestUI=LRDigest.createView({model:digest,sheet:codeSheet,sound:Sound,scenes:()=>files.list('Scenes'),thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s),onRead:()=>driftPaper.update(),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
+  driftPaper=LRDigest.createPaper({view,room,model:digest,open:()=>digestUI.open(),hidden:()=>state.mode!=='explore'||home.active||library.active||letters.active||barnaby.active||frenchUI?.active||rituals.breath.active||filming||view.capturing||document.hidden||!!view.fp||$('#intro').classList.contains('open')||$('#photo').classList.contains('open'),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
+  driftPaper.update();
   atlas.refresh();
   updateHeader();
   setMode(state.mode, true);
@@ -2910,7 +2918,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
