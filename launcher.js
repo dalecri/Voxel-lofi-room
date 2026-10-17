@@ -8,7 +8,7 @@
     ['ideas','Idea jar','💡','Keep a spark for later'],
     ['tea','Tea timer','🫖','Put the kettle on'],
     ['savings','Savings jar','🪙','Small steps toward a goal'],
-    ['sketch','Sketchbook','✎','Make a little mark'],
+    ['sketch','Pixel maker','▦','Make a little pixel picture'],
     ['french','French flashcard','🇫🇷','Your word for today'],
     ['whiteboard','Whiteboard','▤','Room for a thought'],
     ['focus','Focus candle','🕯','Twenty-five quiet minutes'],

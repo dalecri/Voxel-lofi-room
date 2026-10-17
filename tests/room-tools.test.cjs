@@ -29,14 +29,13 @@ test('savings logs exact cents, goal changes retain deposits, removals undo entr
  m.goal('PRIVATE_GOAL','2.00');assert.equal(m.total(),30);for(const v of ['0','-1','1.005','x','1e5','Infinity'])assert.throws(()=>m.deposit(v));m.deposit('2,00');assert.equal(m.total(),230);assert.equal(m.visual.level,8);
  m.remove('deposits',m.state.deposits[0].id);assert.equal(m.total(),30);assert.equal(T.amount(m.total()),'0.30');assert.equal(T.cents('000.01'),1);
 });
-test('normalized sketch strokes survive reload; undo, clear and invalid coordinates are handled',()=>{
- const f=fixture(),m=f.model;const s={color:'#443c34',points:[[0,0],[.5,.5],[1,1]]};m.stroke(s);assert.deepEqual(f.reload().strokes,[s]);s.points[0][0]=.8;assert.equal(m.strokes[0].points[0][0],0);
- assert.throws(()=>m.stroke({color:'red',points:[[0,0]]}));assert.throws(()=>m.stroke({color:'#443c34',points:[[1.1,0]]}));m.undoStroke();assert.equal(m.strokes.length,0);m.stroke(s);m.clearSketch();assert.equal(f.reload().strokes.length,0);
+test('private pixels replace the retired stroke format and persist across reloads',()=>{
+ const f=fixture();f.data['lr.tools']={v:1,next:1,strokes:[{color:'#443c34',points:[[0,0]]}],ideas:[{id:'kept',text:'Keep this idea'}]};const m=f.reload();assert.ok(!('strokes' in f.data['lr.tools']));assert.equal(m.state.ideas[0].text,'Keep this idea');m.pixels.paint(3,4,{color:5});m.pixels.end();assert.equal(f.reload().pixels.grid.cells[4*16+3],5);assert.equal(m.pixels.undo(),true);assert.equal(m.pixels.grid.cells[4*16+3],-1);m.pixels.redo();assert.equal(m.pixels.grid.cells[4*16+3],5);
 });
 test('free furniture definitions, inherited fridge skins, and share privacy remain separate from tools',()=>{
  T.register(L);for(const type of ['letterbox','ideajar','savingsjar','sketchbook']){const C=L.CAT[type],m=new L.Model();C.build(m,C.vars[0]);assert.ok(Object.values(m.parts).some(p=>p.vox.size));assert.equal(C.shop,undefined);}
  assert.equal(T.kind({t:'shopicebox'},{tap:'door',name:'Sage tall icebox'}),'groceries');
- const f=fixture();f.model.addIdea('PRIVATE_IDEA');f.model.stroke({color:'#443c34',points:[[.1,.1]]});
+ const f=fixture();f.model.addIdea('PRIVATE_IDEA');f.model.pixels.paint(1,1,{color:3});f.model.pixels.end();
  const d=W.shareDecor({name:'Tools',n:10,tools:f.model.state,letters:{body:'PRIVATE_MAIL'},items:[{id:1,t:'savingsjar',x:2,z:2,tools:f.model.state,amount:'PRIVATE_AMOUNT'}]});assert.equal(d.items[0].t,'savingsjar');assert.ok(!JSON.stringify(d).includes('PRIVATE'));assert.ok(!('tools' in d));
 });
 test('tea dial maps every minute clockwise and presets keep their familiar steep lengths',()=>{

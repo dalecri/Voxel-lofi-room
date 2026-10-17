@@ -1,5 +1,6 @@
 // Furniture-sized, local tools. One private device state, never room item fields.
 (function(root){
+  const Pixel=typeof module!=='undefined'&&module.exports?require('./pixel-maker.js'):root.LRPixelMaker;
   const KEY='lr.tools',day=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   function validDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const [y,m,d]=s.split('-').map(Number);return day(new Date(y,m-1,d))===s;}
   function cents(value){
@@ -25,7 +26,7 @@
     const old=store.get(KEY,{})||{},copy=a=>JSON.parse(JSON.stringify(a));
     const state={v:1,next:Number.isSafeInteger(old.next)&&old.next>0?old.next:1,
       mail:Array.isArray(old.mail)?old.mail:[],groceries:Array.isArray(old.groceries)?old.groceries:[],ideas:Array.isArray(old.ideas)?old.ideas:[],
-      lastIdea:old.lastIdea||null,tea:old.tea||null,goal:old.goal||null,deposits:Array.isArray(old.deposits)?old.deposits:[],strokes:Array.isArray(old.strokes)?old.strokes:[]};
+      lastIdea:old.lastIdea||null,tea:old.tea||null,goal:old.goal||null,deposits:Array.isArray(old.deposits)?old.deposits:[],pixel:Pixel.normalize(old.pixel),pixelPosters:old.pixelPosters&&typeof old.pixelPosters==='object'?old.pixelPosters:{}};
     const save=()=>{store.set(KEY,state);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(state))throw Error('Could not save on this device.');};
     const id=prefix=>prefix+'-'+now().getTime().toString(36)+'-'+state.next++;
     function send({title,body,html='',letterhead='',deliverOn}){
@@ -57,21 +58,17 @@
     const total=()=>state.deposits.reduce((n,d)=>n+d.cents,0);
     function goal(title,target){title=String(title).trim();if(!title)throw Error('Give your goal a name.');state.goal={title,target:cents(target)};save();}
     function deposit(value,note=''){if(!state.goal)throw Error('Set a goal first.');const n=cents(value);if(!Number.isSafeInteger(total()+n))throw Error('That total is too large for this jar.');state.deposits.unshift({id:id('deposit'),cents:n,note:String(note).trim(),date:day(now())});save();}
-    function stroke(s){
-      if(!['#443c34','#b66b66','#688f76','#6384a4'].includes(s.color))throw Error('Choose one of the pencils.');
-      if(!Array.isArray(s.points)||!s.points.length||s.points.some(p=>!Array.isArray(p)||p.length!==2||p.some(v=>!Number.isFinite(v)||v<0||v>1)))throw Error('That stroke is outside the paper.');
-      state.strokes.push({color:s.color,points:copy(s.points)});save();
-    }
-    function undoStroke(){state.strokes.pop();save();}function clearSketch(){state.strokes=[];save();}
-    return {send,poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,stroke,undoStroke,clearSketch,total,
-      get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get strokes(){return copy(state.strokes);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
+    if('strokes' in old)save(); // Retire the private freehand format; pixel sketches start fresh.
+    const pixels=Pixel.create({read:()=>state.pixel,write:g=>{const before=state.pixel;state.pixel=g;try{save();}catch(e){state.pixel=before;throw e;}}});
+    return {send,poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,pixels,pinPixel(room,id,grid){state.pixelPosters[`${room}:${id}`]=Pixel.normalize(grid);save();},pixelPoster(room,id){const g=state.pixelPosters[`${room}:${id}`];return g?Pixel.normalize(g):null;},total,
+      get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
   // Presentation order only. The model's newest-first list and lastIdea are untouched.
   function ideaCards(ideas,frontId){const index=Math.max(0,ideas.findIndex(i=>i.id===frontId)),top=ideas[index] || null;return {top,count:ideas.length,index, next:ideas.length?ideas[(index+1)%ideas.length]:null,behind:Array.from({length:Math.min(3,Math.max(0,ideas.length-1))},(_,i)=>ideas[(index+i+1)%ideas.length])};}
   function ideaAdded(idea){const date=new Date(idea?.createdAt);if(!Number.isFinite(date.getTime()))return 'Kept in your jar';const parts=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long'}).formatToParts(date);return `Added ${parts.find(p=>p.type==='day').value} ${parts.find(p=>p.type==='month').value}`;}
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
-  function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{}}){
-    let active=null,anchor=null,resize=null,liveStroke=null,canvas=null,status=null,frameTime=0;
+  function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
+    let active=null,anchor=null,resize=null,canvas=null,status=null,frameTime=0;
     let teaMinutes=3;
     const badges=new Map(),button=(parent,label,fn,cls='chipbtn')=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>run(fn);parent.appendChild(b);return b;};
     function run(fn){try{const result=fn();if(status)status.textContent='';return result;}catch(e){if(status)status.textContent=e.message || 'Could not save on this device.';return false;}}
@@ -203,22 +200,11 @@
       const value=field(root,'Deposit amount');value.inputMode='decimal';const note=field(root,'Deposit note');button(root,'Log deposit',()=>{model.deposit(value.value,note.value);sound.coin();savings();});
       for(const d of data.deposits){const row=document.createElement('div');row.className='roomtool-card';text(row,`${amount(d.cents)} · ${d.date}${d.note?' · '+d.note:''}`);removeButton(row,()=>{model.remove('deposits',d.id);savings();});root.appendChild(row);}
     });}
-    function flushStroke(){if(liveStroke?.points.length)run(()=>model.stroke(liveStroke));liveStroke=null;}
-    function sketch(){shell('A little sketchbook','A page for small doodles, private to this device.',root=>{
-      let color='#443c34';const row=document.createElement('div');row.className='rowbtns';root.appendChild(row);
-      for(const [name,c] of [['Graphite','#443c34'],['Rose','#b66b66'],['Sage','#688f76'],['Blue','#6384a4']]){const b=button(row,name,()=>{color=c;row.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});b.setAttribute('aria-pressed',String(c===color));}
-      canvas=document.createElement('canvas');canvas.className='roomtool-sketch';canvas.setAttribute('aria-label','Sketchbook drawing pad');root.appendChild(canvas);
-      const c=canvas;let drawingPointer=null;function point(e){const r=c.getBoundingClientRect();return [Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))];}
-      c.onpointerdown=e=>{if(e.button!==0||liveStroke)return;e.preventDefault();drawingPointer=e.pointerId;c.setPointerCapture(e.pointerId);liveStroke={color,points:[point(e)]};draw();};
-      c.onpointermove=e=>{if(!liveStroke||e.pointerId!==drawingPointer)return;e.preventDefault();const p=point(e),last=liveStroke.points.at(-1);if(Math.hypot(p[0]-last[0],p[1]-last[1])>.002){liveStroke.points.push(p);draw();}};
-      c.onpointerup=c.onpointercancel=e=>{if(e.pointerId!==drawingPointer)return;if(liveStroke){flushStroke();draw();}drawingPointer=null;};
-      button(root,'Undo stroke',()=>{flushStroke();model.undoStroke();draw();});let clearing=false;const clear=button(root,'Clear page',()=>{if(!clearing){clearing=true;clear.textContent='Clear this page?';}else{model.clearSketch();clearing=false;clear.textContent='Clear page';draw();}});
-      resize=new ResizeObserver(()=>draw(true));resize.observe(c);draw(true);
+    function flushStroke(){model.pixels.end();}
+    function sketch(){shell('Pixel maker','Draw a little pixel picture. Kept on this device, outside room shares.',root=>{
+      const ui=Pixel.createView({model:model.pixels,host:root,notice:message=>{status.textContent=message;},hang:hangPixel,reduced:()=>renderer().reducedMotion});
+      resize=new ResizeObserver(()=>ui.resize());resize.observe(ui.canvas);canvas=ui.canvas;
     });}
-    function draw(size=false){if(!canvas)return;const c=canvas,r=c.getBoundingClientRect(),ratio=Math.min(2,window.devicePixelRatio||1);if(size){c.width=Math.max(1,Math.round(r.width*ratio));c.height=Math.max(1,Math.round(r.height*ratio));}
-      const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.lineCap=ctx.lineJoin='round';ctx.lineWidth=2*ratio;
-      for(const s of [...model.strokes,...(liveStroke?[liveStroke]:[])]){ctx.strokeStyle=ctx.fillStyle=s.color;ctx.beginPath();s.points.forEach(([x,y],i)=>{if(!i)ctx.moveTo(x*c.width,y*c.height);else ctx.lineTo(x*c.width,y*c.height);});if(s.points.length===1){ctx.arc(s.points[0][0]*c.width,s.points[0][1]*c.height,ratio,0,Math.PI*2);ctx.fill();}else ctx.stroke();}
-    }
     function tick(allowed){
       const events=model.poll(allowed);if(events.mail.length)notice(`${events.mail.length===1?'A letter from your past self has':'Letters from your past self have'} arrived.`);
       if(events.tea){sound.ritualChime();notice('Your tea is ready. Take a little pause.');}
@@ -255,7 +241,8 @@
       m.box(1,0,1,7,1,7,c).box(1,1,1,2,11,7,c).box(6,1,1,7,11,7,c).box(2,1,1,6,11,2,c).box(1,11,1,7,12,7,0xc5a57d).box(3,12,3,5,13,4,0x79634b);
       for(let n=0;n<8;n++){m.part('privateCoin'+n,[4,1,4]);m.box(2,1+n,3,6,2+n,6,n%2?0xe3ba60:0xf4d17d);}m.main();
     }});
-    def('sketchbook',{name:'Sketchbook',kind:'small',group:'cozy',size:[2,1],tap:'roomtool',privateTool:'sketch',vars:[[0x8c9b82]],build(m,[c]){
+    def('pixelposter',{name:'Pixel art print',kind:'wall',group:'wall',size:[2,2],depth:3,vars:[[0xc5a57d],[0x79604f]],build(m,[c]){m.box(0,0,0,16,16,2,c).box(1,1,2,15,15,3,0xfff4de);}});
+    def('sketchbook',{name:'Pixel maker',kind:'small',group:'cozy',size:[2,1],tap:'roomtool',privateTool:'sketch',vars:[[0x8c9b82]],build(m,[c]){
       m.box(0,0,0,16,1,8,c).box(1,1,0,8,2,8,0xfff4d9).box(8,1,0,15,2,8,0xeee1c5).box(7,1,0,9,2,8,0xd1bea1);
       for(let z=1;z<8;z+=2)m.box(7,2,z,9,3,z+1,0x8c847a);m.box(12,2,1,13,3,7,0xd8a659);
     }});

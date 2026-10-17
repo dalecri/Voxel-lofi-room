@@ -71,7 +71,7 @@
     if(!LR.MOMENTS.some(m=>m[0]==='sushisupper'))LR.MOMENTS.push(['sushisupper','One more little plate','Shared a passing plate with a roommate']);
     if(!LR.MOMENTS.some(m=>m[0]==='harp'))LR.MOMENTS.push(['harp','A few quiet strings','Plucked a gentle tune on the harp']);
   }
-  function createView({store,model,view,room,roomId,files,wardrobe,companion,sheet,close,sound,discover,notice,editing,hidden,takePhoto,openFiles}) {
+  function createView({store,model,view,room,roomId,files,wardrobe,companion,sheet,close,sound,discover,notice,editing,hidden,takePhoto,openFiles,pixelArt=()=>null}) {
     const surfaces=new Map(),images=new Map(),thumbs=new Map(),cooldowns=new Map();
     let scanAt=0,photos=[],context='',meal=null;
     const element=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
@@ -100,18 +100,19 @@
     }
     function dispose(e){e.mesh.removeFromParent();e.mesh.geometry.dispose();e.mesh.material.map.dispose();e.mesh.material.dispose();e.badge.remove();}
     function surface(it,obj) {
-      const fridge=it.t==='minifridge',tee=it.t==='hangingtee',streak=it.t==='streakboard';
-      const canvas=document.createElement('canvas');canvas.width=fridge?256:tee?256:768;canvas.height=fridge?160:tee?512:streak?320:512;
-      const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.minFilter=texture.magFilter=THREE.LinearFilter;
-      const mesh=new THREE.Mesh(new THREE.PlaneGeometry(fridge?.7:tee?.5:streak?1.75:2.7,fridge?.4:tee?1.15:streak?.7:1.7),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
+      const pixel=it.t==='pixelposter',fridge=it.t==='minifridge',tee=it.t==='hangingtee',streak=it.t==='streakboard';
+      const canvas=document.createElement('canvas');canvas.width=pixel?512:fridge?256:tee?256:768;canvas.height=pixel?512:fridge?160:tee?512:streak?320:512;
+      const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.minFilter=texture.magFilter=pixel?THREE.NearestFilter:THREE.LinearFilter;texture.generateMipmaps=!pixel;
+      const mesh=new THREE.Mesh(new THREE.PlaneGeometry(pixel?1.75:fridge?.7:tee?.5:streak?1.75:2.7,pixel?1.75:fridge?.4:tee?1.15:streak?.7:1.7),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
       mesh.name='privateCozySurface';
-      if(fridge){mesh.position.set(.45,.26,.258);obj.userData.parts.door.add(mesh);}else {mesh.position.set(tee?.5:streak?1:1.5,tee?.91:streak?.5:1,.39);obj.userData.inner.add(mesh);}
+      if(fridge){mesh.position.set(.45,.26,.258);obj.userData.parts.door.add(mesh);}else {mesh.position.set(pixel?1:tee?.5:streak?1:1.5,tee?.91:streak?.5:1,.39);obj.userData.inner.add(mesh);}
       obj.userData.parts.privateCozySurface=mesh;
       const badge=element('span','private');badge.className='roomtool-private';badge.setAttribute('aria-label','Private surface, excluded from shared rooms');document.body.appendChild(badge);
       return {obj,mesh,canvas,badge,signature:''};
     }
     function paint(e,it) {
       const data=model.surface(roomId(),it.id),g=e.canvas.getContext('2d'),W=e.canvas.width,H=e.canvas.height;
+      if(it.t==='pixelposter'){const art=pixelArt(it),signature=JSON.stringify(art);if(signature===e.signature)return;e.signature=signature;g.fillStyle='#fff4de';g.fillRect(0,0,W,H);if(art){g.imageSmoothingEnabled=false;const src=LRPixelMaker.paintCanvas(document.createElement('canvas'),art,1);g.drawImage(src,0,0,W,H);}e.mesh.material.map.needsUpdate=true;return;}
       const slots=wardrobe.slots,costume=JSON.stringify(slots),streak=store.get('lr.dailyStreak',{n:0}).n || 0;
       const pinned=data.pins.map(id=>photos.find(p=>p.id===id)).filter(Boolean).slice(0,it.t==='minifridge'?2:6);
       const signature=JSON.stringify([it.t,data.text,pinned.map(p=>[p.id,p.updatedAt]),costume,streak]);if(e.signature===signature)return;e.signature=signature;
@@ -158,7 +159,7 @@
       const refresh=t>=scanAt;if(refresh){scanAt=t+1;photos=files.list('Photos');const livePhotos=new Set(photos.map(p=>p.id+':'+p.updatedAt));for(const k of images.keys())if(!k.startsWith('costume:')&&!livePhotos.has(k))images.delete(k);}
       const alive=new Set();
       for(const it of room.items){const obj=view.objs.get(it.id);if(!obj)continue;
-        if(['photocollage','whiteboard','streakboard','hangingtee','minifridge'].includes(it.t)){
+        if(['pixelposter','photocollage','whiteboard','streakboard','hangingtee','minifridge'].includes(it.t)){
           alive.add(it.id);let e=surfaces.get(it.id);if(e && e.obj!==obj){dispose(e);surfaces.delete(it.id);e=null;}if(!e){e=surface(it,obj);surfaces.set(it.id,e);paint(e,it);}else if(refresh)paint(e,it);
           const show=!hidden() && !view.capturing && view.isShown(obj);e.mesh.visible=show;
           e.badge.hidden=!show || !editing() || it.t==='minifridge';if(!e.badge.hidden){const p=view.itemPoint(it.id,[LR.CAT[it.t].size[0]*4,it.t==='minifridge'?15:LR.CAT[it.t].size[1]*8+2,3]);const point=view.root.localToWorld(p).project(view.cam),rect=view.r.domElement.getBoundingClientRect();e.badge.style.left=rect.left+(point.x+1)*rect.width/2+'px';e.badge.style.top=rect.top+(1-point.y)*rect.height/2+'px';}

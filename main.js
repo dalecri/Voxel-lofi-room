@@ -176,6 +176,7 @@ function startLofiRooms() {
   const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
     editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
     onPhotos: id => cozy.photoPicker(id),
+    hangPixel:grid=>{const it=LRPixelMaker.hang(room,meta.current,grid,(id,piece,art)=>roomTools.pinPixel(id,piece,art),LR);changed();save();cozy.frame(0,view.t+1);closeSheets();toast('<span>Your pixel print is on the wall. Move it in Decorate.</span>',2400,true);return it;},
     portrait:reaction=>companionPortrait('idle',reaction),portraitKey:()=>JSON.stringify(wardrobe.slots),music:()=>!!meta.music,toggleMusic:()=>setMusic(!meta.music),
     letters, word: () => { widgets.refresh(['minifridge']); return widgets.data('fridge-note'); }, sound: Sound,
     notice: text => toast(`<span>${text}</span>`, 3200), onBrew: id => {
@@ -1368,6 +1369,7 @@ function startLofiRooms() {
   // Handle the top sheet before crate navigation, text fields or cat-view controls.
   window.addEventListener('keydown', e => {
     if (!$('#sheet').classList.contains('open')) return;
+    if(e.target.matches('.pixel-grid')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' ','z','Z'].includes(e.key))return;
     const typing = e.target.matches('input, textarea, select') || e.target.isContentEditable;
     const menuShortcut = !typing && !e.ctrlKey && !e.metaKey && !e.altKey && ['h','?'].includes(e.key.toLowerCase()) && !!$('#menu-today');
     if (e.key === 'Escape' || menuShortcut) { e.preventDefault(); closeSheets(); }
@@ -2833,7 +2835,7 @@ function startLofiRooms() {
   window.addEventListener('resize', () => view.resize());
   companion = LRCompanion.create({ view, room, slots: wardrobe.slots, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
-  const cozy = LRCozyFurniture.createView({store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
+  const cozy = LRCozyFurniture.createView({pixelArt:it=>roomTools.pixelPoster(meta.current,it.id),store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
   view.cozyLife = cozy;
   view.petLife = LRPets.createView({view,room,CAT});
   widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open') });

@@ -67,19 +67,10 @@ with sync_playwright() as p:
  page.evaluate('''() => {window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);window.__clock=__lr.roomTools.tea.endAt+1;window.__teaChimes=0;const f=__lr.Sound.ritualChime;__lr.Sound.ritualChime=function(){__teaChimes++;return f.call(this)};__lr.roomToolsUI.tick(true);__lr.roomToolsUI.tick(true);tapTool('kettle')}''')
  assert page.evaluate('__teaChimes')==1;assert 'Your tea is ready' in page.locator('.tea-note').inner_text();page.get_by_role('button',name='Enjoy the tea',exact=True).click();page.keyboard.press('Escape')
  print('PASS: tea survives reload/background elapsed time, preserves herb brewing and chimes exactly once',flush=True)
- # Real pointer strokes save normalized coordinates and redraw at mobile/desktop sizes.
- page.evaluate("tapTool('sketchbook')");canvas=page.locator('.roomtool-sketch');box=canvas.bounding_box()
- for offset in [0,25]:
-  page.mouse.move(box['x']+30,box['y']+40+offset);page.mouse.down();canvas.evaluate('c=>{for(const type of ["pointerdown","pointermove","pointerup"])c.dispatchEvent(new PointerEvent(type,{pointerId:222,button:0,clientX:0,clientY:0,bubbles:true}))}');page.mouse.move(box['x']+90,box['y']+80+offset,steps=8);page.mouse.up()
- assert page.evaluate('__lr.roomTools.strokes.length')==2;page.get_by_role('button',name='Undo stroke',exact=True).click();assert page.evaluate('__lr.roomTools.strokes.length')==1
- strokes=page.evaluate('__lr.roomTools.strokes')
- for width in [320,390,1280]:
-  page.set_viewport_size({'width':width,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.evaluate('__lr.roomTools.strokes')==strokes
- page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI');assert page.evaluate('__lr.roomTools.strokes')==strokes
- page.evaluate("window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);tapTool('sketchbook')");assert page.locator('.roomtool-sketch').evaluate('c=>c.getContext("2d").getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0)')
- page.keyboard.press('Escape')
+ # The replacement grid uses native pointer drawing and survives reload.
+ page.evaluate("tapTool('sketchbook')");canvas=page.locator('.pixel-grid');canvas.scroll_into_view_if_needed();box=canvas.bounding_box();page.mouse.click(box['x']+box['width']*.4,box['y']+box['height']*.4);assert page.evaluate('__lr.roomTools.pixels.grid.cells.some(c=>c>=0)');page.locator('#sheetBody').get_by_role('button',name='Undo',exact=True).click();assert page.evaluate('__lr.roomTools.pixels.grid.cells.every(c=>c<0)');page.get_by_role('button',name='Redo',exact=True).click();grid=page.evaluate('__lr.roomTools.pixels.grid');page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI');assert page.evaluate('__lr.roomTools.pixels.grid')==grid
  # Delivery after local midnight raises the flag; opening the letter lowers it again.
- page.evaluate('''() => {window.__clock=new Date('2026-10-16T00:00:00').getTime();__lr.roomToolsUI.tick(true);__lr.roomToolsUI.frame(1);tapTool('letterbox')}''')
+ page.evaluate('''() => {window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);window.__clock=new Date('2026-10-16T00:00:00').getTime();__lr.roomToolsUI.tick(true);__lr.roomToolsUI.frame(1);tapTool('letterbox')}''')
  assert page.evaluate('''() => {const a=__lr;return a.view.objs.get(a.room.items.find(i=>i.t==='letterbox').id).userData.parts.privateMailFlag.visible}''')
  page.get_by_role('button',name='Read letter',exact=True).click();assert 'PRIVATE_FUTURE_LETTER' in page.locator('.roomtool-letter').inner_text();assert page.locator('.roomtool-letter b').count()==1
  assert page.locator('#sheetBody img').count()==0;assert page.evaluate('!window.__toolUnsafe')
