@@ -78,3 +78,15 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 @media(max-width:359px){.today-duo{grid-template-columns:1fr}.space-today .today-duo .french-today{min-height:175px}.space-today .today-sky{padding:20px}.today-greeting{padding-right:40px}}
 @media(prefers-reduced-motion:reduce){.task-list-progress>span{transition:none}}
 .space-today .today-sky-tag{position:absolute;right:18px;top:22px;max-width:60%;padding:6px 10px;border-radius:18px;background:#ffffff40;font-size:11px;font-weight:900}.space-today .today-sky-phase{font-size:13px}
+
+/* Cozy scrollbars: slim, rounded, theme-aware */
+* { scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { border-width: 2px; }
