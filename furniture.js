@@ -1024,4 +1024,15 @@
       m.box(2, 0, 6, 6, 1, 8, 0x3a3a44);
     },
   });
+  def('lectern', {
+    name:'Reading lectern',kind:'floor',group:'furniture',size:[1,1],tap:'library',
+    vars:[[0xb18a60,0x526459],[0x765242,0x494d70],[0xd2bc91,0x8e554f]],
+    build(m,[wood,cover]) {
+      m.box(1,0,1,7,1,7,shade(wood,.78)).box(2,1,2,6,2,6,wood);
+      m.box(3,2,3,5,10,5,wood).box(2,8,2,6,10,6,shade(wood,.9));
+      // Stepped sloping reading surface and two open parchment leaves.
+      for(let z=0;z<7;z++){const y=10+Math.floor((6-z)/2);m.box(0,y,z,8,y+1,z+1,wood);m.box(1,y+1,z,7,y+2,z+1,cover);if(z>0&&z<6){m.box(1,y+2,z,4,y+3,z+1,0xf7ead0);m.box(4,y+2,z,7,y+3,z+1,0xf2dfbc);if(z===2||z===4){m.box(2,y+2,z,3,y+3,z+1,0xc9b993);m.box(5,y+2,z,6,y+3,z+1,0xc9b993);}}}
+      m.box(0,10,6,8,12,7,shade(wood,.8));m.set(4,13,5,0xb45f54);
+    },
+  });
 })();

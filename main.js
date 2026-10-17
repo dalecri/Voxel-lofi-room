@@ -174,7 +174,7 @@ function startLofiRooms() {
   const state = { mode: 'explore', tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
   const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
-    editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
+    editing: () => state.mode === 'edit', hidden: () => library.active || letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
     onPhotos: id => cozy.photoPicker(id),
     hangPixel:grid=>{const it=LRPixelMaker.hang(room,meta.current,grid,(id,piece,art)=>roomTools.pinPixel(id,piece,art),LR);changed();save();cozy.frame(0,view.t+1);closeSheets();toast('<span>Your pixel print is on the wall. Move it in Decorate.</span>',2400,true);return it;},
     portrait:reaction=>companionPortrait('idle',reaction),portraitKey:()=>JSON.stringify(wardrobe.slots),music:()=>!!meta.music,toggleMusic:()=>setMusic(!meta.music),
@@ -183,10 +183,13 @@ function startLofiRooms() {
       const it=room.get(id); if (it) { if (care) care.tap(it,id,true); view.burst(id,'steam',3.5); }
       discover('tea');
     } });
+  const library = LRLibrary.createView({model:LRLibrary.create({store,letters:()=>letters.model.list(),ideas:()=>roomTools.state.ideas}),sound:Sound,clean:LRLetters.sanitizeHTML,reduced:()=>view.reducedMotion,
+    beforeOpen:()=>{home.close(false);letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
+  });
   const files = LRDashboard.create({store, letters: letters.model});
   let pendingPortal = null;
   const dashboard = LRDashboard.createView({model:files,CAT,widgets,sheet:codeSheet,close:closeSheets,letters,localDestinations:()=>[{label:'Control Centre',icon:'🧰',action:()=>home.open()},...LRLauncher.TOOLS.map(p=>({...p,action:()=>{closeSheets();launchTool(p);}}))],room:()=>room,renderer:()=>view,
-    hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
+    hidden:()=>library.active || letters.active || filming || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2600,true),
     onLaunch:p=>{const it=room.items.find(it=>it.t===p.furnitureId);if(it && widgetView)widgetView.feedback(it.id);if(p.furnitureId==='pomodorocandle')Sound.matchStrike();},
     saveScene:()=>LRWidgets.shareDecor(room.serialize()),encodeScene:decor=>roomCode(decor),
@@ -222,7 +225,7 @@ function startLofiRooms() {
     portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
     celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
     settings:()=>{home.close(false);store.set('lr.menuTab','Settings');renderMenu();openSheet();},
-    hidden:()=>filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
+    hidden:()=>library.active || filming || view.capturing || rituals.breath.active || document.hidden || $('#photo').classList.contains('open'),
     notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),
     openTimer:row=>{home.close(false);letters.close();closeSheets();if(row.target==='tea')launchTool({id:'tea'});},
   });
@@ -281,7 +284,7 @@ function startLofiRooms() {
     previewKey:()=>JSON.stringify([meta.current,room.items.map(i=>[i.t,i.c])]),
     preview:p=>{const f=LRLauncher.furniture(p,room.items,CAT);return f?{...f,src:thumbOf(f.id,f.variant)}:null;},
 
-    beforeOpen:()=>{letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
+    beforeOpen:()=>{library.close();letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
     onClose:()=>$('#bHome').focus(),
     actions:{
       launch:launchTool,
@@ -305,7 +308,8 @@ function startLofiRooms() {
     const find=(...types)=>room.items.find(i=>types.includes(i.t));
     const tools={mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
-    if(p.id==='typewriter')letters.open();
+    if(p.id==='library')library.open();
+    else if(p.id==='typewriter')letters.open();
     else if(p.id==='french')roomToolsUI.flashcard();
     else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
     else if(p.id==='breathing')breathingSheet();
@@ -848,6 +852,7 @@ function startLofiRooms() {
       if (privateTool === 'groceries') { view.openDoor(id); Sound.fridge(true); setTimeout(() => Sound.fridge(false),2700); }
       roomToolsUI.open(privateTool,id); return;
     }
+    if (tap === 'library') { library.open(); return; }
     if (tap === 'wardrobe') { wardrobeSheet(); return; }
     if (tap === 'newspaper') { newspaperSheet(); return; }
     if (tap === 'shop') { openShop(id); return; }
@@ -1213,7 +1218,7 @@ function startLofiRooms() {
   setInterval(() => { if (Math.random() < 0.15 * (care ? care.magicBoost() : 1)) visit(); }, 60000);   // cozy rooms get more visitors
   function merchantHere() { return merchant.active && merchantCat && room.items.includes(merchantCat) && meta.visitors !== false; }
   function tickWorld(dt) {
-    const idle = !home.active && !letters.active && !rituals.breath.active && !document.hidden && state.mode === 'explore' && !state.drag && !view.fp && !filming && !$('#photo').classList.contains('open') && !$('#intro').classList.contains('open');
+    const idle = !home.active && !library.active && !letters.active && !rituals.breath.active && !document.hidden && state.mode === 'explore' && !state.drag && !view.fp && !filming && !$('#photo').classList.contains('open') && !$('#intro').classList.contains('open');
     if (merchantHere() && sheet.classList.contains('open') && $('#sheetBody').dataset.merchant === 'here') merchant.linger();
     const edges = [];
     for (let k = 0; k < room.n; k++) edges.push([k, 0], [0, k], [k, room.n - 1], [room.n - 1, k]);
@@ -1683,7 +1688,7 @@ function startLofiRooms() {
   }
 
   window.addEventListener('keydown', e => {
-    if (letters.active || sheet.classList.contains('open')) return;   // writing and sheets own keyboard focus
+    if (library.active || letters.active || sheet.classList.contains('open')) return;   // writing and sheets own keyboard focus
     if (rituals.breath.active) { if (e.key === 'Escape') stopBreathing(); return; }
     if (e.target.matches('input, textarea, select') || e.target.isContentEditable) return;
     if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
@@ -2760,7 +2765,8 @@ function startLofiRooms() {
     app.addListener('pause', () => { roomToolsUI.flush(); letters.flush(); save(); window.Store.flush(); if (Sound.ctx) Sound.ctx.suspend(); });
     app.addListener('resume', () => { if (Sound.ctx && Sound.on) Sound.ctx.resume(); liveWeather.refresh(); });
     app.addListener('backButton', () => {
-      if (home.active) home.close();
+      if (library.active) library.close();
+      else if (home.active) home.close();
       else if (letters.active) letters.close();
       else if (rituals.breath.active) stopBreathing();
       else if (filming) filmCancel = true;
@@ -2787,7 +2793,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); liveWeather.refresh(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
+    if (worldT >= 1) { calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !library.active && !letters.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
@@ -2817,17 +2823,17 @@ function startLofiRooms() {
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) liveWeather.refresh(); });
   window.addEventListener('resize', () => view.resize());
-  companion = LRCompanion.create({ view, room, slots: wardrobe.slots, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  companion = LRCompanion.create({ view, room, slots: wardrobe.slots, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || library.active || letters.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
-  const cozy = LRCozyFurniture.createView({pixelArt:it=>roomTools.pixelPoster(meta.current,it.id),store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>letters.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
+  const cozy = LRCozyFurniture.createView({pixelArt:it=>roomTools.pixelPoster(meta.current,it.id),store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>library.active || letters.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
   view.cozyLife = cozy;
   view.petLife = LRPets.createView({view,room,CAT});
-  widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => letters.active || filming || document.hidden || $('#photo').classList.contains('open') });
+  widgetView = LRWidgets.createView({ widgets, view, room, editing: () => state.mode === 'edit', hidden: () => library.active || letters.active || filming || document.hidden || $('#photo').classList.contains('open') });
   const atlas = LRAtlas.create({store,meta,save:saveMeta,changed:()=>activity.wake()});
   const atlasUI = LRAtlas.createView({model:atlas,view,room,sheet:codeSheet,meta,
     hasStation:url=>(meta.stations || []).some(s=>s.url===url),
     addStation:station=>{if(!(meta.stations || []).some(s=>s.url===station.url)){(meta.stations || (meta.stations=[])).push(station);saveMeta();}},
-    hidden:()=>letters.active || home.active || filming || view.capturing || document.hidden || $('#photo').classList.contains('open')
+    hidden:()=>library.active || letters.active || home.active || filming || view.capturing || document.hidden || $('#photo').classList.contains('open')
   });
   const googleCalendar=LRCalendar.createGoogle();
   const calendar=LRCalendar.createView({model:calendarModel,google:googleCalendar,sheet:codeSheet,atlas,meta,scenes:()=>files.list('Scenes'),seasons:LR.SEASONS || [],thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s)});
@@ -2846,7 +2852,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { library, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
