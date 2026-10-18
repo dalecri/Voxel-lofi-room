@@ -875,11 +875,12 @@
     const [fw, fd] = fp(it);
     if (it.x < 0 || it.z < 0 || it.x + fw > N || it.z + fd > N) return false;
     if (C.kind === 'pet') return !others.some(o => CAT[o.t].kind === 'pet' && o.x === it.x && o.z === it.z);
-    const layer = C.kind === 'rug' ? 'rug' : 'floor';
+    // Hanging lights use floor coordinates but can share a cell with furniture below.
+    const layer = C.ceiling ? 'ceiling' : C.kind === 'rug' ? 'rug' : 'floor';
     return !others.some(o => {
       const OC = CAT[o.t];
       if (OC.kind === 'wall' || OC.kind === 'pet' || o.p) return false;
-      if ((OC.kind === 'rug' ? 'rug' : 'floor') !== layer) return false;
+      if ((OC.ceiling ? 'ceiling' : OC.kind === 'rug' ? 'rug' : 'floor') !== layer) return false;
       const [ow, od] = fp(o);
       return it.x < o.x + ow && o.x < it.x + fw && it.z < o.z + od && o.z < it.z + fd;
     });
@@ -891,7 +892,7 @@
     const g = new Uint8Array(N * N).fill(1);
     for (const o of this.items) {
       const C = CAT[o.t];
-      if (o.p || C.kind === 'wall' || C.kind === 'pet' || C.kind === 'rug') continue;
+      if (o.p || C.ceiling || C.kind === 'wall' || C.kind === 'pet' || C.kind === 'rug') continue;
       const [fw, fd] = fp(o);
       for (let x = o.x; x < o.x + fw; x++) for (let z = o.z; z < o.z + fd; z++) g[z * N + x] = C.walk ? 2 : 0;
     }

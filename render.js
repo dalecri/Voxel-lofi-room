@@ -855,6 +855,7 @@
         // keep children attached to the new object
         const fresh = this.makeObject(it);
         fresh.userData.boing = obj.userData.boing;
+        if(CAT[it.t].doorToggle)fresh.userData.doorA=obj.userData.doorA;
         obj.children.slice().forEach(ch => { if (ch !== obj.userData.inner) fresh.add(ch); });
         obj.removeFromParent();
         if (obj.userData.glowMat) obj.userData.glowMat.dispose();
@@ -1708,10 +1709,11 @@
       ud.beam.mesh.material.opacity = bp[1] * (1 - this.rainK * 0.7) * (0.92 + 0.08 * Math.sin(t * 0.5 + it.id));
     }
     if (ud.blobs) ud.blobs.forEach((b, k) => { b.visible = !!it.on; b.position.y = (5.5 + 4.5 * (0.5 + 0.5 * Math.sin(t * 0.45 + b.userData.ph))) * S; b.scale.y = 1 + 0.25 * Math.sin(t * 0.9 + k); });
-    // doors swing open for a moment, then close
+    // Legacy doors open briefly; doorToggle pieces retain their ordinary on state.
     if (ud.parts.door || ud.parts.door2 || ud.parts.slide || ud.parts.slide2) {
-      const goal = ud.doorUntil > t ? 1 : 0;
-      ud.doorA = (ud.doorA || 0) + (goal - (ud.doorA || 0)) * Math.min(1, dt * 6);
+      const goal = C.doorToggle ? (it.on ? 1 : 0) : ud.doorUntil > t ? 1 : 0;
+      if(ud.doorA == null)ud.doorA=C.doorToggle && it.on ? 1 : 0;
+      ud.doorA += (goal - ud.doorA) * Math.min(1, dt * 6);
       if (ud.parts.door) ud.parts.door.rotation.y = -ud.doorA * 1.9;
       if (ud.parts.door2) ud.parts.door2.rotation.y = ud.doorA * 1.9;
       // sliding doors glide sideways (or up, for slideUp) instead of swinging

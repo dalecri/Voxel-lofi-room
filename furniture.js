@@ -522,6 +522,34 @@
       m.set(3, 7, 6, a, true); m.box(4, 7, 3, 5, 8, 4, 0x1e1e24);
     },
   });
+  def('microwave', {
+    name: 'Microwave', kind: 'small', group: 'kitchen', size: [1, 1], on: false, doorToggle: true,
+    tap: 'fx', fx: { toggle: true, sfx: 'blip', sayOn: ['Microwave door open'], sayOff: ['Microwave door closed'] },
+    vars: [[0xb4bec2], [0x30343b], [0xf0e6d4]],
+    build(m, [c]) {
+      m.box(0, 0, 1, 8, 6, 7, c).clear(1, 1, 2, 6, 5, 7);
+      m.box(1, 1, 2, 6, 2, 7, shade(c, .7)).box(2, 2, 3, 5, 3, 6, 0xd9d4c6);
+      m.box(6, 1, 7, 8, 6, 8, shade(c, .85)).box(6, 4, 7, 8, 5, 8, DARK).set(6, 4, 7, 0x9cce9f, true);
+      for(const x of [6,7])for(const y of [1,2])m.set(x,y,7,shade(c,1.25));
+      m.part('door', [0, 1, 7]);
+      m.box(0, 1, 7, 6, 6, 8, shade(c, .7)).box(1, 2, 7, 5, 5, 8, 0x26343e);
+      m.set(1,4,7,0x65818d).box(5, 2, 8, 6, 5, 9, CHROME);m.main();
+    },
+  });
+  def('pendantlamp', {
+    name: 'Pendant lamp', kind: 'floor', group: 'lights', size: [1, 1], ceiling: true, on: true, tap: 'toggle',
+    light: { at: [4, 31, 4], color: 0xffd29b, i: 4, d: 8 },
+    vars: [[0xdbaa63], [0xece9dd], [0x6f9280]],
+    build(m, [c], s) {
+      m.box(2,54,2,6,56,6,shade(c,.65)).box(3,36,3,4,54,4,DARK).box(2,35,2,6,37,6,CHROME);
+      const glass=s.on?mix(c,0xffebbf,.25):shade(c,.75);
+      m.box(1,30,1,7,31,7,glass).box(2,35,2,6,36,6,glass);
+      for(const x of [1,6])m.box(x,31,1,x+1,35,7,glass);
+      for(const z of [1,6])m.box(2,31,z,6,35,z+1,shade(glass,1.08));
+      m.box(3,31,3,5,34,5,s.on?0xffedc4:0xc4baa3,s.on);
+      m.set(1,33,2,shade(glass,1.25));
+    },
+  });
   def('counter', {
     name: 'Kitchen counter', kind: 'floor', group: 'kitchen', size: [2, 1], wallish: true, tap: 'sink', top: 12, surf: [[1, 0]],
     vars: [[0xf2efe8, 0xd8b48a], [0x8a9a7a, 0xf2efe8], [0x3c4a78, 0xd8b48a], [0xf0b4c0, 0xf4f0e8]],
@@ -894,6 +922,25 @@
       const f = (x) => (x % 3 === 0 ? shade(sheer, 0.9) : sheer);
       if (s.on) m.box(-2, 2, 2, 1, 24, 3, f).box(23, 2, 2, 26, 24, 3, f);
       else for (let x = -1; x < 25; x++) for (let y = 2; y < 24; y++) if ((x + y) % 2 === 0 || x % 3 === 0) m.set(x, y, 2, f(x));
+    },
+  });
+  def('slidingdoor', {
+    name: 'Sliding glass door', kind: 'wall', group: 'doors', size: [3, 3], depth: 4, on: false, dyn: true,
+    doorToggle: true, slideBy: 10, beam: 'plain', beamClosed: 'plain', tap: 'fx',
+    fx: { toggle: true, sfx: 'whoosh', sayOn: ['Glass door open'], sayOff: ['Glass door closed'] },
+    vars: [[WOOD.oak], [WOOD.walnut], [WOOD.white]],
+    build(m, [frame], s) {
+      // The right panel glides over the left on a second track, within its footprint.
+      pane(m,s,1,1,23,23);
+      m.box(0,0,0,1,24,4,frame).box(23,0,0,24,24,4,frame).box(0,23,0,24,24,4,shade(frame,.8));
+      m.box(0,0,0,24,1,4,shade(frame,.85)).box(1,1,1,23,2,2,CHROME);
+      const panel=(x,z)=>{
+        m.box(x,1,z,x+1,23,z+1,frame).box(x+10,1,z,x+11,23,z+1,frame);
+        m.box(x,1,z,x+11,2,z+1,frame).box(x,22,z,x+11,23,z+1,frame);
+        for(let k=0;k<8;k++)m.set(x+2+k,17-k,z,0xc9e5e9);
+      };
+      panel(1,2);m.part('slide',[17,12,3]);panel(12,3);
+      m.box(13,9,4,14,15,5,shade(frame,.65));m.main();
     },
   });
   def('roundwindow', {
