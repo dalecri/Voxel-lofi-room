@@ -99,7 +99,7 @@ with sync_playwright() as p:
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   for phase in ['day','night']:
    page.evaluate('phase=>__lr.view.setPhase(phase,true)',phase)
-   assert page.locator('#lettersView .mailwin').evaluate('e=>getComputedStyle(e).borderTopWidth')=='0px'
+   assert page.locator('#lettersView .mailwin').evaluate('e=>getComputedStyle(e).borderTopWidth')=='4px'
    assert page.locator('.letter-tools button').first.evaluate('e=>e.getBoundingClientRect().height>=44')
    page.screenshot(path=f'/tmp/paper-typewriter-{phase}-{width}-{height}.png')
  page.keyboard.press('Escape');assert page.evaluate('!__lr.letters.active && !__lr.Sound.writing')

@@ -15,7 +15,7 @@ test('a subject title saves on the letter and the letter store stays letters-onl
  f.model.update({letterhead:a.letterhead,body:'<b>hi</b>',title:'  For later  '});
  const saved=f.reload().get();
  assert.equal(saved.title,'For later');
- assert.deepEqual(Object.keys(saved).sort(),['body','createdAt','id','letterhead','title','updatedAt']);
+ assert.deepEqual(Object.keys(saved).sort(),['body','cardIcon','createdAt','id','letterhead','title','updatedAt']);
  f.model.update({letterhead:saved.letterhead,body:saved.body});
  assert.equal(f.model.get().title,'For later');
  f.model.update({letterhead:saved.letterhead,body:'x',title:'   '});

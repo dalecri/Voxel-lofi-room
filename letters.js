@@ -1,5 +1,6 @@
 // A private stack of letters. No room data, remote services or shared-code fields.
 (function (root) {
+  const Postcard=typeof module!=='undefined'&&module.exports?require('./mail-window.js'):root.LRMailWindow;
   const KEY = 'lr.letters';
   const escapeHTML = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const day = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -32,7 +33,7 @@
     const saved = store.get(KEY,null);
     const state = { v:1, next:Number.isSafeInteger(saved?.next) && saved.next>0 ? saved.next : 1,
       current:typeof saved?.current === 'string' ? saved.current : null,
-      letters:Array.isArray(saved?.letters) ? saved.letters.filter(l => l && typeof l.id==='string').map(l => ({id:l.id,title:String(l.title || 'Untitled letter'),letterhead:String(l.letterhead || ''),body:String(l.body || ''),createdAt:Number(l.createdAt)||0,updatedAt:Number(l.updatedAt)||0})) : [] };
+      letters:Array.isArray(saved?.letters) ? saved.letters.filter(l => l && typeof l.id==='string').map(l => ({id:l.id,title:String(l.title || 'Untitled letter'),letterhead:String(l.letterhead || ''),cardIcon:Postcard.normalizeIcon(l.cardIcon),body:String(l.body || ''),createdAt:Number(l.createdAt)||0,updatedAt:Number(l.updatedAt)||0})) : [] };
     const get = (id = state.current) => state.letters.find(l => l.id === id);
     if (!get()) state.current = state.letters[0]?.id || null;
     function persist() {
@@ -42,13 +43,14 @@
     }
     function add(roomName) {
       const date=now(),id=`letter-${date.getTime().toString(36)}-${state.next++}`;
-      state.letters.unshift({id,title:'Untitled letter',letterhead:`${roomName} · ${dateStamp(date)}`,body:'',createdAt:date.getTime(),updatedAt:date.getTime()});
+      state.letters.unshift({id,title:'Untitled letter',letterhead:`${roomName} · ${dateStamp(date)}`,cardIcon:'tulips',body:'',createdAt:date.getTime(),updatedAt:date.getTime()});
       state.current=id;persist();return {...get()};
     }
-    function update({letterhead,body,title}) {
+    function update({letterhead,body,title,cardIcon}) {
       const letter=get();if(!letter)return;
       const old=letter.body;letter.letterhead=String(letterhead);letter.body=clean(body);
       if(title!==undefined)letter.title=String(title).trim()||'Untitled letter';
+      if(cardIcon!==undefined)letter.cardIcon=Postcard.normalizeIcon(cardIcon);
       letter.updatedAt=now().getTime();persist();if(letter.body!==old&&letter.body.replace(/<[^>]*>/g,'').trim())onSaved({...letter});
     }
     function select(id) {if(!get(id))return false;state.current=id;persist();return true;}
@@ -59,8 +61,8 @@
   function htmlFile(letter, clean = sanitizeHTML) {
     return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'">' +
-      `<title>${escapeHTML(letter.title)}</title><style>body{margin:0;background:#f5eedc;color:#443c34;font:18px/1.8 'Courier New',monospace}main{max-width:700px;margin:auto;padding:64px 8vw;overflow-wrap:anywhere}header{font-size:14px;border-bottom:1px solid #d4c9b5;padding-bottom:20px;margin-bottom:40px;white-space:pre-wrap}article{white-space:pre-wrap}p,article div{margin:0 0 .25em}@media print{body{background:white}main{padding:20px}}</style></head><body><main>` +
-      `<header>${escapeHTML(letter.letterhead)}</header><article>${clean(letter.body)}</article></main></body></html>\n`;
+      `<title>${escapeHTML(letter.title)}</title><style>body{margin:0;padding:24px;background:#ede5d9;color:#344c38;font:18px/1.6 'Courier New',monospace}main{box-sizing:border-box;max-width:700px;margin:auto;padding:40px 7%;border:4px solid #393047;box-shadow:inset 0 0 0 4px #839576,inset 0 0 0 7px #fcf6ec,inset 0 0 0 9px #d58a9c;background:repeating-linear-gradient(0deg,#b99e7910 0 8px,transparent 8px 16px),repeating-linear-gradient(90deg,#b99e7910 0 8px,transparent 8px 16px),#fcf6ec;overflow-wrap:anywhere}header{font-size:14px;border-bottom:1px solid #a7b09b;padding-bottom:20px;white-space:pre-wrap}h1{font-size:25px;color:#c35d7b}.picture{display:grid;place-items:center;width:75%;aspect-ratio:1;margin:28px auto;border:4px solid #393047;box-shadow:5px 5px #789471;background:#fffcfa}.picture svg{width:64%;height:64%;image-rendering:pixelated}article{white-space:pre-wrap}p,article div{margin:0 0 .25em}footer{margin-top:30px;padding-top:16px;border-top:1px solid #a7b09b;text-align:right;font-size:13px;color:#71836b}@media print{body{padding:0}main{max-width:none}}</style></head><body><main>` +
+      `<header>${escapeHTML(letter.letterhead)}</header><h1>${escapeHTML(letter.title)}</h1><div class="picture">${Postcard.art(letter.cardIcon)}</div><article>${clean(letter.body)}</article><footer>A LITTLE LETTER, JUST YOURS.</footer></main></body></html>\n`;
   }
   async function saveFile({ html, filename, cap = root.Capacitor }) {
     if (cap?.isNativePlatform?.()) return cap.registerPlugin('LetterFiles').save({filename,html});
@@ -74,8 +76,8 @@
     view.innerHTML=`<div class="letter-chrome"><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton">Letters</button><button type="button" id="letterExport">Save as file</button></div>
       <div id="letterScroll" class="letter-stage"></div>
       <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" class="mailwin-btn mailwin-small" id="letterListClose">Back to the letter</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" class="mailwin-btn" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
-    const windowUi=root.LRMailWindow.create({title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
-    // Keep the shared editor fields and handlers; only the typewriter gets this paper-and-machine skin.
+    const windowUi=root.LRMailWindow.create({postcard:true,onIconChange:()=>schedule(),title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
+    // Feed the shared postcard stationery through the existing typewriter controls.
     const machine=document.createElement('div');machine.className='letter-machine';
     machine.innerHTML='<div class="letter-roller" aria-hidden="true"><i></i><span></span><i></i></div><div class="letter-machine-brand" aria-hidden="true">LOFI LETTERS</div>';
     machine.appendChild(windowUi.toolbar);
@@ -91,11 +93,11 @@
     function flush() {
       clearTimeout(timer);timer=null;if(!active || !model.current)return;
       const letter=model.get();if(!letter)return;
-      safe(()=>{rememberSender(from.value);model.update({letterhead:letter.letterhead,body:body.innerHTML,title:subject.value});message('Saved');});
+      safe(()=>{rememberSender(from.value);model.update({letterhead:letter.letterhead,body:body.innerHTML,title:subject.value,cardIcon:windowUi.postcard.icon});message('Saved');});
     }
     function schedule() {message('Saving…');clearTimeout(timer);timer=setTimeout(flush,250);}
     function load() {
-      const l=model.get();subject.value=l?.title || '';from.value=sender();body.innerHTML=sanitizeHTML(l?.body || '');
+      const l=model.get();subject.value=l?.title || '';from.value=sender();windowUi.postcard.set(l?.cardIcon);body.innerHTML=sanitizeHTML(l?.body || '');
       body.contentEditable=l?'true':'false';subject.disabled=from.disabled=to.disabled=!l;
       $('#letterExport').disabled=!l;windowUi.buttons.Save.disabled=!l;windowUi.buttons['Send to future'].disabled=!l;
       view.querySelectorAll('.letter-tools button').forEach(b=>b.disabled=!l);
@@ -163,7 +165,7 @@
     windowUi.buttons['Send to future'].onclick=()=>{
       flush();const snap=model.get();
       if(!snap || !snap.body.replace(/<[^>]*>/g,'').trim()){message('Write a little first.');return;}
-      onSendToFuture({title:snap.title,body:snap.body,letterhead:snap.letterhead,from:from.value,to:to.value.trim()||'Me'});
+      onSendToFuture({title:snap.title,body:snap.body,letterhead:snap.letterhead,cardIcon:snap.cardIcon,from:from.value,to:to.value.trim()||'Me'});
     };
     from.addEventListener('change',()=>safe(()=>rememberSender(from.value)));
     subject.addEventListener('input',schedule);

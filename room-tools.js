@@ -1,6 +1,7 @@
 // Furniture-sized, local tools. One private device state, never room item fields.
 (function(root){
   const Pixel=typeof module!=='undefined'&&module.exports?require('./pixel-maker.js'):root.LRPixelMaker;
+  const Postcard=typeof module!=='undefined'&&module.exports?require('./mail-window.js'):root.LRMailWindow;
   const KEY='lr.tools',day=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   function validDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const [y,m,d]=s.split('-').map(Number);return day(new Date(y,m-1,d))===s;}
   function cents(value){
@@ -43,19 +44,19 @@
       const hit=!before.completed&&count>=TALLY_GOAL;state.tally={date:before.date,count,completed:before.completed||hit};try{save();}catch(e){state.tally=before;throw e;}
       if(hit)onTallyGoal(copy(state.tally));return copy(state.tally);
     }
-    function send({title,body,html='',letterhead='',deliverOn,from,to}){
+    function send({title,body,html='',letterhead='',deliverOn,from,to,cardIcon}){
       if(!validDate(deliverOn)||deliverOn<=day(now()))throw Error('Choose a future date.');
       if(!String(body||'').trim())throw Error('Put a little something in the envelope.');
-      const letter={id:id('mail'),title:String(title||'').trim()||MAIL_DEFAULTS.subject,body:String(body||''),html:String(html),letterhead:String(letterhead),deliverOn,
+      const letter={id:id('mail'),title:String(title||'').trim()||MAIL_DEFAULTS.subject,body:String(body||''),html:String(html),letterhead:String(letterhead),cardIcon:Postcard.normalizeIcon(cardIcon),deliverOn,
         from:clip(String(from??'').trim()||MAIL_DEFAULTS.from,120),to:clip(String(to??'').trim()||MAIL_DEFAULTS.to,120),status:'sealed',read:false,notified:false,createdAt:now().getTime()};
       state.mail.unshift(letter);state.mailFrom=letter.from;state.mailDraft=null;save();return copy(letter);   // sending clears the draft, keeps the sender
     }
     // The compose window: a saved draft, and the sender remembered between letters.
-    function saveDraft(d){state.mailDraft={from:clip(d?.from,120),to:clip(d?.to,120),subject:clip(d?.subject,200),body:clip(d?.body,20000),deliverOn:clip(d?.deliverOn,10),savedAt:now().getTime()};save();return copy(state.mailDraft);}
+    function saveDraft(d){state.mailDraft={from:clip(d?.from,120),to:clip(d?.to,120),subject:clip(d?.subject,200),body:clip(d?.body,20000),deliverOn:clip(d?.deliverOn,10),cardIcon:Postcard.normalizeIcon(d?.cardIcon),savedAt:now().getTime()};save();return copy(state.mailDraft);}
     function clearDraft(){if(state.mailDraft){state.mailDraft=null;save();}}
     function setFrom(v){const from=clip(String(v??'').trim(),120);if(from===(state.mailFrom??MAIL_DEFAULTS.from))return;state.mailFrom=from||null;save();}
     function compose(){const d=state.mailDraft,date=new Date(now());date.setDate(date.getDate()+7);
-      return {from:d?d.from:state.mailFrom??MAIL_DEFAULTS.from,to:d?d.to:MAIL_DEFAULTS.to,subject:d?d.subject:MAIL_DEFAULTS.subject,body:d?d.body:'',deliverOn:d&&validDate(d.deliverOn)&&d.deliverOn>day(now())?d.deliverOn:day(date),draft:!!d};}
+      return {from:d?d.from:state.mailFrom??MAIL_DEFAULTS.from,to:d?d.to:MAIL_DEFAULTS.to,subject:d?d.subject:MAIL_DEFAULTS.subject,body:d?d.body:'',deliverOn:d&&validDate(d.deliverOn)&&d.deliverOn>day(now())?d.deliverOn:day(date),cardIcon:Postcard.normalizeIcon(d?.cardIcon),draft:!!d};}
     function poll(notices=true){
       if(state.tally&&state.tally.date!==day(now()))tally();
       let changed=false;const events={mail:[],tea:false},date=day(now()),time=now().getTime();
@@ -117,7 +118,7 @@
     }
     function applyTypewriter(ui,snapshot){
       ui.body.value=plainLetter(snapshot.body);ui.body.readOnly=true;ui.fields.Subject.value=snapshot.title;
-      if(snapshot.from)ui.fields.From.value=snapshot.from;if(snapshot.to)ui.fields.To.value=snapshot.to;
+      if(snapshot.from)ui.fields.From.value=snapshot.from;if(snapshot.to)ui.fields.To.value=snapshot.to;ui.postcard.set(snapshot.cardIcon);
       if(!ui.foot.querySelector('.mailwin-hint'))text(ui.foot,'Typewriter formatting will travel inside this envelope.','mailwin-hint');
       return snapshot;
     }
@@ -126,15 +127,15 @@
       const sealed=pendingSeal;pendingSeal=null;
       model.poll(false);shell('Letters to future you','A little time capsule, private to this device. It arrives on its date when you next visit your room.',root=>{
         const c=model.compose(),tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
-        const ui=LRMailWindow.create({title:'Email',icon:'envelope',label:'Compose a letter to future you',from:sealed?.from||c.from,to:sealed?.to||c.to,subject:sealed?.title||c.subject,body:sealed?'':c.body,placeholder:'Hey future me!',richText:false,deliverOn:{value:c.deliverOn,min:day(tomorrow)},status:c.draft&&!sealed?'Draft restored':'',buttons:[{label:'Save draft'},{label:'Send',className:'mailwin-send'}]});
+        const ui=LRMailWindow.create({postcard:true,cardIcon:sealed?.cardIcon||c.cardIcon,title:'Email',icon:'envelope',label:'Compose a letter to future you',from:sealed?.from||c.from,to:sealed?.to||c.to,subject:sealed?.title||c.subject,body:sealed?'':c.body,placeholder:'Hey future me!',richText:false,deliverOn:{value:c.deliverOn,min:day(tomorrow)},status:c.draft&&!sealed?'Draft restored':'',buttons:[{label:'Save draft'},{label:'Send',className:'mailwin-send'}]});
         root.appendChild(ui.form);
         const {form:win,body,due,saved,foot}=ui,from=ui.fields.From,to=ui.fields.To,title=ui.fields.Subject;
         from.addEventListener('change',()=>run(()=>model.setFrom(from.value)));   // the sender is remembered even without a draft
         let snapshot=sealed?applyTypewriter(ui,sealed):null;const draft=letters.model.get();
         if(draft)button(foot,'Use my current typewriter letter',()=>{letters.flush();snapshot=applyTypewriter(ui,letters.model.get());},'mailwin-btn mailwin-small');
-        const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,deliverOn:due.value});
+        const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,cardIcon:ui.postcard.icon,deliverOn:due.value});
         ui.buttons['Save draft'].onclick=()=>run(()=>{model.saveDraft(state());model.setFrom(from.value);const t=new Date();saved.textContent=`Draft saved ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;});
-        ui.buttons.Send.onclick=()=>run(()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value});sound.rustle();mailbox();});
+        ui.buttons.Send.onclick=()=>run(()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value,cardIcon:ui.postcard.icon});sound.rustle();mailbox();});
         if(model.state.mail.length){const h=document.createElement('p');h.className='mailwin-listhead';h.textContent='Your envelopes';root.appendChild(h);}
         for(const l of model.state.mail){
           const row=document.createElement('section');row.className='roomtool-card mailwin-letter';row.dataset.mail=l.id;row.dataset.mailStatus=l.status;root.appendChild(row);text(row,l.title,'roomtool-title');
@@ -145,8 +146,7 @@
       });
     }
     function readMail(l){shell(l.title,l.letterhead || `A note from your past self · ${l.deliverOn}`,root=>{
-      if(l.from||l.to){const head=document.createElement('dl');head.className='mailwin-readhead';for(const [k,v] of [['From',l.from],['To',l.to],['Subject',l.title]])if(v){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v;head.append(dt,dd);}root.appendChild(head);}
-      const paper=document.createElement('article');paper.className='roomtool-letter';if(l.html)paper.innerHTML=LRLetters.sanitizeHTML(l.html);else paper.textContent=l.body;root.appendChild(paper);button(root,'Back to mailbox',mailbox);
+      root.appendChild(LRMailWindow.readCard(l,LRLetters.sanitizeHTML));button(root,'Back to mailbox',mailbox);
     });}
     function groceries(){shell('On the fridge door','Your grocery list, private to this device.',root=>{
       const notebook=document.createElement('section');notebook.className='grocery-notebook';notebook.setAttribute('aria-label','Grocery notebook');root.appendChild(notebook);

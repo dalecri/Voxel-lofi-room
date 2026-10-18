@@ -1,7 +1,39 @@
-// The retro pixel email window. The mailbox and the typewriter both mount this,
-// so a title, a header row, or a button is the same element in both places.
+// Shared letter fields and pixel stationery for the mailbox and typewriter.
 (function (root) {
   const el = (tag, cls) => { const n = document.createElement(tag); if (cls) n.className = cls; return n; };
+  // Original little pixel illustrations, drawn locally; no images or network assets.
+  const ICONS = [
+    {id:'tulips',name:'Tulips',rows:['................','...rr...rr......','..rRrr.rRrr.....','..rRRr.rRRr..rr.','...rr...rr..rRrr','....g...g...rRRr','....g...g....rr.','....g.g.g....g..','....ggg.g.g..g..','.....gggggg..g..','......gggg..gg..','......yyyyyy....','.....yyYYyy.....','.......gg.......','.......gg.......','......g.g.......']},
+    {id:'cat',name:'Cat',rows:['................','...dd......dd...','...dDdd..ddDd...','...dDDddddDDd...','...dDDDDDDDDd...','..dDDDDDDDDDDd..','..dDDdDDDDdDDd..','..dDDdDDDDdDDd..','..dDDDDrrDDDDd..','...dDDDDDDDDd...','....dddddddd....','....dDDDDDDd....','...dDDDDDDDDd...','...dDDDDDDDDd...','...dddddddddd...','................']},
+    {id:'moon',name:'Moon',rows:['................','.......yyyyy....','.....yyYYyy.....','....yYYYyy......','...yYYYyy.......','..yYYYyy........','..yYYYy.........','..yYYYy.....y...','..yYYYyy....yy..','...yYYYyy..yyy..','....yYYYYyyyy...','.....yYYYYyy....','......yyyyy.....','................','...y........y...','................']},
+    {id:'tea',name:'Tea',rows:['................','.....d..d.......','....d..d........','.....d..d.......','................','..dddddddddd....','..dLLLLLLLLdddd.','..dLLLLLLLLd..d.','..dLLLLLLLLd..d.','..dLLLLLLLLdddd.','...dLLLLLLd.....','....dddddd......','..yyyyyyyyyy....','...yyyyyyyy.....','................','................']},
+    {id:'leaf',name:'Leaf',rows:['................','...........ggg..','........gggGGg..','......ggGGGGGg..','....ggGGGGGGGg..','...gGGGGGGgGGg..','..gGGGGGGgGGGg..','..gGGGGGgGGGGg..','..gGGGGgGGGGg...','..gGGGgGGGGg....','...gGgGGGGg.....','....ggGGgg......','....g.gg........','...g............','..g.............','................']},
+    {id:'star',name:'Star',rows:['................','.......yy.......','......yYYy......','......yYYy......','.....yYYYYy.....','..yyyyYYYYyyyy..','..yYYYYYYYYYYy..','...yYYYYYYYYy...','....yYYYYYYy....','....yYYYYYYy....','...yYYYYYYYYy...','...yYYYyyYYYy...','...yYYy..yYYy...','....yy....yy....','................','................']}
+  ];
+  const normalizeIcon = value => ICONS.some(i=>i.id===value)?value:'tulips';
+  function art(value) {
+    const icon=ICONS.find(i=>i.id===normalizeIcon(value)),colors={d:'#393047',D:'#b9aa98',r:'#bd526c',R:'#ef8b9d',g:'#466a4a',G:'#83a46f',y:'#b58d45',Y:'#edc76e',L:'#a8c6b5'};
+    return '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges">'+icon.rows.flatMap((row,y)=>[...row].flatMap((c,x)=>colors[c]?[`<rect x="${x}" y="${y}" width="1" height="1" fill="${colors[c]}"/>`]:[])).join('')+'</svg>';
+  }
+  function decorate(form,head,page,from,initial,onChange) {
+    if(!form.className.split(/\s+/).includes('pixel-postcard'))form.className+=' pixel-postcard';
+    const stamp=el('span','postcard-stamp');stamp.setAttribute('aria-hidden','true');head.appendChild(stamp);
+    const picture=el('div','postcard-picture');picture.setAttribute('role','img');head.after(picture);
+    const signature=el('div','postcard-signature'),label=el('small'),name=el('span');label.textContent='WITH LOVE FROM';signature.append(label,name);page.after(signature);
+    const picker=el('fieldset','postcard-picker'),legend=el('legend');legend.textContent='A little picture';picker.appendChild(legend);
+    let icon=normalizeIcon(initial);const buttons=[];
+    function update(value){icon=normalizeIcon(value);picture.innerHTML=art(icon);stamp.innerHTML=art(icon);picture.setAttribute('aria-label',ICONS.find(i=>i.id===icon).name+' pixel illustration');name.textContent=from.value||'Me';buttons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.icon===icon)));}
+    for(const item of ICONS){const b=el('button');b.type='button';b.dataset.icon=item.id;b.setAttribute('aria-label',item.name+' picture');b.innerHTML=art(item.id);b.onclick=()=>{update(item.id);onChange?.(item.id);};buttons.push(b);picker.appendChild(b);}
+    from.addEventListener('input',()=>{name.textContent=from.value||'Me';});update(icon);
+    return {picker,set:update,get icon(){return icon;}};
+  }
+  function readCard(letter,clean) {
+    const card=el('article','pixel-postcard postcard-read'),head=el('header','postcard-readhead'),to=el('small'),title=el('h3');
+    to.textContent='TO: '+(letter.to||'You');title.textContent=letter.title||'A little letter';head.append(to,title);card.append(head);
+    const page=el('div','mailwin-page'),body=el('div','roomtool-letter');
+    if(letter.html)body.innerHTML=clean(letter.html);else body.textContent=letter.body||'';page.append(body);card.append(page);
+    const from=el('input');from.value=letter.from||'Me';decorate(card,head,page,from,letter.cardIcon);return card;
+  }
   function create(options = {}) {
     const form = el('form', 'mailwin');
     form.noValidate = false;
@@ -71,8 +103,10 @@
     form.append(bar, head);
     if (toolbar) form.appendChild(toolbar);
     form.append(page, foot, actions);
-    return { form, name, fields, body, toolbar, foot, due, saved, actions, buttons };
+    const postcard=options.postcard?decorate(form,head,page,fields.From,options.cardIcon,options.onIconChange):null;
+    if(postcard)foot.prepend(postcard.picker);
+    return { form, name, fields, body, toolbar, foot, due, saved, actions, buttons, postcard };
   }
-  const api = { create };
+  const api = { create, ICONS, normalizeIcon, art, readCard };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRMailWindow = api;
 })(typeof window !== 'undefined' ? window : globalThis);
