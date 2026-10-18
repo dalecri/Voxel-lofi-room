@@ -26,7 +26,7 @@ test('cache carries exportedAt across reloads; failed HTTP, JSON and network ret
  const fetcher=async(url,init)=>{calls++;assert.equal(init.credentials,'omit');assert.equal(init.referrerPolicy,'no-referrer');if(mode==='throw')throw Error('offline');return {ok:mode!=='http',json:async()=>{if(mode==='json')throw SyntaxError('broken');return mode==='shape'?{wrong:true}:fixture;}};};
  const m=C.create({store:s,fetcher});await Promise.all([m.refresh(),m.refresh()]);assert.equal(calls,1);
  assert.equal(m.state.cached,false);assert.equal(s.values[C.KEY].data.exportedAt,fixture.exportedAt);
- for(const failure of ['http','json','shape','throw']){mode=failure;const reload=C.create({store:s,fetcher});assert.equal(reload.state.cached,true);await reload.refresh();assert.deepEqual(reload.state.rows.map(c=>c.id),['new','old']);assert.equal(reload.state.cached,true);assert.equal(reload.state.failed,true);}
+ for(const failure of ['http','json','shape','throw']){mode=failure;const reload=C.create({store:s,fetcher});assert.equal(reload.state.cached,true);await reload.refresh();assert.deepEqual(reload.state.rows.map(c=>c.id),C.dailyRows(C.parse(fixture)).map(c=>c.id));assert.equal(reload.state.cached,true);assert.equal(reload.state.failed,true);}
  mode='ok';await m.refresh();assert.equal(m.state.failed,false);
 });
 test('malformed exports and cache fail softly; synchronous fetch errors remain retryable',async()=>{
@@ -46,4 +46,24 @@ test('clipboard API and legacy textarea fallback copy exact text; failure is rep
 test('caption data is never included in shared decor',()=>{
  const shared=W.shareDecor({v:1,name:'Room',items:[],captionDesk:fixture,'lr.captionDesk':fixture});
  assert.ok(!JSON.stringify(shared).includes('My original words'));assert.ok(!JSON.stringify(shared).includes('First caption'));
+});
+
+test('three-per-day rotation is stable all day, wraps only after consuming the pool, and needs no store',()=>{
+ const data={clips:Array.from({length:7},(_,i)=>({id:String(i),status:'idea',created:new Date(2026,0,7-i).toISOString(),desc:String(i),captions:null}))};
+ const ids=d=>C.dailyRows(data,d).map(c=>c.id);
+ assert.deepEqual(ids(new Date(1970,0,1,0)),['0','1','2']);
+ assert.deepEqual(ids(new Date(1970,0,1,23,59)),['0','1','2']);
+ assert.deepEqual(ids(new Date(1970,0,2)),['3','4','5']);
+ assert.deepEqual(ids(new Date(1970,0,3)),['6','0','1']);
+ const cycle=[0,1,2].flatMap(d=>ids(new Date(1970,0,1+d)));assert.equal(new Set(cycle.slice(0,7)).size,7);assert.equal(cycle[7],cycle[0]);
+ for(const n of [0,1,2]){const result=C.dailyRows({clips:data.clips.slice(0,n)},new Date(2026,9,18));assert.equal(result.length,n);assert.equal(new Set(result.map(c=>c.id)).size,n);}
+ assert.deepEqual(C.dailyRows({clips:[{id:'gone',status:'published'}]}),[]);
+});
+test('local-day indexing respects midnight and DST, rather than elapsed 24-hour chunks',()=>{
+ assert.equal(C.dayIndex(new Date(1970,0,1,23,59)),0);
+ for(const [month,day] of [[2,8],[10,1]]){const a=new Date(2026,month,day),b=new Date(2026,month,day+1);assert.equal(C.dayIndex(b)-C.dayIndex(a),1);}
+});
+test('an empty unpublished pool hides the newspaper section',async()=>{
+ const m=C.create({store:store(),fetcher:async()=>({ok:true,json:async()=>({...fixture,clips:[fixture.clips[1]]})})});await m.refresh();
+ const host={replaceChildren(){}};C.render(host,m);assert.equal(host.hidden,true);
 });

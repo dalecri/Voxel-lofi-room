@@ -22,6 +22,13 @@
   }
   const rows = data => (data?.clips || []).filter(c=>c.status!=='published').slice().sort((a,b)=>
     ((Date.parse(b.created)||0)-(Date.parse(a.created)||0)) || a.id.localeCompare(b.id));
+  // Local civil-day ordinal: midnight boundaries stay stable through DST.
+  const dayIndex = date => Math.floor(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())/86400000);
+  function dailyRows(data,date=new Date()) {
+    const pool=rows(data);if(!pool.length)return [];
+    const start=((dayIndex(date)*3)%pool.length+pool.length)%pool.length;
+    return Array.from({length:Math.min(3,pool.length)},(_,i)=>pool[(start+i)%pool.length]);
+  }
   const copyPayload = clip => options(clip.captions)[0] ?? clip.desc;
   function create({store,url=CAPTIONS_URL,fetcher=(...args)=>root.fetch(...args),changed=()=>{},now=Date.now}) {
     let saved;try { saved=store.get(KEY,null); } catch(e) { /* storage unavailable */ }
@@ -42,7 +49,7 @@
       });
       return pending;
     }
-    return {refresh,get state(){return {enabled:!!url, data, rows:rows(data), cached, loading, failed};}};
+    return {refresh,get state(){return {enabled:!!url, data, rows:dailyRows(data,new Date(now())), cached, loading, failed};}};
   }
   async function copy(text,{navigator=root.navigator,document=root.document}={}) {
     try {await navigator.clipboard.writeText(text);return true;} catch(e) { /* older WebView or permission denied */ }
@@ -53,14 +60,13 @@
     finally {area.remove();active?.focus?.({preventScroll:true});}
   }
   function render(host,model) {
-    host.replaceChildren();const s=model.state;host.hidden=!s.enabled;if(!s.enabled)return;
+    host.replaceChildren();const s=model.state;host.hidden=!s.enabled||!s.rows.length;if(host.hidden)return;
     const doc=host.ownerDocument;
     const add=(tag,cls,text,parent=host)=>{const el=doc.createElement(tag);el.className=cls;el.textContent=text;parent.appendChild(el);return el;};
     const head=add('div','caption-desk-head','');add('h4','','The caption desk',head);
     const refresh=add('button','caption-refresh',s.loading?'Refreshing…':'Refresh',head);refresh.type='button';refresh.disabled=s.loading;refresh.onclick=()=>model.refresh();
     const status=add('p','caption-desk-status',s.cached?'Cached · last saved export':s.failed?'The desk is offline. Refresh when you’re back.':s.loading?'Fetching the latest export…':'TwoStoryTails · unpublished');status.setAttribute('role','status');
     if(s.data?.exportedAt){const date=new Date(s.data.exportedAt);if(Number.isFinite(date.getTime()))status.appendChild(doc.createTextNode(' · Exported '+date.toLocaleString()));}
-    if(!s.rows.length)add('p','caption-empty',s.data?'No unpublished clips in this edition.':s.loading?'The drafts are on their way.':'No cached drafts yet. The rest of the paper is ready.');
     for(const clip of s.rows){
       const article=add('article','caption-clip','');
       add('p','caption-desc',clip.desc,article);
@@ -72,6 +78,6 @@
       button.onclick=async()=>{const ok=await copy(copyPayload(clip));button.textContent=ok?'Copied':'Copy failed';button.setAttribute('aria-label',ok?'Caption copied':'Copy failed — try again');setTimeout(()=>{if(button.isConnected){button.textContent='Copy';button.setAttribute('aria-label','Copy caption: '+clip.desc);}},1600);};
     }
   }
-  const api={CAPTIONS_URL,KEY,options,parse,rows,copyPayload,create,copy,render};
+  const api={CAPTIONS_URL,KEY,options,parse,rows,dayIndex,dailyRows,copyPayload,create,copy,render};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCaptions=api;
 })(typeof window!=='undefined'?window:globalThis);
