@@ -60,7 +60,7 @@ body.reduce-motion *,body.reduce-motion *::before,body.reduce-motion *::after{an
 
 /* Direct, visible editing for the room shortcut and radio display. */
 .app-shortcut-controls{position:relative;width:44px;height:44px}.rot .app-shortcut-edit{position:absolute;right:-7px;top:-8px;width:26px;height:26px;border:1px solid var(--line);border-radius:10px;background:var(--panel-solid)}.rot .app-shortcut-edit svg{width:15px;height:15px}.rot button[hidden]{display:none}
-.station-copy[role=button]{cursor:pointer}.station-copy:focus-visible{outline:3px solid var(--ink);outline-offset:-5px}.station-icon-picker{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:10px;background:var(--panel-solid);border-radius:16px;margin:8px 5px}.station-icon-picker[hidden]{display:none}.station-icon-picker button{min-height:40px;border-radius:10px;font-size:24px;text-align:center}.station-icon-picker button[aria-pressed=true]{outline:2px solid var(--accent)}.today-tasks>.task-journey{margin-top:20px}
+.station-copy[role=button]{cursor:pointer}.station-copy:focus-visible{outline:3px solid var(--ink);outline-offset:-5px}.station-icon-picker{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:10px;background:var(--panel-solid);border-radius:16px;margin:8px 5px}.station-icon-picker[hidden]{display:none}.station-icon-picker button{min-height:40px;border-radius:10px;font-size:24px;text-align:center}.station-icon-picker button[aria-pressed=true]{outline:2px solid var(--accent)}
 
 .station-copy{width:100%}
 
@@ -171,7 +171,7 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 .space-today .today-weather .today-sky-tag { top: 0; right: 0; }
 .today-sky > .google-tasks { padding: 20px 0 0; margin: 0; border: 0; border-radius: 0; background: transparent; color: inherit; }
 .space-today .today-sky .google-tasks small { display: inline; margin: 0; }
-.today-sky .google-readonly, .today-sky .google-task-picker, .today-sky .google-task-row time { color: inherit; }
+.today-sky .google-task-picker, .today-sky .google-task-row time { color: inherit; }
 
 /* Welcome belongs to the sky: a single date below it, with no duplicate header. */
 .today-welcome { margin-bottom: 18px; }
@@ -181,3 +181,8 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 .space-search.has-external-toggle:not(.is-expanded) { display: none; }
 .space-search.has-external-toggle.is-expanded { clear: both; display: block; margin: 12px 0; }
 .space-search.has-external-toggle .home-results { margin-top: 8px; }
+
+/* The companion's journey belongs to the same notebook as the little list. */
+.task-notebook > .task-journey { border: 0; border-radius: 0; box-shadow: none; background: transparent; margin: 18px 0 0; padding: 16px 0 0; }
+.task-notebook .task-journey-summary { background: var(--chip); }
+.task-notebook .task-journey-summary::after { background: var(--chip); }

@@ -16,7 +16,7 @@ function startLofiRooms() {
     del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
   };
   const calendarModel=LRCalendar.create({store});
-  const googleCalendar=LRCalendar.createGoogle({scope:LRCalendar.READ_SCOPES});
+  const googleCalendar=LRCalendar.createGoogle({scope:LRCalendar.TASKS_EDIT_SCOPES});
   const googleTasksUI=LRCalendar.createTasksView({google:googleCalendar});
   const remember=(kind,options)=>{try{calendarModel.append(kind,options);}catch(e){/* optional memory never interrupts a ritual */}};
   const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); }, onPurchase: item => {

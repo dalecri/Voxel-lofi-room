@@ -6,13 +6,14 @@
 // No client secret belongs in this app. Google Identity Services' code flow
 // requires a backend. This static app uses the GIS browser-token flow instead.
 // Tokens expire naturally; reconnect is explicit. In OAuth testing mode, add test
-// users. Production accounts may require Google verification of the read scope.
+// users. Production accounts may require Google verification of the requested scopes.
 // Embedded Android WebViews may reject Google sign-in; the local calendar works
 // regardless. Use the registered HTTPS browser origin for Google authorization.
 (function(root){
   const GOOGLE_CLIENT_ID='446703031004-aga4sp6l11dknafmg8rpspi5m7lif8e4.apps.googleusercontent.com'; // OWNER CONFIG: OAuth client ID. Blank keeps everything local.
   const SCOPE='https://www.googleapis.com/auth/calendar.readonly';
   const TASKS_SCOPE='https://www.googleapis.com/auth/tasks.readonly',READ_SCOPES=SCOPE+' '+TASKS_SCOPE;
+  const TASKS_WRITE_SCOPE='https://www.googleapis.com/auth/tasks',TASKS_EDIT_SCOPES=READ_SCOPES+' '+TASKS_WRITE_SCOPE;
   const LOG='lr.activityLog',EVENTS='lr.calendarEvents',TOKEN='lr.googleCalendarToken';
   const KINDS={pushups:['Reached 50 pushups','#bf9563'],letter:['Wrote a letter','#bc8eaf'],tea:['Made tea','#b38d50'],tasks:['Finished a task','#789c87'],plant:['Watered a plant','#77a56b'],cat:['Fed a cat','#ce9376'],focus:['Finished a focus ritual','#8c91bd'],daily:['Found the daily moment','#d2ad54'],french:['Studied French','#c4896a']};
   const day=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -60,7 +61,7 @@
     return identityLoading;
   }
   function authorizeGoogle(clientId,scope){
-    const request=()=>new Promise((resolve,reject)=>{try{const client=root.google.accounts.oauth2.initTokenClient({client_id:clientId,scope,include_granted_scopes:false,callback:r=>r.error?reject(Error(r.error)):resolve(r),error_callback:()=>reject(Error('Could not open Google sign-in'))});client.requestAccessToken({prompt:'consent'});}catch(e){reject(e);}});
+    const request=()=>new Promise((resolve,reject)=>{try{const client=root.google.accounts.oauth2.initTokenClient({client_id:clientId,scope,include_granted_scopes:String(scope).split(/\s+/).includes(TASKS_WRITE_SCOPE),callback:r=>r.error?reject(Error(r.error)):resolve(r),error_callback:()=>reject(Error('Could not open Google sign-in'))});client.requestAccessToken({prompt:'consent'});}catch(e){reject(e);}});
     // Request synchronously when the SDK is ready, preserving popup user activation.
     if(root.google?.accounts?.oauth2)return request();
     return identityReady().then(request);
@@ -69,26 +70,47 @@
   // depend on a network or a configured OAuth client. Tokens bypass Store/SQLite.
   function createGoogle({clientId=GOOGLE_CLIENT_ID,scope=SCOPE,storage,authorize=authorizeGoogle,fetcher=(...a)=>root.fetch(...a),now=()=>Date.now()}={}){
     if(!storage)try{storage=root.localStorage;}catch(e){/* local tools need no token storage */}
-    const required=String(scope).split(/\s+/).filter(Boolean),cache=new Map(),pending=new Map(),controllers=new Set(),listeners=new Set();
-    let token=null,reconnect=false,generation=0;
-    const granted=(value,needed=required)=>needed.every(s=>String(value || SCOPE).split(/\s+/).includes(s));
+    const requested=String(scope).split(/\s+/).filter(Boolean),required=requested.filter(s=>s!==TASKS_WRITE_SCOPE),cache=new Map(),taskRevisions=new Map(),pending=new Map(),controllers=new Set(),listeners=new Set();
+    const completedTasks=new Map();let token=null,reconnect=false,generation=0;
+    const granted=(value,needed=required)=>{const scopes=new Set(String(value || SCOPE).split(/\s+/));return needed.every(s=>scopes.has(s)||s===TASKS_SCOPE&&scopes.has(TASKS_WRITE_SCOPE));};
     try{const saved=JSON.parse(storage?.getItem(TOKEN)||'null');if(typeof saved?.access_token==='string'&&Number.isFinite(saved.expiresAt)){if(saved.expiresAt>now()&&granted(saved.scope))token=saved;else{reconnect=true;storage?.removeItem(TOKEN);}}}catch(e){}
     const notify=()=>{for(const fn of listeners)try{fn();}catch(e){/* one closed view cannot block another */}};
-    const clear=(retry=false)=>{generation++;controllers.forEach(c=>c.abort());controllers.clear();token=null;cache.clear();pending.clear();reconnect=retry;try{storage?.removeItem(TOKEN);}catch(e){}notify();};
+    const clear=(retry=false)=>{generation++;controllers.forEach(c=>c.abort());controllers.clear();token=null;cache.clear();pending.clear();completedTasks.clear();reconnect=retry;try{storage?.removeItem(TOKEN);}catch(e){}notify();};
     const connected=()=>!!clientId&&!!token&&token.expiresAt>now()&&granted(token.scope);
     const usable=needed=>{if(!connected()){if(token)clear(true);return false;}if(!granted(token.scope,[needed]))return false;return true;};
-    async function connect(){if(!clientId)return false;if(!authorize){reconnect=true;notify();return false;}const version=++generation;controllers.forEach(c=>c.abort());controllers.clear();pending.clear();try{const reply=await authorize(clientId,scope);if(version!==generation)return false;if(!reply?.access_token||!reply.scope||!granted(reply.scope))throw Error();const listId=token?.listId || '@default';token={access_token:reply.access_token,scope:reply.scope,expiresAt:now()+Math.min(3600,Number(reply.expires_in)||3600)*1000,listId};storage.setItem(TOKEN,JSON.stringify(token));cache.clear();reconnect=false;notify();return true;}catch(e){if(version===generation)clear(true);return false;}}
+    async function connect(){if(!clientId)return false;if(!authorize){reconnect=true;notify();return false;}const prior=token,version=++generation;controllers.forEach(c=>c.abort());controllers.clear();pending.clear();try{const reply=await authorize(clientId,scope);if(version!==generation)return false;if(!reply?.access_token||!reply.scope||!granted(reply.scope,requested))throw Error();const listId=token?.listId || '@default';token={access_token:reply.access_token,scope:reply.scope,expiresAt:now()+Math.min(3600,Number(reply.expires_in)||3600)*1000,listId};storage.setItem(TOKEN,JSON.stringify(token));cache.clear();reconnect=false;notify();return true;}catch(e){if(version===generation){if(requested.includes(TASKS_WRITE_SCOPE)&&prior&&prior.expiresAt>now()&&granted(prior.scope)){token=prior;notify();}else clear(true);}return false;}}
     function cached(key){const c=cache.get(key);return connected()&&c&&c.until>now()?c.rows:[];}
     async function request(key,url,params,mapper,needed,ttl=Infinity){
-      if(!usable(needed))return [];const old=cache.get(key);if(old&&old.until>now())return old.rows;if(pending.has(key))return pending.get(key);const version=generation,auth=token.access_token;
+      if(!usable(needed))return [];const old=cache.get(key);if(old&&old.until>now())return old.rows;if(pending.has(key))return pending.get(key);const version=generation,auth=token.access_token,revision=taskRevisions.get(key)||0;
       const job=(async()=>{const all=[];let page=null,pages=0;const seen=new Set(),abort=new AbortController();controllers.add(abort);const timer=setTimeout(()=>abort.abort(),12000);
-        try{do{const p=new URLSearchParams(params);if(page)p.set('pageToken',page);const response=await fetcher(url+(p.size?'?'+p:''),{method:'GET',headers:{Authorization:'Bearer '+auth},credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',signal:abort.signal});if(version!==generation)return [];if(response.status===401||response.status===403){clear(true);return [];}if(!response.ok)return [];const body=await response.json();if(!body||typeof body!=='object'||(body.items!=null&&!Array.isArray(body.items)))return [];all.push(...mapper(body));page=typeof body.nextPageToken==='string'?body.nextPageToken:null;pages++;if(page&&seen.has(page))return [];if(page)seen.add(page);}while(page&&all.length<10000&&pages<20);if(version!==generation)return [];cache.set(key,{rows:all,until:now()+ttl});return all;}catch(e){return [];}finally{clearTimeout(timer);controllers.delete(abort);}})();pending.set(key,job);job.finally(()=>{if(pending.get(key)===job)pending.delete(key);});return job;
+        try{do{const p=new URLSearchParams(params);if(page)p.set('pageToken',page);const response=await fetcher(url+(p.size?'?'+p:''),{method:'GET',headers:{Authorization:'Bearer '+auth},credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',signal:abort.signal});if(version!==generation||(taskRevisions.get(key)||0)!==revision)return [];if(response.status===401||response.status===403){clear(true);return [];}if(!response.ok)return [];const body=await response.json();if(version!==generation||(taskRevisions.get(key)||0)!==revision)return [];if(!body||typeof body!=='object'||(body.items!=null&&!Array.isArray(body.items)))return [];all.push(...mapper(body));page=typeof body.nextPageToken==='string'?body.nextPageToken:null;pages++;if(page&&seen.has(page))return [];if(page)seen.add(page);}while(page&&all.length<10000&&pages<20);if(version!==generation||(taskRevisions.get(key)||0)!==revision)return [];cache.set(key,{rows:all,until:now()+ttl});return all;}catch(e){return [];}finally{clearTimeout(timer);controllers.delete(abort);}})();pending.set(key,job);job.finally(()=>{if(pending.get(key)===job)pending.delete(key);});return job;
     }
     function events(d){const [start,end]=monthBounds(d);return request('events:'+monthKey(d),'https://www.googleapis.com/calendar/v3/calendars/primary/events',{timeMin:start.toISOString(),timeMax:end.toISOString(),singleEvents:'true',orderBy:'startTime',maxResults:'2500'},googleRows,SCOPE);}
     // Google's documented task-list collection is users/@me/lists, not /lists.
     const taskLists=()=>request('lists','https://tasks.googleapis.com/tasks/v1/users/@me/lists',{},taskListRows,TASKS_SCOPE,300000);
     const tasks=(listId=token?.listId || '@default')=>request('tasks:'+listId,'https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(listId)+'/tasks',{showCompleted:'false',maxResults:'100'},taskRows,TASKS_SCOPE,60000);
-    return {connect,events,taskLists,tasks,check(){if(token&&!connected())clear(true);return connected();},subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
+    async function setTaskCompleted(listId,id,done){
+      if(!usable(TASKS_WRITE_SCOPE))throw Error('Reconnect Google to enable task check-offs.');
+      if(typeof id!=='string'||!id||typeof listId!=='string'||!listId)throw Error('This task is unavailable.');
+      const version=generation,key='tasks:'+listId,receipt=listId+':'+id;
+      const before=cache.get(key)?.rows.find(t=>t.id===id)||completedTasks.get(receipt),abort=new AbortController();controllers.add(abort);const timer=setTimeout(()=>abort.abort(),12000);
+      // Cancel a pending list read before this write so a stale GET cannot put a
+      // completed task back. In-flight reads are fenced by this per-list revision.
+      const rev=(taskRevisions.get(key)||0)+1;taskRevisions.set(key,rev);pending.delete(key);
+      try{
+        const response=await fetcher('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(listId)+'/tasks/'+encodeURIComponent(id),{method:'PATCH',headers:{Authorization:'Bearer '+token.access_token,'Content-Type':'application/json'},body:JSON.stringify({status:done?'completed':'needsAction',...(!done?{completed:null}:{})}),credentials:'omit',referrerPolicy:'no-referrer',signal:abort.signal});
+        if(version!==generation)throw Error('Reconnect Google to save this check-off.');
+        if(response.status===401||response.status===403){clear(true);throw Error('Reconnect Google to save this check-off.');}
+        if(!response.ok)throw Error('Could not save your check-off. Try again when you’re online.');
+        const body=await response.json();if(!body||typeof body!=='object'||body.id!==id)throw Error('Google returned an incomplete task. Refresh to check it.');
+        if(version!==generation)throw Error('Reconnect Google to save this check-off.');
+        const list=(cache.get(key)?.rows||[]).filter(t=>t.id!==id);
+        if(done){if(before)completedTasks.set(receipt,before);if(completedTasks.size>200)completedTasks.delete(completedTasks.keys().next().value);}
+        else {const restored=taskRows({items:[{...before,...body,status:'needsAction',hidden:false,deleted:false}]})[0];if(restored)list.push(restored);completedTasks.delete(receipt);}
+        taskRevisions.set(key,(taskRevisions.get(key)||0)+1);pending.delete(key);cache.set(key,{rows:list,until:now()+60000});notify();return true;
+      }finally{clearTimeout(timer);controllers.delete(abort);}
+    }
+    return {connect,events,taskLists,tasks,setTaskCompleted,get canCompleteTasks(){return connected()&&granted(token.scope,[TASKS_WRITE_SCOPE]);},get taskEditingRequested(){return requested.includes(TASKS_WRITE_SCOPE);},check(){if(token&&!connected())clear(true);return connected();},subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
       get selectedList(){return token?.listId || '@default';},selectList(id){if(!connected()||typeof id!=='string'||!id||id.length>500)return;const before=token.listId;token.listId=id;try{storage.setItem(TOKEN,JSON.stringify(token));}catch(e){token.listId=before;return;}notify();},
       get cachedLists(){return cached('lists');},get cachedTasks(){return cached('tasks:'+(token?.listId || '@default'));},
       disconnect(){const value=token?.access_token;clear();if(!value)return;const revoke=()=>{try{root.google.accounts.oauth2.revoke(value,()=>{});}catch(e){/* local disconnect still succeeds */}};
@@ -97,19 +119,51 @@
   }
   function googleAuth(host,google,refresh,{label='Google Calendar',lists=google.cachedLists || []}={}){
     const el=(tag,cls,text)=>{const n=root.document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;},row=el('div','calendar-auth'),note=el('p','muted small');host.append(row,note);
-    const b=el('button','chipbtn',google.connected?'Connected to '+label:google.reconnect?'Reconnect '+label:'Connect '+label);b.type='button';b.disabled=google.connected||!google.configured;b.onclick=async()=>{b.disabled=true;await google.connect();if(host.isConnected)refresh();};row.appendChild(b);
+    const upgrade=google.connected&&google.taskEditingRequested&&!google.canCompleteTasks;
+    const b=el('button','chipbtn',upgrade?'Reconnect to enable task check-offs':google.connected?'Connected to '+label:google.reconnect?'Reconnect '+label:'Connect '+label);b.type='button';b.disabled=google.connected&&!upgrade||!google.configured;b.onclick=async()=>{b.disabled=true;await google.connect();if(host.isConnected)refresh();};row.appendChild(b);
     if(google.connected||google.reconnect){const off=el('button','chipbtn','Disconnect');off.type='button';off.onclick=()=>{google.disconnect();if(host.isConnected)refresh();};row.appendChild(off);}
     if(google.connected&&lists.length>1){const l=el('label','google-task-picker','Task list'),select=el('select');select.setAttribute('aria-label','Google task list');for(const e of [{id:'@default',title:'Default list'},...lists]){const option=el('option','',e.title);option.value=e.id;select.appendChild(option);}select.value=google.selectedList;select.onchange=()=>google.selectList(select.value);l.appendChild(select);row.appendChild(l);}
-    note.textContent=!google.configured?'Google is optional. An OAuth client ID has not been configured. Everything local is ready.':google.reconnect?'Google needs a fresh connection. Tap Reconnect to try again. Your local lists and calendar are still here.':'Optional and read-only. Calendar and Tasks are read; nothing is written to Google.';
+    note.textContent=!google.configured?'Google is optional. An OAuth client ID has not been configured. Everything local is ready.':google.reconnect?'Google needs a fresh connection. Tap Reconnect to try again. Your local lists and calendar are still here.':google.taskEditingRequested?'Task check-offs sync to your Google account. Calendar stays read-only.':'Optional and read-only. Calendar and Tasks are read; nothing is written to Google.';
   }
-  function createTasksView({google}){
-    const mounts=new Set(),el=(tag,cls,text)=>{const n=root.document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-    function paint(entry){const host=entry.host;host.replaceChildren();const heading=el('div','google-tasks-heading');heading.append(el('h3','','Google Tasks'),el('span','google-readonly','Google · read-only'));host.appendChild(heading);const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google'});
-      if(!google.connected)return;const list=el('ul','google-task-list');for(const t of google.cachedTasks){const li=el('li','google-task-row');li.appendChild(el('b','',t.title));if(t.due){const when=el('time');when.dateTime=t.due;when.textContent=date(t.due).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});li.appendChild(when);}list.appendChild(li);}host.appendChild(list);if(!list.children.length)host.appendChild(el('p','muted small','No incomplete tasks to show. Your local little list is separate.'));
+  function createTasksView({google,now=Date.now,holdMs=2500,undoMs=15000}){
+    const mounts=new Set(),changes=new Map();let error='',nextRefresh=0;
+    const el=(tag,cls,text)=>{const n=root.document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+    const key=(list,id)=>JSON.stringify([list,id]);
+    function repaint(){for(const entry of mounts){if(!entry.host.isConnected)mounts.delete(entry);else paint(entry);}}
+    async function change(task,listId,done,index=0){
+      const k=key(listId,task.id),previous=changes.get(k);if(previous?.busy)return;
+      const entry={task,listId,index:previous?.index??index,busy:true,done,hideAt:Infinity,until:Infinity};changes.set(k,entry);error='';repaint();
+      try{
+        await google.setTaskCompleted(listId,task.id,done);
+        if(changes.get(k)!==entry||!google.connected)return;
+        if(!done){changes.delete(k);repaint();return;}
+        entry.busy=false;entry.hideAt=now()+holdMs;entry.until=now()+undoMs;
+        entry.hideTimer=setTimeout(repaint,holdMs);
+        entry.undoTimer=setTimeout(()=>{if(changes.get(k)===entry){changes.delete(k);repaint();}},undoMs);repaint();
+      }catch(e){if(changes.get(k)!==entry)return;changes.delete(k);if(previous&&!done){changes.set(k,previous);}error=e.message||'Could not save your check-off. Try again.';repaint();}
+    }
+    const checkIcon='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg>';
+    function paint(entry){
+      const host=entry.host,focus=host.contains(root.document.activeElement)?root.document.activeElement.dataset.taskAction:null;host.replaceChildren();const heading=el('div','google-tasks-heading');heading.append(el('h3','','Google Tasks'));host.appendChild(heading);
+      const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google'});
+      if(error){const note=el('p','google-task-error',error);note.setAttribute('role','status');host.appendChild(note);}
+      if(!google.connected)return;
+      const listId=google.selectedList,list=el('ul','google-task-list'),visible=[...google.cachedTasks];
+      for(const state of [...changes.values()].sort((a,b)=>a.index-b.index))if(state.listId===listId&&(state.busy||state.done&&now()<state.hideAt)&&!visible.some(t=>t.id===state.task.id))visible.splice(Math.min(state.index,visible.length),0,state.task);
+      for(const task of visible){
+        const state=changes.get(key(listId,task.id));if(state?.done&&now()>=state.hideAt)continue;
+        const row=el('li','google-task-row'+(state?.done?' completed':''));row.dataset.task=task.id;
+        const check=el('button','google-task-check');check.type='button';check.setAttribute('role','checkbox');check.setAttribute('aria-label',task.title);check.setAttribute('aria-checked',String(!!state?.done));check.disabled=!google.canCompleteTasks;check.setAttribute('aria-disabled',String(!!state?.busy||!google.canCompleteTasks));check.setAttribute('aria-busy',String(!!state?.busy));
+        if(state?.done)check.innerHTML=checkIcon;
+        check.dataset.taskAction='check:'+task.id;check.onclick=()=>change(task,listId,!state?.done,visible.indexOf(task));
+        const text=el('span','google-task-copy');text.appendChild(el('b','',task.title));if(task.due){const when=el('time');when.dateTime=task.due;when.textContent=date(task.due).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});text.appendChild(when);}row.append(check,text);list.appendChild(row);
+      }
+      host.appendChild(list);if(!list.children.length)host.appendChild(el('p','muted small','All clear in this list.'));
+      for(const state of changes.values())if(state.listId===listId&&state.done&&!state.busy&&now()<state.until){const feedback=el('div','google-task-feedback'),label=el('span','',state.task.title+' · completed'),undo=el('button','chipbtn','Undo');undo.type='button';undo.setAttribute('aria-label','Undo '+state.task.title);undo.dataset.taskAction='undo:'+state.task.id;undo.onclick=()=>change(state.task,listId,false);feedback.append(label,undo);host.appendChild(feedback);}
+      if(focus){const candidates=[...host.querySelectorAll('[data-task-action]')];(candidates.find(b=>b.dataset.taskAction===focus)||candidates.find(b=>b.dataset.taskAction==='undo:'+focus.slice(focus.indexOf(':')+1))||candidates.find(b=>b.dataset.taskAction==='check:'+focus.slice(focus.indexOf(':')+1)))?.focus({preventScroll:true});}
     }
     function update(entry){if(!entry.host.isConnected){mounts.delete(entry);return;}const version=++entry.version;paint(entry);if(google.connected)Promise.all([google.taskLists(),google.tasks()]).then(()=>{if(entry.host.isConnected&&entry.version===version)paint(entry);});}
-    google.subscribe(()=>{for(const entry of mounts)update(entry);});
-    let nextRefresh=0;
+    google.subscribe(()=>{if(!google.connected){for(const c of changes.values()){clearTimeout(c.hideTimer);clearTimeout(c.undoTimer);}changes.clear();error='';}for(const entry of mounts)update(entry);});
     return {tick(time){if(time<nextRefresh)return;nextRefresh=time+60000;for(const entry of mounts)if(entry.host.isConnected&&!entry.host.closest('[hidden]')&&entry.host.closest('.sheet.open'))update(entry);},mount(parent,before){for(const entry of mounts)if(!entry.host.isConnected)mounts.delete(entry);const host=el('section','google-tasks');parent.insertBefore(host,before || null);const entry={host,version:0};mounts.add(entry);update(entry);return host;},refresh(){for(const entry of mounts)update(entry);}};
   }
   function createView({model,google,sheet,atlas,meta,scenes,seasons=[],thumb,openScene,now=()=>new Date()}){
@@ -134,5 +188,5 @@
     });}
     return {open(){current=now();selected=day(current);month();},month,detail,refresh(){const host=root.document.querySelector('.calendar-view');if(host?.isConnected&&host.closest('.sheet.open')&&sources()!==observed)month();}};
   }
-  const api={GOOGLE_CLIENT_ID,SCOPE,TASKS_SCOPE,READ_SCOPES,LOG,EVENTS,TOKEN,KINDS,day,date,valid,moon,grid,activityRows,activityWords,memoryFor,seasonalNotes,googleRows,taskRows,taskListRows,markers,create,authorizeGoogle,createGoogle,googleAuth,createTasksView,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCalendar=api;
+  const api={GOOGLE_CLIENT_ID,SCOPE,TASKS_SCOPE,READ_SCOPES,TASKS_WRITE_SCOPE,TASKS_EDIT_SCOPES,LOG,EVENTS,TOKEN,KINDS,day,date,valid,moon,grid,activityRows,activityWords,memoryFor,seasonalNotes,googleRows,taskRows,taskListRows,markers,create,authorizeGoogle,createGoogle,googleAuth,createTasksView,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCalendar=api;
 })(typeof window!=='undefined'?window:globalThis);
