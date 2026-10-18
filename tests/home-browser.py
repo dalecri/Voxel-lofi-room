@@ -32,7 +32,7 @@ with sync_playwright() as p:
   if page.get_by_role('button',name='Search your space',exact=True).get_attribute('aria-expanded')=='false':page.get_by_role('button',name='Search your space',exact=True).click()
   page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True).fill(q)
   assert page.locator('.space-search').bounding_box()['y']>page.locator('[aria-label="Menu sections"]').bounding_box()['y']
- open_home();assert body.get_by_role('heading',name='Control Centre',exact=True).is_visible();assert page.locator('#bHome').get_attribute('aria-label')=='Control Centre';assert view.locator('h2').all_text_contents()==['Tools and apps']
+ open_home();assert body.get_by_role('heading',name='Control Centre',exact=True).is_visible();assert page.locator('#bHome').get_attribute('aria-label')=='Control Centre';assert view.locator('h2').count()==0
  assert view.locator('[data-app=rooms],[data-app=journal],[data-app=settings],[data-app=breathing]').count()==0
  assert view.locator('.today-tasks,.today-sky,.home-daily,.home-notifications,.home-coziness,.space-search').count()==0;assert view.locator('[data-app]').count()>20
  # Header settings replaces its app tile; native controls still affect the room.
