@@ -64,8 +64,8 @@
   function createView({sheet,dismiss,apps=()=>[],preview=()=>null,previewKey=()=>'',actions,beforeOpen=()=>{},onClose=()=>{}}) {
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
     const view=el('section','home-view');view.id='homeView';view.setAttribute('aria-label','Control Centre apps');
-    const settingsRow=el('div','rowbtns'),settings=el('button','chipbtn','⚙ Open Settings');settings.type='button';settings.setAttribute('aria-label','Open Settings');settings.onclick=()=>{closeView(false);actions.navigate('settings');};settingsRow.appendChild(settings);
-    const main=el('div','home-content');view.append(settingsRow,main);const sections={};
+    const settings=el('button','chipbtn sheet-icon home-settings');settings.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3 1-1h4l1 3 2 1 3-1 2 3-2 2v3l2 2-2 3-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-3 2-2v-3L2 8l2-3 3 1 2-1Z"/><circle cx="12" cy="11" r="3"/></svg>';settings.title='Open Settings';settings.type='button';settings.setAttribute('aria-label','Open Settings');settings.onclick=()=>{closeView(false);actions.navigate('settings');};
+    const main=el('div','home-content');view.appendChild(main);const sections={};
     SECTIONS.forEach(name=>{const section=el('section','home-section'),h=el('h2','',name);h.id='home-'+name.toLowerCase().replaceAll(' ','-');section.setAttribute('aria-labelledby',h.id);section.appendChild(h);main.appendChild(section);sections[name]=section;});
     const appSearch=el('input','home-search');appSearch.type='search';appSearch.placeholder='Find a tool or app';appSearch.setAttribute('aria-label','Find a tool or app');
     const appGrid=el('div','home-apps'),appEmpty=el('p','muted');sections['Tools and apps'].append(el('p','muted','Your tools and apps. Color means the furniture is in this room; gray means it is not placed. Every tool still opens here.'),appSearch,appGrid,appEmpty);
@@ -84,7 +84,7 @@
       beforeOpen();appSearch.value='';launchApps();
       // codeSheet calls home.close(false). Mark active only after it has built
       // this sheet, so opening ourselves cannot recursively dismiss ourselves.
-      sheet('Control Centre','Your tools and apps.',h=>{h('div','home-sheet-content').appendChild(view);});
+      sheet('Control Centre','Your tools and apps.',h=>{h('div','home-sheet-content').appendChild(view);const body=view.closest('#sheetBody'),close=body?.querySelector(':scope > .sheet-close');if(close){const tools=el('div','home-sheet-actions');tools.append(settings,close);body.insertBefore(tools,body.querySelector(':scope > h2'));}});
       active=true;
       const body=view.closest('#sheetBody');if(body)body.scrollTop=0;
       body?.querySelector('.sheet-close')?.focus({preventScroll:true});

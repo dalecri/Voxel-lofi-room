@@ -1944,7 +1944,7 @@ function startLofiRooms() {
     const body = $('#sheetBody');
     const here = merchantHere();
     body.dataset.merchant = here ? 'here' : 'away';
-    body.innerHTML = `<div class="grab"></div><div class="rowbtns"><button class="chipbtn" id="shopBack">Menu</button><button class="chipbtn" id="shopClose">Close</button></div>
+    body.innerHTML = `<div class="grab"></div><div class="rowbtns"><button class="chipbtn" id="shopBack">Menu</button><button class="chipbtn sheet-icon" id="shopClose" aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
       <h2>Mallow’s traveling treasures</h2><p id="shopBalance" role="status" aria-live="polite"></p>
       <p class="muted">${here ? 'Three little finds in a well-traveled satchel. Anything you take home is yours forever.' : 'Mallow is out wandering. He drops by cozy rooms from time to time. Missed him? He’ll come back another day. Your Fireflies and treasures are safe.'}</p>
       <p class="muted small">${here ? 'Nothing is gone forever. There’s always another visit. ' : ''}Fireflies come from cozy play. No money purchases, no ads.</p>
@@ -2173,7 +2173,7 @@ function startLofiRooms() {
     const body = $('#sheetBody'); body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
-    const close = h('button', 'chipbtn sheet-close', 'Close'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
+    const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
     h('h2', '', title); h('p', 'muted', sub);
     build(h); openSheet();
   }

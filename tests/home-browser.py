@@ -36,7 +36,7 @@ with sync_playwright() as p:
  assert view.locator('[data-app=rooms],[data-app=journal],[data-app=settings],[data-app=breathing]').count()==0
  assert view.locator('.today-tasks,.today-sky,.home-daily,.home-notifications,.home-coziness,.space-search').count()==0;assert view.locator('[data-app]').count()>20
  # Header settings replaces its app tile; native controls still affect the room.
- view.get_by_role('button',name='Open Settings',exact=True).click();assert page.locator('#menu-settings').is_visible()
+ body.get_by_role('button',name='Open Settings',exact=True).click();assert page.locator('#menu-settings').is_visible()
  def control(label):return page.locator('#menu-settings').get_by_role('switch',name=re.compile('^'+re.escape(label)+r'(?:$| \()'))
  for value in [True,False]:
   b=control('Rain')
