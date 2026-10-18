@@ -123,7 +123,7 @@ with sync_playwright() as p:
  context.close()
  fresh=browser.new_context();fresh.add_init_script("localStorage.setItem('lr.intro','true')");recipient=fresh.new_page();recipient.on('pageerror',lambda e:errors.append(str(e)))
  recipient.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');recipient.wait_for_function('!!window.__lr')
- recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.wait_for_function('__lr.room.name==="Letter Share"')
+ recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.get_by_role('button',name='Visit this room',exact=True).click();recipient.wait_for_function('__lr.room.name==="Letter Share"')
  assert recipient.evaluate('localStorage.getItem("lr.letters")') is None
  assert 'PRIVATE_LETTER' not in recipient.evaluate('JSON.stringify(localStorage)')
  assert not errors,errors;assert not outbound,outbound

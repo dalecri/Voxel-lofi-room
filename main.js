@@ -2262,33 +2262,29 @@ function startLofiRooms() {
       shareQR=LRRoomQR.createView({host:$('#sheetBody'),code,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
     });
   }
-  function importSheet() {
-    codeSheet('Open a friend’s room', 'Paste a room code to visit a friend’s room (nothing of yours is replaced), or a note code to add their guest book note to your room.', h => {
-      const ta = h('textarea', 'code'); ta.rows = 4; ta.placeholder = 'LR1.…';
-      const row = h('div', 'rowbtns'); row.innerHTML = '<button class="chipbtn" id="bOpenCode">Open room</button><button type="button" class="chipbtn" id="bScanRoom">Scan with camera</button>';
-      roomScanner=LRRoomQR.scanner({host:$('#sheetBody'),onCode:code=>{ta.value=code;row.querySelector('#bOpenCode').click();},notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
-      row.querySelector('#bScanRoom').onclick=()=>roomScanner.start();
-      row.querySelector('#bOpenCode').onclick = async () => {
-        if (/^\s*LRG[01]\./.test(ta.value)) { try { await receiveNote(ta.value); closeSheets(); } catch (e) { Sound.nope(); toast('<span>That note code doesn’t look right</span>', 1600); } return; }
-        try {
-          const d = await readCode(ta.value);
-          const probe = new LR.Room();
-          if (!probe.load(d)) throw new Error('bad room');
-          probe.items = probe.items.filter(i => CAT[i.t]);   // pieces this version doesn't know are skipped
-          closeSheets();
-          leaveThen(() => {
-            const id = Date.now();
-            room.load(probe.serialize());
-            meta.current = id; undo.length = 0; baseSig = sig();
-            meta.visit = { id, gid: d.gid || null, host: room.name };   // you can sign this room's guest book
-            view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
-            changed(); save(); saveMeta(); updateHeader();
-            toast(`<b>${room.name}</b><span>Visiting a friend’s room. Sign their guest book, or tap Save to keep it.</span>`, 3000); Sound.stamp(); setTimeout(() => Sound.arpeggio(), 250);
-          });
-        } catch (e) { Sound.nope(); toast('<span>That code doesn’t look right</span>', 1600); }
-      };
+  const friendCards=LRFriendCards.create({store});
+  async function prepareFriendCard(code) {
+    const d=await readCode(code),probe=new LR.Room();
+    if(!probe.load(d))throw Error('bad room');
+    const decor=LRWidgets.shareDecor(probe.serialize());
+    const gid=typeof d.gid==='number'&&Number.isFinite(d.gid)?d.gid:null;
+    return {room:decor,gid,title:probe.name,description:LRRoomViews.description(decor),n:probe.n,items:probe.items.length,identity:gid?'room:'+gid:JSON.stringify(decor)};
+  }
+  function visitFriendCard(data) {
+    closeSheets();
+    leaveThen(()=>{
+      let id=Date.now();while(id===meta.current||rooms.some(r=>r.id===id))id++;
+      room.load(data.room);meta.current=id;undo.length=0;baseSig=sig();
+      meta.visit={id,gid:data.gid,host:room.name};
+      view.panGoal.set(0,0,0);view.zoomGoal=1;changed();save();saveMeta();updateHeader();
+      toast(`<b>${esc(room.name)}</b><span>Visiting a friend’s room. Sign their guest book, or tap Save to keep it.</span>`,3000);Sound.stamp();setTimeout(()=>Sound.arpeggio(),250);
     });
   }
+  const friendCardsUI=LRFriendCards.createView({model:friendCards,sheet:codeSheet,prepare:prepareFriendCard,visit:visitFriendCard,thumb:decor=>view.roomThumb(decor),sound:Sound,reduced:()=>view.reducedMotion,
+    notice:text=>{Sound.nope();toast(`<span>${esc(text)}</span>`,2200,true);},
+    receiveNote:async code=>{await receiveNote(code);closeSheets();},
+    scan:({host,onCode})=>{roomScanner=LRRoomQR.scanner({host,onCode,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});return ()=>roomScanner?.start();}});
+  function importSheet() { friendCardsUI.open(); }
   // the guest book: a friend visiting your shared room signs it and gets a reply code; when you paste it,
   // their note is pinned in that room. No server: the codes carry everything.
   const STICKER_GLYPHS = ['♥', '★', '🐾', '✿', '☕', '♪', '☾', '✦'];
@@ -2576,7 +2572,7 @@ function startLofiRooms() {
       });
     }
     const sh = h('div', 'rowbtns');
-    sh.innerHTML = '<button class="chipbtn" id="bShareCode">Share this room as a code</button><button class="chipbtn" id="bImportCode">Open a friend’s code</button>';
+    sh.innerHTML = '<button class="chipbtn" id="bShareCode">Share this room as a code</button><button class="chipbtn" id="bImportCode">Friends’ room cards</button>';
     sh.querySelector('#bShareCode').onclick = () => shareSheet();
     sh.querySelector('#bImportCode').onclick = () => importSheet();
     if (meta.visit && meta.visit.id === meta.current) { const gs = h('div', 'rowbtns'); gs.innerHTML = '<button class="chipbtn primary" id="bSignBook">✍ Sign this room’s guest book</button>'; gs.querySelector('#bSignBook').onclick = () => signSheet(); }
@@ -3002,7 +2998,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

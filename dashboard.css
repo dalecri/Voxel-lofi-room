@@ -34,3 +34,8 @@
 /* Menu tabs use the same line-icon style as Search and Close. */
 .menu-nav .menu-tabs { gap: 1px; padding: 2px; }
 .menu-nav .menu-tabs .chipbtn { display: grid; place-items: center; flex: 1 1 0; min-width: 32px; height: 44px; padding: 6px 2px; }
+
+/* A warm tint separates navigation from the sheet; only Close is a boxed action. */
+.menu-nav { border-radius:22px; background:var(--panel-solid); background:color-mix(in srgb,#ed955e 13%,var(--panel-solid)); }
+.menu-nav .dashboard-tabs.menu-tabs { background:transparent; }
+.menu-nav .menu-actions .space-search-toggle { background:transparent; border:0; box-shadow:none; }

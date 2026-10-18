@@ -108,7 +108,7 @@ with sync_playwright() as p:
  for secret in ['PRIVATE','groceries','deliverOn','endAt','strokes','points','deposits','lr.tools']:assert secret not in json.dumps(decoded),secret
  context.close();fresh=browser.new_context();fresh.add_init_script("localStorage.setItem('lr.intro','true')");recipient=fresh.new_page();recipient.on('pageerror',lambda e:errors.append(str(e)))
  recipient.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');recipient.wait_for_function('!!window.__lr')
- recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.wait_for_function('__lr.room.name==="Private Tools"')
+ recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.get_by_role('button',name='Visit this room',exact=True).click();recipient.wait_for_function('__lr.room.name==="Private Tools"')
  assert recipient.evaluate('localStorage.getItem("lr.tools")') is None
  assert recipient.evaluate('__lr.roomTools.visual.level')==0;assert not errors,errors;assert not external,external
  print('PASS: sketch persistence/redraw/mobile, local-date delivery/read flag, private edit badges, and fresh LR1 import containing furniture but zero tool data',flush=True)

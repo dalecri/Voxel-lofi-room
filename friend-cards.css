@@ -1,0 +1,45 @@
+.friend-cards { display:grid; gap:18px; }
+.friend-cards > p { margin:0; }
+.friend-code-entry { padding:16px; border:1px solid var(--line); border-radius:22px; background:var(--chip); }
+.friend-code-entry > button { background:var(--panel-solid); }
+.friend-code-form { display:grid; gap:10px; margin-top:14px; }
+.friend-code-form[hidden] { display:none; }
+.friend-code-label { font-size:13px; font-weight:800; }
+.friend-code-form textarea { box-sizing:border-box; width:100%; margin:0; background:var(--panel-solid); }
+.friend-code-form .rowbtns { gap:8px; }
+.friend-archive h3 { margin:0 0 12px; }
+.friend-saved-row { display:flex; align-items:center; gap:8px; padding:8px; margin-bottom:10px; border:1px solid var(--line); border-radius:20px; background:var(--chip); }
+.friend-saved-open { flex:1; min-width:0; display:flex; align-items:center; gap:14px; text-align:left; border:0; border-radius:14px; padding:8px; background:transparent; color:var(--ink); }
+.friend-mini { width:56px; flex:none; }
+.friend-mini svg { display:block; width:100%; height:auto; }
+.friend-mini .friend-flap { transform:none; }
+.friend-mini .friend-seal { opacity:1; }
+.friend-saved-copy { min-width:0; }
+.friend-saved-copy b { display:block; font:600 18px/1.2 Fredoka,sans-serif; overflow-wrap:anywhere; }
+.friend-saved-copy small { display:block; margin-top:6px; color:var(--ink-dim); font:13px/1.4 Nunito,sans-serif; }
+.friend-card-remove { min-width:44px; min-height:44px; border:0; border-radius:14px; padding:8px; background:transparent; color:var(--ink-dim); font:700 15px Nunito,sans-serif; }
+.friend-card-view { padding:0 0 8px; }
+.friend-card-status { min-height:20px; margin:6px 0 14px; text-align:center; color:var(--ink-dim); font-size:13px; }
+.friend-card-stage { position:relative; isolation:isolate; max-width:420px; margin:0 auto; padding:0 12px 110px; }
+.friend-card-info { position:relative; z-index:2; max-width:340px; margin:0 auto; padding:20px; border:2px solid #b29a78; border-radius:4px; background:#fff6e4; color:#514237; box-shadow:4px 5px 0 #bfa78744,0 16px 30px #0001; text-align:center; overflow-wrap:anywhere; }
+.friend-card-info h3 { margin:10px 0; font:600 clamp(23px,6vw,30px)/1.1 Fredoka,sans-serif; color:#514237; }
+.friend-card-info .muted { color:#87745d; margin:8px 0; font-size:14px; }
+.friend-card-eyebrow { margin:0; color:#94784d; font:800 10px/1.5 Nunito,sans-serif; letter-spacing:.15em; }
+.friend-card-meta { margin:14px 0 0; color:#87745d; font-size:12px; }
+.friend-room-preview { display:block; width:100%; max-width:210px; height:145px; margin:8px auto 0; object-fit:contain; image-rendering:pixelated; }
+.friend-envelope { position:absolute; z-index:1; left:50%; bottom:0; transform:translateX(-50%); width:240px; max-width:85%; filter:drop-shadow(0 8px 0 #0001); }
+.friend-envelope svg { display:block; width:100%; overflow:visible; }
+.friend-envelope .friend-flap { transform-origin:48px 24px; transform:rotateX(180deg); }
+.friend-envelope .friend-seal { opacity:0; }
+.friend-card-actions { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:20px; }
+.friend-card-actions button { min-height:44px; }
+.friend-saved-open:focus-visible,.friend-card-remove:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.is-arriving .friend-envelope { animation:friend-arrive .45s ease-out both; }
+.is-arriving .friend-flap { animation:friend-unseal .35s .45s ease-in-out both; }
+.is-arriving .friend-seal { animation:friend-seal-away .25s .4s ease-out both; }
+.is-arriving .friend-card-info { animation:friend-unfold .45s .7s ease-out both; }
+@keyframes friend-arrive { from{opacity:0;transform:translate(-50%,35px) rotate(-6deg)}to{opacity:1;transform:translate(-50%,0) rotate(0)} }
+@keyframes friend-unseal { from{transform:rotateX(0)}to{transform:rotateX(180deg)} }
+@keyframes friend-seal-away { from{opacity:1}to{opacity:0} }
+@keyframes friend-unfold { from{opacity:0;transform:translateY(70px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)} }
+@media(prefers-reduced-motion:reduce) { .is-arriving .friend-envelope,.is-arriving .friend-flap,.is-arriving .friend-seal,.is-arriving .friend-card-info { animation:none; } }

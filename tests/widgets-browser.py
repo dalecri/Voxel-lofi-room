@@ -122,7 +122,7 @@ with sync_playwright() as p:
         recipient.wait_for_function('!!window.__lr')
     except Exception:
         raise AssertionError({'startup_errors':errors})
-    recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode'); recipient.locator('textarea.code').fill(code); recipient.click('#bOpenCode')
+    recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode'); recipient.locator('textarea.code').fill(code); recipient.click('#bOpenCode');recipient.get_by_role('button',name='Visit this room',exact=True).click()
     recipient.wait_for_function('__lr.room.name==="Widget room"')
     assert recipient.evaluate('__lr.room.items.map(i=>i.t)')==['frenchdesk','newspaper']
     assert 'OWNER_ONLY_NEWS' not in recipient.evaluate('JSON.stringify(localStorage)')

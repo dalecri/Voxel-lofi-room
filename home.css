@@ -272,3 +272,26 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .shop-thanks { color:var(--ink); font-size:14px; }
 @media(min-width:640px) { .shop-sinks { grid-template-columns:1fr 1fr; } }
 .shop-exclusive { color:var(--ink-dim); font:800 10px/1.4 Nunito,sans-serif; letter-spacing:.06em; text-transform:uppercase; }
+
+/* The recorder belongs to the sheet: full width, cream/coral by day, plum at night. */
+.stations { width:100%; max-width:none; margin-inline:0; }
+.station-card { container-type:inline-size; --radio-green:var(--ink); --radio-paper:var(--panel-solid); --radio-display:color-mix(in srgb,#30232c 85%,var(--accent)); --radio-signal:color-mix(in srgb,var(--accent) 32%,#fff3de); border-color:color-mix(in srgb,var(--accent) 45%,var(--panel-solid)); background:var(--radio-grain),linear-gradient(115deg,var(--panel-solid),color-mix(in srgb,var(--accent) 20%,var(--panel-solid))); box-shadow:0 7px 0 color-mix(in srgb,var(--accent) 30%,var(--panel-solid)),0 10px 20px #0002; }
+.station-card.playing { border-color:var(--accent); box-shadow:0 7px 0 color-mix(in srgb,var(--accent) 30%,var(--panel-solid)),0 10px 20px #0002; }
+.station-copy { height:auto; aspect-ratio:1.65; min-height:185px; max-height:300px; border-color:color-mix(in srgb,var(--accent) 35%,var(--radio-display)); background:repeating-linear-gradient(0deg,#fff1 0 1px,transparent 1px 4px),var(--radio-display); color:var(--radio-signal); }
+.station-copy b { font-size:clamp(16px,4cqi,22px); }
+.station-status,.playing .station-status,.station-waveform,.station-copy .muted.small { color:var(--radio-signal); }
+.station-status::after { background:color-mix(in srgb,var(--radio-signal) 55%,var(--radio-display)); }
+.playing .station-status::after { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+.station-battery { border-color:var(--radio-signal); background:var(--radio-signal); box-shadow:inset 0 0 0 1px var(--radio-display); }
+.station-battery::after { background:var(--radio-signal); }
+.station-grille { height:clamp(60px,16cqi,90px); font-size:clamp(38px,11cqi,64px); background-image:radial-gradient(circle,var(--ink) 1.25px,transparent 1.6px); }
+.station-controls { grid-template-rows:repeat(2,clamp(48px,13cqi,68px)); border-color:color-mix(in srgb,var(--ink) 50%,var(--panel-solid)); }
+.station-controls button { border-color:color-mix(in srgb,var(--ink) 50%,var(--panel-solid)); background:var(--radio-grain),linear-gradient(120deg,var(--panel-solid),color-mix(in srgb,var(--accent) 12%,var(--panel-solid))); color:var(--ink); }
+.station-controls button:hover:not(:disabled) { background:color-mix(in srgb,var(--accent) 18%,var(--panel-solid)); }
+.station-controls button:disabled { color:var(--ink-dim); }
+.station-controls button:focus-visible { outline-color:var(--accent); }
+.station-controls .station-pause { border-color:color-mix(in srgb,var(--ink) 50%,var(--panel-solid)); }
+.station-stop span,.station-power i,.playing .station-power i { background:var(--accent); box-shadow:inset 0 1px 1px #fff5; }
+.station-vents i,.station-power { background:color-mix(in srgb,var(--ink) 40%,var(--panel-solid)); box-shadow:inset 0 2px 2px #0002; }
+.station-card .station-remove:hover { background:var(--chip); color:var(--ink); }
+body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 75%,#111021); --radio-signal:color-mix(in srgb,var(--ink) 85%,var(--accent)); }
