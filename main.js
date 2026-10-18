@@ -2585,7 +2585,7 @@ function startLofiRooms() {
     };
     const sl = h('div', 'stations');
     const icons=['📻','🌙','☕','🌧','🌿','🎷','🎹','🌊','🌸','✨','🎧','🔥'];
-    const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">'+(kind==='stop'?'<rect x="6" y="6" width="12" height="12" rx="2"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';
+    const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">'+(kind==='pause'?'<path d="M7 5h4v14H7zM15 5h4v14h-4z"/>':kind==='stop'?'<rect x="6" y="6" width="12" height="12" rx="2"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';
     {
       const list=stationList(),wanted=meta.music?meta.station:meta.lastStation;
       const index=Number.isInteger(wanted)&&wanted>=0&&wanted<list.length?wanted:0,st=list[index];
@@ -2596,18 +2596,22 @@ function startLofiRooms() {
       const band=document.createElement('span');band.className='muted small';band.textContent=st.gen?'OFFLINE · LOFI BAND':'SAVED · LIVE STREAM';
       const channel=document.createElement('span');channel.className='station-channel';channel.innerHTML='<small>STATION</small><strong>'+String(index+1).padStart(2,'0')+'</strong>';
       const status=document.createElement('span');status.className='station-status';status.textContent=playing?'On air':'Ready when you are';status.setAttribute('role','status');
-      copy.append(band,channel,name,face,status);
+      const screenTop=document.createElement('span');screenTop.className='station-screen-top';const battery=document.createElement('span');battery.className='station-battery';battery.setAttribute('aria-hidden','true');screenTop.append(status,battery);
+      const wave=document.createElement('span');wave.className='station-waveform';wave.setAttribute('aria-hidden','true');
+      const bars=Array.from({length:60},(_,n)=>{const x=8+n*5.8;let top=66,bottom=74;if(n>=23&&n<=46){const t=(n-23)/23;top=48-14*Math.abs(Math.sin(2*Math.PI*t));bottom=72+43*(1-Math.abs(2*t-1));}else{const h=5+Math.abs(Math.sin(n*1.9))*17+(n===16?80:n===15?58:n===17?48:n===9?34:0);top=70-h/2;bottom=70+h/2;}return `<path d="M${x.toFixed(1)} ${top.toFixed(1)}V${bottom.toFixed(1)}"/>`;}).join('');wave.innerHTML=`<svg viewBox="0 0 360 140" fill="none" stroke="currentColor" stroke-width="1.7">${bars}</svg>`;
+      const stationName=document.createElement('span');stationName.className='station-screen-name';stationName.append(face,name,channel);copy.append(screenTop,wave,stationName,band);
       const iconPicker=document.createElement('div');iconPicker.className='station-icon-picker';iconPicker.hidden=true;iconPicker.setAttribute('role','group');iconPicker.setAttribute('aria-label','Choose icon for '+st.name);
       copy.tabIndex=0;copy.setAttribute('role','button');copy.setAttribute('aria-label','Edit icon for '+st.name);copy.setAttribute('aria-expanded','false');
       copy.onclick=()=>{iconPicker.hidden=!iconPicker.hidden;copy.setAttribute('aria-expanded',String(!iconPicker.hidden));};
       for(const icon of icons){const option=document.createElement('button');option.type='button';option.textContent=icon;option.setAttribute('aria-label','Use '+icon+' for '+st.name);option.setAttribute('aria-pressed',String(face.textContent===icon));option.onclick=()=>updateRadio(()=>{if(st.gen)meta.lofiIcon=icon;else meta.stations[i].icon=icon;saveMeta();},'.station-copy');iconPicker.appendChild(option);}
 
-      const tuner=document.createElement('div');tuner.className='station-tuner';tuner.setAttribute('aria-hidden','true');
-      tuner.innerHTML='<div class="station-ticks"><i></i></div><div class="station-scale"><span>01</span><span>'+String(index+1).padStart(2,'0')+' / '+String(list.length).padStart(2,'0')+'</span><span>'+String(list.length).padStart(2,'0')+'</span></div>';
-      tuner.querySelector('i').style.left=(list.length>1?index/(list.length-1)*100:50)+'%';
+      const grille=document.createElement('div');grille.className='station-grille';grille.setAttribute('aria-hidden','true');grille.textContent='LOFI ROOMS';
       const row=document.createElement('div');row.className='station-controls';
       const step=(delta,label)=>{const b=document.createElement('button');b.className='station-step '+(delta<0?'station-prev':'station-next');b.disabled=list.length<2;b.innerHTML=radioGlyph(delta<0?'previous':'next');b.setAttribute('aria-label',label+' station from '+st.name);b.onclick=()=>updateRadio(()=>playStation((index+delta+list.length)%list.length),delta<0?'.station-prev':'.station-next');return b;};
-      const play=document.createElement('button');play.className='station-play';play.innerHTML=radioGlyph(playing?'stop':'play');play.setAttribute('aria-label',(playing?'Stop ':'Play ')+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>updateRadio(()=>playStation(playing?-1:index),'.station-play');row.append(step(-1,'Previous'),play,step(1,'Next'));
+      const play=document.createElement('button');play.type='button';play.className='station-play';play.innerHTML=radioGlyph('play');play.setAttribute('aria-label','Play '+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>{if(!playing)updateRadio(()=>playStation(index),'.station-play');};
+      const stop=document.createElement('button');stop.type='button';stop.className='station-stop';stop.innerHTML='<span aria-hidden="true"></span>';stop.setAttribute('aria-label','Stop '+st.name);stop.title='Stop radio';stop.disabled=!meta.music;stop.onclick=()=>updateRadio(()=>playStation(-1),'.station-play');
+      const pause=document.createElement('button');pause.type='button';pause.className='station-pause';pause.innerHTML=radioGlyph('pause');pause.setAttribute('aria-label','Pause '+st.name);pause.disabled=!playing;pause.onclick=()=>updateRadio(()=>playStation(-1),'.station-play');row.append(stop,play,step(-1,'Previous'),step(1,'Next'),pause);
+      const base=document.createElement('div');base.className='station-base';base.innerHTML='<span class="station-vents" aria-hidden="true"><i></i><i></i></span><span class="station-power" aria-hidden="true"><i></i></span>';
       let remove=null;
       if(!st.gen){
         const del=document.createElement('button');remove=del;del.type='button';del.className='station-remove';del.setAttribute('aria-label','Remove');del.title='Remove '+st.name;del.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>';del.onclick=()=>{
@@ -2616,7 +2620,7 @@ function startLofiRooms() {
           meta.stations.splice(i,1);saveMeta();renderMenu();
         };
       }
-      r.append(copy,iconPicker,tuner,row);if(remove)r.appendChild(remove);sl.appendChild(r);
+      r.append(copy,iconPicker,grille,row,base);if(remove)base.appendChild(remove);sl.appendChild(r);
     }
     const stationDisclosure=h('div','station-add-disclosure'),stationToggle=document.createElement('button');
     stationToggle.type='button';stationToggle.className='station-add-toggle';stationToggle.setAttribute('aria-expanded','false');stationToggle.setAttribute('aria-controls','station-add-form');
