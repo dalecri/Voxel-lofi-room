@@ -37,7 +37,7 @@ with sync_playwright() as p:
     assert calls == []
     page.evaluate('''() => {
       const a=__lr; a.room.items=[]; a.room.name='Widget room'; a.room.n=10;
-      a.room.add(a.room.make('minifridge',{x:2,z:0})); a.room.add(a.room.make('newspaper',{x:4,z:4})); a.changed();
+      a.room.add(a.room.make('frenchdesk',{x:2,z:0})); a.room.add(a.room.make('newspaper',{x:4,z:4})); a.changed();
       a.setMode('edit',true); window.__decorBefore=JSON.stringify(a.room.serialize());
     }''')
     page.wait_for_function('__lr.widgets.data("newspaper").headlines.length===2')
@@ -45,17 +45,15 @@ with sync_playwright() as p:
     assert len(calls) == 1
     assert page.evaluate('JSON.stringify(__lr.room.serialize())===__decorBefore')
     assert page.evaluate('''() => __lr.room.items.every(i=>{
-      let found=false; __lr.view.objs.get(i.id).traverse(o=>{if(o.name==='widget:'+ (i.t==='minifridge'?'fridge-note':'newspaper')) found=true;});return found;
+      let found=false; __lr.view.objs.get(i.id).traverse(o=>{if(o.name==='widget:'+ (i.t==='frenchdesk'?'fridge-note':'newspaper')) found=true;});return found;
     })''')
     before = page.evaluate('__lr.widgets.data("fridge-note").word')
     page.evaluate('window.__widgetNow+=1000')
     page.wait_for_function('__lr.widgets.data("fridge-note").date==="2026-10-16"')
     assert before != page.evaluate('__lr.widgets.data("fridge-note").word')
-    page.evaluate('''() => {__lr.setMode('explore',true); __lr.interact(__lr.room.items.find(i=>i.t==='minifridge').id);}''')
-    page.get_by_role('button',name='French word flashcard',exact=True).click()
-    page.get_by_role('button',name='Reveal translation',exact=True).click()
-    assert page.locator('#sheetBody').inner_text().find(page.evaluate('__lr.widgets.data("fridge-note").translation')) >= 0
-    page.evaluate('document.querySelector("#sheet").classList.remove("open")')
+    page.evaluate('''() => {__lr.setMode('explore',true); __lr.interact(__lr.room.items.find(i=>i.t==='frenchdesk').id);}''')
+    assert page.locator('#frenchView').is_visible();assert page.locator('.french-deck').count()==19
+    page.get_by_role('button',name='Close French corner',exact=True).click()
     page.wait_for_function('document.querySelectorAll(".widget-private:not([hidden])").length===0')
     # A real pointer tap on the paper opens the reading sheet.
     point = page.evaluate('''() => {
@@ -109,7 +107,7 @@ with sync_playwright() as p:
     assert 'OWNER_ONLY_NEWS' not in str(decoded)
     assert not any(k in str(decoded) for k in ['headlines','widgets','fridge-note','fetchedAt'])
     assert 'seed' not in decoded
-    assert [i['t'] for i in decoded['items']]==['minifridge','newspaper']
+    assert [i['t'] for i in decoded['items']]==['frenchdesk','newspaper']
     code0=page.evaluate('''async () => {const old=CompressionStream; window.CompressionStream=undefined;try{return await __lr.roomCode()}finally{window.CompressionStream=old}}''')
     assert code0.startswith('LR0.')
     assert page.evaluate('code=>__lr.readCode(code)',code0)==decoded
@@ -126,7 +124,7 @@ with sync_playwright() as p:
         raise AssertionError({'startup_errors':errors})
     recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode'); recipient.locator('textarea.code').fill(code); recipient.click('#bOpenCode')
     recipient.wait_for_function('__lr.room.name==="Widget room"')
-    assert recipient.evaluate('__lr.room.items.map(i=>i.t)')==['minifridge','newspaper']
+    assert recipient.evaluate('__lr.room.items.map(i=>i.t)')==['frenchdesk','newspaper']
     assert 'OWNER_ONLY_NEWS' not in recipient.evaluate('JSON.stringify(localStorage)')
     assert recipient.evaluate('__lr.widgets.data("newspaper").headlines.length')==0
     recipient.evaluate('__lr.newspaperSheet()')

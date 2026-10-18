@@ -89,7 +89,7 @@
   function ideaCards(ideas,frontId){const index=Math.max(0,ideas.findIndex(i=>i.id===frontId)),top=ideas[index] || null;return {top,count:ideas.length,index, next:ideas.length?ideas[(index+1)%ideas.length]:null,behind:Array.from({length:Math.min(3,Math.max(0,ideas.length-1))},(_,i)=>ideas[(index+i+1)%ideas.length])};}
   function ideaAdded(idea){const date=new Date(idea?.createdAt);if(!Number.isFinite(date.getTime()))return 'Kept in your jar';const parts=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long'}).formatToParts(date);return `Added ${parts.find(p=>p.type==='day').value} ${parts.find(p=>p.type==='month').value}`;}
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
-  function createView({model,sheet,renderer,room,editing,hidden,letters,word,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
+  function createView({model,sheet,renderer,room,editing,hidden,letters,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
     let active=null,anchor=null,resize=null,canvas=null,status=null,frameTime=0;
     let teaMinutes=3;
     const badges=new Map(),button=(parent,label,fn,cls='chipbtn')=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>run(fn);parent.appendChild(b);return b;};
@@ -162,7 +162,7 @@
       if(!model.state.groceries.length)text(items,'🧺 Nothing on the list yet. A little space for what you need.','grocery-empty');
       const form=document.createElement('form');form.className='grocery-add';root.appendChild(form);const input=field(form,'Add groceries');input.autocomplete='off';input.placeholder='Something for the basket…';
       const add=()=>{model.addGrocery(input.value);groceries();active.querySelector('input:not([type=checkbox])').focus();};form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add,'grocery-add-button');
-      button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});button(root,'French word flashcard',flashcard);if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
+      button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
     });}
     function tally(){shell('Pushup tally','One rep at a time. Just yours, on this device.',root=>{
       root.classList.add('pushup-tally');text(root,'Creatine 5g · 50 pushups a day','muted small tally-habit');
@@ -172,10 +172,6 @@
       const undo=button(root,'−1 · Undo',()=>{model.countRep(-1);updateTally();},'chipbtn tally-undo');undo.setAttribute('aria-label','Undo one pushup');text(root,'','tally-note muted');updateTally();
     });}
     function updateTally(){if(!active?.classList.contains('pushup-tally'))return;const data=model.tally;active.querySelector('.tally-count').textContent=String(data.count);active.querySelector('.tally-progress').textContent=`${data.count} / ${TALLY_GOAL}`;active.querySelector('.tally-bar').value=Math.min(TALLY_GOAL,data.count);active.querySelector('.tally-undo').disabled=data.count===0;active.querySelector('.tally-note').textContent=data.count>=TALLY_GOAL?'Daily 50 reached. Nicely done.':'Every rep belongs here.';}
-    function flashcard(){const data=word();shell('Un mot par jour','A little French, on the fridge.',root=>{
-      const card=document.createElement('div');card.className='roomtool-flashcard';text(card,data.word,'roomtool-title');const back=document.createElement('div');back.hidden=true;text(back,data.translation);text(back,data.example,'muted');card.appendChild(back);root.appendChild(card);
-      const flip=button(root,'Reveal translation',()=>{back.hidden=!back.hidden;flip.textContent=back.hidden?'Reveal translation':'Hide translation';flip.setAttribute('aria-pressed',String(!back.hidden));});flip.setAttribute('aria-pressed','false');button(root,'Back to groceries',groceries);
-    });}
     function ideas(){shell('The idea jar','Drop in a thought. Shake for a spark. All yours, on this device.',root=>{
       root.classList.add('idea-jar');let frontId=null,reason='latest';
       const count=document.createElement('small');count.className='idea-count';root.parentElement.querySelector(':scope > h2')?.appendChild(count);
@@ -274,7 +270,7 @@
       for(const [id,b] of badges)if(!alive.has(id)){b.remove();badges.delete(id);}
     }
     document.addEventListener('visibilitychange',()=>{if(document.hidden)flushStroke();});window.addEventListener('pagehide',flushStroke);
-    return {open,close,seal,tick,frame,flush:flushStroke,flashcard};
+    return {open,close,seal,tick,frame,flush:flushStroke};
   }
   function register(L){
     const {def,CAT}=L;

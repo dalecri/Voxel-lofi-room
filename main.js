@@ -183,7 +183,7 @@ function startLofiRooms() {
     onPhotos: id => cozy.photoPicker(id),
     hangPixel:grid=>{const it=LRPixelMaker.hang(room,meta.current,grid,(id,piece,art)=>roomTools.pinPixel(id,piece,art),LR);changed();save();cozy.frame(0,view.t+1);closeSheets();toast('<span>Your pixel print is on the wall. Move it in Decorate.</span>',2400,true);return it;},
     portrait:reaction=>companionPortrait('idle',reaction),portraitKey:()=>JSON.stringify(wardrobe.slots),music:()=>!!meta.music,toggleMusic:()=>setMusic(!meta.music),
-    letters, word: () => { widgets.refresh(['minifridge']); return widgets.data('fridge-note'); }, sound: Sound,
+    letters, sound: Sound,
     notice: text => toast(`<span>${text}</span>`, 3200), onBrew: id => {
       const it=room.get(id); if (it) { if (care) care.tap(it,id,true); view.burst(id,'steam',3.5); }
       discover('tea');
@@ -347,7 +347,7 @@ function startLofiRooms() {
     if(p.id==='library')library.open();
     else if(p.id==='digest')digestUI.open();
     else if(p.id==='typewriter')letters.open();
-    else if(p.id==='french')roomToolsUI.flashcard();
+    else if(p.id==='french')frenchUI.open();
     else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
     else if(p.id==='breathing')breathingSheet();
     else if(p.id==='wardrobe')wardrobeSheet();
@@ -1060,7 +1060,7 @@ function startLofiRooms() {
     }
     if (tap === 'door') {
       view.openDoor(id);
-      if (it.t === 'minifridge') { Sound.fridge(true); setTimeout(() => Sound.fridge(false), 2700); fridgeNoteSheet(); }
+      if (it.t === 'minifridge') { Sound.fridge(true); setTimeout(() => Sound.fridge(false), 2700); roomToolsUI.open('groceries', it.id); }
       else { Sound.creak(); setTimeout(() => Sound.creak(), 2600); toast(`<span>${pickOne(['What to wear…', 'So many sweaters', 'Found a lost sock'])}</span>`, 1500); }
       return;
     }
@@ -2210,7 +2210,6 @@ function startLofiRooms() {
     } else toast('<span>That doorway is quiet for now.</span>', 1600);
     return true;
   }
-  function fridgeNoteSheet() { roomToolsUI.flashcard(); }
   function newspaperSheet() {
     codeSheet('The newspaper', 'CBC News · Top stories', h => {
       const panel = h('div', 'widget-news');

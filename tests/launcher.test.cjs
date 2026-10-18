@@ -18,3 +18,5 @@ test('Home directory derives actual portal/widget destinations and reflects priv
  apps[0].label='Changed';assert.equal(L.TOOLS[0].label,'Typewriter');
  const decor=W.shareDecor({...new LR.Room().serialize(),apps,portals:model.custom});assert.ok(!JSON.stringify(decor).includes('my-bank'));
 });
+
+test('French previews follow the corner desk and never a fridge',()=>{require('../french.js');assert.deepEqual(L.FURNITURE.french,['frenchdesk']);assert.deepEqual(L.furniture({id:'french'},[{t:'minifridge',c:1}],LR.CAT),{id:'frenchdesk',variant:0,present:false});assert.deepEqual(L.furniture({id:'french'},[{t:'frenchdesk',c:2}],LR.CAT),{id:'frenchdesk',variant:2,present:true});});

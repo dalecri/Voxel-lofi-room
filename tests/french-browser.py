@@ -18,7 +18,16 @@ with sync_playwright() as p:
  page.on('console',lambda m:errors.append(m.text) if m.type=='error' and 'Failed to load resource' not in m.text else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle')
  page.wait_for_function('!!window.__lr?.french && window.LRFrench')
- page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.n=10;a.room.name='French Room';a.setMode('explore',true);a.room.add(a.room.make('frenchdesk',{x:2,z:2}));a.changed();}''')
+ page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.n=10;a.room.name='French Room';a.setMode('explore',true);a.room.add(a.room.make('frenchdesk',{x:2,z:2}));a.room.add(a.room.make('minifridge',{x:6,z:2}));a.changed();}''')
+ # Fridge opens groceries with its sound and magnets, never French.
+ page.evaluate("window.fridgeSounds=[];const oldFridge=__lr.Sound.fridge;__lr.Sound.fridge=(on)=>{fridgeSounds.push(on);oldFridge.call(__lr.Sound,on)};__lr.interact(__lr.room.items.find(i=>i.t==='minifridge').id)")
+ assert page.get_by_role('textbox',name='Add groceries',exact=True).is_visible();assert page.get_by_role('button',name='Photo magnets',exact=True).is_visible();assert page.get_by_role('button',name='French word flashcard',exact=True).count()==0;assert not page.evaluate('__lr.french.active');assert page.evaluate('fridgeSounds.includes(true)');page.keyboard.press('Escape')
+ # The note lies on the desk's free corner, not on the fridge door.
+ page.evaluate('__lr.widgetView.frame()')
+ assert page.evaluate("(()=>{const d=__lr.room.items.find(i=>i.t==='frenchdesk'),f=__lr.room.items.find(i=>i.t==='minifridge');let note=null,bad=false;__lr.view.objs.get(d.id).traverse(o=>{if(o.name==='widget:fridge-note')note=o});__lr.view.objs.get(f.id).traverse(o=>{if(o.name.startsWith('widget:'))bad=true});return !!note&&!bad&&Math.abs(note.rotation.x+Math.PI/2)<.001&&note.position.y>1.5&&note.position.y<1.53})()")
+ page.wait_for_function('__lr.widgets.data("fridge-note").word')
+ # The Control Centre previews the desk and launches the same full session.
+ page.click('#bHome');tile=page.locator('#homeView [data-app=french]');image=tile.locator('.home-furniture');assert image.get_attribute('data-furniture')=='frenchdesk';assert not image.evaluate('e=>e.classList.contains("absent")');tile.click();page.locator('#frenchView').wait_for(state='visible');assert page.locator('.french-deck input').count()==19;page.get_by_role('button',name='Close French corner',exact=True).click()
  page.evaluate('__lr.interact(__lr.room.items[0].id)')
  page.locator('#frenchView').wait_for(state='visible')
  page.wait_for_function('__lr.french.model.cards().length===803')

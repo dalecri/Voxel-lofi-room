@@ -22,11 +22,12 @@ test('30 mixed French words rotate by local civil date, including DST and midnig
   for (const def of Object.values(W.WIDGETS)) for (const key of ['id', 'furnitureId', 'dataSource', 'refreshCadence', 'render']) assert.ok(def[key]);
 });
 
-test('fridge is entirely local; state updates at midnight without touching decor', async () => {
+test('French desk note is local, never attaches to the fridge, and updates at midnight', async () => {
   const s = store(); let d = new Date(2026, 9, 15, 23, 59);
   const w = W.create({ store: s, now: () => d, fetchRSS: () => { throw Error('unexpected network'); } });
-  await w.refresh(['minifridge']); const before = w.data('fridge-note');
-  d = new Date(2026, 9, 16); await w.refresh(['minifridge']);
+  await w.refresh(['minifridge']);assert.equal(w.data('fridge-note').word,undefined);assert.equal(W.attached('minifridge'),undefined);assert.equal(W.attached('frenchdesk').surface,'desk');
+  await w.refresh(['frenchdesk']); const before = w.data('fridge-note');
+  d = new Date(2026, 9, 16); await w.refresh(['frenchdesk']);
   assert.notEqual(before.word, w.data('fridge-note').word);
   assert.deepEqual(Object.keys(s.values), ['lr.widgets']);
 });

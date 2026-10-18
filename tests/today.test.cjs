@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const T=require('../today.js'),W=require('../widgets.js'),A=require('../launcher.js'),LR=require('../room.js');require('../furniture.js');require('../packs/cozy.js');require('../room-tools.js').register(LR);W.register(LR);require('../shop.js').register(LR);require('../cozy-furniture.js').register(LR);
+const T=require('../today.js'),W=require('../widgets.js'),A=require('../launcher.js'),LR=require('../room.js');require('../furniture.js');require('../french.js');require('../packs/cozy.js');require('../room-tools.js').register(LR);W.register(LR);require('../shop.js').register(LR);require('../cozy-furniture.js').register(LR);
 function fixture(){const values={},store={get:(k,d)=>structuredClone(values[k]??d),set:(k,v)=>{values[k]=structuredClone(v);}};return {values,store};}
 test('private little tasks add, check, delete and survive a fresh model without joining decor or shares',()=>{
  const {store,values}=fixture(),m=T.create({store,now:()=>100});assert.deepEqual(m.list(),[]);assert.equal(m.add('  PRIVATE_TODO  '),true);const id=m.list()[0].id;m.check(id,true);assert.equal(T.create({store}).list()[0].done,true);

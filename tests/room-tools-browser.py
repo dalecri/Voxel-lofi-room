@@ -56,17 +56,15 @@ with sync_playwright() as p:
  page.screenshot(path='/tmp/mailbox-sent-mobile.png');page.keyboard.press('Escape')
  assert not errors,errors
  print('PASS: retro email window: defaults, inline edits, Save draft restores across reload, past dates refused, Send seals and clears the draft at 390px',flush=True)
- # Groceries and the French card share the fridge without losing either entry point.
+ # The fridge is for groceries, with no French session attached.
  page.evaluate("tapTool('minifridge')");page.locator('#sheet').get_by_label('Add groceries',exact=True).fill('PRIVATE_MILK');page.get_by_role('button',name='Add to list',exact=True).click()
  page.locator('#sheet').get_by_label('Add groceries',exact=True).fill('Eggs');page.get_by_role('button',name='Add to list',exact=True).click();page.get_by_role('checkbox',name='PRIVATE_MILK',exact=True).check()
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI')
  page.evaluate("window.tapTool=t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id);tapTool('minifridge')")
  assert page.get_by_role('checkbox',name='PRIVATE_MILK',exact=True).is_checked()
  page.get_by_role('button',name='Clear checked items',exact=True).click();assert page.get_by_role('checkbox').count()==1
- page.get_by_role('button',name='French word flashcard',exact=True).click();translation=page.evaluate('__lr.widgets.data("fridge-note").translation')
- assert translation not in page.locator('.roomtool-flashcard').inner_text();page.get_by_role('button',name='Reveal translation',exact=True).click();assert translation in page.locator('.roomtool-flashcard').inner_text()
- page.get_by_role('button',name='Hide translation',exact=True).click();assert translation not in page.locator('.roomtool-flashcard').inner_text();page.keyboard.press('Escape')
- print('PASS: fridge groceries add/check/clear/reload; French flashcard flips while its sticky widget stays intact',flush=True)
+ assert page.get_by_role('button',name='French word flashcard',exact=True).count()==0;assert not page.evaluate('__lr.french.active');page.keyboard.press('Escape')
+ print('PASS: fridge groceries add/check/clear/reload; no French flashcards in groceries',flush=True)
  # Idea jar handles empty state, two ideas and non-repeating shakes.
  page.evaluate("tapTool('ideajar')");assert page.get_by_role('button',name='Shake the jar',exact=True).is_disabled()
  for idea in ['PRIVATE_APP_IDEA','A tiny offline game']:
@@ -102,7 +100,8 @@ with sync_playwright() as p:
  assert page.locator('#sheetBody img').count()==0;assert page.evaluate('!window.__toolUnsafe')
  page.evaluate('__lr.roomToolsUI.frame(1)');assert page.evaluate('''() => {const a=__lr;return !a.view.objs.get(a.room.items.find(i=>i.t==='letterbox').id).userData.parts.privateMailFlag.visible}''')
  page.keyboard.press('Escape');page.evaluate('__lr.setMode("edit",true);__lr.roomToolsUI.frame(1)')
- assert page.locator('.roomtool-private:not([hidden])').count()==5
+ # The fridge now owns a grocery-tool badge instead of a French-widget badge.
+ assert page.locator('.roomtool-private:not([hidden])').count()==6
  page.evaluate('''() => {__lr.setMode('explore',true);__lr.room.name='Private Tools';__lr.room.tools=__lr.roomTools.state;__lr.room.items[0].tools=__lr.roomTools.state;}''')
  code=page.evaluate('__lr.roomCode()');decoded=page.evaluate('code=>__lr.readCode(code)',code)
  assert len(decoded['items'])==6

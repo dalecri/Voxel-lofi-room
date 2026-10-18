@@ -60,8 +60,9 @@
     if (!rows.length) throw new Error('Empty feed');
     return rows;
   }
+  // Keep the legacy note ID inside lr.widgets; its only surface is now the French desk.
   const WIDGETS = {
-    'fridge-note': { id: 'fridge-note', furnitureId: 'minifridge', dataSource: 'local:french-words', refreshCadence: 'local-midnight', surface: 'fridge', render: data => ({ ...data, title: 'Un mot par jour', paper: '#f6e4a2', lines: [data.word || '', data.translation || '', data.example || ''] }) },
+    'fridge-note': { id: 'fridge-note', furnitureId: 'frenchdesk', dataSource: 'local:french-words', refreshCadence: 'local-midnight', surface: 'desk', render: data => ({ ...data, title: 'Un mot par jour', paper: '#f6e4a2', lines: [data.word || '', data.translation || '', data.example || ''] }) },
     newspaper: { id: 'newspaper', furnitureId: 'newspaper', dataSource: RSS, refreshCadence: HOUR, surface: 'paper',
       render: (data, now) => {
         const rows = headlines(data.headlines), cached = !!data.fetchedAt && (data.failed || now - data.fetchedAt >= HOUR);
@@ -87,7 +88,7 @@
     const save = () => store.set(KEY, state);
     async function refresh(types) {
       const d = now(), time = d.getTime();
-      if (types.includes('minifridge') && state['fridge-note']?.date !== dateKey(d)) { state['fridge-note'] = wordOfDay(d); save(); }
+      if (types.includes('frenchdesk') && state['fridge-note']?.date !== dateKey(d)) { state['fridge-note'] = wordOfDay(d); save(); }
       const configs = { 'tst-corkboard': TST_CONTENT, 'pomodoro-candle': { url: POMODORO_URL }, 'app-portals': { portals: PORTALS } };
       for (const [id, config] of Object.entries(configs)) if (types.some(t => matches(WIDGETS[id], t)) && JSON.stringify(state[id]) !== JSON.stringify(config)) {
         state[id] = JSON.parse(JSON.stringify(config)); save();
@@ -152,14 +153,14 @@
         alive.add(it.id); let entry = entries.get(it.id);
         if (entry && entry.obj !== obj) { dispose(entry); entries.delete(it.id); entry = null; }
         if (!entry) {
-          const paper = ['fridge', 'paper', 'board'].includes(def.surface);
+          const paper = ['desk', 'paper', 'board'].includes(def.surface);
           let canvas = null, mesh;
           if (paper) {
             canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 640;
             const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
-            const size = def.surface === 'fridge' ? [.60, .75] : def.surface === 'board' ? [1.4, 1.35] : [.78, .96];
+            const size = def.surface === 'desk' ? [.5, .375] : def.surface === 'board' ? [1.4, 1.35] : [.78, .96];
             mesh = new THREE.Mesh(new THREE.PlaneGeometry(...size), new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }));
-            if (def.surface === 'fridge') { mesh.position.set(.41, .88, .19); obj.userData.parts.door.add(mesh); }
+            if (def.surface === 'desk') { mesh.rotation.x=-Math.PI/2; mesh.position.set(1.5,(LR.topOf(it)||12)/8+.015,.6875); obj.userData.inner.add(mesh); }
             else if (def.surface === 'board') { mesh.position.set(1, 1.05, .507); obj.userData.inner.add(mesh); }
             else { mesh.rotation.x = -Math.PI / 2; mesh.position.set(.5, .252, .5); obj.userData.inner.add(mesh); }
           } else {
@@ -181,7 +182,7 @@
           flame.rotation.z = Math.sin(time * .004) * (.025 + feedback * .06);
         }
         const quiet = hidden(); entry.mesh.visible = !quiet;
-        const p = view.root.localToWorld(view.itemPoint(it.id, [LR.CAT[it.t].size[0] * 4, it.t === 'minifridge' ? 15 : def.surface === 'paper' ? 2 : def.surface === 'board' ? 17 : (LR.topOf(it) || 24) + 2, 4])).project(view.cam), rect = view.r.domElement.getBoundingClientRect();
+        const p = view.root.localToWorld(view.itemPoint(it.id, [LR.CAT[it.t].size[0] * 4, def.surface === 'desk' ? 14 : def.surface === 'paper' ? 2 : def.surface === 'board' ? 17 : (LR.topOf(it) || 24) + 2, 4])).project(view.cam), rect = view.r.domElement.getBoundingClientRect();
         entry.badge.hidden = !editing() || quiet || p.z < -1 || p.z > 1;
         entry.badge.style.left = Math.max(32, Math.min(innerWidth - 32, rect.left + (p.x + 1) * rect.width / 2)) + 'px';
         entry.badge.style.top = Math.max(12, Math.min(innerHeight - 16, rect.top + (1 - p.y) * rect.height / 2)) + 'px';

@@ -30,7 +30,7 @@ with sync_playwright() as p:
     page.wait_for_function('!!window.__lr?.widgets')
     page.evaluate('''() => {
       const a=__lr;a.room.items=[];a.room.n=10;a.room.name='All widgets';
-      for(const [t,o] of [['minifridge',{x:0,z:0}],['newspaper',{x:3,z:4}],['tstcorkboard',{k:0,u:3,e:3}],['pomodorocandle',{x:5,z:5}],['crt',{x:4,z:0}],['libcase',{x:7,z:0}],['gamingdesk',{x:0,z:4}],['arcade',{x:7,z:3}],['terrarium',{x:6,z:6}]]) a.room.add(a.room.make(t,o));
+      for(const [t,o] of [['frenchdesk',{x:0,z:0}],['newspaper',{x:3,z:4}],['tstcorkboard',{k:0,u:3,e:3}],['pomodorocandle',{x:5,z:5}],['crt',{x:4,z:0}],['libcase',{x:7,z:0}],['gamingdesk',{x:0,z:4}],['arcade',{x:7,z:3}],['terrarium',{x:6,z:6}]]) a.room.add(a.room.make(t,o));
       a.changed();a.setMode('edit',true);
     }''')
     try:

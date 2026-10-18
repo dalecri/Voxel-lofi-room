@@ -23,18 +23,19 @@ with sync_playwright() as p:
  view=page.locator('#homeView');body=page.locator('#sheetBody')
  def launch(id):page.click('#bHome');view.locator('[data-app="'+id+'"]').click();assert not page.evaluate('__lr.home.active')
  launch('typewriter');page.locator('#letterBody').fill('PRIVATE_HOME_TOOL_LETTER');page.click('#letterClose')
- expected={'mailbox':'Letters to future you','groceries':'On the fridge','ideas':'The idea jar','tea':'Tea','savings':'A little savings jar','sketch':'Pixel maker','french':'A little French','whiteboard':'A little whiteboard','wardrobe':'A little wardrobe','tst':'TwoStoryTails'}
+ expected={'mailbox':'Letters to future you','groceries':'On the fridge','ideas':'The idea jar','tea':'Tea','savings':'A little savings jar','sketch':'Pixel maker','whiteboard':'A little whiteboard','wardrobe':'A little wardrobe','tst':'TwoStoryTails'}
  for id,title in expected.items():
   launch(id);assert title in body.inner_text(),(id,body.inner_text())
   if id=='ideas':
    body.get_by_role('button',name='Drop in an idea',exact=True).click();body.get_by_role('textbox',name='A little idea').fill('PRIVATE_HOME_TOOL_IDEA');body.get_by_role('button',name='Drop in jar',exact=True).click()
   if id=='whiteboard':body.get_by_role('textbox',name='Whiteboard text').fill('PRIVATE_HOME_TOOL_BOARD')
   page.keyboard.press('Escape');assert not page.locator('#sheet').evaluate("e=>e.classList.contains('open')")
+ launch('french');assert page.locator('#frenchView').is_visible();page.keyboard.press('Escape');assert not page.evaluate('__lr.french.active')
  for id,tab in [('letters','Letters'),('scenes','Scenes'),('photos','Photos')]:
   launch(id);assert (page.get_by_role('tab',selected=True).get_attribute('aria-label') or page.get_by_role('tab',selected=True).inner_text())==tab;page.keyboard.press('Escape')
  for id,tab in [('sound','Sound')]:
   launch(id);assert (page.get_by_role('tab',selected=True).get_attribute('aria-label') or page.get_by_role('tab',selected=True).inner_text())==tab;page.keyboard.press('Escape')
- page.click('#bHome');assert view.locator('[data-app=rooms],[data-app=journal],[data-app=settings]').count()==0;view.get_by_role('button',name='Open Settings',exact=True).click();assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Settings';page.keyboard.press('Escape')
+ page.click('#bHome');assert view.locator('[data-app=rooms],[data-app=journal],[data-app=settings]').count()==0;body.get_by_role('button',name='Open Settings',exact=True).click();assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Settings';page.keyboard.press('Escape')
  launch('newspaper');page.wait_for_function("document.querySelector('#sheetBody').textContent.includes('Fixture headline')");page.keyboard.press('Escape');assert len(calls)==1
  page.click('#bHome');view.get_by_role('searchbox',name='Find a tool or app').fill('voxel');assert view.locator('[data-app]').count()==1;view.locator('[data-app]').click();assert page.evaluate('opened.at(-1)')==['https://heycristobal.com/voxel-worlds/','_blank','noopener,noreferrer']
  page.click('#bHome');view.get_by_role('button',name='＋ Add your own',exact=True).click();body.get_by_role('textbox',name='Name',exact=True).fill('PRIVATE_HOME_LINK');body.get_by_role('textbox',name='URL',exact=True).fill('https://example.com/owner');body.get_by_role('button',name='Add destination',exact=True).click();page.keyboard.press('Escape')
