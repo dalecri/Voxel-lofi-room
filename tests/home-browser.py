@@ -22,12 +22,16 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.home')
  page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.n=10;a.room.name='Home room';a.meta.visitors=false;a.meta.realtime=false;a.meta.dreamy=false;a.setMode('explore',true);for(const [t,x,z] of [['phone',1,1],['ideajar',3,1],['kettle',5,1]])a.room.add(a.room.make(t,{x,z}));a.changed();a.letters.model.add('Home room');a.letters.model.rename(a.letters.model.current,'HOME_PRIVATE_LETTER');a.letters.model.update({letterhead:'Home',body:'Private home letter body'});a.files.add('Scenes',{title:'HOME_PRIVATE_SCENE',decor:LRWidgets.shareDecor(a.room.serialize())});a.roomTools.addIdea('HOME_PRIVATE_IDEA');}''')
  page.locator('#bSave').evaluate("e=>e.hidden?window.dispatchEvent(new Event('pagehide')):e.click()");baseline=list(external);view=page.locator('#homeView');body=page.locator('#sheetBody')
- def open_home():page.click('#bHome');assert page.evaluate('__lr.home.active')
+ def open_home():
+  for _ in range(2):
+   if page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.keyboard.press('Escape')
+  page.click('#bHome');assert page.evaluate('__lr.home.active')
  def search(q):
   if page.evaluate('__lr.home.active'):page.keyboard.press('Escape')
   if not page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.click('#bMenu')
+  if page.get_by_role('button',name='Search your space',exact=True).get_attribute('aria-expanded')=='false':page.get_by_role('button',name='Search your space',exact=True).click()
   page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True).fill(q)
-  assert page.locator('.space-search').bounding_box()['y']<page.locator('[aria-label="Menu sections"]').bounding_box()['y']
+  assert page.locator('.space-search').bounding_box()['y']>page.locator('[aria-label="Menu sections"]').bounding_box()['y']
  open_home();assert view.get_by_role('heading',name='Control Centre',exact=True).is_visible();assert page.locator('#bHome').get_attribute('aria-label')=='Control Centre';assert view.locator('h2').all_text_contents()==['Tools and apps']
  assert view.locator('[data-app=rooms],[data-app=journal],[data-app=settings],[data-app=breathing]').count()==0
  assert view.locator('.today-tasks,.today-sky,.home-daily,.home-notifications,.home-coziness,.space-search').count()==0;assert view.locator('[data-app]').count()>20

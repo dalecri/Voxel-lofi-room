@@ -186,3 +186,18 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 .caption-copy, .caption-refresh { background: #eadbb3; color: #684b30; border: 1px solid #bba477; border-radius: 18px; padding: 9px 18px; font-size: 13px; font-weight: 800; }
 .caption-copy { margin-top: 12px; }
 .caption-refresh:disabled { opacity: .6; }
+
+/* A single compact search affordance; hidden fields occupy no layout space. */
+.space-search { display: inline-flex; margin: 6px 0 10px; vertical-align: middle; }
+.space-search.is-expanded { display: grid; grid-template-columns: 44px minmax(0,1fr); align-items: start; gap: 8px; width: 100%; }
+.space-search-toggle { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 16px; background: var(--chip); color: var(--ink); }
+.space-search-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.space-search .home-search { margin: 0; min-width: 0; width: 100%; height: 44px; }
+.space-search .home-results { grid-column: 1 / -1; }
+.space-search .home-search[hidden], .space-search .home-results[hidden] { display: none; }
+/* Weather and Google's existing tasks UI share one continuous hero surface. */
+.today-weather { position: relative; padding-bottom: 12px; }
+.space-today .today-weather .today-sky-tag { top: 0; right: 0; }
+.today-sky > .google-tasks { padding: 20px 0 0; margin: 0; border: 0; border-radius: 0; background: transparent; color: inherit; }
+.space-today .today-sky .google-tasks small { display: inline; margin: 0; }
+.today-sky .google-readonly, .today-sky .google-task-picker, .today-sky .google-task-row time { color: inherit; }

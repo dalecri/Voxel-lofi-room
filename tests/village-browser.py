@@ -44,6 +44,7 @@ with sync_playwright() as p:
  page.evaluate('testDoor.link=0;__lr.changed()');assert page.locator('.rooms-connectors path').count()==0
  page.evaluate('testDoor.link=102;__lr.changed()');assert page.locator('.rooms-connectors path').count()==1
  # Shared spotlight filters every view without introducing another input.
+ page.get_by_role('button',name='Search your space',exact=True).click()
  search=page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True)
  for name in ['Diorama grid','House map','Showcase']:
   mode(name);search.fill('Tea room');assert page.locator('.rooms-card').count()==1;assert page.locator('.rooms-card').get_attribute('data-room-id')=='102';search.fill('')

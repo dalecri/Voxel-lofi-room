@@ -15,3 +15,9 @@
 .files-empty{padding:20px 0;line-height:1.6}.file-photo{display:block;width:100%;border-radius:16px}
 .saved-scenes-shelf:empty{display:none}
 @media(max-width:360px){.dashboard-tabs{gap:2px}.dashboard-tabs .chipbtn{padding:9px 7px;font-size:12px}.launcher-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* The menu's navigation is the first row, tucked above its title. */
+.dashboard-tabs.menu-tabs { margin: 0 0 10px; padding: 4px; border-radius: 20px; gap: 3px; background: var(--panel-solid); }
+.dashboard-tabs.menu-tabs .chipbtn { padding: 8px 9px; border-radius: 16px; background: transparent; }
+.dashboard-tabs.menu-tabs [aria-selected=true] { background: var(--accent); color: var(--panel-solid); }
+@media(max-width:360px) { .dashboard-tabs.menu-tabs { gap: 1px; padding: 3px; } .dashboard-tabs.menu-tabs .chipbtn { padding: 8px 5px; font-size: 12px; } }

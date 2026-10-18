@@ -1420,7 +1420,9 @@ function startLofiRooms() {
     if(e.target.matches('.pixel-grid')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' ','z','Z'].includes(e.key))return;
     const typing = e.target.matches('input, textarea, select') || e.target.isContentEditable;
     const menuShortcut = !typing && !e.ctrlKey && !e.metaKey && !e.altKey && ['h','?'].includes(e.key.toLowerCase()) && !!$('#menu-today');
-    if (e.key === 'Escape' || menuShortcut) { e.preventDefault(); closeSheets(); }
+    const expandedSearch=$('#sheetBody .space-search.is-expanded');
+    if(e.key==='Escape'&&expandedSearch){e.preventDefault();expandedSearch.dispatchEvent(new Event('search-collapse'));}
+    else if (e.key === 'Escape' || menuShortcut) { e.preventDefault(); closeSheets(); }
     else LRDashboard.tabKey(e);
     e.stopImmediatePropagation();
   }, true);
@@ -2469,13 +2471,13 @@ function startLofiRooms() {
     body.dataset.merchant = '';
     body.innerHTML = '';
     const sections = LRDashboard.menu(body, store, closeSheets, name=>{if(name==='Journal')captionDesk.refresh();});
-    const spotlight=homeSearch();body.insertBefore(spotlight,body.querySelector('[role=tablist]'));
+    const spotlight=homeSearch();body.insertBefore(spotlight,sections.Today);
     spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     todayUI.mount(target,{greetingHost:body});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
-    googleTasksUI.mount(target.querySelector('.space-today'),target.querySelector('.today-tasks'));
+    googleTasksUI.mount(target.querySelector('.today-sky'));
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomVillage(target);

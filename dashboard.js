@@ -45,7 +45,16 @@
     select(names.includes(selected)?selected:names[0]);return panels;
   }
   function tabKey(e){const list=e.target.closest?.('[role=tablist]');if(!list || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const b=[...list.querySelectorAll('[role=tab]')],i=b.indexOf(e.target);if(i<0)return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?b.length-1:(i+(e.key==='ArrowRight'?1:b.length-1))%b.length;b[next].click();b[next].focus();}
-  function menu(body,store,close,onSelect=()=>{}){body.appendChild(element('div','grab'));button(body,'Close',close,'chipbtn sheet-close');body.appendChild(element('h2','','Your Space'));body.appendChild(element('p','muted','A little space for your day.'));return tabs(body,MENU_TABS,store.get('lr.menuTab','Today'),name=>{store.set('lr.menuTab',name);onSelect(name);},'menu');}
+  function menu(body,store,close,onSelect=()=>{}) {
+    const panels=tabs(body,MENU_TABS,store.get('lr.menuTab','Today'),name=>{store.set('lr.menuTab',name);onSelect(name);},'menu');
+    body.querySelector('[role=tablist]').classList.add('menu-tabs');
+    const grab=element('div','grab');body.insertBefore(grab,panels.Today);
+    const closeButton=button(body,'Close',close,'chipbtn sheet-close');body.insertBefore(closeButton,panels.Today);
+    // Keep the title as a direct child for existing sheet and greeting callers.
+    body.insertBefore(element('h2','','Your Space'),panels.Today);
+    body.insertBefore(element('p','muted','A little space for your day.'),panels.Today);
+    return panels;
+  }
   function createView({model,CAT,widgets,sheet,letters,room,renderer,hidden,saveScene,openScene,encodeScene,placePortal,notice,onLaunch=()=>{},close=()=>{},localDestinations=[]}) {
     const safe=fn=>async()=>{try{await fn();}catch(e){notice(e.message || 'Could not open this file.');}};
     function launch(p){onLaunch(p);window.open(p.url,'_blank','noopener,noreferrer');}

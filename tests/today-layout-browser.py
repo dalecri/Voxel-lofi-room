@@ -11,11 +11,11 @@ server=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']);c=b.new_context(viewport={'width':390,'height':844},timezone_id='America/Toronto')
  c.add_init_script("localStorage.setItem('lr.intro','true');localStorage.setItem('lr.meta',JSON.stringify({sound:false,music:false,realtime:false,phase:'day',visitors:false,mischief:false,calmPerformance:true}));if(localStorage.getItem('lr.fireflies')===null)localStorage.setItem('lr.fireflies','30')")
- external=[];c.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else (external.append(r.request.url),r.abort())[-1]);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
+ external=[];c.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else (external.append(r.request.url),r.abort())[-1]);c.route('**/twostorycaptions.json',lambda r:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}));page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
  page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();panel=page.locator('#menu-today')
- assert page.locator('.today-greeting').is_visible();assert page.locator('#sheetBody > h2').is_hidden()
- assert page.locator('.today-greeting').evaluate('e=>e.compareDocumentPosition(document.querySelector(".dashboard-tabs"))&Node.DOCUMENT_POSITION_FOLLOWING')
+ assert page.locator('.today-greeting').is_visible();assert page.locator('#sheetBody > h2').is_visible()
+ assert page.locator('.today-greeting').evaluate('e=>e.compareDocumentPosition(document.querySelector(".dashboard-tabs"))&Node.DOCUMENT_POSITION_PRECEDING')
  for phase,greeting in [('morning','Good morning'),('day','Good afternoon'),('evening','Good evening'),('night','Good evening')]:
   page.evaluate('p=>{__lr.meta.phase=p;__lr.todayUI.refresh()}',phase);assert panel.locator('.today-sky').get_attribute('data-phase')==phase;assert greeting in page.locator('.today-greeting h2').inner_text();page.screenshot(path=f'/tmp/today-hero-{phase}.png')
  for tab in ['Rooms','Journal','Sound','Settings']:
