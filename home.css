@@ -217,22 +217,20 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .space-today .today-date-row .today-sky-icon { display:inline-flex; align-items:center; flex:none; font-size:24px; line-height:1; margin:0; }
 .space-today .today-date-row .today-date { margin:0; }
 
-/* A small tuning card beneath the radio, with proper field labels. */
-#menu-sound .station-add-disclosure { margin:18px 0 24px; border:1px solid var(--line); border-radius:24px; background:var(--panel-solid); overflow:hidden; }
-#menu-sound .station-add-disclosure summary { list-style:none; padding:14px 16px; cursor:pointer; }
-.station-add-disclosure summary::-webkit-details-marker { display:none; }
-.station-add-disclosure summary::after { content:''; width:7px; height:7px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); margin-left:auto; margin-right:5px; transition:transform .15s; }
-.station-add-disclosure[open] summary::after { transform:rotate(225deg); }
-.station-add-disclosure summary:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; border-radius:24px; }
-#menu-sound .addstation { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:0; padding:0 16px 16px; }
-.addstation-heading { grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
-.addstation-heading h3 { margin:0; font:500 20px Fredoka,sans-serif; }
-.addstation-mark { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; background:var(--chip); color:var(--accent); }
-.station-field { display:grid; gap:7px; min-width:0; font-size:12px; font-weight:800; color:var(--ink-dim); }
-#menu-sound .addstation input { box-sizing:border-box; width:100%; min-height:46px; padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--chip); color:var(--ink); font:600 14px var(--font); }
+/* Quiet station disclosure; explicit button avoids native disclosure markers. */
+.station-add-disclosure { margin:16px 0 22px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.station-add-toggle { display:flex; align-items:center; gap:9px; width:100%; min-height:48px; padding:12px 2px; border:0; background:transparent; color:var(--ink); font:800 14px var(--font); cursor:pointer; text-align:left; }
+.station-add-toggle > svg:first-child { color:var(--accent); flex:none; }
+.station-add-chevron { margin-left:auto; flex:none; }
+.station-add-toggle[aria-expanded="true"] .station-add-chevron { transform:rotate(180deg); }
+.station-add-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:8px; }
+#menu-sound .addstation { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:0; padding:4px 0 16px; }
+#menu-sound .addstation[hidden] { display:none; }
+.station-field { display:flex; flex-direction:column; gap:7px; min-width:0; font-size:12px; font-weight:800; color:var(--ink-dim); }
+#menu-sound .addstation input { box-sizing:border-box; width:100%; flex:none; min-height:46px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--chip); color:var(--ink); font:600 14px var(--font); }
 #menu-sound .addstation input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-#menu-sound #stAdd { grid-column:1 / -1; display:flex; align-items:center; justify-content:center; gap:8px; min-height:46px; border-radius:15px; }
-@media(max-width:480px) { #menu-sound .addstation { grid-template-columns:minmax(0,1fr); gap:12px; padding:0 16px 16px; } }
+#menu-sound #stAdd { grid-column:1 / -1; min-height:44px; border-radius:12px; text-align:center; }
+@media(max-width:480px) { #menu-sound .addstation { grid-template-columns:minmax(0,1fr); gap:12px; } }
 
 /* Shared sheet chrome: compact, labeled icon targets. */
 #sheetBody .sheet-icon { display:inline-grid; place-items:center; width:44px; height:44px; padding:0; flex:none; border-radius:16px; background:var(--chip); color:var(--ink); }

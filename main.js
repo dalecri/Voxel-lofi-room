@@ -2615,16 +2615,19 @@ function startLofiRooms() {
       }
       r.append(copy,iconPicker,tuner,row);if(remove)r.appendChild(remove);sl.appendChild(r);
     }
-    const stationDisclosure=h('details','station-add-disclosure'),stationSummary=document.createElement('summary');stationSummary.className='addstation-heading';stationDisclosure.appendChild(stationSummary);
-    const add = document.createElement('form');add.className='addstation';stationDisclosure.appendChild(add);add.noValidate=true;add.setAttribute('aria-label','Add a station');
-    add.innerHTML = '<div class="addstation-heading"><span class="addstation-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="3"/><path d="M6 8l12-5M6 12h12M6 16h5M6 18h5"/><circle cx="17" cy="17" r="1.5"/></svg></span><h3>Add a station</h3></div><label class="station-field" for="stName">Station name<input id="stName" placeholder="Night jazz" maxlength="40" autocomplete="off"></label><label class="station-field" for="stUrl">Stream link<input id="stUrl" type="url" placeholder="https://…" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="none"></label><button type="submit" class="chipbtn primary" id="stAdd"><span aria-hidden="true">＋</span> Add station</button>';
-    const stationHeading=add.querySelector('.addstation-heading');stationSummary.append(...stationHeading.childNodes);stationHeading.remove();
+    const stationDisclosure=h('div','station-add-disclosure'),stationToggle=document.createElement('button');
+    stationToggle.type='button';stationToggle.className='station-add-toggle';stationToggle.setAttribute('aria-expanded','false');stationToggle.setAttribute('aria-controls','station-add-form');
+    stationToggle.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add station</span><svg class="station-add-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    stationDisclosure.appendChild(stationToggle);
+    const add=document.createElement('form');add.id='station-add-form';add.className='addstation';add.hidden=true;add.noValidate=true;add.setAttribute('aria-label','Add a station');stationDisclosure.appendChild(add);
+    stationToggle.onclick=()=>{const expanded=stationToggle.getAttribute('aria-expanded')!=='true';stationToggle.setAttribute('aria-expanded',String(expanded));add.hidden=!expanded;};
+    add.innerHTML='<label class="station-field" for="stName">Station name<input id="stName" placeholder="Night jazz" maxlength="40" autocomplete="off"></label><label class="station-field" for="stUrl">Stream link<input id="stUrl" type="url" placeholder="https://…" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="none"></label><button type="submit" class="chipbtn primary" id="stAdd">Save station</button>';
     add.onsubmit = e => {e.preventDefault();
       const url = add.querySelector('#stUrl').value.trim(), name = add.querySelector('#stName').value.trim() || 'My station';
       if (!/^https?:\/\//i.test(url)) { Sound.nope(); toast('<span>Paste a link that starts with http</span>', 1600, true); return; }
       if (/youtube\.com|youtu\.be/i.test(url)) { Sound.nope(); toast('<span>YouTube can’t play inside the app. Try a direct radio stream link.</span>', 2600, true); return; }
       (meta.stations || (meta.stations = [])).push({ name, url, icon:icons[Math.floor(Math.random()*icons.length)] }); saveMeta(); Sound.chime();
-      toast(`<span>Added ${name.replace(/</g, '&lt;')}. Use the arrows to tune in.</span>`, 2000, true); renderMenu(); document.querySelector('#menu-sound .station-add-disclosure summary')?.focus({preventScroll:true});
+      toast(`<span>Added ${name.replace(/</g, '&lt;')}. Use the arrows to tune in.</span>`, 2000, true); renderMenu(); document.querySelector('#menu-sound .station-add-toggle')?.focus({preventScroll:true});
     };
     atlasUI.mountRadio(target);
     target = sections.Settings;
