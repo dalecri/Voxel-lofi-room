@@ -75,7 +75,15 @@
       <div id="letterScroll" class="letter-stage"></div>
       <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" class="mailwin-btn mailwin-small" id="letterListClose">Back to the letter</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" class="mailwin-btn" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
     const windowUi=root.LRMailWindow.create({title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
+    // Keep the shared editor fields and handlers; only the typewriter gets this paper-and-machine skin.
+    const machine=document.createElement('div');machine.className='letter-machine';
+    machine.innerHTML='<div class="letter-roller" aria-hidden="true"><i></i><span></span><i></i></div><div class="letter-machine-brand" aria-hidden="true">LOFI LETTERS</div>';
+    machine.appendChild(windowUi.toolbar);
+    const keys=document.createElement('div');keys.className='letter-keyboard';keys.setAttribute('aria-hidden','true');
+    for(let row=0;row<3;row++){const line=document.createElement('div');for(let key=0;key<10-row;key++)line.appendChild(document.createElement('i'));keys.appendChild(line);}
+    machine.append(keys,windowUi.actions);
     view.querySelector('#letterScroll').appendChild(windowUi.form);
+    view.querySelector('#letterScroll').after(machine);
     const $=s=>view.querySelector(s),body=windowUi.body,subject=windowUi.fields.Subject,from=windowUi.fields.From,to=windowUi.fields.To,scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
     let active=false,timer=null,lastRange=null,lastFocus=null,lastClack=-Infinity,lastBell=-Infinity,beforeLine=null,composing=false,compositionLine=null;
     function message(text) {status.textContent=text;}

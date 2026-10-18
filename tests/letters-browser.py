@@ -24,7 +24,8 @@ with sync_playwright() as p:
  page.mouse.click(point['x'],point['y']);page.locator('#lettersView').wait_for(state='visible')
  assert page.evaluate('__lr.letters.active && __lr.Sound.writing')
  assert page.evaluate('__sounds.returns')==1 and page.evaluate('__sounds.clacks[0]')==[1,False]
- win=page.locator('#lettersView .mailwin');assert win.locator('.mailwin-typewriter').count()==1;assert 'Typewriter' in win.locator('.mailwin-name').inner_text()
+ win=page.locator('#lettersView .mailwin');assert win.locator('.mailwin-typewriter').count()==1;assert 'Typewriter' in win.locator('.mailwin-name').text_content()
+ assert page.locator('.letter-machine .letter-roller').count()==1;assert page.locator('.letter-keyboard').get_attribute('aria-hidden')=='true';assert page.locator('.letter-machine .letter-tools').count()==1;assert page.locator('.letter-machine #letterSave').count()==1
  assert page.locator('#letterKeyboard').count()==0;assert page.locator('#lettersView').evaluate('e=>e.closest("#sheetBody")!==null && getComputedStyle(e).position==="relative"');assert page.locator('#sheetBody > .grab').count()==1;assert page.locator('#letterClose svg').count()==1
  assert page.locator('#lettersView').get_by_label('From',exact=True).input_value()=='crisdalessio@gmail.com'
  assert page.locator('#lettersView').get_by_label('To',exact=True).input_value()=='Me'
@@ -96,6 +97,11 @@ with sync_playwright() as p:
   bounds=page.locator('.letter-tools').bounding_box();assert bounds['y']>=0 and bounds['y']+bounds['height']<=height
   assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();return scroll.height>0 && scroll.height<=innerHeight*.49 && sheet.top>0}''')
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  for phase in ['day','night']:
+   page.evaluate('phase=>__lr.view.setPhase(phase,true)',phase)
+   assert page.locator('#lettersView .mailwin').evaluate('e=>getComputedStyle(e).borderTopWidth')=='0px'
+   assert page.locator('.letter-tools button').first.evaluate('e=>e.getBoundingClientRect().height>=44')
+   page.screenshot(path=f'/tmp/paper-typewriter-{phase}-{width}-{height}.png')
  page.keyboard.press('Escape');assert page.evaluate('!__lr.letters.active && !__lr.Sound.writing')
  # Send to future opens the real mailbox window with a snapshot, then a later edit stays behind.
  page.evaluate('__lr.letters.open()')
