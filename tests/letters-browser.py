@@ -25,7 +25,7 @@ with sync_playwright() as p:
  assert page.evaluate('__lr.letters.active && __lr.Sound.writing')
  assert page.evaluate('__sounds.returns')==1 and page.evaluate('__sounds.clacks[0]')==[1,False]
  win=page.locator('#lettersView .mailwin');assert win.locator('.mailwin-typewriter').count()==1;assert 'Typewriter' in win.locator('.mailwin-name').inner_text()
- assert page.locator('#letterKeyboard').count()==1
+ assert page.locator('#letterKeyboard').count()==0;assert page.locator('#lettersView').evaluate('e=>e.closest("#sheetBody")!==null && getComputedStyle(e).position==="relative"');assert page.locator('#sheetBody > .grab').count()==1;assert page.locator('#letterClose svg').count()==1
  assert page.locator('#lettersView').get_by_label('From',exact=True).input_value()=='crisdalessio@gmail.com'
  assert page.locator('#lettersView').get_by_label('To',exact=True).input_value()=='Me'
  subject=page.locator('#lettersView').get_by_label('Subject',exact=True);body=page.locator('#letterBody')
@@ -94,7 +94,7 @@ with sync_playwright() as p:
  for width,height in [(320,844),(390,400),(1280,844)]:
   page.set_viewport_size({'width':width,'height':height});body.click();page.keyboard.press('Control+End')
   bounds=page.locator('.letter-tools').bounding_box();assert bounds['y']>=0 and bounds['y']+bounds['height']<=height
-  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),key=document.querySelector('#letterKeyboard').getBoundingClientRect();return key.top>=scroll.bottom-1 && key.height>=40}''')
+  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();return scroll.height>0 && scroll.height<=innerHeight*.49 && sheet.top>0}''')
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
  page.keyboard.press('Escape');assert page.evaluate('!__lr.letters.active && !__lr.Sound.writing')
  # Send to future opens the real mailbox window with a snapshot, then a later edit stays behind.

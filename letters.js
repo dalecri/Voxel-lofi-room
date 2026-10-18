@@ -68,16 +68,14 @@
     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);return {saved:true};
   }
-  function createView({store,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{},sender=()=>'',rememberSender=()=>{},onSendToFuture=()=>{}}) {
+  function createView({store,sheet,dismiss,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{},onClose=()=>{},sender=()=>'',rememberSender=()=>{},onSendToFuture=()=>{}}) {
     const model=create({store,onSaved}),view=document.createElement('section');view.id='lettersView';view.hidden=true;
-    view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Write a letter');
-    view.innerHTML=`<header class="letter-chrome"><button type="button" id="letterClose">← Room</button><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton">Letters</button><button type="button" id="letterExport">Save as file</button></header>
+    view.setAttribute('aria-label','Write a letter');
+    view.innerHTML=`<div class="letter-chrome"><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton">Letters</button><button type="button" id="letterExport">Save as file</button></div>
       <div id="letterScroll" class="letter-stage"></div>
-      <div class="letter-keyboard" id="letterKeyboard" aria-hidden="true"></div>
       <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" class="mailwin-btn mailwin-small" id="letterListClose">Back to the letter</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" class="mailwin-btn" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
     const windowUi=root.LRMailWindow.create({title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
     view.querySelector('#letterScroll').appendChild(windowUi.form);
-    document.body.appendChild(view);
     const $=s=>view.querySelector(s),body=windowUi.body,subject=windowUi.fields.Subject,from=windowUi.fields.From,to=windowUi.fields.To,scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
     let active=false,timer=null,lastRange=null,lastFocus=null,lastClack=-Infinity,lastBell=-Infinity,beforeLine=null,composing=false,compositionLine=null;
     function message(text) {status.textContent=text;}
@@ -117,8 +115,7 @@
       else if(rect.top<bounds.top+12)scroll.scrollTop-=bounds.top+12-rect.top;
     }
     function viewport() {
-      if(!active)return;const v=window.visualViewport;
-      view.style.top=(v?.offsetTop || 0)+'px';view.style.height=(v?.height || window.innerHeight)+'px';requestAnimationFrame(keepCaret);
+      if(active)requestAnimationFrame(keepCaret);
     }
     function clack() {const t=performance.now();if(t-lastClack>=65){lastClack=t;sound.clack(1,false);}}
     function format(command) {if(!model.current)return;restore();document.execCommand('styleWithCSS',false,false);document.execCommand(command,false);remember();schedule();}
@@ -142,14 +139,17 @@
       }
     }
     function showList() {flush();rows();list.hidden=false;$('#letterNew').focus();}
-    function close() {if(!active)return;flush();active=false;view.hidden=true;list.hidden=true;onWriting(false);if(lastFocus?.isConnected)lastFocus.focus({preventScroll:true});}
+    function close(focus=true) {if(!active)return;flush();active=false;view.hidden=true;list.hidden=true;view.remove();onWriting(false);dismiss();if(focus){if(lastFocus?.isConnected&&lastFocus!==document.body)lastFocus.focus({preventScroll:true});else onClose();}}
     function open() {
-      if(active)return;lastFocus=document.activeElement;beforeOpen();active=true;view.hidden=false;list.hidden=true;
+      if(active)return;lastFocus=document.activeElement;beforeOpen();
+      // codeSheet closes any previous editor. Activate only after the shared sheet is built.
+      sheet('Typewriter','A little letter, just yours.',h=>{h('div','letter-sheet-content').appendChild(view);const closeButton=view.closest('#sheetBody')?.querySelector('.sheet-close');if(closeButton){closeButton.id='letterClose';closeButton.onclick=()=>{if(!list.hidden){list.hidden=true;body.focus();}else close();};}});
+      active=true;view.hidden=false;list.hidden=true;
       if(!model.current)safe(()=>model.add(roomName()));load();viewport();onWriting(true);sound.clack(1,false);sound.carriageReturn();
       // Opening the paper does not summon the mobile keyboard until the owner taps it.
-      $('#letterClose').focus({preventScroll:true});
+      view.closest('#sheetBody')?.querySelector('#letterClose')?.focus({preventScroll:true});
     }
-    $('#letterClose').onclick=close;$('#letterListButton').onclick=showList;$('#letterListClose').onclick=()=>{list.hidden=true;body.focus();};
+    $('#letterListButton').onclick=showList;$('#letterListClose').onclick=()=>{list.hidden=true;body.focus();};
     $('#letterNew').onclick=()=>{flush();safe(()=>model.add(roomName()));load();list.hidden=true;body.focus();};
     windowUi.buttons.Save.onclick=()=>flush();
     windowUi.buttons['Send to future'].onclick=()=>{
@@ -190,7 +190,7 @@
     window.addEventListener('keydown',e=>{
       if(!active)return;
       if(e.key==='Tab'){
-        const scope=list.hidden?view:list,items=[...scope.querySelectorAll('button:not(:disabled),input,[contenteditable="true"],[contenteditable="plaintext-only"]')].filter(n=>n.getClientRects().length);
+        const scope=list.hidden?(view.closest('#sheetBody')||view):list,items=[...scope.querySelectorAll('button:not(:disabled),input,[contenteditable="true"],[contenteditable="plaintext-only"]')].filter(n=>n.getClientRects().length);
         const first=items[0],last=items[items.length-1];
         if(items.length && (e.shiftKey && (document.activeElement===first || !scope.contains(document.activeElement)) || !e.shiftKey && (document.activeElement===last || !scope.contains(document.activeElement)))){e.preventDefault();(e.shiftKey?last:first).focus();}
       }

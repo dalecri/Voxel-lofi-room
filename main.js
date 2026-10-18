@@ -29,7 +29,7 @@ function startLofiRooms() {
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
   const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}),onTallyGoal:t=>{remember('pushups',{date:t.date,id:t.date});try{Sound.init();if(Sound.on)Sound.chime();}catch(e){/* quiet reps still count */}if(companion)companion.hop();} });
-  const letters = LRLetters.createView({ store,onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); } });
+  const letters = LRLetters.createView({ store,sheet:codeSheet,dismiss:closeSheets,onClose:()=>$('#bHome').focus({preventScroll:true}),onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); } });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -1417,7 +1417,7 @@ function startLofiRooms() {
   }
   // Handle the top sheet before crate navigation, text fields or cat-view controls.
   window.addEventListener('keydown', e => {
-    if (!$('#sheet').classList.contains('open')) return;
+    if (!$('#sheet').classList.contains('open') || letters.active) return;
     // Let an open native picker handle Escape and its own keyboard navigation.
     try { if (document.querySelector('select:open')) return; } catch (_) {}
     if(e.target.matches('.pixel-grid')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' ','z','Z'].includes(e.key))return;
@@ -1858,6 +1858,7 @@ function startLofiRooms() {
     $('#bMenu').setAttribute('aria-expanded',String(!!$('#menu-today')));
   }
   function closeSheets() {
+    if(letters.active){letters.close();return;}
     if(home.active){home.close();return;}
     releaseRoomQR();
     villageView?.destroy(); villageView=null;
@@ -2167,6 +2168,7 @@ function startLofiRooms() {
     return d;
   }
   function codeSheet(title, sub, build) {
+    letters.close(false);
     releaseRoomQR();
     home.close(false);
     roomToolsUI.close();
@@ -2480,6 +2482,7 @@ function startLofiRooms() {
   }
   function homeSearch(toggleHost) { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace,toggleHost}); }
   function renderMenu() {
+    letters.close(false);
     releaseRoomQR();
     villageView?.destroy(); villageView=null;
     home.close(false);

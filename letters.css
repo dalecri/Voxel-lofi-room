@@ -1,19 +1,15 @@
-/* The typewriter screen. The writing itself is the shared pixel email window. */
-#lettersView { position:fixed; inset:0 0 auto; height:100dvh; z-index:50; display:flex; flex-direction:column; background:var(--panel-solid); color:var(--ink); font:16px/1.5 Nunito,sans-serif; }
+/* The typewriter lives inside the shared slide-up sheet, like the mailbox. */
+#lettersView { position:relative; display:flex; flex-direction:column; color:var(--ink); font:16px/1.5 Nunito,sans-serif; }
 #lettersView[hidden], #letterList[hidden] { display:none; }
-.letter-chrome { position:static; display:flex; flex:none; align-items:center; gap:4px; padding:calc(env(safe-area-inset-top,0px) + 6px) max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px)); background:var(--panel-solid); color:var(--ink); pointer-events:auto; }
+.letter-chrome { position:static; display:flex; flex:none; align-items:center; gap:4px; padding:0 0 10px; flex-wrap:wrap; background:var(--panel-solid); color:var(--ink); pointer-events:auto; }
 #lettersView .letter-chrome button { border:1px solid var(--line); border-radius:8px; background:var(--chip); color:var(--ink); font:700 13px Nunito,sans-serif; cursor:pointer; padding:8px 10px; min-height:42px; }
 #lettersView .letter-chrome button:hover, #lettersView .letter-chrome button:focus-visible { background:var(--panel-solid); }
 #lettersView .letter-chrome button:disabled { opacity:.5; cursor:default; }
 #lettersView .letter-chrome button:focus-visible, #lettersView .letter-stack input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 #letterStatus { flex:1; font-size:11px; line-height:1.3; text-align:center; overflow-wrap:anywhere; }
-#letterScroll { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:8px 12px 0; }
+#letterScroll { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:4px 0 8px; max-height:48dvh; scrollbar-color:var(--accent) transparent; }
 #lettersView .mailwin { max-width:680px; margin:4px auto 12px; }
-/* Reserved for the illustrated typewriter keyboard. The window stays above this strip. */
-.letter-keyboard { flex:none; min-height:120px; }
-@media (max-height:700px) { .letter-keyboard { min-height:72px; } }
-@media (max-height:480px) { .letter-keyboard { min-height:40px; } }
-#letterList { position:absolute; inset:0; z-index:3; background:#2a262880; overflow:auto; padding:24px 12px; }
+#letterList { position:absolute; inset:0; z-index:3; background:var(--panel-solid); overflow:auto; overscroll-behavior:contain; padding:8px 4px 16px; }
 .letter-stack { --mw-ink:#2a2628; --mw-paper:#f5f2ef; --mw-font:'VT323',ui-monospace,'Courier New',monospace; background:var(--mw-paper); color:var(--mw-ink); max-width:640px; margin:0 auto; padding:16px; border:2px solid var(--mw-ink); border-radius:3px; box-shadow:4px 4px 0 var(--mw-ink); font-family:var(--mw-font); }
 .letter-list-top { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
 #lettersView .letter-stack h2 { font:400 28px/1 var(--mw-font); margin:0; color:var(--mw-ink); }
