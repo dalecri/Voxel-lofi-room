@@ -35,7 +35,7 @@ with sync_playwright() as p:
    open_menu()
    if action=='h':page.keyboard.press('h')
    elif action=='Escape':page.get_by_role('textbox',name='A little task',exact=True).focus();page.keyboard.press('Escape')
-   elif action=='Close':page.locator('#sheetBody > .sheet-close').click()
+   elif action=='Close':page.locator('#sheetBody .menu-actions > .sheet-close').click()
    elif action=='Menu keyboard':page.locator('#bMenu').focus();page.keyboard.press('Enter')
    else:
     box=page.locator('#bMenu').bounding_box();page.mouse.click(box['x']+box['width']/2,box['y']+box['height']/2)
@@ -51,13 +51,13 @@ with sync_playwright() as p:
   page.keyboard.press('x');affordance(True);page.keyboard.press('x');affordance(False)
   page.click('#bEdit');affordance(True);page.evaluate('localStorage.setItem("lr.mode",JSON.stringify("edit"))');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');affordance(False);assert page.evaluate('localStorage.getItem("lr.mode")') is None
   open_menu('Rooms');assert re.sub(r'\s+',' ',page.locator('#menu-rooms h2').first.text_content())=='Your home · 1 room';page.keyboard.press('Escape');closed()
-  open_menu('Today');heads=page.locator('#menu-today h2,#menu-today h3').all_text_contents();assert heads==['Google Tasks',"Today's moment",'Little things'],heads
+  open_menu('Today');heads=page.locator('#menu-today h2,#menu-today h3').all_text_contents();assert heads[0].startswith('Good ');assert heads[1:]==['Google Tasks',"Today's moment",'Little things'],heads
   assert page.locator('#menu-today .daily-notice').count()==0;assert page.locator('#menu-today .today-sky').evaluate('e=>e.nextElementSibling.classList.contains("today-duo")');page.screenshot(path=f'/tmp/uiux-today-{width}.png');page.get_by_role('tab',name='Settings',exact=True).click()
   switches=page.locator('#menu-settings .toggle');assert switches.count()==12
   assert switches.evaluate_all('es=>es.every(e=>e.getAttribute("role")==="switch" && e.getAttribute("aria-pressed")===String(e.classList.contains("on")) && e.getAttribute("aria-checked")===e.getAttribute("aria-pressed"))')
   mischief=page.get_by_role('switch',name=re.compile('^Cat mischief'));before=mischief.get_attribute('aria-checked');mischief.click();assert mischief.get_attribute('aria-checked')!=before;assert mischief.get_attribute('aria-pressed')==mischief.get_attribute('aria-checked');assert mischief.evaluate('e=>document.activeElement===e');page.screenshot(path=f'/tmp/uiux-settings-{width}.png')
   # Close still works when the optional interface sound device fails.
-  page.evaluate('window.slideBefore=__lr.Sound.slide;__lr.Sound.slide=()=>{throw Error("unavailable audio")};void 0;');page.locator('#sheetBody > .sheet-close').click();closed();page.evaluate('__lr.Sound.slide=slideBefore;void 0');assert not errors,errors
+  page.evaluate('window.slideBefore=__lr.Sound.slide;__lr.Sound.slide=()=>{throw Error("unavailable audio")};void 0;');page.locator('#sheetBody .menu-actions > .sheet-close').click();closed();page.evaluate('__lr.Sound.slide=slideBefore;void 0');assert not errors,errors
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
  print('PASS: sibling progress never renames; H/Escape/Close/Menu keyboard and real tap dismiss; task typing stays intact; transient decorate mode and one accessible affordance; spaced headings/help; switch states/focus; mobile/desktop without console errors',flush=True)
  browser.close()

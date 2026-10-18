@@ -49,7 +49,9 @@
     const panels=tabs(body,MENU_TABS,store.get('lr.menuTab','Today'),name=>{store.set('lr.menuTab',name);onSelect(name);},'menu');
     body.querySelector('[role=tablist]').classList.add('menu-tabs');
     const grab=element('div','grab');body.insertBefore(grab,panels.Today);
-    const closeButton=button(body,'Close',close,'chipbtn sheet-close');body.insertBefore(closeButton,panels.Today);
+    const actions=element('div','menu-actions');actions.setAttribute('role','group');actions.setAttribute('aria-label','Sheet actions');body.insertBefore(actions,panels.Today);
+    const closeButton=button(actions,'',close,'sheet-close sheet-icon');closeButton.setAttribute('aria-label','Close');
+    closeButton.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
     // Keep the title as a direct child for existing sheet and greeting callers.
     body.insertBefore(element('h2','','Your Space'),panels.Today);
     body.insertBefore(element('p','muted','A little space for your day.'),panels.Today);

@@ -14,12 +14,12 @@ with sync_playwright() as p:
  external=[];c.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else (external.append(r.request.url),r.abort())[-1]);c.route('**/twostorycaptions.json',lambda r:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}));page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
  page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();panel=page.locator('#menu-today')
- assert page.locator('.today-greeting').is_visible();assert page.locator('#sheetBody > h2').is_visible()
- assert page.locator('.today-greeting').evaluate('e=>e.compareDocumentPosition(document.querySelector(".dashboard-tabs"))&Node.DOCUMENT_POSITION_PRECEDING')
+ assert page.locator('.today-greeting').count()==0;assert panel.locator('.today-sky .today-welcome').is_visible();assert page.locator('#sheetBody > h2').is_visible()
+ assert panel.locator('.today-welcome').evaluate('e=>e.closest(".today-sky")!==null');date=panel.locator('.today-date').inner_text();assert panel.inner_text().count(date)==1
  for phase,greeting in [('morning','Good morning'),('day','Good afternoon'),('evening','Good evening'),('night','Good evening')]:
-  page.evaluate('p=>{__lr.meta.phase=p;__lr.todayUI.refresh()}',phase);assert panel.locator('.today-sky').get_attribute('data-phase')==phase;assert greeting in page.locator('.today-greeting h2').inner_text();page.screenshot(path=f'/tmp/today-hero-{phase}.png')
+  page.evaluate('p=>{__lr.meta.phase=p;__lr.todayUI.refresh()}',phase);assert panel.locator('.today-sky').get_attribute('data-phase')==phase;assert greeting in page.locator('.today-welcome h2').inner_text();page.screenshot(path=f'/tmp/today-hero-{phase}.png')
  for tab in ['Rooms','Journal','Sound','Settings']:
-  page.get_by_role('tab',name=tab,exact=True).click();assert page.locator('.today-greeting').is_hidden();assert page.locator('#sheetBody > h2').is_visible()
+  page.get_by_role('tab',name=tab,exact=True).click();assert page.locator('.today-welcome').is_hidden();assert page.locator('#sheetBody > h2').is_visible()
  page.get_by_role('tab',name='Today',exact=True).click()
  page.wait_for_function('document.querySelector(".french-today b")?.textContent.length>0');french=panel.locator('.french-today');before=page.evaluate('localStorage.getItem("lr.french.progress")');french.focus();page.keyboard.press('Enter');assert french.get_attribute('aria-pressed')=='true';assert french.locator('.french-example').is_visible();assert french.locator('.french-example').inner_text();page.keyboard.press('Space');assert french.get_attribute('aria-pressed')=='false';assert page.evaluate('localStorage.getItem("lr.french.progress")')==before
  got=panel.locator('.today-got');got.click();assert got.is_disabled();assert page.evaluate('__lr.dailyInfo().D.done');assert 'day streak' in panel.locator('.today-streak').inner_text()

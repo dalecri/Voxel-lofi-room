@@ -21,3 +21,7 @@
 .dashboard-tabs.menu-tabs .chipbtn { padding: 8px 9px; border-radius: 16px; background: transparent; }
 .dashboard-tabs.menu-tabs [aria-selected=true] { background: var(--accent); color: var(--panel-solid); }
 @media(max-width:360px) { .dashboard-tabs.menu-tabs { gap: 1px; padding: 3px; } .dashboard-tabs.menu-tabs .chipbtn { padding: 8px 5px; font-size: 12px; } }
+
+.menu-actions { float: right; display: flex; gap: 6px; align-items: center; margin: 0 0 8px 12px; }
+.menu-actions .sheet-icon, .menu-actions .space-search-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; margin: 0; float: none; border-radius: 16px; background: var(--chip); color: var(--ink); flex: none; }
+.menu-actions .sheet-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

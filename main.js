@@ -2465,7 +2465,7 @@ function startLofiRooms() {
       },thumb:d=>d.id===meta.current?captureRoomSnapshot(true):roomSnapshots.get(d.id,meta.phase)?.url,travel:r=>{closeSheets();if(r.id!==meta.current)switchRoom(r.id);},
       save:()=>{commit();renderMenu();},remove:deleteRoom,newRoom:newFlow});
   }
-  function homeSearch() { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace}); }
+  function homeSearch(toggleHost) { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace,toggleHost}); }
   function renderMenu() {
     releaseRoomQR();
     villageView?.destroy(); villageView=null;
@@ -2477,11 +2477,11 @@ function startLofiRooms() {
     body.dataset.merchant = '';
     body.innerHTML = '';
     const sections = LRDashboard.menu(body, store, closeSheets, name=>{if(name==='Journal')captionDesk.refresh();});
-    const spotlight=homeSearch();body.insertBefore(spotlight,sections.Today);
+    const spotlight=homeSearch(body.querySelector('.menu-actions'));body.insertBefore(spotlight,sections.Today);
     spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
-    todayUI.mount(target,{greetingHost:body});
+    todayUI.mount(target);
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     googleTasksUI.mount(target.querySelector('.today-sky'));
     target = sections.Rooms;

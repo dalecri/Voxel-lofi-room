@@ -42,13 +42,13 @@
     return {sections:SECTIONS,today:{date:now.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'}),phase:PHASES[meta.phase] || 'Afternoon',clock:meta.realtime?'following the clock':'your chosen daypart',weather:({clear:'Clear',rain:'Rain',storm:'Storm',snow:'Snow'})[meta.weather] || 'Clear',daily,streak:store.get('lr.dailyStreak',{n:0}).n || 0,waiting:[teaLine,merchant?'Traveling merchant · visiting your room':'Traveling merchant · out wandering',unread?`${unread} future-self letter${unread===1?'':'s'} arrived`:'No letters waiting']},notifications,coziness:coziness({...ctx,now})};
   }
   let searchId=0;
-  function createSearch({sources,navigate}) {
+  function createSearch({sources,navigate,toggleHost}) {
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
     const host=el('section','space-search');host.setAttribute('aria-label','Universal search');
     const input=el('input','home-search');input.type='search';input.placeholder='Search your space…';input.setAttribute('aria-label','Search furniture, letters, scenes, ideas');
     const toggle=el('button','space-search-toggle');toggle.type='button';toggle.setAttribute('aria-label','Search your space');toggle.setAttribute('aria-expanded','false');input.id='space-search-'+(++searchId);toggle.setAttribute('aria-controls',input.id);
     toggle.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>';
-    const results=el('div','home-results');results.setAttribute('aria-live','polite');host.append(toggle,input,results);
+    const results=el('div','home-results');results.setAttribute('aria-live','polite');if(toggleHost){host.classList.add('has-external-toggle');toggleHost.prepend(toggle);host.append(input,results);}else host.append(toggle,input,results);
     let expanded=false;input.hidden=true;results.hidden=true;
     function collapse(){expanded=false;host.classList.remove('is-expanded');toggle.setAttribute('aria-expanded','false');input.value='';input.hidden=true;results.hidden=true;results.replaceChildren();input.dispatchEvent(new Event('input',{bubbles:true}));toggle.focus({preventScroll:true});}
     toggle.onclick=()=>{if(expanded){if(!input.value.trim())collapse();else input.focus();return;}expanded=true;host.classList.add('is-expanded');toggle.setAttribute('aria-expanded','true');input.hidden=false;results.hidden=false;searchResults();input.focus();};
