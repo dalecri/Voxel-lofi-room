@@ -169,3 +169,20 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
   .news-left { grid-column: 1; } .news-right { grid-column: 2; }
   .news-side:empty { display: none; }
 }
+
+/* Read-and-copy drafts, printed inside the daily paper in either room theme. */
+.caption-desk { border-top: 3px double #94744e; margin-top: 22px; padding-top: 16px; }
+.caption-desk[hidden] { display: none; }
+.caption-desk-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.caption-desk-head h4 { font-size: 23px; margin: 0; }
+.caption-desk-status, .caption-empty { font-size: 12px; line-height: 1.6; }
+.caption-clip { border-top: 1px solid #cab88e; padding: 18px 0; content-visibility: auto; contain-intrinsic-size: auto 180px; }
+.caption-desc { font: 17px/1.55 Georgia, 'Times New Roman', serif; white-space: pre-wrap; margin: 0 0 10px; }
+.caption-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.caption-tag { padding: 3px 8px; border: 1px solid #cab88e; border-radius: 20px; font-size: 11px; }
+.caption-platform { font-size: 11px; }
+.caption-options { padding-left: 24px; font: 15px/1.6 Georgia, 'Times New Roman', serif; }
+.caption-options li { white-space: pre-wrap; padding: 5px 0; }
+.caption-copy, .caption-refresh { background: #eadbb3; color: #684b30; border: 1px solid #bba477; border-radius: 18px; padding: 9px 18px; font-size: 13px; font-weight: 800; }
+.caption-copy { margin-top: 12px; }
+.caption-refresh:disabled { opacity: .6; }

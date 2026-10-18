@@ -19,6 +19,7 @@ with sync_playwright() as p:
    const data={'lr.intro':true,'lr.rooms':[{id:101,name:room.name,n:0}],'lr.room.101':room,'lr.menuTab':'Journal','lr.meta':{current:101,phase:'night',realtime:false,visitors:false,mischief:false,calmPerformance:true},'lr.found':['tea'],'lr.journalNews':{days:[date],moments:[{id:'tea',date,time:now}]},'lr.catJournal':[{time:now-1000,cat:1,name:'Diego',kind:'eat',coat:0,text:'Inspected dinner. Ate the evidence.'},{time:now-2000,cat:2,name:'Luna',kind:'nap',coat:1,text:'Held the room down with my whole body. Important work.'}]};
    for(const [k,v] of Object.entries(data))localStorage.setItem(k,JSON.stringify(v));}''')
   context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
+  context.route('**/twostorycaptions.json',lambda r:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','exportedAt':'','clips':[]}))
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu')
   paper=page.locator('.journal-paper');paper.wait_for();assert paper.locator('h3').inner_text()=='DAILY NEWS';assert paper.locator('.news-day').inner_text()=='Day 1'

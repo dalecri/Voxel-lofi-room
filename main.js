@@ -447,6 +447,7 @@ function startLofiRooms() {
   ensureDaily();
   const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog });
   const catJournal = LRLife.journal({ store });
+  const captionDesk = LRCaptions.create({store,changed:()=>{const host=$('.caption-desk');if(host)LRCaptions.render(host,captionDesk);}});
   const journalNews = LRLife.newspaper({ store, moments: MOMENTS });
   journalNews.edition(catJournal.entries);
   const ambientLife = LRLife.ambience({ random: () => Math.random() });
@@ -2046,6 +2047,7 @@ function startLofiRooms() {
       paper.querySelector(index % 2 ? '.news-right' : '.news-left').appendChild(story);
     });
     paper.querySelector('.news-reaction').onclick = () => { paper.querySelector('.news-response').textContent = news.reaction; companion?.say(news.reaction); };
+    const desk=document.createElement('section');desk.className='caption-desk';desk.setAttribute('aria-label','The caption desk');paper.insertBefore(desk,paper.querySelector('footer'));LRCaptions.render(desk,captionDesk);
     feed.appendChild(paper);
     const archive = document.createElement('h3'); archive.className = 'journal-archive-title'; archive.textContent = journalFeed === 'cats' ? 'The cats’ archive' : 'Cozy moments checklist'; feed.appendChild(archive);
     ['moments', 'cats'].forEach(k => {
@@ -2466,7 +2468,7 @@ function startLofiRooms() {
     const focusState = focused?.matches('.toggle') ? {label:focused.textContent,panel:focused.closest('[role=tabpanel]')?.id,top:body.scrollTop} : null;
     body.dataset.merchant = '';
     body.innerHTML = '';
-    const sections = LRDashboard.menu(body, store, closeSheets);
+    const sections = LRDashboard.menu(body, store, closeSheets, name=>{if(name==='Journal')captionDesk.refresh();});
     const spotlight=homeSearch();body.insertBefore(spotlight,body.querySelector('[role=tablist]'));
     spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
