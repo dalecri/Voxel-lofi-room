@@ -300,6 +300,7 @@ function startLofiRooms() {
   updateAppShortcut();
   window.addEventListener('storage',e=>{if(!e.key || [APP_SHORTCUT_KEY,'lr.portals'].includes(e.key))updateAppShortcut();});
   const home = LRHome.createView({
+    sheet:codeSheet,dismiss:closeSheets,
     apps:controlApps,
     previewKey:()=>JSON.stringify([meta.current,room.items.map(i=>[i.t,i.c])]),
     preview:p=>{const f=LRLauncher.furniture(p,room.items,CAT);return f?{...f,src:thumbOf(f.id,f.variant)}:null;},
@@ -1423,6 +1424,10 @@ function startLofiRooms() {
     const expandedSearch=$('#sheetBody .space-search.is-expanded');
     if(e.key==='Escape'&&expandedSearch){e.preventDefault();expandedSearch.dispatchEvent(new Event('search-collapse'));}
     else if (e.key === 'Escape' || menuShortcut) { e.preventDefault(); closeSheets(); }
+    else if(e.key==='Tab'&&home.active){
+      const nodes=[...$('#sheetBody').querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(n=>!n.disabled&&n.tabIndex>=0&&n.getClientRects().length),first=nodes[0],last=nodes.at(-1);
+      if(first&&(!sheet.contains(document.activeElement)||e.shiftKey&&document.activeElement===first||!e.shiftKey&&document.activeElement===last)){e.preventDefault();(e.shiftKey?last:first).focus();}
+    }
     else LRDashboard.tabKey(e);
     e.stopImmediatePropagation();
   }, true);
@@ -1840,6 +1845,7 @@ function startLofiRooms() {
     $('#bMenu').setAttribute('aria-expanded',String(!!$('#menu-today')));
   }
   function closeSheets() {
+    if(home.active){home.close();return;}
     releaseRoomQR();
     villageView?.destroy(); villageView=null;
     roomToolsUI.close();

@@ -61,11 +61,11 @@
     input.oninput=searchResults;
     searchResults();return host;
   }
-  function createView({apps=()=>[],preview=()=>null,previewKey=()=>'',actions,beforeOpen=()=>{},onClose=()=>{}}) {
+  function createView({sheet,dismiss,apps=()=>[],preview=()=>null,previewKey=()=>'',actions,beforeOpen=()=>{},onClose=()=>{}}) {
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
-    const view=el('section','home-view');view.id='homeView';view.hidden=true;view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Control Centre');
-    const header=el('header','home-header'),title=el('h1','','Control Centre'),close=el('button','chipbtn','← Room');close.type='button';const controls=el('div','home-header-actions'),settings=el('button','chipbtn','⚙');settings.type='button';settings.setAttribute('aria-label','Settings');settings.onclick=()=>{closeView(false);actions.navigate('settings');};controls.append(settings,close);header.append(title,controls);view.appendChild(header);
-    const scroll=el('div','home-scroll'),main=el('main','home-content');scroll.appendChild(main);view.appendChild(scroll);const sections={};
+    const view=el('section','home-view');view.id='homeView';view.setAttribute('aria-label','Control Centre apps');
+    const settingsRow=el('div','rowbtns'),settings=el('button','chipbtn','⚙ Open Settings');settings.type='button';settings.setAttribute('aria-label','Open Settings');settings.onclick=()=>{closeView(false);actions.navigate('settings');};settingsRow.appendChild(settings);
+    const main=el('div','home-content');view.append(settingsRow,main);const sections={};
     SECTIONS.forEach(name=>{const section=el('section','home-section'),h=el('h2','',name);h.id='home-'+name.toLowerCase().replaceAll(' ','-');section.setAttribute('aria-labelledby',h.id);section.appendChild(h);main.appendChild(section);sections[name]=section;});
     const appSearch=el('input','home-search');appSearch.type='search';appSearch.placeholder='Find a tool or app';appSearch.setAttribute('aria-label','Find a tool or app');
     const appGrid=el('div','home-apps'),appEmpty=el('p','muted');sections['Tools and apps'].append(el('p','muted','Your tools and apps. Color means the furniture is in this room; gray means it is not placed. Every tool still opens here.'),appSearch,appGrid,appEmpty);
@@ -77,15 +77,23 @@
       const add=el('button','home-app');add.type='button';add.textContent='＋ Add your own';add.onclick=()=>{closeView(false);actions.addPortal();};appGrid.appendChild(add);lastPreviewKey=null;updatePreviews();
     }
     appSearch.oninput=launchApps;
-    document.body.appendChild(view);
     let active=false,next=0;
     function refresh(){if(active)updatePreviews();}
-    function viewport(){if(!active)return;view.style.height=(window.visualViewport?.height || innerHeight)+'px';view.style.top=(window.visualViewport?.offsetTop || 0)+'px';}
-    window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);window.addEventListener('resize',viewport);
-    function open(){if(active)return;beforeOpen();active=true;view.hidden=false;viewport();scroll.scrollTop=0;appSearch.value='';launchApps();close.focus({preventScroll:true});}
-    function closeView(focus=true){if(!active)return;active=false;if(view.contains(document.activeElement))document.activeElement.blur();view.hidden=true;view.style.height='';view.style.top='';if(focus)onClose();}
-    close.onclick=()=>closeView();
-    window.addEventListener('keydown',e=>{if(!active)return;if(e.key==='Escape'){e.preventDefault();closeView();}else if(e.key==='Tab'){const nodes=[...view.querySelectorAll('button,input,select')].filter(n=>!n.disabled&&n.offsetParent!==null),first=nodes[0],last=nodes.at(-1);if(!view.contains(document.activeElement)){e.preventDefault();(e.shiftKey?last:first).focus();}else if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}e.stopImmediatePropagation();},true);
+    function open(){
+      if(active)return;
+      beforeOpen();appSearch.value='';launchApps();
+      // codeSheet calls home.close(false). Mark active only after it has built
+      // this sheet, so opening ourselves cannot recursively dismiss ourselves.
+      sheet('Control Centre','Your tools and apps.',h=>{h('div','home-sheet-content').appendChild(view);});
+      active=true;
+      const body=view.closest('#sheetBody');if(body)body.scrollTop=0;
+      body?.querySelector('.sheet-close')?.focus({preventScroll:true});
+    }
+    function closeView(focus=true){
+      if(!active)return;active=false;
+      if(view.contains(document.activeElement))document.activeElement.blur();
+      view.remove();dismiss();if(focus)onClose();
+    }
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
     return {open,close:closeView,refresh,view,get active(){return active;},tick(time){if(!active||time<next)return;next=time+1000;refresh();updatePreviews();}};
   }

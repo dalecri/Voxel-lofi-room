@@ -32,11 +32,11 @@ with sync_playwright() as p:
   if page.get_by_role('button',name='Search your space',exact=True).get_attribute('aria-expanded')=='false':page.get_by_role('button',name='Search your space',exact=True).click()
   page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True).fill(q)
   assert page.locator('.space-search').bounding_box()['y']>page.locator('[aria-label="Menu sections"]').bounding_box()['y']
- open_home();assert view.get_by_role('heading',name='Control Centre',exact=True).is_visible();assert page.locator('#bHome').get_attribute('aria-label')=='Control Centre';assert view.locator('h2').all_text_contents()==['Tools and apps']
+ open_home();assert body.get_by_role('heading',name='Control Centre',exact=True).is_visible();assert page.locator('#bHome').get_attribute('aria-label')=='Control Centre';assert view.locator('h2').all_text_contents()==['Tools and apps']
  assert view.locator('[data-app=rooms],[data-app=journal],[data-app=settings],[data-app=breathing]').count()==0
  assert view.locator('.today-tasks,.today-sky,.home-daily,.home-notifications,.home-coziness,.space-search').count()==0;assert view.locator('[data-app]').count()>20
  # Header settings replaces its app tile; native controls still affect the room.
- view.get_by_role('button',name='Settings',exact=True).click();assert page.locator('#menu-settings').is_visible()
+ view.get_by_role('button',name='Open Settings',exact=True).click();assert page.locator('#menu-settings').is_visible()
  def control(label):return page.locator('#menu-settings').get_by_role('switch',name=re.compile('^'+re.escape(label)+r'(?:$| \()'))
  for value in [True,False]:
   b=control('Rain')
@@ -56,7 +56,7 @@ with sync_playwright() as p:
  add_search.fill('');assert page.locator('#row .swatch').count()>1
  page.evaluate('__lr.state.tool="paint";__lr.setMode("edit",true)');assert not add_search.is_visible();page.evaluate('__lr.setMode("explore",true)')
  page.evaluate('__lr.room.name="Changed since scene";__lr.changed()');search('HOME_PRIVATE_SCENE');body.get_by_role('button',name='HOME_PRIVATE_SCENE',exact=True).click();assert page.evaluate('__lr.room.name')=='Home room'
- page.evaluate("__lr.interact(__lr.room.items.find(i=>i.t==='phone').id)");body.get_by_role('button',name='Control Centre',exact=True).click();assert page.evaluate('__lr.home.active');assert 'open' not in page.locator('#sheet').get_attribute('class');page.keyboard.press('Escape')
+ page.evaluate("__lr.interact(__lr.room.items.find(i=>i.t==='phone').id)");body.get_by_role('button',name='Control Centre',exact=True).click();assert page.evaluate('__lr.home.active');assert 'open' in page.locator('#sheet').get_attribute('class');page.keyboard.press('Escape')
  # Tasks and weather live only in Your Space, with live state and persistence.
  search('');page.get_by_role('tab',name='Today',exact=True).click();assert body.locator('.today-sky').count()==1
  form=body.locator('.today-task-form');form.get_by_role('textbox',name='A little task',exact=True).fill('PRIVATE_SPACE_TASK');form.get_by_role('button',name='＋ Add',exact=True).click();body.get_by_role('checkbox',name='PRIVATE_SPACE_TASK',exact=True).check();page.keyboard.press('Escape');open_home();assert view.get_by_role('checkbox').count()==0;page.keyboard.press('Escape')
