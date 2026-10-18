@@ -1,7 +1,9 @@
 // The small, unscheduled lives around the room. Persistence uses the same Store as saves.
 (function (root) {
-  function merchant({ store, today, owns, catalog, now = Date.now, random = Math.random }) {
+  function merchant({ store, today, owns, catalog, exclusives = [], now = Date.now, random = Math.random }) {
     let trip = store.get('lr.merchant', null), date = today(), wait = 45 + random() * 60;
+    const traveling = typeof module !== 'undefined' && module.exports ? require('./merchant-assets.js').travelingFor : root.LRMerchantAssets.travelingFor;
+    const wares = () => {const special=traveling(today(),owns,exclusives).map(c=>c.id);return [...special,...(trip?.wares || []).filter(id=>!exclusives.some(c=>c.id===id))].slice(0,3);};
     const active = () => !!trip && trip.date === today() && trip.until > now();
     function tick(dt, allowed, cozy = 0.5) {
       if (date !== today()) { date = today(); wait = 45 + random() * 60; }
@@ -19,7 +21,7 @@
     function linger() {
       if (active() && trip.until - now() < 30000) { trip.until = now() + 60000; store.set('lr.merchant', trip); }
     }
-    return { tick, linger, get active() { return active(); }, get wares() { return active() ? trip.wares.slice() : []; }, offers: id => active() && trip.wares.includes(id) };
+    return { tick, linger, get active() { return active(); }, get wares() { return active() ? wares() : []; }, offers: id => active() && wares().includes(id) };
   }
 
   function journal({ store, now = Date.now, random = Math.random }) {
@@ -44,7 +46,11 @@
       entries = entries.slice(0, 120); store.set('lr.catJournal', entries);
       return true;
     }
-    return { write, get entries() { return entries.slice(); } };
+    function tip(room) {
+      entries.unshift({time:now(),room,cat:'mallow',name:'Mallow',coat:5,kind:'tip',text:'Mallow pocketed your tip and did a little spin.'});
+      entries=entries.slice(0,120);store.set('lr.catJournal',entries);
+    }
+    return { write, tip, get entries() { return entries.slice(); } };
   }
 
   // Daily news is a view of journal feeds, independent of the weekly digest.

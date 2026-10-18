@@ -262,3 +262,13 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .rooms-card .rooms-bedroom { position:absolute; top:12px; right:12px; display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--panel-solid); color:var(--ink-dim); box-shadow:0 2px 8px #0001; }
 .rooms-card .rooms-bedroom[aria-pressed=true] { color:#9a6b20; background:#fff0c5; border-color:#d4b36c; }
 .rooms-card .rooms-bedroom:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.shop-sinks { display:grid; gap:14px; margin-top:20px; }
+.shop-tip,.shop-finish { padding:18px; border:1px solid var(--line); border-radius:24px; background:var(--chip); }
+.shop-sinks h3 { margin:0 0 8px; font-family:Fredoka,sans-serif; }
+.shop-sinks p { margin:6px 0 12px; }
+.shop-sinks .rowbtns { gap:8px; flex-wrap:wrap; }
+.shop-sinks button { min-height:44px; }
+.shop-thanks:empty { display:none; }
+.shop-thanks { color:var(--ink); font-size:14px; }
+@media(min-width:640px) { .shop-sinks { grid-template-columns:1fr 1fr; } }
+.shop-exclusive { color:var(--ink-dim); font:800 10px/1.4 Nunito,sans-serif; letter-spacing:.06em; text-transform:uppercase; }

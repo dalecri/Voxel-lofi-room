@@ -21,7 +21,7 @@ function startLofiRooms() {
   const remember=(kind,options)=>{try{calendarModel.append(kind,options);}catch(e){/* optional memory never interrupts a ritual */}};
   const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); }, onPurchase: item => {
     if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setSlots(wardrobe.slots); companion.frame(0); } }
-  } });
+  }, onTip:n=>{catJournal.tip(meta.current);remember('tip');journalNews.edition(catJournal.entries);renderJournal();} });
   const rituals = LRRituals.create({ store });
   const focusGarden = LRFocusGarden.create({store,rituals});
   let breathCamera = null;
@@ -121,7 +121,7 @@ function startLofiRooms() {
   // explicitly kept. A separate pending draft preserves experiments when startup
   // opens the owner's chosen main bedroom.
   // An edit is a change to what's built: lamps switched on or a cat wandering don't count.
-  const sig = () => JSON.stringify([room.name, room.n, room.wall, room.floor, room.items.filter(i => !i.visitor).map(i => [i.t, i.x, i.z, i.k, i.u, i.e, i.r | 0, i.c | 0, i.link || 0, ...(i.crown ? ['crown'] : [])])]);
+  const sig = () => JSON.stringify([room.name, room.n, room.wall, room.floor, room.gild || null, room.items.filter(i => !i.visitor).map(i => [i.t, i.x, i.z, i.k, i.u, i.e, i.r | 0, i.c | 0, i.link || 0, ...(i.crown ? ['crown'] : [])])]);
   let baseSig = '';
   const isSaved = () => rooms.some(r => r.id === meta.current);
   const isEdited = () => sig() !== baseSig;
@@ -446,7 +446,7 @@ function startLofiRooms() {
     delete meta.daily; saveMeta();
   })();
   ensureDaily();
-  const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog });
+  const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog, exclusives: LRShop.exclusives });
   const catJournal = LRLife.journal({ store });
   const captionDesk = LRCaptions.create({store,changed:()=>{const host=$('.caption-desk');if(host)LRCaptions.render(host,captionDesk);}});
   const journalNews = LRLife.newspaper({ store, moments: MOMENTS });
@@ -742,7 +742,7 @@ function startLofiRooms() {
     toast(`<span>Plot is now ${n}×${n}</span>`, 1100);
   }
   function paintRoom(fn, kind) {
-    pushUndo(); fn(); saveMeta(); changed(); renderTray();
+    pushUndo(); fn(); if(kind!=='size'&&kind!=='view')LRShop.clearGild(room); saveMeta(); changed(); renderTray();
     (kind === 'floor' ? Sound.brush() : kind === 'color' ? Sound.tick2() : kind === 'size' ? Sound.place(0.9) : Sound.roller()); haptic(6);
   }
 
@@ -1937,9 +1937,11 @@ function startLofiRooms() {
     const el = $('#shopBalance');
     if (el) el.textContent = `${shop.balance} Fireflies`;
     document.querySelectorAll('[data-shop-buy]').forEach(b => {
-      const item = LRShop.catalog.find(c => c.id === b.dataset.shopBuy);
+      const item = LRShop.allCatalog.find(c => c.id === b.dataset.shopBuy);
       b.disabled = !merchantHere() || !merchant.offers(item.id) || shop.owns(item.id) || shop.balance < item.price;
     });
+    document.querySelectorAll('[data-shop-tip]').forEach(b=>b.disabled=!merchantHere()||shop.balance<Number(b.dataset.shopTip));
+    const gild=$('#shopGild');if(gild)gild.disabled=!merchantHere()||LRShop.isGilded(room)||shop.balance<150;
   }
   function openShop(stall, purchased) {
     const body = $('#sheetBody');
@@ -1953,12 +1955,12 @@ function startLofiRooms() {
     $('#shopBack').onclick = () => { body.dataset.merchant = ''; renderMenu(); };
     $('#shopClose').onclick = closeSheets;
     const grid = body.querySelector('.shop-grid');
-    LRShop.catalog.filter(item => here && merchant.offers(item.id)).forEach(item => {
+    LRShop.allCatalog.filter(item => here && merchant.offers(item.id)).forEach(item => {
       const owned = shop.owns(item.id), card = document.createElement('div');
       card.className = 'shop-card' + (purchased === item.id ? ' purchased' : '');
       card.dataset.shopItem = item.id;
       card.innerHTML = `${item.costume ? `<img alt="" src="${costumeThumb(item.costume)}">` : item.piece ? `<img alt="" src="${thumbOf(item.piece)}">` : `<div class="shop-icon" aria-hidden="true">${item.icon}</div>`}
-        <b>${item.name}</b><p>${item.desc}</p><span>${item.price} Fireflies</span>
+        <b>${item.name}</b>${item.exclusive ? '<small class="shop-exclusive">Traveling colorway</small>' : ''}<p>${item.desc}</p><span>${item.price} Fireflies</span>
         <button class="chipbtn ${owned ? '' : 'primary'}" data-shop-buy="${item.id}" aria-label="${owned ? 'Owned: ' : 'Buy '}${item.name}${owned ? '' : ' for ' + item.price + ' Fireflies'}">${owned ? '✓ Owned' : 'Buy'}</button>`;
       card.querySelector('button').onclick = () => {
         if (!merchantHere() || !merchant.offers(item.id)) { openShop(); return; }
@@ -1969,6 +1971,20 @@ function startLofiRooms() {
       };
       grid.appendChild(card);
     });
+    if(here) {
+      const sinks=document.createElement('section');sinks.className='shop-sinks';sinks.setAttribute('aria-label','A little extra warmth');
+      const tips=document.createElement('div');tips.className='shop-tip';
+      const title=document.createElement('h3');title.textContent='Mallow’s tip jar';
+      const note=document.createElement('p');note.className='muted small';note.textContent='A little kindness for the road. No item, just a happy cat.';tips.append(title,note);
+      const actions=document.createElement('div');actions.className='rowbtns';
+      const thanks=document.createElement('p');thanks.className='shop-thanks';thanks.setAttribute('role','status');
+      for(const n of [5,10,25]){const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=`Tip ${n} ✦`;b.dataset.shopTip=n;b.setAttribute('aria-label',`Tip Mallow ${n} Fireflies`);b.disabled=shop.balance<n;
+        b.onclick=()=>{if(!merchantHere()||!shop.tip(n))return;view.petCat(merchantCat.id);view.boing(merchantCat.id);view.spin(merchantCat.id);Sound.chime();updateShopBalance();sinks.querySelectorAll('[data-shop-tip]').forEach(btn=>btn.disabled=shop.balance<Number(btn.dataset.shopTip));gild.disabled=LRShop.isGilded(room)||shop.balance<150;thanks.textContent='Mallow pocketed your tip and did a little spin.';};actions.appendChild(b);}
+      tips.append(actions,thanks);
+      const finish=document.createElement('div');finish.className='shop-finish';const heading=document.createElement('h3');heading.textContent='Gild this room';const desc=document.createElement('p');desc.className='muted small';desc.textContent='A warm golden-hour glow, just for this room. Repainting walls or floors lets it go.';
+      const gild=document.createElement('button');gild.type='button';gild.className='chipbtn primary';gild.id='shopGild';gild.textContent=LRShop.isGilded(room)?'This room is gilded':'Gild this room · 150 ✦';gild.disabled=LRShop.isGilded(room)||shop.balance<150;
+      gild.onclick=()=>{if(!merchantHere()||!shop.gild(room))return;changed();save();Sound.arpeggio();toast('<span>A little golden hour, kept here.</span>',1800);openShop(stall);};finish.append(heading,desc,gild);sinks.append(tips,finish);grid.after(sinks);
+    }
     updateShopBalance();
     openSheet();
   }

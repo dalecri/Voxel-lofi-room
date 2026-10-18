@@ -16,7 +16,11 @@
     ...extras.catalog,
   ];
 
-  function create({ store, today, notify = () => {}, onPurchase = () => {} }) {
+  const exclusives=extras.exclusives, allCatalog=[...catalog,...exclusives];
+  const finishOf=room=>JSON.stringify([room.wall,room.floor]);
+  const isGilded=room=>!!room && room.gild===finishOf(room);
+  const clearGild=room=>{delete room.gild;};
+  function create({ store, today, notify = () => {}, onPurchase = () => {}, onTip = () => {} }) {
     let balance = store.get('lr.fireflies', null);
     if (balance === null) { balance = 30; store.set('lr.fireflies', balance); }
     if (!Number.isSafeInteger(balance) || balance < 0) balance = 0;
@@ -42,14 +46,17 @@
       return n;
     }
     function buy(id) {
-      const item = catalog.find(c => c.id === id);
+      const item = allCatalog.find(c => c.id === id);
       if (!item || owned.has(id) || balance < item.price) return false;
       balance -= item.price; owned.add(id);
       store.set('lr.fireflies', balance); store.set('lr.shopOwned', [...owned]);
       onPurchase(item);
       return true;
     }
-    return { earn, buy, owns: id => owned.has(id), available: C => !C.shop || owned.has(C.shop), get balance() { return balance; }, get earnedToday() { return day().earned; } };
+    function spend(n) {if(!Number.isSafeInteger(n)||n<=0||balance<n)return false;balance-=n;store.set('lr.fireflies',balance);return true;}
+    function tip(n) {if(![5,10,25].includes(n)||!spend(n))return false;onTip(n);return true;}
+    function gild(room) {if(!room||isGilded(room)||!spend(150))return false;room.gild=finishOf(room);return true;}
+    return { earn, buy, tip, gild, owns: id => owned.has(id), available: C => !C.shop || owned.has(C.shop), get balance() { return balance; }, get earnedToday() { return day().earned; } };
   }
 
   function register(L) {
@@ -122,6 +129,7 @@
       },
     });
     extras.register(L);
+    extras.registerExclusives(L);
     // Kept out of the picker and excluded from room saves by its visitor flag.
     def('merchantcat', {
       name: 'Mallow, the traveling merchant', kind: 'pet', group: 'guest', size: [1, 1], tap: 'shop', vars: [[5]],
@@ -135,7 +143,7 @@
     L.WALLS.shopstars = { label: 'Constellation', shop: 'starwall', fn: (c, u, y) => hash3(u, y, 0, 81) > 0.977 ? 0xffe8ad : ((u + y) % 13 === 0 ? 0x514465 : 0x302a48) };
     L.FLOORS.shoppearl = { label: 'Moonstone', shop: 'pearlfloor', fn: (x, z) => x % 6 === 5 || z % 6 === 5 ? 0xb3a9c4 : shade((Math.floor(x / 6) + Math.floor(z / 6)) % 2 ? 0xe4dbef : 0xc9e0e4, 0.95 + hash3(x, z, 0, 41) * 0.1) };
   }
-  const api = { catalog, create, register };
+  const api = { catalog, exclusives, allCatalog, travelingFor:extras.travelingFor, isGilded, clearGild, create, register };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else { root.LRShop = api; register(root.LR); }
 })(typeof window !== 'undefined' ? window : globalThis);

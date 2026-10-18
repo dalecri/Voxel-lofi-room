@@ -901,10 +901,11 @@
   RP.count = function (pred) { return this.items.filter(pred).length; };
 
   RP.serialize = function () {
-    return { v: 1, name: this.name, n: this.n, view: this.view || 'city', wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.filter(i => !i.visitor).map(i => Object.assign({}, i)) };
+    return { v: 1, name: this.name, n: this.n, view: this.view || 'city', ...(this.gild?{gild:this.gild}:{}), wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.filter(i => !i.visitor).map(i => Object.assign({}, i)) };
   };
   RP.load = function (d) {
     if (!d || d.v !== 1 || !Array.isArray(d.items)) return false;
+    this.gild = typeof d.gild==='string' ? d.gild : undefined;
     this.name = d.name || 'My Room';
     this.view = VIEWS.includes(d.view) ? d.view : 'city';
     this.wall = Object.assign({ style: 'paint', color: 0 }, d.wall);
@@ -925,6 +926,7 @@
   // ---------------------------------------------------------------
   // Hand-made rooms. Items list: [type, fields, children?]
   function build(room, spec, n) {
+    delete room.gild;
     room.items = []; room.next = 1; room.n = n || N;
     const add = (t, o, kids) => {
       const it = room.add(room.make(t, o));
@@ -1062,6 +1064,7 @@
   const NOUN = ['Nook', 'Hideaway', 'Attic', 'Corner', 'Den', 'Studio', 'Burrow', 'Hideout', 'Room', 'Loft'];
 
   RP.generate = function (seed) {
+    delete this.gild;
     const N = this.n;
     const rnd = mulberry(seed >>> 0);
     const pick = a => a[(rnd() * a.length) | 0];

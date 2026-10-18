@@ -452,6 +452,12 @@
     this.amb.color.copy(hexMix(a.amb, b.amb, s)).lerp(new THREE.Color(0xa8b4d0), rk * 0.4);
     this.amb.intensity = this.amb.userData.base = ph.ambI * (1 - rk * 0.15) * (this.weather === 'storm' ? 0.82 : 1);
     this.hemi.color.copy(hexMix(a.sky, b.sky, s)); this.hemi.groundColor.copy(hexMix(a.ground, b.ground, s)); this.hemi.intensity = ph.hemiI * (storm ? 0.7 : 1);
+    this.gildActive=!!this.room && this.room.gild===JSON.stringify([this.room.wall,this.room.floor]);
+    if (this.gildActive) {
+      this.sun.color.lerp(new THREE.Color(0xffc477), .42);
+      this.amb.color.lerp(new THREE.Color(0xffd6a1), .2);
+      this.hemi.groundColor.lerp(new THREE.Color(0xbd884b), .18);
+    }
     const dr = Math.max(this.drift || 0, this.breathDim || 0);
     if (dr > 0.001) { const moon = new THREE.Color(0x8ea4ff); this.sun.color.lerp(moon, 0.85 * dr); this.amb.color.lerp(new THREE.Color(0x5a6ae8), 0.8 * dr); this.hemi.color.lerp(moon, 0.75 * dr); this.hemi.groundColor.lerp(new THREE.Color(0x2a2e70), 0.6 * dr); this.sun.intensity *= 1 + 0.25 * dr; this.amb.intensity *= 1 + 0.2 * dr; }
     const breathing = this.breathDim || 0;
@@ -774,7 +780,7 @@
     if (id) this.hoverBox.material.color.setHex(color || 0xffffff);
   };
   R.openDoor = function (id) { const o = this.objs.get(id); if (o) o.userData.doorUntil = this.t + 2.6; };
-  R.spin = function (id) { const o = this.objs.get(id); if (o) o.userData.spinV = 9; };
+  R.spin = function (id) { const o = this.objs.get(id); if (o) {o.userData.spinV = 9;if(this.pets.has(id)&&!this.reducedMotion)o.userData.petSpinUntil=this.t+1;} };
   R.excite = function (id) { const o = this.objs.get(id); if (o) o.userData.excited = this.t + 3; };
   R.play = function (id, secs) { const o = this.objs.get(id); if (o) o.userData.playUntil = this.t + (secs || 8); };
   // a burst of steam, smoke, snow or mist from a piece for a few seconds
@@ -834,6 +840,7 @@
     if (this.lifeItems && this.lifeItems !== room.items) this.clearLifeEvents();
     this.lifeItems = room.items;
     this.room = room;
+    if(this.gildActive !== (room.gild===JSON.stringify([room.wall,room.floor])))this.applyPhase(this.phaseT);
     this.env.view = LR.viewNow = room.view || 'city';   // what the windows look out on
     this.setSize(room.n || LR.N);
     this.buildShell(room, this.visibleMask());
@@ -1186,6 +1193,7 @@
       inner.scale.set(1 + (1 - squash) * 0.4, squash, 1 + (1 - squash) * 0.25);
       if (tail) tail.rotation.y = Math.sin(t * (P.state === 'pet' ? 9 : P.state === 'walk' ? 6 : 2) + id) * (P.state === 'nap' ? 0.15 : 0.45);
       this.placePet(P, obj);
+      if(obj.userData.petSpinUntil>t && !this.reducedMotion)obj.rotation.y+=Math.PI*2*(1-(obj.userData.petSpinUntil-t));
       if(this.petLife)this.petLife.pose(P,obj,t);
     }
   };
@@ -1776,13 +1784,14 @@
     if (this.ambT < 0.12) return;
     const step = this.ambT; this.ambT = 0;
     // Room-wide cosmetics share the existing particle pools. Multiple keepsakes don't multiply the load.
-    const effects = new Set(this.room.items.filter(i => i.on && CAT[i.t].roomEffect).map(i => CAT[i.t].roomEffect));
-    for (const effect of effects) {
+    const effects = new Map();
+    for(const it of this.room.items){const C=CAT[it.t];if(it.on&&C.roomEffect&&(!effects.has(C.roomEffect)||C.roomEffectColors))effects.set(C.roomEffect,C.roomEffectColors);}
+    for (const [effect, colors] of effects) {
       const count = Math.floor(step * (effect === 'petals' ? 14 : 28) + Math.random());
       for (let k = 0; k < count; k++) {
         const x = Math.random() * N, z = Math.random() * N;
-        if (effect === 'petals') this.fx.spawn(x, 3 + Math.random(), z, 0.12, -0.18, 0.08, Math.random() < 0.5 ? 0xf6a8c4 : 0xffdce9, 0.065, 7, 0.01, 0.2, 0.85);
-        else this.glowFx.spawn(x, 0.4 + Math.random() * 2.4, z, (Math.random() - 0.5) * 0.15, 0.06, (Math.random() - 0.5) * 0.15, 0xe8f7a0, 0.035, 3 + Math.random() * 2, 0, 0.2, 0.8);
+        if (effect === 'petals') this.fx.spawn(x, 3 + Math.random(), z, 0.12, -0.18, 0.08, colors ? colors[(Math.random()*colors.length)|0] : Math.random() < 0.5 ? 0xf6a8c4 : 0xffdce9, 0.065, 7, 0.01, 0.2, 0.85);
+        else this.glowFx.spawn(x, 0.4 + Math.random() * 2.4, z, (Math.random() - 0.5) * 0.15, 0.06, (Math.random() - 0.5) * 0.15, colors ? colors[(Math.random()*colors.length)|0] : 0xe8f7a0, 0.035, 3 + Math.random() * 2, 0, 0.2, 0.8);
       }
     }
     for (const it of this.room.items) {

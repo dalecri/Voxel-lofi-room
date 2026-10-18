@@ -32,6 +32,8 @@ with sync_playwright() as p:
       }
     ''')
     page = context.new_page(); errors = []; failed = []
+    page.route('https://gist.githubusercontent.com/**',lambda r:r.fulfill(json={'clips':[]}))
+    page.route('https://catfact.ninja/**',lambda r:r.fulfill(json={'fact':'Cats enjoy a quiet room.'}))
     page.on('pageerror', lambda e: errors.append(str(e)))
     page.on('requestfailed', lambda r: failed.append(r.url))
     page.goto(f'http://127.0.0.1:{server.server_port}', wait_until='networkidle')
@@ -51,11 +53,12 @@ with sync_playwright() as p:
     page.evaluate("__lr.interact(__lr.room.items.find(i=>i.t==='merchantcat').id)")
     assert page.locator('.shop-card').count() == 3
     item = wares[0]
-    price = page.evaluate('(id)=>LRShop.catalog.find(c=>c.id===id).price', item)
+    price = page.evaluate('(id)=>LRShop.allCatalog.find(c=>c.id===id).price', item)
     before = page.evaluate('__lr.shop.balance')
     page.click(f'[data-shop-buy="{item}"]')
     assert page.evaluate('__lr.shop.balance') == before - price
     assert page.evaluate('(id)=>__lr.shop.owns(id)', item)
+    wares = page.evaluate('__lr.merchant.wares')  # purchased traveling colorways leave the satchel immediately
     page.screenshot(path='/tmp/traveling-merchant-mobile.png')
     page.reload(wait_until='networkidle'); page.wait_for_function('!!window.__lr')
     page.evaluate("__lr.setMode('explore',true); __lr.tickWorld(0)")
@@ -112,6 +115,9 @@ with sync_playwright() as p:
     page.keyboard.press('Escape')
     print('PASS: cat POV from pets, naps and meals; second journal feed; persistence without changing moments')
 
+    # Arrival/diary checks use reduced motion; explicitly enable motion for ambient visuals.
+    page.emulate_media(reduced_motion='no-preference')
+    page.wait_for_function('!__lr.view.reducedMotion')
     # Capture the short-lived event synchronously, before a normal render/room sync can clear it.
     scheduled = page.evaluate('''() => {
       __lr.setMode('explore',true); __lr.meta.raining=false; __lr.setPhase('day',true);

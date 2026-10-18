@@ -27,6 +27,40 @@
     ['mini-foosball', 'Miniature foosball table', 85, 'A shelf-sized stadium with tiny teams. Display only.'],
     ['question-cube', 'Lucky question cube', 50, 'A golden question-mark ornament. Nothing to chase or collect inside.'],
   ].map(([id, name, price, desc]) => ({ id, name, price, desc, piece: 'shop' + id.replace(/-/g, ''), icon: '✦' }));
+  // Paired rotation: twelve colorways make a complete six-day circuit.
+  const exclusives = [
+    ['autumn-petals','Autumn petal-fall',60,'shoppetals',[0xd68c53]],
+    ['snow-lantern','Snowy firefly lantern',90,'shopfireflies',[0xd9edf0]],
+    ['frost-blossom','Frosted cherry blossom',100,'sakura',[0xe5eef6]],
+    ['harvest-hearth','Harvest hearth',140,'fireplace',[0xb6784d]],
+    ['moss-chair','Moss velvet armchair',110,'armchair',[0x6c8060,0xd9b575]],
+    ['winter-sofa','Winter berry sofa',160,'sofa',[0x78596f,0xe2bdcc]],
+    ['copper-desk','Copperwood writing desk',130,'desk',[0xb78061]],
+    ['dusk-lamp','Dusk rose lamp',80,'floorlamp',[0xcc9caf]],
+    ['midnight-wall','Midnight blue wallpaper',180,null,[0x26394e]],
+    ['plum-wall','Winter plum wallpaper',150,null,[0x49354d]],
+    ['honey-floor','Honey parquet floor',120,null,[0xbd925a]],
+    ['frost-floor','Frost mosaic floor',150,null,[0xd3e0df]],
+  ].map(([id,name,price,base,colors])=>({id,name,price,base,colors,exclusive:true,icon:'✦',
+    ...(base?{piece:'travel'+id.replace(/-/g,'')} : id.endsWith('wall')?{wall:'travel'+id.replace(/-/g,'')}:{floor:'travel'+id.replace(/-/g,'')}),
+    desc:base?'A special traveling colorway of a familiar favorite.':`A traveling palette. Find it in Paint → ${id.endsWith('wall')?'Walls':'Floor'}.`}));
+  function travelingFor(date, owns=()=>false, pool=exclusives) {
+    const parts=String(date).split('-').map(Number),day=Math.floor(Date.UTC(parts[0],parts[1]-1,parts[2])/86400000);
+    if(!pool.length || !Number.isFinite(day))return [];
+    const start=((day*2)%pool.length+pool.length)%pool.length;
+    // The day's pair is global: buying one must not expose tomorrow's stock.
+    // Already-owned finds leave their slot to the ordinary catalog.
+    return Array.from({length:Math.min(2,pool.length)},(_,i)=>pool[(start+i)%pool.length]).filter(item=>!owns(item.id));
+  }
+  function registerExclusives(L) {
+    for(const item of exclusives) {
+      if(item.base) {const base=L.CAT[item.base];if(!base)continue;L.def(item.piece,{...base,name:item.name,group:'market',shop:item.id,vars:[item.colors],
+        ...(item.id==='autumn-petals'?{roomEffectColors:[0xcf8050,0xe9b05f]}:{}),
+        ...(item.id==='snow-lantern'?{roomEffectColors:[0xc7e5fa,0xf1f8ff],light:{at:[4,6,4],color:0xd8eaff,i:1,d:3}}:{})});}
+      else if(item.wall)L.WALLS[item.wall]={label:item.name,shop:item.id,fn:(c,u,y)=>L.shade(item.colors[0],(u+y)%12===0?1.25:1)};
+      else L.FLOORS[item.floor]={label:item.name,shop:item.id,fn:(x,z)=>L.shade(item.colors[0],x%8===7||z%8===7?.8:1+(L.hash3(x,z,0,91)-.5)*.08)};
+    }
+  }
   function register(L) {
     const { CAT, def } = L;
     const item = id => catalog.find(c => c.id === id);
@@ -144,7 +178,7 @@
       } });
     }
   }
-  const api = { catalog, register };
+  const api = { catalog, exclusives, travelingFor, register, registerExclusives };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.LRMerchantAssets = api;
 })(typeof window !== 'undefined' ? window : globalThis);

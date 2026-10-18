@@ -5,7 +5,7 @@
   function decorHash(room) {
     // A canonical decor fingerprint: titles, door destinations, visitors and private
     // tool contents cannot invalidate a picture that does not display them.
-    return JSON.stringify([room.n || 10,room.view || 'city',room.wall?.style,room.wall?.color,room.floor?.style,room.floor?.color,
+    return JSON.stringify([room.n || 10,room.view || 'city',room.wall?.style,room.wall?.color,room.floor?.style,room.floor?.color,room.gild || null,
       (room.items || []).filter(i=>!i.visitor && i.t!=='guestnote').map(i=>DECOR.map(k=>i[k] ?? null))]);
   }
   function createCache(limit = 48) {
