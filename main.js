@@ -16,6 +16,8 @@ function startLofiRooms() {
     del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
   };
   const calendarModel=LRCalendar.create({store});
+  const googleCalendar=LRCalendar.createGoogle({scope:LRCalendar.READ_SCOPES});
+  const googleTasksUI=LRCalendar.createTasksView({google:googleCalendar});
   const remember=(kind,options)=>{try{calendarModel.append(kind,options);}catch(e){/* optional memory never interrupts a ritual */}};
   const shop = LRShop.create({ store, today: () => today(), notify: n => { toast(`<b>✦ +${n}</b>`, 1700, false, 'firefly'); updateShopBalance(); }, onPurchase: item => {
     if (item.costume) { wardrobe.sync(); wardrobe.equip(item.costume); if (companion) { companion.setSlots(wardrobe.slots); companion.frame(0); } }
@@ -2453,6 +2455,7 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     todayUI.mount(target,{greetingHost:body});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
+    googleTasksUI.mount(target.querySelector('.space-today'),target.querySelector('.today-tasks'));
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomVillage(target);
@@ -2861,7 +2864,7 @@ function startLofiRooms() {
   let last = performance.now(), t = 0, soundT = 0, clockT = 0, momentT = 0, worldT = 0;
   function loop(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
-    updateRituals(); home.tick(now); todayUI.tick(now); atlas.tick();
+    updateRituals(); home.tick(now); todayUI.tick(now); googleTasksUI.tick(now); atlas.tick();
     view.weatherIntensity=liveWeather.intensity;
     const liftGoal = state.mode === 'edit' ? (innerWidth < 760 ? 84 : 60) : (innerWidth < 760 ? 24 : 16);
     liftNow += (liftGoal - liftNow) * Math.min(1, dt * 6);
@@ -2871,7 +2874,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); liveWeather.refresh(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { driftPaper.update();calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !library.active && !letters.active && !barnaby.active && !frenchUI?.active && !rituals.breath.active && !filming); worldT = 0; }
+    if (worldT >= 1) { driftPaper.update();googleCalendar.check();calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !library.active && !letters.active && !barnaby.active && !frenchUI?.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
@@ -2913,7 +2916,6 @@ function startLofiRooms() {
     addStation:station=>{if(!(meta.stations || []).some(s=>s.url===station.url)){(meta.stations || (meta.stations=[])).push(station);saveMeta();}},
     hidden:()=>library.active || letters.active || barnaby.active || frenchUI?.active || home.active || filming || view.capturing || document.hidden || $('#photo').classList.contains('open')
   });
-  const googleCalendar=LRCalendar.createGoogle();
   const calendar=LRCalendar.createView({model:calendarModel,google:googleCalendar,sheet:codeSheet,atlas,meta,scenes:()=>files.list('Scenes'),seasons:LR.SEASONS || [],thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s)});
   const digest=LRDigest.create({store,sources:()=>({activity:calendarModel.activity(),scenes:files.list('Scenes'),ideas:roomTools.state.ideas,streak:store.get('lr.dailyStreak',{}),guestbook:store.get('lr.guestbook',[]),catLog:catJournal.entries,events:calendarModel.events()})});
   const digestUI=LRDigest.createView({model:digest,sheet:codeSheet,sound:Sound,scenes:()=>files.list('Scenes'),thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s),onRead:()=>driftPaper.update(),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
