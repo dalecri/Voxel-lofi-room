@@ -2625,10 +2625,10 @@ function startLofiRooms() {
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Use the arrows to tune in.</span>`, 2000, true); renderMenu();
     };
     atlasUI.mountRadio(target);
-    toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     target = sections.Settings;
     toggle('Music', !!meta.music, () => setControl('music',!meta.music));
     toggle('Sound', Sound.on, () => setControl('sound',!Sound.on));
+    toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     toggle('Rain', meta.weather==='rain' || meta.weather==='storm', () => setControl('rain',!(meta.weather==='rain' || meta.weather==='storm')));
     toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
     h('p','muted small','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.');
