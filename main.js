@@ -2615,9 +2615,9 @@ function startLofiRooms() {
       }
       r.append(copy,iconPicker,tuner,row);if(remove)r.appendChild(remove);sl.appendChild(r);
     }
-    const add = h('div', 'addstation');
-    add.innerHTML = '<input id="stName" placeholder="Name (e.g. Night jazz)" maxlength="40" aria-label="Station name"><input id="stUrl" placeholder="https://… stream link" inputmode="url"><button class="chipbtn" id="stAdd">Add station</button>';
-    add.querySelector('#stAdd').onclick = () => {
+    const add = h('form', 'addstation');add.noValidate=true;add.setAttribute('aria-label','Add a station');
+    add.innerHTML = '<div class="addstation-heading"><span class="addstation-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="3"/><path d="M6 8l12-5M6 12h12M6 16h5M6 18h5"/><circle cx="17" cy="17" r="1.5"/></svg></span><h3>Add a station</h3></div><label class="station-field" for="stName">Station name<input id="stName" placeholder="Night jazz" maxlength="40" autocomplete="off"></label><label class="station-field" for="stUrl">Stream link<input id="stUrl" type="url" placeholder="https://…" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="none"></label><button type="submit" class="chipbtn primary" id="stAdd"><span aria-hidden="true">＋</span> Add station</button>';
+    add.onsubmit = e => {e.preventDefault();
       const url = add.querySelector('#stUrl').value.trim(), name = add.querySelector('#stName').value.trim() || 'My station';
       if (!/^https?:\/\//i.test(url)) { Sound.nope(); toast('<span>Paste a link that starts with http</span>', 1600, true); return; }
       if (/youtube\.com|youtu\.be/i.test(url)) { Sound.nope(); toast('<span>YouTube can’t play inside the app. Try a direct radio stream link.</span>', 2600, true); return; }
