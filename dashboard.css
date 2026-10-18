@@ -16,7 +16,7 @@
 .saved-scenes-shelf:empty{display:none}
 @media(max-width:360px){.dashboard-tabs{gap:2px}.dashboard-tabs .chipbtn{padding:9px 7px;font-size:12px}.launcher-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* The menu's navigation is the first row, tucked above its title. */
+/* One compact navigation row: tabs scroll within it; actions stay reachable. */
 .dashboard-tabs.menu-tabs { margin: 0 0 10px; padding: 4px; border-radius: 20px; gap: 3px; background: var(--panel-solid); }
 .dashboard-tabs.menu-tabs .chipbtn { padding: 8px 9px; border-radius: 16px; background: transparent; }
 .dashboard-tabs.menu-tabs [aria-selected=true] { background: var(--accent); color: var(--panel-solid); }
@@ -25,3 +25,8 @@
 .menu-actions { float: right; display: flex; gap: 6px; align-items: center; margin: 0 0 8px 12px; }
 .menu-actions .sheet-icon, .menu-actions .space-search-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; margin: 0; float: none; border-radius: 16px; background: var(--chip); color: var(--ink); flex: none; }
 .menu-actions .sheet-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.menu-nav { display: flex; align-items: center; gap: 4px; position: sticky; top: 0; z-index: 2; background: var(--panel-solid); margin-bottom: 8px; }
+.menu-nav .dashboard-tabs.menu-tabs { position: static; flex: 1; min-width: 0; margin: 0; }
+.menu-nav .menu-tabs .chipbtn { flex: 1 0 auto; padding: 8px 4px; font-size: 12px; }
+.menu-nav .menu-actions { float: none; flex: none; gap: 4px; margin: 0; }

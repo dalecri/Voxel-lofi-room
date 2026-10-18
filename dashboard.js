@@ -47,14 +47,14 @@
   function tabKey(e){const list=e.target.closest?.('[role=tablist]');if(!list || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const b=[...list.querySelectorAll('[role=tab]')],i=b.indexOf(e.target);if(i<0)return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?b.length-1:(i+(e.key==='ArrowRight'?1:b.length-1))%b.length;b[next].click();b[next].focus();}
   function menu(body,store,close,onSelect=()=>{}) {
     const panels=tabs(body,MENU_TABS,store.get('lr.menuTab','Today'),name=>{store.set('lr.menuTab',name);onSelect(name);},'menu');
-    body.querySelector('[role=tablist]').classList.add('menu-tabs');
+    const bar=body.querySelector('[role=tablist]'),nav=element('div','menu-nav');bar.classList.add('menu-tabs');body.insertBefore(nav,bar);nav.appendChild(bar);
+    // On narrow phones the tabs scroll while the two actions stay fixed.
+    const revealTab=()=>{if(!nav.isConnected)return;const tab=bar.querySelector('[aria-selected=true]');if(!tab)return;const a=tab.getBoundingClientRect(),b=bar.getBoundingClientRect();if(a.right>b.right)bar.scrollLeft+=a.right-b.right;else if(a.left<b.left)bar.scrollLeft-=b.left-a.left;};
+    bar.addEventListener('click',revealTab);requestAnimationFrame(revealTab);
     const grab=element('div','grab');body.insertBefore(grab,panels.Today);
-    const actions=element('div','menu-actions');actions.setAttribute('role','group');actions.setAttribute('aria-label','Sheet actions');body.insertBefore(actions,panels.Today);
+    const actions=element('div','menu-actions');actions.setAttribute('role','group');actions.setAttribute('aria-label','Sheet actions');nav.appendChild(actions);
     const closeButton=button(actions,'',close,'sheet-close sheet-icon');closeButton.setAttribute('aria-label','Close');
     closeButton.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
-    // Keep the title as a direct child for existing sheet and greeting callers.
-    body.insertBefore(element('h2','','Your Space'),panels.Today);
-    body.insertBefore(element('p','muted','A little space for your day.'),panels.Today);
     return panels;
   }
   function createView({model,CAT,widgets,sheet,letters,room,renderer,hidden,saveScene,openScene,encodeScene,placePortal,notice,onLaunch=()=>{},close=()=>{},localDestinations=[]}) {

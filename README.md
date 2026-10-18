@@ -356,13 +356,13 @@ Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/
 
 ## Control Centre
 
-The toolbox toolbar button and the phone launcher's **Control Centre** tile open a full-screen directory of tools and apps. Rooms and Journal stay in Your Space. Settings is available through a gear in the top corner, outside the app grid. Weather, Little things and daily information stay in Your Space.
+The toolbox toolbar button and the phone launcher's **Control Centre** tile open the shared bottom sheet with a directory of tools and apps. Rooms and Journal stay in the menu. Settings is available through the Open Settings row, outside the app grid. Weather, Little things and daily information stay in Your Space.
 
 A private, configurable **app shortcut** sits above the paw toolbar button, opening your chosen room tool in one tap.
 
 The grid is derived from `launcher.js`, live portal definitions and private custom links. Tools delegate to their existing sheets and models, so letters, groceries, ideas, tea and sketching work before their furniture is placed. Settings keeps music, sound, weather, motion, glow, dream and clock controls.
 
-Universal search sits above the Your Space tabs and searches furniture names, letter titles, saved scenes and ideas. Results open the real tools; furniture opens Decorate filtered to that piece, with **Show all** to clear the filter. Locked cosmetics open the merchant. The Add tray has its own search across all available furniture groups. Broad queries show up to sixty results with a prompt to refine, keeping thumbnail work bounded; clearing the query restores the selected group.
+Universal search opens from the magnifier beside the menu tabs and searches furniture names, letter titles, saved scenes and ideas. Search and Close share the navigation row; the heading and subtitle are omitted. Results open the real tools; furniture opens Decorate filtered to that piece, with **Show all** to clear the filter. Locked cosmetics open the merchant. The Add tray has its own search across all available furniture groups. Broad queries show up to sixty results with a prompt to refine, keeping thumbnail work bounded; clearing the query restores the selected group.
 
 Run `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/home-browser.py` to verify search navigation, the tools-only directory, Settings access, responsive layouts, private share payloads and offline behavior. Control Centre closes with Escape or Android Back.
 

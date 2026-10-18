@@ -35,7 +35,7 @@ with sync_playwright() as p:
    open_menu()
    if action=='h':page.keyboard.press('h')
    elif action=='Escape':page.get_by_role('textbox',name='A little task',exact=True).focus();page.keyboard.press('Escape')
-   elif action=='Close':page.locator('#sheetBody .menu-actions > .sheet-close').click()
+   elif action=='Close':page.locator('#sheetBody .menu-nav .menu-actions > .sheet-close').click()
    elif action=='Menu keyboard':page.locator('#bMenu').focus();page.keyboard.press('Enter')
    else:
     box=page.locator('#bMenu').bounding_box();page.mouse.click(box['x']+box['width']/2,box['y']+box['height']/2)
@@ -57,7 +57,7 @@ with sync_playwright() as p:
   assert switches.evaluate_all('es=>es.every(e=>e.getAttribute("role")==="switch" && e.getAttribute("aria-pressed")===String(e.classList.contains("on")) && e.getAttribute("aria-checked")===e.getAttribute("aria-pressed"))')
   mischief=page.get_by_role('switch',name=re.compile('^Cat mischief'));before=mischief.get_attribute('aria-checked');mischief.click();assert mischief.get_attribute('aria-checked')!=before;assert mischief.get_attribute('aria-pressed')==mischief.get_attribute('aria-checked');assert mischief.evaluate('e=>document.activeElement===e');page.screenshot(path=f'/tmp/uiux-settings-{width}.png')
   # Close still works when the optional interface sound device fails.
-  page.evaluate('window.slideBefore=__lr.Sound.slide;__lr.Sound.slide=()=>{throw Error("unavailable audio")};void 0;');page.locator('#sheetBody .menu-actions > .sheet-close').click();closed();page.evaluate('__lr.Sound.slide=slideBefore;void 0');assert not errors,errors
+  page.evaluate('window.slideBefore=__lr.Sound.slide;__lr.Sound.slide=()=>{throw Error("unavailable audio")};void 0;');page.locator('#sheetBody .menu-nav .menu-actions > .sheet-close').click();closed();page.evaluate('__lr.Sound.slide=slideBefore;void 0');assert not errors,errors
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
  print('PASS: sibling progress never renames; H/Escape/Close/Menu keyboard and real tap dismiss; task typing stays intact; transient decorate mode and one accessible affordance; spaced headings/help; switch states/focus; mobile/desktop without console errors',flush=True)
  browser.close()
