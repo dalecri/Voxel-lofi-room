@@ -251,8 +251,9 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .french-review-known[aria-pressed=true] { background:#dbe9da; color:#35553c; border-color:#8aa68c; }
 .french-review-learning[aria-pressed=true] { background:#f9e0cd; color:#834d35; border-color:#cc9c7f; }
 .french-review-status { min-height:16px; font-size:11px; font-weight:800; color:var(--ink-dim); text-align:center; }
-.french-next-word { min-height:36px; padding:6px 10px; font-size:12px; font-weight:800; color:var(--ink); border-radius:12px; }
-.french-next-word:hover { background:var(--chip); }
+.french-quick-actions[hidden] { display:none; }
+.french-review-done { font:500 23px/1.4 Fredoka,sans-serif; text-align:center; margin:24px 0; }
+.french-review-done[hidden] { display:none; }
 
 /* A room's startup preference lives on its own card, separate from travel. */
 .rooms-card .rooms-bedroom { position:absolute; top:12px; right:12px; display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--panel-solid); color:var(--ink-dim); box-shadow:0 2px 8px #0001; }

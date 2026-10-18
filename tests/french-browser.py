@@ -75,12 +75,13 @@ with sync_playwright() as p:
  # Quick controls are siblings of the flip button and share Wordnest progress.
  quick=page.locator('.french-today-card');word_id=today.get_attribute('data-card-id');known=quick.get_by_role('button',name='Mark as learned',exact=True);learning=quick.get_by_role('button',name='Still learning',exact=True)
  assert today.locator('button').count()==0
- known.click();assert known.get_attribute('aria-pressed')=='true';assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)=='known';assert today.get_attribute('aria-pressed')=='true'
- learning.click();assert learning.get_attribute('aria-pressed')=='true';assert known.get_attribute('aria-pressed')=='false';assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)=='learning'
- quick.get_by_role('button',name='Next word →',exact=True).click();assert today.get_attribute('data-card-id')!=word_id;assert today.get_attribute('aria-pressed')=='false';assert not page.evaluate('__lr.french.active')
+ known.click();assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)=='known';assert today.get_attribute('data-card-id')!=word_id;assert today.get_attribute('aria-pressed')=='false';learning_id=today.get_attribute('data-card-id')
+ learning.click();assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',learning_id)=='learning';assert today.get_attribute('data-card-id') not in [word_id,learning_id];assert today.get_attribute('aria-pressed')=='false';assert quick.get_by_role('button',name='Next word →',exact=True).count()==0
+ for _ in range(page.evaluate('LRFrench.GAP')):known.click()
+ assert today.get_attribute('data-card-id')==learning_id;assert learning.get_attribute('aria-pressed')=='true';assert not page.evaluate('__lr.french.active')
  for width in (320,390,1280):
   page.set_viewport_size({'width':width,'height':844});quick.scroll_into_view_if_needed();assert quick.evaluate('e=>e.scrollWidth<=e.clientWidth');assert quick.locator('.french-quick-actions').evaluate('e=>[...e.children].every(b=>b.getBoundingClientRect().width>=44)');page.screenshot(path=f'/tmp/french-quick-{width}.png')
- page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.french');page.wait_for_function('__lr.french.model.cards().length===803');assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)=='learning'
+ page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.french');page.wait_for_function('__lr.french.model.cards().length===803');assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)=='known';assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',learning_id)=='learning';assert page.evaluate('__lr.french.model.quickWord().id')!=word_id
  page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
 
  page.evaluate('__lr.french.open()')
@@ -91,6 +92,9 @@ with sync_playwright() as p:
   assert page.evaluate('document.querySelector("#frenchView").scrollWidth<=document.querySelector("#frenchView").clientWidth+1 && document.documentElement.scrollWidth<=innerWidth+1')
  page.evaluate("__lr.setPhase('night',true)")
  assert page.locator('.french-card').is_visible()
+ # The final mastered card leaves a calm empty state and a usable keyboard focus.
+ page.evaluate("__lr.french.close();__lr.french.model.setCards([{id:'quick-final',deck:'d',fr:'Merci',en:'Thank you'}]);__lr.french.refresh()")
+ page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.locator('.french-today-card .french-review-known').click();assert page.locator('.french-review-done').is_visible();assert page.locator('.french-quick-actions').is_hidden();assert page.locator('.french-review-done').evaluate('e=>e===document.activeElement')
  assert not errors,errors
  print('PASS: French corner decks, mixed grading, saved card ids, today word, mobile width',flush=True)
  browser.close()

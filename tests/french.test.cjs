@@ -142,9 +142,14 @@ test('quick reviews persist against the same card ids without changing the study
  assert.equal(model.review('missing','known'),false);assert.equal(model.review(card.id,'other'),false);assert.equal(studied,2);
  assert.deepEqual(Object.keys(values),[F.KEY]);assert.deepEqual(model.selection(),['d']);
 });
-test('browsing another word advances and wraps without grading or changing the daily word',()=>{
- const {store}=fixture(),model=F.create({store,cards:tiny,now:()=>new Date(2026,9,18,12)}),daily=model.word();
- assert.notEqual(model.nextWord(daily.id).id,daily.id);assert.equal(model.nextWord('f').id,'a');
- assert.equal(model.word().id,daily.id);assert.deepEqual(model.progress().cards,{});
- assert.equal(F.create({store,cards:[]}).nextWord('none'),null);
+test('quick deck removes mastered words and reinserts learning cards using the existing review gap',()=>{
+ const {store}=fixture(),model=F.create({store,cards:tiny,now:()=>new Date(2026,9,18,12)});
+ const first=model.quickWord();assert.equal(first.id,model.word().id);
+ model.review(first.id,'learning');assert.notEqual(model.quickWord().id,first.id);
+ for(let i=0;i<Math.min(F.GAP,tiny.length-1);i++){assert.notEqual(model.quickWord().id,first.id);model.review(model.quickWord().id,'known');}
+ assert.equal(model.quickWord().id,first.id);model.review(first.id,'known');
+ while(model.quickWord())model.review(model.quickWord().id,'known');
+ assert.equal(model.quickWord(),null);assert.equal(F.create({store,cards:tiny}).quickWord(),null);
+ model.review(first.id,'learning');assert.equal(model.quickWord().id,first.id);
+ assert.equal(F.create({store,cards:[]}).quickWord(),null);
 });

@@ -91,7 +91,7 @@
   }
 
   function create({ store, cards = [], now = () => new Date(), onStudied = () => {} } = {}) {
-    let list = [], categories = [];
+    let list = [], categories = [], quick = null, quickDay = "";
     setCards(cards);
     let session = null;
 
@@ -111,6 +111,7 @@
       if (JSON.stringify(store.get(KEY, null)) !== JSON.stringify(saved)) throw Error('Could not save French progress on this device.');
     }
     function setCards(input) {
+      quick=null;
       if (Array.isArray(input)) { list = input.slice(); categories = []; }
       else { list = (input?.cards || []).slice(); categories = (input?.categories || []).slice(); }
     }
@@ -160,8 +161,20 @@
       if (!list.some(card=>card.id===id) || !['known','learning'].includes(status)) return false;
       const progress=read();progress.cards[id]={status,updatedAt:+now()};write(progress);return true;
     }
-    function review(id,status) { if(!saveReview(id,status))return false;onStudied();return true; }
-    function nextWord(id,date) { if(!list.length)return null;const index=list.findIndex(card=>card.id===id);return list[(index<0?list.indexOf(word(date))+1:index+1)%list.length]; }
+    function quickWord(date) {
+      const key=typeof date==='string'?date:day(date || now());
+      if(quickDay!==key){quickDay=key;quick=null;}
+      const progress=read();
+      if(quick===null){const start=Math.max(0,list.indexOf(word(key)));quick=list.slice(start).concat(list.slice(0,start));}
+      quick=quick.filter(card=>progress.cards[card.id]?.status!=='known');
+      const queued=new Set(quick.map(card=>card.id));for(const card of list)if(!queued.has(card.id)&&progress.cards[card.id]?.status!=='known'){quick.push(card);queued.add(card.id);}
+      return quick[0] || null;
+    }
+    function review(id,status) {
+      if(!saveReview(id,status))return false;
+      if(quick?.[0]?.id===id)quick=rotate(quick,status);
+      onStudied();return true;
+    }
     function act(action) {
       if (!session || session.done) return snapshot();
       if (action === 'flip') { if (session.queue[0]) session.flipped = true; return snapshot(); }
@@ -184,7 +197,7 @@
       const key = typeof date === 'string' ? date : day(date || now());
       return wordOfDay(list, key);
     }
-    return { setCards, cards: () => list.slice(), categories: () => categories.slice(), decks, selection, setDecks, start, act, close, view: snapshot, progress: read, word, nextWord, review, face };
+    return { setCards, cards: () => list.slice(), categories: () => categories.slice(), decks, selection, setDecks, start, act, close, view: snapshot, progress: read, word, quickWord, review, face };
   }
 
   function registerFurniture(LR) {
@@ -284,7 +297,7 @@
     body.append(decks, study, done);
     overlay.append(chrome, body);
     doc.body.appendChild(overlay);
-    let active = false, lastFocus = null, todayHost = null, todayCardId = null, todayDate = "";
+    let active = false, lastFocus = null, todayHost = null, todayCardId = null;
 
     function viewport() {
       overlay.style.height = (root.visualViewport?.height || root.innerHeight) + 'px';
@@ -301,10 +314,10 @@
     function paintToday() {
       const btn = todayHost?.querySelector('.french-today') || doc.querySelector('.space-today .french-today');
       if (!btn) return;
-      const date=day(new Date());if(todayDate!==date){todayDate=date;todayCardId=null;}
-      const card=model.cards().find(card=>card.id===todayCardId) || model.word();
-      btn.hidden = !card;const shell=btn.closest('.french-today-card');if(shell)shell.hidden=!card;
-      if (!card) return;
+      const card=model.quickWord();
+      btn.hidden=!card;const shell=btn.closest('.french-today-card');
+      if(shell){shell.hidden=!model.cards().length;shell.querySelector('.french-quick-actions').hidden=!card;shell.querySelector('.french-review-done').hidden=!!card;shell.querySelector('.french-review-status').textContent=card?'':'Every word in this deck is learned.';}
+      if(!card){todayCardId=null;return;}
       todayCardId=card.id;btn.dataset.cardId=card.id;
       const status=model.progress().cards[card.id]?.status;
       if(shell){shell.querySelector('.french-review-known').setAttribute('aria-pressed',String(status==='known'));shell.querySelector('.french-review-learning').setAttribute('aria-pressed',String(status==='learning'));shell.querySelector('.french-review-status').textContent=status==='known'?'Learned':status==='learning'?'Still learning':'';btn.querySelector('.french-today-kicker').textContent=card.id===model.word()?.id?"Today's French word":'Another French word';}
@@ -424,10 +437,9 @@
           const actions=el('div','french-quick-actions'),status=el('span','french-review-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
           for(const [action,label,path] of [['learning','Still learning','m6 6 12 12M18 6 6 18'],['known','Mark as learned','m5 12 4 4L19 6']]){
             const control=el('button','french-review-'+action);control.type='button';control.setAttribute('aria-label',label);control.title=label;control.setAttribute('aria-pressed','false');control.innerHTML=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
-            control.onclick=()=>{try{if(model.review(todayCardId,action)){paintToday();if(action==='known')try{onCorrect();}catch(e){/* optional celebration */}}}catch(e){status.textContent=e.message;}};actions.appendChild(control);
+            control.onclick=()=>{try{if(model.review(todayCardId,action)){btn.classList.remove('is-flipped');btn.querySelector('.french-front').hidden=false;btn.querySelector('.french-back').hidden=true;paintToday();status.textContent=model.quickWord()?(action==='known'?'Learned · next word':'Back in the deck for later'):'Every word in this deck is learned.';if(!model.quickWord())card.querySelector('.french-review-done').focus({preventScroll:true});if(action==='known')try{onCorrect();}catch(e){/* optional celebration */}}}catch(e){status.textContent=e.message;}};actions.appendChild(control);
           }
-          const next=el('button','french-next-word','Next word →');next.type='button';next.onclick=()=>{const word=model.nextWord(todayCardId);if(!word)return;todayCardId=word.id;btn.classList.remove('is-flipped');btn.querySelector('.french-front').hidden=false;btn.querySelector('.french-back').hidden=true;paintToday();};
-          card.append(actions,status,next);
+          const done=el('p','french-review-done','All caught up. Nice work.');done.tabIndex=-1;done.hidden=true;card.append(actions,done,status);
         }
       }
       paintToday();
