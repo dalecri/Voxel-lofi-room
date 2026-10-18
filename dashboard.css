@@ -30,3 +30,7 @@
 .menu-nav .dashboard-tabs.menu-tabs { position: static; flex: 1; min-width: 0; margin: 0; }
 .menu-nav .menu-tabs .chipbtn { flex: 1 0 auto; padding: 8px 4px; font-size: 12px; }
 .menu-nav .menu-actions { float: none; flex: none; gap: 4px; margin: 0; }
+
+/* Menu tabs use the same line-icon style as Search and Close. */
+.menu-nav .menu-tabs { gap: 1px; padding: 2px; }
+.menu-nav .menu-tabs .chipbtn { display: grid; place-items: center; flex: 1 1 0; min-width: 32px; height: 44px; padding: 6px 2px; }

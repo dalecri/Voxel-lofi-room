@@ -18,6 +18,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu')
  body=page.locator('#sheetBody');tabs=page.get_by_role('tablist',name='Menu sections');icon=page.get_by_role('button',name='Search your space',exact=True);search=page.locator('.space-search .home-search')
  assert body.evaluate('e=>e.firstElementChild.classList.contains("menu-nav")')
+ assert tabs.locator('button').all_text_contents()==['']*5;assert tabs.locator('button').evaluate_all('es=>es.map(b=>b.getAttribute("aria-label"))')==['Today','Rooms','Journal','Sound','Settings'];assert tabs.evaluate('e=>[...e.children].every(b=>b.title===b.getAttribute("aria-label")&&b.querySelector("svg[aria-hidden=true]"))')
  assert tabs.evaluate('e=>[...e.children].every(b=>b.getAttribute("role")==="tab" && document.getElementById(b.getAttribute("aria-controls")).getAttribute("role")==="tabpanel")')
  close=page.get_by_role('button',name='Close',exact=True);actions=page.get_by_role('group',name='Sheet actions',exact=True)
  assert actions.locator('button').count()==2;assert actions.locator('button').first.get_attribute('aria-label')=='Search your space';assert actions.locator('button').last.get_attribute('aria-label')=='Close';assert close.inner_text()=='';assert close.locator('svg').count()==1
@@ -39,7 +40,7 @@ with sync_playwright() as p:
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.todayUI.refresh()}',phase)
   for width in [320,390,1280]:
-   page.set_viewport_size({'width':width,'height':1000});body.evaluate('e=>e.scrollTop=0');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/dashboard-layout-{phase}-{width}.png');nav=page.locator('.menu-nav');assert nav.locator('.menu-actions').bounding_box()['x']>=tabs.bounding_box()['x']+tabs.bounding_box()['width']-1;assert nav.evaluate('e=>e.scrollWidth<=e.clientWidth')
+   page.set_viewport_size({'width':width,'height':1000});body.evaluate('e=>e.scrollTop=0');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/dashboard-layout-{phase}-{width}.png');nav=page.locator('.menu-nav');assert nav.locator('.menu-actions').bounding_box()['x']>=tabs.bounding_box()['x']+tabs.bounding_box()['width']-1;assert nav.evaluate('e=>e.scrollWidth<=e.clientWidth');assert tabs.evaluate('e=>e.scrollWidth<=e.clientWidth+1')
  page.set_viewport_size({'width':320,'height':900});page.get_by_role('tab',name='Settings',exact=True).click();page.wait_for_function('(()=>{const t=document.querySelector(".menu-tabs [aria-selected=true]").getBoundingClientRect(),b=document.querySelector(".menu-tabs").getBoundingClientRect();return t.left>=b.left-1&&t.right<=b.right+1})()');page.get_by_role('tab',name='Today',exact=True).click()
  page.reload(wait_until='networkidle');page.click('#bMenu');assert page.get_by_role('tab',name='Today',exact=True).get_attribute('aria-selected')=='true';assert page.get_by_role('button',name='Search your space',exact=True).get_attribute('aria-expanded')=='false'
  assert not errors,errors;browser.close()

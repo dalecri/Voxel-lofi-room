@@ -20,7 +20,7 @@ with sync_playwright() as p:
  def tab(name):page.get_by_role('tab',name=name,exact=True).click()
  def escape():page.keyboard.press('Escape');assert 'open' not in sheet.get_attribute('class')
  def tap(t):page.evaluate("t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id)",t)
- page.click('#bMenu');assert page.get_by_role('tab').all_text_contents()==['Today','Rooms','Journal','Sound','Settings']
+ page.click('#bMenu');assert page.get_by_role('tab').evaluate_all('es=>es.map(e=>e.ariaLabel)')==['Today','Rooms','Journal','Sound','Settings']
  assert page.locator('#sheetBody > h2').inner_text()=='Your Space';assert page.locator('#menu-today .today-sky').is_visible();assert page.locator('.ritual-cards').count()==0;assert page.locator('#menu-today .daily-badge').count()==0
  tab('Rooms');page.locator('#menu-rooms details.preset-group summary').first.click();page.locator('#menu-rooms details.preset-group summary').last.click();assert page.locator('#bImportCode').is_visible();assert page.locator('#bShareCode').is_visible();assert page.locator('.roomstack').count() or 'Your home' in body.inner_text()
  # Every preset remains present and visible in Rooms.
@@ -28,10 +28,10 @@ with sync_playwright() as p:
  for name in expected:assert name in page.locator('#menu-rooms').inner_text(),name
  tab('Journal');page.click('#bCatDiary');assert page.locator('#catDiary').is_visible();page.click('#bMomentDiary');assert page.locator('#journalFeed .d').count()>50
  tab('Sound');assert page.locator('#stAdd').is_visible();assert not page.locator('#bImportCode').is_visible()
- page.locator('#stName').fill('PRIVATE_STATION');page.locator('#stUrl').fill('https://example.com/stream.mp3');page.click('#stAdd');assert page.get_by_role('tab',selected=True).inner_text()=='Sound';assert 'PRIVATE_STATION' in body.inner_text();body.get_by_role('button',name='Remove',exact=True).click();assert 'PRIVATE_STATION' not in body.inner_text()
+ page.locator('#stName').fill('PRIVATE_STATION');page.locator('#stUrl').fill('https://example.com/stream.mp3');page.click('#stAdd');assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Sound';assert 'PRIVATE_STATION' in body.inner_text();body.get_by_role('button',name='Remove',exact=True).click();assert 'PRIVATE_STATION' not in body.inner_text()
  tab('Settings');assert 'Follow the clock' in body.inner_text();assert 'Keys:' in body.inner_text();assert 'Radio stations' not in body.inner_text();escape()
- page.click('#bMenu');assert page.get_by_role('tab',selected=True).inner_text()=='Settings';page.get_by_role('tab',name='Settings',exact=True).focus();page.keyboard.press('ArrowLeft');assert page.get_by_role('tab',selected=True).inner_text()=='Sound';escape()
- page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu');assert page.get_by_role('tab',selected=True).inner_text()=='Sound';escape()
+ page.click('#bMenu');assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Settings';page.get_by_role('tab',name='Settings',exact=True).focus();page.keyboard.press('ArrowLeft');assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Sound';escape()
+ page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu');assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Sound';escape()
  print('PASS: five menu sections, every preset, relocated controls, radio add/remove, journal feeds, persistent tab and keyboard navigation',flush=True)
  page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.name='Private Files';a.room.n=10;a.meta.visitors=false;a.meta.realtime=false;a.setPhase('day',true);a.setMode('explore',true);for(const [t,x,z] of [['phone',1,1],['filecab',3,1],['appportal',5,1],['crt',7,1],['pomodorocandle',1,4]])a.room.add(a.room.make(t,{x,z}));a.changed();window.__opened=[];window.open=(u,target,features)=>{__opened.push({u,target,features});};}''')
  tap('filecab');assert page.get_by_role('tab').all_text_contents()==['Letters','Scenes','Photos'];assert page.locator('.files-empty:visible').inner_text()=='No letters yet — the typewriter is waiting.';assert page.evaluate('localStorage.getItem("lr.letters")') is None
