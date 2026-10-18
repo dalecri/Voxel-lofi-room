@@ -27,8 +27,8 @@ with sync_playwright() as p:
  menu('Rooms');assert page.locator('#menu-rooms .preset-group').count()==2;assert page.locator('#menu-rooms .preset-group[open]').count()==0
  assert not page.locator('.card').filter(has_text='Lofi Study').is_visible()
  for group in page.locator('#menu-rooms .preset-group').all():group.locator('summary').click();assert group.locator('.card').first.is_visible();group.locator('summary').click()
- page.get_by_role('combobox',name='Main bedroom',exact=True).select_option('102');assert page.evaluate('JSON.parse(localStorage.getItem("lr.mainBedroom"))')==102;esc();page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==102
- menu('Rooms');page.get_by_role('combobox',name='Main bedroom',exact=True).select_option('101');esc()
+ page.locator('[data-room-id="102"] .rooms-bedroom').click();assert page.evaluate('JSON.parse(localStorage.getItem("lr.mainBedroom"))')==102;esc();page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==102
+ menu('Rooms');page.locator('[data-room-id="101"] .rooms-bedroom').click();esc()
  page.evaluate('__lr.room.name="AUTO_SAVED_LIVING";__lr.changed()');page.wait_for_function('JSON.parse(localStorage.getItem("lr.room.102")).name==="AUTO_SAVED_LIVING"')
  assert page.evaluate('JSON.parse(localStorage.getItem("lr.rooms")).find(r=>r.id===102).name')=='AUTO_SAVED_LIVING'
  page.evaluate('__lr.room.name="LAST_SECOND_LIVING";__lr.changed()');menu('Rooms');page.locator('.village-room').filter(has_text='Bedroom').locator('.village-visit').click();assert page.evaluate('__lr.meta.current')==101;assert page.locator('#lvSave').count()==0
@@ -55,7 +55,7 @@ with sync_playwright() as p:
  # Bedroom setting is device-only and resetting it restores last-room startup.
  code=page.evaluate('__lr.roomCode()');decoded=page.evaluate('c=>__lr.readCode(c)',code)
  for key in ['mainBedroom','pendingDraft','stations']:assert key not in json.dumps(decoded)
- menu('Rooms');page.get_by_role('combobox',name='Main bedroom',exact=True).select_option('');esc();current=page.evaluate('__lr.meta.current');page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==current
+ menu('Rooms');page.locator('.rooms-bedroom[aria-pressed=true]').click();esc();current=page.evaluate('__lr.meta.current');page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==current
  # Old versions kept edits only in lr.draft. Adopt that working copy on boot,
  # even before the owner touches anything in this version.
  context.close();legacy=browser.new_context(reduced_motion='reduce',viewport={'width':390,'height':844})

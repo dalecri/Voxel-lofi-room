@@ -36,7 +36,7 @@ with sync_playwright() as p:
  assert page.evaluate('Object.keys(JSON.parse(localStorage.getItem("lr.roomSnapshots"))).length')==3
  assert page.evaluate('''() => {const v=__lr.view,s=()=>JSON.stringify([v.phase,v.phaseT,v.ph,v.pool.map(l=>l.intensity),v.sun.color.getHex(),v.sun.intensity,v.r.toneMappingExposure,v.env,v.sky]),before=s();const day=v.snapshot(120,'day'),night=v.snapshot(120,'night');if(before!==s())throw Error('Snapshot altered live lighting');return day!==night && JSON.parse(localStorage.getItem('lr.roomSnapshots'))['102'].shots.day!==JSON.parse(localStorage.getItem('lr.roomSnapshots'))['102'].shots.night;}''')
  assert page.evaluate('''()=>{const c=JSON.parse(localStorage.getItem('lr.roomSnapshots'));return Object.values(c).every(e=>Object.keys(e.shots).length===4) && new Set(Object.values(c).map(e=>e.shots.day)).size===3;}''')
- assert page.get_by_label('Main bedroom',exact=True).count()==1
+ assert page.locator('.rooms-bedroom').count()==3;assert page.get_by_role('combobox',name='Main bedroom',exact=True).count()==0
  # Shared spotlight filters every view without introducing another input.
  page.get_by_role('button',name='Search your space',exact=True).click()
  search=page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True)

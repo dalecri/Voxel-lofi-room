@@ -25,7 +25,7 @@
       remove(id){delete entries[id];store.set(SNAPSHOTS,entries);}
     };
   }
-  function mount({parent,rooms,current,thumb,travel,save,remove,newRoom,phase=()=> 'day'}){
+  function mount({parent,rooms,current,thumb,travel,save,remove,newRoom,bedroom=()=>null,setBedroom=null,phase=()=> 'day'}){
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const host=el('section','rooms-views'),content=el('div','rooms-content');host.append(content);parent.append(host);
     // Legacy lr.roomsView values are deliberately ignored: the grid is the only layout.
@@ -34,7 +34,9 @@
     function image(r){const wrap=el('span','rooms-art'),img=el('img');img.alt='';img.width=480;img.height=360;img.decoding='async';wrap.append(img);const hint=el('span','rooms-preview-hint','Loading preview…');wrap.append(hint);observed.push({img,wrap,hint,r});return wrap;}
     function info(r){const box=el('span','rooms-info');box.append(el('span','rooms-floor',floorOf(r)),el('b','rooms-name',r.name),el('span','rooms-description',description(r)));const pills=el('span','rooms-meta');pills.append(el('span','',`${count(r)} items`));if(r.id===current())pills.append(el('span','rooms-here','you are here'));else if(r.draft)pills.append(el('span','','not saved'));box.append(pills);return box;}
     function manage(r,card){if(r.draft)card.append(makeButton('Save','chipbtn rooms-manage',save));else if(rooms().filter(r=>!r.draft).length>1)card.append(makeButton('Delete','rooms-delete',()=>remove(r.id)));}
-    function card(r){const a=el('article','rooms-card'+(r.id===current()?' here':''));a.dataset.roomId=r.id;const b=makeButton('','rooms-visit',()=>travel(r));b.setAttribute('aria-label','Visit '+r.name);b.append(image(r),info(r));a.append(b);manage(r,a);return a;}
+    function card(r){const a=el('article','rooms-card'+(r.id===current()?' here':''));a.dataset.roomId=r.id;const b=makeButton('','rooms-visit',()=>travel(r));b.setAttribute('aria-label','Visit '+r.name);b.append(image(r),info(r));a.append(b);manage(r,a);
+      if(setBedroom){const selected=bedroom()===r.id,star=makeButton('','rooms-bedroom',()=>{setBedroom(r);refresh();[...host.querySelectorAll('.rooms-card')].find(c=>c.dataset.roomId===String(r.id))?.querySelector('.rooms-bedroom')?.focus({preventScroll:true});});star.setAttribute('aria-label','Main bedroom for '+r.name);star.setAttribute('aria-pressed',String(selected));star.title=selected?'Main bedroom · Tap to clear':r.draft?'Save and set as main bedroom':'Set as main bedroom';star.innerHTML=`<svg viewBox="0 0 24 24" width="21" height="21" fill="${selected?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg>`;a.appendChild(star);}
+      return a;}
     function newCard(){return makeButton('＋ New room','rooms-new',newRoom);}
     function filtered(){return rooms().filter(r=>`${r.name} ${description(r)} ${floorOf(r)}`.toLocaleLowerCase().includes(query));}
     function loadImages(){pending=null;if(stopped || !host.isConnected || !host.getClientRects().length)return;const next=observed.shift();if(!next)return;try{const url=thumb(next.r);if(url){next.img.src=url;next.hint.remove();next.wrap.classList.add('ready');}else next.hint.textContent='Visit to make a preview';}catch(e){next.hint.textContent='Preview resting. Tap to visit.';}if(observed.length)pending=setTimeout(loadImages,32);}
@@ -43,7 +45,7 @@
       if(!list.length)content.append(el('p','muted','No rooms match your search.'));
       const grid=el('div','rooms-grid');list.forEach(r=>grid.append(card(r)));grid.append(newCard());content.append(grid);schedule();
     }
-    function refresh(){const key=JSON.stringify([rooms(),current(),phase()]);if(key!==signature){signature=key;draw();}else{schedule();}}
+    function refresh(){const key=JSON.stringify([rooms(),current(),phase(),bedroom()]);if(key!==signature){signature=key;draw();}else{schedule();}}
     const resize=new ResizeObserver(()=>{schedule();});resize.observe(content);
     const mutation=new MutationObserver(()=>{if(!host.isConnected){destroy();return;}schedule();});mutation.observe(parent,{attributes:true,attributeFilter:['hidden']});const sheet=parent.closest('.sheet');if(sheet)mutation.observe(sheet,{attributes:true,attributeFilter:['class']});
     function destroy(){stopped=true;if(pending!==null)clearTimeout(pending);resize.disconnect();mutation.disconnect();}

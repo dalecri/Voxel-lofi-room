@@ -2477,7 +2477,14 @@ function startLofiRooms() {
         if(!isSaved())list.push({...room.serialize(),id:meta.current,draft:true});
         return list;
       },thumb:d=>d.id===meta.current?captureRoomSnapshot(true):roomSnapshots.get(d.id,meta.phase)?.url,travel:r=>{closeSheets();if(r.id!==meta.current)switchRoom(r.id);},
-      save:()=>{commit();renderMenu();},remove:deleteRoom,newRoom:newFlow});
+      save:()=>{commit();renderMenu();},remove:deleteRoom,newRoom:newFlow,
+      bedroom:()=>store.get('lr.mainBedroom',null),setBedroom:r=>{
+        const selected=store.get('lr.mainBedroom',null)===r.id;
+        if(r.draft){if(r.id!==meta.current)return;commit(true);if(!store.get('lr.room.'+r.id,null)){toast('<span>Save this room first, then choose its star.</span>',2400,true);return;}}
+        if(selected)store.del('lr.mainBedroom');else store.set('lr.mainBedroom',r.id);
+        Sound.click(!selected);toast(`<span>${selected?'Main bedroom cleared · Open the last room visited':'Main bedroom set · '+esc(r.name)}</span>`,2000,true);
+        if(r.draft){renderMenu();[...$('#menu-rooms').querySelectorAll('.rooms-card')].find(card=>card.dataset.roomId===String(r.id))?.querySelector('.rooms-bedroom')?.focus({preventScroll:true});}
+      }});
   }
   function homeSearch(toggleHost) { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace,toggleHost}); }
   function renderMenu() {
@@ -2502,13 +2509,7 @@ function startLofiRooms() {
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomVillage(target);
-    h('p','muted small','Rooms in your home save automatically. New rooms ask before you leave.');
-    const bedroom=h('label','settings-phase');bedroom.textContent='Main bedroom';
-    const bedroomSelect=document.createElement('select');bedroomSelect.setAttribute('aria-label','Main bedroom');
-    const last=document.createElement('option');last.value='';last.textContent='Last room visited';bedroomSelect.appendChild(last);
-    rooms.forEach(r=>{const o=document.createElement('option');o.value=String(r.id);o.textContent=r.name;bedroomSelect.appendChild(o);});
-    bedroomSelect.value=String(store.get('lr.mainBedroom',''));bedroomSelect.onchange=()=>{const chosen=rooms.find(r=>String(r.id)===bedroomSelect.value);if(chosen)store.set('lr.mainBedroom',chosen.id);else store.del('lr.mainBedroom');};bedroom.appendChild(bedroomSelect);
-    h('p','muted small','Choose a saved room to wake up in whenever you reopen the app.');
+    h('p','muted small','Rooms in your home save automatically. New rooms ask before you leave. Tap a star to choose your main bedroom.');
     const pending=store.get('lr.pendingDraft',null);
     if(pending && pending.id!==meta.current){
       const resume=h('button','chipbtn');resume.textContent='Resume unsaved room: '+(pending.data?.name || 'Untitled room');

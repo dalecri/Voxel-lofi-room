@@ -253,3 +253,8 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .french-review-status { min-height:16px; font-size:11px; font-weight:800; color:var(--ink-dim); text-align:center; }
 .french-next-word { min-height:36px; padding:6px 10px; font-size:12px; font-weight:800; color:var(--ink); border-radius:12px; }
 .french-next-word:hover { background:var(--chip); }
+
+/* A room's startup preference lives on its own card, separate from travel. */
+.rooms-card .rooms-bedroom { position:absolute; top:12px; right:12px; display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--panel-solid); color:var(--ink-dim); box-shadow:0 2px 8px #0001; }
+.rooms-card .rooms-bedroom[aria-pressed=true] { color:#9a6b20; background:#fff0c5; border-color:#d4b36c; }
+.rooms-card .rooms-bedroom:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
