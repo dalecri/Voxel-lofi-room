@@ -211,3 +211,8 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
   html body select:not([multiple]) option:hover, html body select:not([multiple]) option:focus { background: var(--chip); }
   html body select:not([multiple]) option::checkmark { color: var(--accent); margin-inline-start: auto; }
 }
+
+/* Keep the sky symbol with the date instead of giving it a separate row. */
+.today-date-row { display:flex; align-items:center; gap:10px; margin:0 0 10px; }
+.space-today .today-date-row .today-sky-icon { display:inline-flex; align-items:center; flex:none; font-size:24px; line-height:1; margin:0; }
+.space-today .today-date-row .today-date { margin:0; }
