@@ -2590,8 +2590,13 @@ function startLofiRooms() {
     h('div', 'disc').id = 'journalFeed'; renderJournal();
     h('div', 'saved-scenes-shelf').setAttribute('aria-label', 'Future saved scenes shelf');
     target = sections.Sound;
+    const settingsNotes=[];
     const toggle = (label, on, fn) => {
-      const r = h('button', 'toggle' + (on ? ' on' : ''), `<span>${label}</span><i></i>`);
+      const parts=label.match(/^(.*?) \((.*)\)$/),name=parts?parts[1]:label;
+      if(parts)settingsNotes.push([name,parts[2]]);
+      const r = h('button', 'toggle' + (on ? ' on' : ''), `<span>${name}</span><i aria-hidden="true"></i>`);
+      r.type='button';r.setAttribute('aria-label',label);
+      if(parts)r.title=parts[2];
       r.setAttribute('role','switch'); r.setAttribute('aria-pressed',String(!!on)); r.setAttribute('aria-checked',String(!!on));
       r.onclick = () => { fn(); renderMenu(); };
     };
@@ -2650,22 +2655,26 @@ function startLofiRooms() {
     };
     atlasUI.mountRadio(target);
     target = sections.Settings;
+    const settingsPanel=target;target=h('div','settings-toggle-grid');target.setAttribute('aria-label','Settings toggles');
     toggle('Music', !!meta.music, () => setControl('music',!meta.music));
     toggle('Sound', Sound.on, () => setControl('sound',!Sound.on));
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     toggle('Rain', meta.weather==='rain' || meta.weather==='storm', () => setControl('rain',!(meta.weather==='rain' || meta.weather==='storm')));
     toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
-    h('p','muted small','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.');
+    settingsNotes.push(['Calm performance','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.']);
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
     toggle('Live extras', meta.liveExtras === true, () => { atlas.setEnabled(meta.liveExtras !== true); });
-    h('p','muted small','Public-domain art, aurora watch and Canadian holidays. Radio browsing, book searches, recipes and cat facts connect only when tapped.');
+    settingsNotes.push(['Live extras','Public-domain art, aurora watch and Canadian holidays. Radio browsing, book searches, recipes and cat facts connect only when tapped.']);
     toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
-    h('p', 'muted small', 'Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.');
+    settingsNotes.push(['Live weather','Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.']);
     toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
     toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
     toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
     toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
+    target=settingsPanel;
+    const settingsHelp=h('details','settings-help'),helpTitle=document.createElement('summary');helpTitle.textContent='About these settings';settingsHelp.appendChild(helpTitle);
+    for(const [name,description] of settingsNotes){const p=document.createElement('p'),b=document.createElement('b');b.textContent=name+': ';p.append(b,document.createTextNode(description));settingsHelp.appendChild(p);}
     if(!meta.realtime){
       const label=h('label','settings-phase');label.textContent='Daypart';
       const select=document.createElement('select');select.setAttribute('aria-label','Daypart');

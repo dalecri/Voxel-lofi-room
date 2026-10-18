@@ -39,3 +39,16 @@
 .menu-nav { border-radius:22px; background:var(--panel-solid); background:color-mix(in srgb,#ed955e 13%,var(--panel-solid)); }
 .menu-nav .dashboard-tabs.menu-tabs { background:transparent; }
 .menu-nav .menu-actions .space-search-toggle { background:transparent; border:0; box-shadow:none; }
+
+/* A pair of compact settings on each line, including phone widths. */
+.settings-toggle-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:12px 0; }
+#menu-settings .settings-toggle-grid .toggle { min-width:0; min-height:64px; margin:0; padding:10px; gap:8px; border:1px solid var(--line); border-radius:14px; background:var(--chip); color:var(--ink); text-align:left; font:700 13px/1.3 Nunito,sans-serif; }
+.settings-toggle-grid .toggle span { min-width:0; overflow-wrap:anywhere; }
+.settings-toggle-grid .toggle i { width:34px; height:22px; border-radius:12px; }
+.settings-toggle-grid .toggle i::after { width:16px; height:16px; }
+.settings-toggle-grid .toggle.on i::after { transform:translateX(12px); }
+.settings-toggle-grid .toggle:focus-visible,.settings-help summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.settings-help { margin:12px 0 18px; color:var(--ink-dim); font-size:13px; line-height:1.5; }
+.settings-help summary { cursor:pointer; padding:8px 0; border-radius:8px; }
+.settings-help p { margin:10px 0; }
+@media(max-width:360px) { #menu-settings .settings-toggle-grid .toggle { padding:8px; gap:6px; font-size:12px; } }
