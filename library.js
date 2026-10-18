@@ -34,9 +34,9 @@
     function turn(delta){if(cover){showPage(model.resume(),true);return;}if(index+delta<0){cover=true;draw();pageSound();return;}if(index+delta>=rows.length)return;showPage(rows[index+delta].id);pageSound();}
     function safe(fn){try{fn();}catch(e){const status=stage.querySelector('[role=status]');if(status)status.textContent=e.message;}}
     function draw(){stage.replaceChildren();view.dataset.page=cover?'cover':rows[index].id;view.classList.toggle('library-reduced',reduced());
-      if(cover){const book=el('div','library-cover');book.setAttribute('role','group');book.setAttribute('aria-label','Library cover');stage.appendChild(book);
+      if(cover){const book=el('div','library-cover');book.setAttribute('role','group');book.setAttribute('aria-label','Library book stack');stage.appendChild(book);
         const plaque=el('div','library-plaque');book.appendChild(plaque);const title=button(plaque,model.title,rename,'library-title');title.setAttribute('aria-label','Rename library');
-        plaque.appendChild(el('span','library-cover-rule','✦'));button(book,'Tap or swipe to open',e=>{e.stopPropagation();showPage(model.resume(),true);pageSound();},'library-cover-hint').setAttribute('aria-label','Open library book');book.onclick=e=>{if(e.target.closest('.library-plaque'))return;showPage(model.resume(),true);pageSound();};
+        const stack=el('div','library-stack');stack.setAttribute('aria-hidden','true');for(const [kind,label] of [['letters','LETTERS'],['ideas','SPARKS'],['notes','NOTES']]){const volume=el('div','library-stack-volume '+kind);volume.append(el('span','library-stack-band'),el('span','library-stack-label',label),el('span','library-stack-pages'));stack.appendChild(volume);}book.appendChild(stack);button(book,'Open your library',e=>{e.stopPropagation();showPage(model.resume(),true);pageSound();},'library-cover-hint').setAttribute('aria-label','Open library book');book.onclick=e=>{if(e.target.closest('.library-plaque'))return;showPage(model.resume(),true);pageSound();};
         book.onkeydown=e=>{if(e.target!==book)return;if(['Enter',' '].includes(e.key)){e.preventDefault();showPage(model.resume(),true);pageSound();}};return;
       }
       const book=el('div','library-book');stage.appendChild(book);const left=el('aside','library-left'),right=el('section','library-page');book.append(left,right);

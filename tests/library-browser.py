@@ -24,7 +24,7 @@ with sync_playwright() as p:
  page.evaluate("const a=__lr;a.room.items=[];window.lectern=a.room.add(a.room.make('lectern',{x:2,z:2}));a.changed();a.interact(lectern.id)")
  for c in range(3):
   data=page.evaluate('c=>__lr.view.thumb({t:"lectern",c,on:true})',c);Path(f'/tmp/library-lectern-{c}.png').write_bytes(base64.b64decode(data.split(',')[1]))
- view=page.locator('#libraryView');assert view.is_visible();assert view.get_attribute('data-page')=='cover';assert view.get_by_role('button',name='Rename library',exact=True).inner_text()=='My Library'
+ view=page.locator('#libraryView');assert view.is_visible();assert view.get_attribute('data-page')=='cover';assert view.get_by_role('button',name='Rename library',exact=True).inner_text()=='My Library';assert view.locator('.library-stack-volume').count()==3;assert view.locator('.library-stack-label').all_text_contents()==['LETTERS','SPARKS','NOTES']
  assert page.evaluate('__lr.library.model.pages()[0].id')=='compose';assert page.evaluate('__lr.library.model.pages()[1].memory')
  view.get_by_role('button',name='Rename library',exact=True).click();view.get_by_role('textbox',name='Library title',exact=True).fill('PRIVATE_QUIET_LIBRARY');view.get_by_role('button',name='Save title',exact=True).click()
  assert page.evaluate('JSON.parse(localStorage.getItem("lr.library")).title')=='PRIVATE_QUIET_LIBRARY'
