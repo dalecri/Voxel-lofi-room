@@ -447,11 +447,13 @@ function startLofiRooms() {
   ensureDaily();
   const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog });
   const catJournal = LRLife.journal({ store });
+  const journalNews = LRLife.newspaper({ store, moments: MOMENTS });
+  journalNews.edition(catJournal.entries);
   const ambientLife = LRLife.ambience({ random: () => Math.random() });
   let merchantCat = null, journalFeed = 'moments';
   function recordCat(cat, kind, thing) {
     if (!cat || cat.t !== 'cat' || cat.visitor) return;
-    if (catJournal.write({ ...cat, name: catName(cat) }, kind, meta.current, thing) && $('#catDiary')) renderJournal();
+    if (catJournal.write({ ...cat, name: catName(cat) }, kind, meta.current, thing)) { journalNews.edition(catJournal.entries); renderJournal(); }
   }
   const dailyInfo = () => { const D = ensureDaily(); const r = DAILY.find(x => x[0] === D.id) || DAILY[0]; const M = MOMENTS.find(x => x[0] === D.id); return { D, name: M ? M[1] : D.id, hint: r[1] }; };
   function dailyCheck(key) {
@@ -464,7 +466,7 @@ function startLofiRooms() {
     shop.earn('daily');
     if (S.n > 0 && S.n % 7 === 0) shop.earn('streak');
     const log = store.get('lr.dailyLog', []);
-    log.unshift({ date: D.date, id: D.id }); store.set('lr.dailyLog', log.slice(0, 60));   // the journal, newest first
+    log.unshift({ date: D.date, id: D.id }); store.set('lr.dailyLog', log.slice(0, 60)); journalNews.edition(catJournal.entries);   // the journal, newest first
     setTimeout(() => {
       toast(`<b>☀ Today’s moment: ${name}</b><span>You made today cozy. ${S.n > 1 ? `${S.n} days in a row!` : 'Come back tomorrow for a new one.'}</span>`, 4200, true, 'daily');
       Sound.arpeggio(); setTimeout(() => Sound.chime(), 450);
@@ -477,7 +479,7 @@ function startLofiRooms() {
     if (found.has(key) || $('#intro').classList.contains('open')) return;
     const d = MOMENTS.find(x => x[0] === key);
     if (!d) return;
-    found.add(key); store.set('lr.found', [...found]);
+    found.add(key); store.set('lr.found', [...found]); journalNews.record(key); renderJournal();
     if (companion) companion.celebrate(key);
     shop.earn('moment');
     toast(`<b>✦ ${d[1]}</b><span>${d[2]}</span>`, 3800);
@@ -2030,6 +2032,22 @@ function startLofiRooms() {
   function renderJournal() {
     const feed = $('#journalFeed'); if (!feed) return;
     feed.innerHTML = '';
+    const news = journalNews.edition(catJournal.entries);
+    const paper = document.createElement('article'); paper.className = 'journal-paper'; paper.setAttribute('aria-label', 'Daily News');
+    paper.innerHTML = `<header class="news-masthead"><h3>DAILY NEWS</h3><span class="news-day">Day ${news.day}</span></header>
+      <p class="news-sections">${esc(news.sections.join(' - ') || 'A quiet edition')}</p>
+      <p class="news-date">${esc(new Date(news.date+'T12:00').toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'}))}</p>
+      <div class="news-columns"><div class="news-side news-left"></div><div class="news-lead"><h4>${esc(news.headline)}</h4><p>${esc(news.dek)}</p></div><div class="news-side news-right"></div></div>
+      <footer><button type="button" class="news-reaction">Mmmh…</button><p class="news-response" role="status"></p></footer>`;
+    news.remaining.forEach((entry,index) => {
+      const story = document.createElement('section'); story.className = 'news-story';
+      const heading = document.createElement('h4'); heading.textContent = entry.title;
+      const text = document.createElement('p'); text.textContent = entry.text; story.append(heading,text);
+      paper.querySelector(index % 2 ? '.news-right' : '.news-left').appendChild(story);
+    });
+    paper.querySelector('.news-reaction').onclick = () => { paper.querySelector('.news-response').textContent = news.reaction; companion?.say(news.reaction); };
+    feed.appendChild(paper);
+    const archive = document.createElement('h3'); archive.className = 'journal-archive-title'; archive.textContent = journalFeed === 'cats' ? 'The cats’ archive' : 'Cozy moments checklist'; feed.appendChild(archive);
     ['moments', 'cats'].forEach(k => {
       const b = $(k === 'cats' ? '#bCatDiary' : '#bMomentDiary');
       if (b) { b.classList.toggle('primary', journalFeed === k); b.setAttribute('aria-pressed', String(journalFeed === k)); }

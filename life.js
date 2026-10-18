@@ -47,6 +47,54 @@
     return { write, get entries() { return entries.slice(); } };
   }
 
+  // Daily news is a view of journal feeds, independent of the weekly digest.
+  // Retain dates beyond the cat diary's rolling 120-entry window. Undated legacy
+  // discoveries stay in the checklist; we never invent a discovery date for them.
+  function newspaper({ store, now = Date.now, moments = [] }) {
+    const dateOf = value => {
+      const d = new Date(value);
+      return Number.isFinite(d.getTime()) ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '';
+    };
+    let state = store.get('lr.journalNews', { days: [], moments: [] });
+    state = { days: Array.isArray(state?.days) ? state.days : [], moments: Array.isArray(state?.moments) ? state.moments : [] };
+    function retain(dates) {
+      const days = [...new Set([...state.days, ...dates].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();
+      if (JSON.stringify(days) !== JSON.stringify(state.days)) { state.days = days; store.set('lr.journalNews', state); }
+    }
+    function record(id) {
+      if (state.moments.some(e => e.id === id)) return;
+      const time = now(); state.moments.push({ id, time, date: dateOf(time) });
+      retain([dateOf(time)]); store.set('lr.journalNews', state);
+    }
+    const reactions = [
+      'The evidence suggests a room in excellent company.',
+      'Another quiet field report. The residents remain fascinating.',
+      'I have reviewed the findings. A small cup of tea seems appropriate.',
+      'Life continues here at a very respectable, unhurried pace.'
+    ];
+    function edition(cats = []) {
+      const date = dateOf(now()), daily = store.get('lr.dailyLog', []);
+      retain([...cats.map(e => dateOf(e.time)), ...state.moments.map(e => e.date), ...daily.map(e => e.date)]);
+      const catRows = cats.filter(e => dateOf(e.time) === date).map(e => ({
+        type: 'cat', time: e.time, key: `${e.cat}:${e.time}:${e.text}`, title: `${e.name || 'A resident cat'}: ${String(e.text || 'A quiet observation').split(/[.!?]/)[0]}`, text: e.text
+      })).sort((a,b) => b.time-a.time || a.key.localeCompare(b.key));
+      const known = [...state.moments, ...daily.filter(e => !state.moments.some(m => m.id===e.id && m.date===e.date)).map(e => ({...e,time:new Date(e.date+'T00:00').getTime()}))];
+      const momentRows = known.filter(e => e.date === date).map(e => {
+        const m = moments.find(m => m[0] === e.id);
+        return {type:'moment', time:e.time, key:`${e.id}:${e.date}`, title:m ? m[1] : e.id, text:m ? m[2] : 'A little moment was noticed in the room.'};
+      }).sort((a,b) => b.time-a.time || a.key.localeCompare(b.key));
+      const entries = [...catRows, ...momentRows], lead = entries[0] || null;
+      const key = lead ? lead.key : date;
+      let hash = 0; for (const c of key) hash = (Math.imul(hash,31)+c.charCodeAt(0)) >>> 0;
+      return { date, day:state.days.length, lead, remaining:entries.slice(1),
+        sections:[...(momentRows.length ? ['Little moments'] : []), ...(catRows.length ? ['The cats’ version'] : [])],
+        headline:lead ? lead.title.toUpperCase() : 'No news today. The presses rest.',
+        dek:lead ? (lead.type==='cat' ? `“${lead.text}” The resident considers the matter settled.` : `${lead.text} Our observer has entered it in the record.`) : 'A quiet room is still a good place to be.',
+        reaction:reactions[hash % reactions.length] };
+    }
+    return {record, edition};
+  }
+
   function ambience({ random = Math.random } = {}) {
     let wait = 30 + random() * 35;
     return { tick(dt, allowed, options) {
@@ -59,7 +107,7 @@
       return choices[Math.floor(random() * choices.length)];
     } };
   }
-  const api = { merchant, journal, ambience };
+  const api = { merchant, journal, newspaper, ambience };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.LRLife = api;
 })(typeof window !== 'undefined' ? window : globalThis);
