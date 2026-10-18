@@ -36,7 +36,7 @@ with sync_playwright() as p:
  page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('switch',name='Cat mischief (cats sometimes knock things over)',exact=True).click();assert page.get_by_role('tab',name='Settings',exact=True).get_attribute('aria-selected')=='true';assert body.evaluate('e=>e.firstElementChild.classList.contains("menu-nav")')
  page.get_by_role('tab',name='Today',exact=True).click();tasks=page.locator('.google-tasks');assert tasks.evaluate('e=>e.parentElement.classList.contains("today-sky")');assert page.locator('.space-today > .google-tasks').count()==0
  assert tasks.evaluate('e=>{const s=getComputedStyle(e);return s.borderTopWidth==="0px"&&s.backgroundColor==="rgba(0, 0, 0, 0)"}')
- assert tasks.get_by_role('button',name='Connect Google',exact=True).is_enabled();assert page.locator('.today-tasks .today-task-form').is_visible()
+ assert tasks.get_by_role('button',name='Connect Google',exact=True).is_enabled();assert page.locator('.today-tasks .today-task-form').is_visible();assert page.locator('.today-tasks').evaluate('e=>e.nextElementSibling.classList.contains("today-rituals")');assert page.locator('.today-rituals [data-ritual]').evaluate_all('es=>es.map(e=>e.dataset.ritual).join(",")')=='tea,garden,letter,ideas'
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.todayUI.refresh()}',phase)
   for width in [320,390,1280]:
