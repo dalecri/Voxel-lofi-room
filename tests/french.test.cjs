@@ -130,3 +130,21 @@ test('the French corner is a placeable desk and its words stay out of room codes
   assert.equal(shared.items[0].t,'frenchdesk');
   assert.equal(JSON.stringify(shared).includes('PRIVATE_FRENCH'),false);
 });
+
+test('quick reviews persist against the same card ids without changing the study queue',()=>{
+ const {store,values}=fixture();let studied=0;
+ const model=F.create({store,cards:tiny,now:()=>new Date(2026,9,18,12),onStudied:()=>studied++});
+ model.start(['d']);const queue=model.view().queue;
+ const card=model.word();assert.equal(model.review(card.id,'known'),true);
+ assert.equal(values[F.KEY].cards[card.id].status,'known');assert.deepEqual(model.view().queue,queue);
+ assert.equal(model.review(card.id,'learning'),true);assert.equal(studied,2);
+ assert.equal(F.create({store,cards:tiny}).progress().cards[card.id].status,'learning');
+ assert.equal(model.review('missing','known'),false);assert.equal(model.review(card.id,'other'),false);assert.equal(studied,2);
+ assert.deepEqual(Object.keys(values),[F.KEY]);assert.deepEqual(model.selection(),['d']);
+});
+test('browsing another word advances and wraps without grading or changing the daily word',()=>{
+ const {store}=fixture(),model=F.create({store,cards:tiny,now:()=>new Date(2026,9,18,12)}),daily=model.word();
+ assert.notEqual(model.nextWord(daily.id).id,daily.id);assert.equal(model.nextWord('f').id,'a');
+ assert.equal(model.word().id,daily.id);assert.deepEqual(model.progress().cards,{});
+ assert.equal(F.create({store,cards:[]}).nextWord('none'),null);
+});

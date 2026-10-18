@@ -156,6 +156,12 @@
       session = { queue, planned: queue.length, graded: new Set(), seen: 0, flipped: false, cap: Math.max(queue.length * 2, queue.length), done: queue.length === 0, logged: false };
       return snapshot();
     }
+    function saveReview(id,status) {
+      if (!list.some(card=>card.id===id) || !['known','learning'].includes(status)) return false;
+      const progress=read();progress.cards[id]={status,updatedAt:+now()};write(progress);return true;
+    }
+    function review(id,status) { if(!saveReview(id,status))return false;onStudied();return true; }
+    function nextWord(id,date) { if(!list.length)return null;const index=list.findIndex(card=>card.id===id);return list[(index<0?list.indexOf(word(date))+1:index+1)%list.length]; }
     function act(action) {
       if (!session || session.done) return snapshot();
       if (action === 'flip') { if (session.queue[0]) session.flipped = true; return snapshot(); }
@@ -164,9 +170,7 @@
       const card = session.queue[0];
       if (!card) { finish(); return snapshot(); }
       if (action === 'known' || action === 'learning') {
-        const progress = read();
-        progress.cards[card.id] = { status: action === 'known' ? 'known' : 'learning', updatedAt: +now() };
-        write(progress);
+        saveReview(card.id,action);
         session.graded.add(card.id);
       }
       session.queue = rotate(session.queue, action);
@@ -180,7 +184,7 @@
       const key = typeof date === 'string' ? date : day(date || now());
       return wordOfDay(list, key);
     }
-    return { setCards, cards: () => list.slice(), categories: () => categories.slice(), decks, selection, setDecks, start, act, close, view: snapshot, progress: read, word, face };
+    return { setCards, cards: () => list.slice(), categories: () => categories.slice(), decks, selection, setDecks, start, act, close, view: snapshot, progress: read, word, nextWord, review, face };
   }
 
   function registerFurniture(LR) {
@@ -280,7 +284,7 @@
     body.append(decks, study, done);
     overlay.append(chrome, body);
     doc.body.appendChild(overlay);
-    let active = false, lastFocus = null, todayHost = null;
+    let active = false, lastFocus = null, todayHost = null, todayCardId = null, todayDate = "";
 
     function viewport() {
       overlay.style.height = (root.visualViewport?.height || root.innerHeight) + 'px';
@@ -297,9 +301,13 @@
     function paintToday() {
       const btn = todayHost?.querySelector('.french-today') || doc.querySelector('.space-today .french-today');
       if (!btn) return;
-      const card = model.word();
-      btn.hidden = !card;
+      const date=day(new Date());if(todayDate!==date){todayDate=date;todayCardId=null;}
+      const card=model.cards().find(card=>card.id===todayCardId) || model.word();
+      btn.hidden = !card;const shell=btn.closest('.french-today-card');if(shell)shell.hidden=!card;
       if (!card) return;
+      todayCardId=card.id;btn.dataset.cardId=card.id;
+      const status=model.progress().cards[card.id]?.status;
+      if(shell){shell.querySelector('.french-review-known').setAttribute('aria-pressed',String(status==='known'));shell.querySelector('.french-review-learning').setAttribute('aria-pressed',String(status==='learning'));shell.querySelector('.french-review-status').textContent=status==='known'?'Learned':status==='learning'?'Still learning':'';btn.querySelector('.french-today-kicker').textContent=card.id===model.word()?.id?"Today's French word":'Another French word';}
       btn.querySelector('b').textContent = card.fr;
       btn.querySelector('small').textContent = card.en;
       if(btn.dataset.flip){btn.querySelector('.french-example').textContent=card.ex || card.en;btn.querySelector('.french-example-translation').textContent=card.exEn || '';btn.setAttribute('aria-pressed',String(btn.classList.contains('is-flipped')));}
@@ -411,6 +419,16 @@
         if (sky) sky.insertAdjacentElement('afterend', btn);
         else if(flip)host.appendChild(btn);
         else host.prepend(btn);
+        if(flip){
+          const card=el('section','french-today-card');card.setAttribute('aria-label','French quick review');btn.replaceWith(card);card.appendChild(btn);
+          const actions=el('div','french-quick-actions'),status=el('span','french-review-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+          for(const [action,label,path] of [['learning','Still learning','m6 6 12 12M18 6 6 18'],['known','Mark as learned','m5 12 4 4L19 6']]){
+            const control=el('button','french-review-'+action);control.type='button';control.setAttribute('aria-label',label);control.title=label;control.setAttribute('aria-pressed','false');control.innerHTML=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+            control.onclick=()=>{try{if(model.review(todayCardId,action)){paintToday();if(action==='known')try{onCorrect();}catch(e){/* optional celebration */}}}catch(e){status.textContent=e.message;}};actions.appendChild(control);
+          }
+          const next=el('button','french-next-word','Next word →');next.type='button';next.onclick=()=>{const word=model.nextWord(todayCardId);if(!word)return;todayCardId=word.id;btn.classList.remove('is-flipped');btn.querySelector('.french-front').hidden=false;btn.querySelector('.french-back').hidden=true;paintToday();};
+          card.append(actions,status,next);
+        }
       }
       paintToday();
     }

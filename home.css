@@ -241,3 +241,15 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 
 .home-app-controls { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
 .home-app-controls .home-search { flex:1; min-width:0; margin:0; height:46px; }
+
+/* Today's word flips independently of its sibling review controls. */
+.space-today .today-duo .french-today-card { display:flex; flex-direction:column; align-items:center; gap:10px; min-width:0; border:1px solid var(--line); border-radius:26px; background:var(--panel-solid); padding:20px 16px 14px; }
+.space-today .today-duo .french-today-card[hidden] { display:none; }
+.space-today .today-duo .french-today-card .french-today { border:0; border-radius:0; background:none; padding:0; min-height:150px; margin:0; flex:1; }
+.french-quick-actions { display:flex; justify-content:center; gap:10px; }
+.french-quick-actions button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--chip); color:var(--ink); }
+.french-review-known[aria-pressed=true] { background:#dbe9da; color:#35553c; border-color:#8aa68c; }
+.french-review-learning[aria-pressed=true] { background:#f9e0cd; color:#834d35; border-color:#cc9c7f; }
+.french-review-status { min-height:16px; font-size:11px; font-weight:800; color:var(--ink-dim); text-align:center; }
+.french-next-word { min-height:36px; padding:6px 10px; font-size:12px; font-weight:800; color:var(--ink); border-radius:12px; }
+.french-next-word:hover { background:var(--chip); }
