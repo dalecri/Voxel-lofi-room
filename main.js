@@ -788,7 +788,7 @@ function startLofiRooms() {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bMusic: 'Lofi radio (M)', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bHome: 'Control Centre', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bMusic: 'Lofi radio (M) · Hold to open Sound', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bHome: 'Control Centre', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -1418,6 +1418,8 @@ function startLofiRooms() {
   // Handle the top sheet before crate navigation, text fields or cat-view controls.
   window.addEventListener('keydown', e => {
     if (!$('#sheet').classList.contains('open')) return;
+    // Let an open native picker handle Escape and its own keyboard navigation.
+    try { if (document.querySelector('select:open')) return; } catch (_) {}
     if(e.target.matches('.pixel-grid')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' ','z','Z'].includes(e.key))return;
     const typing = e.target.matches('input, textarea, select') || e.target.isContentEditable;
     const menuShortcut = !typing && !e.ctrlKey && !e.metaKey && !e.altKey && ['h','?'].includes(e.key.toLowerCase()) && !!$('#menu-today');
@@ -1833,7 +1835,18 @@ function startLofiRooms() {
     if (meta.raining) discover('rain');
     if (meta.weather === 'storm') setTimeout(() => view.strike(), 900);
   }
-  $('#bMusic').onclick = () => toggleRadio();
+  (function musicShortcut(){
+    const button=$('#bMusic');let timer=null,pointer=null,held=false,start=null;
+    const clear=()=>{if(timer!==null)clearTimeout(timer);timer=null;pointer=null;};
+    const openSound=()=>{if(held)return;held=true;clear();store.set('lr.menuTab','Sound');renderMenu();openSheet();$('#menu-sound-tab')?.focus({preventScroll:true});};
+    button.title='Lofi radio (M) · Hold to open Sound';
+    button.setAttribute('aria-description','Tap to toggle music. Press and hold to open Sound.');
+    button.addEventListener('pointerdown',e=>{if(e.button!==0)return;clear();held=false;pointer=e.pointerId;start={x:e.clientX,y:e.clientY};timer=setTimeout(openSound,550);});
+    button.addEventListener('pointermove',e=>{if(pointer===e.pointerId&&Math.hypot(e.clientX-start.x,e.clientY-start.y)>10)clear();});
+    for(const event of ['pointerup','pointercancel','pointerleave'])button.addEventListener(event,clear);
+    button.addEventListener('contextmenu',e=>{e.preventDefault();if(pointer!==null)openSound();});
+    button.onclick=e=>{if(held){held=false;if(e.detail>0){e.preventDefault();return;}}toggleRadio();};
+  })();
 
   // ---------------------------------------------------------------
   // Rooms list & menu
@@ -2567,9 +2580,6 @@ function startLofiRooms() {
       r.setAttribute('role','switch'); r.setAttribute('aria-pressed',String(!!on)); r.setAttribute('aria-checked',String(!!on));
       r.onclick = () => { fn(); renderMenu(); };
     };
-    toggle('Sound', Sound.on, () => { Sound.toggle(); meta.sound = Sound.on; saveMeta(); });
-    h('h2', '', 'Your radio');
-    h('p', 'muted small', 'Use the arrows to tune between Lofi radio (offline) and your saved stations. Add a direct MP3 or Icecast/Shoutcast stream below. YouTube links can’t play inside the app.');
     const sl = h('div', 'stations');
     const icons=['📻','🌙','☕','🌧','🌿','🎷','🎹','🌊','🌸','✨','🎧','🔥'];
     const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">'+(kind==='stop'?'<rect x="6" y="6" width="12" height="12" rx="2"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';

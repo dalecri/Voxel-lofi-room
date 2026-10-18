@@ -75,7 +75,7 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 .today-rituals{display:flex;gap:10px;overflow-x:auto;padding:2px 0 10px;scroll-snap-type:x proximity}.space-today .today-ritual{display:flex;flex:0 0 auto;align-items:center;gap:10px;min-width:132px;max-width:205px;width:auto;margin:0;padding:14px 16px;border:1px solid var(--line);border-radius:22px;background:var(--panel-solid);color:var(--ink);text-align:left;scroll-snap-align:start}.space-today .today-ritual b{display:block;font:500 17px Fredoka,sans-serif}.space-today .today-ritual small{display:block;margin-top:3px;font-size:12px;color:var(--ink-dim)}.space-today .today-ritual .ritual-icon{font-size:24px}.task-notebook-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.task-notebook-heading .task-notebook-title{margin:0}.task-counter{font-size:13px;font-weight:900;white-space:nowrap;color:var(--ink-dim)}.task-list-progress{height:5px;overflow:hidden;border-radius:10px;background:var(--line);margin-bottom:12px}.task-list-progress>span{display:block;height:100%;background:#d9b35e;border-radius:inherit;transition:width .25s ease}.space-today .task-notebook{margin-top:12px}.space-today button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 @media(max-width:359px){.today-duo{grid-template-columns:1fr}.space-today .today-duo .french-today{min-height:175px}.space-today .today-sky{padding:20px}}
 @media(prefers-reduced-motion:reduce){.task-list-progress>span{transition:none}}
-.space-today .today-sky-tag{position:absolute;right:18px;top:22px;max-width:60%;padding:6px 10px;border-radius:18px;background:#ffffff40;font-size:11px;font-weight:900}.space-today .today-sky-phase{font-size:13px}
+.space-today .today-sky-phase{font-size:13px}
 
 /* Cozy scrollbars: slim, rounded, theme-aware */
 * { scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
@@ -168,7 +168,6 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 .space-search .home-search[hidden], .space-search .home-results[hidden] { display: none; }
 /* Weather and Google's existing tasks UI share one continuous hero surface. */
 .today-weather { position: relative; padding-bottom: 12px; }
-.space-today .today-weather .today-sky-tag { top: 0; right: 0; }
 .today-sky > .google-tasks { padding: 20px 0 0; margin: 0; border: 0; border-radius: 0; background: transparent; color: inherit; }
 .space-today .today-sky .google-tasks small { display: inline; margin: 0; }
 .today-sky .google-task-picker, .today-sky .google-task-row time { color: inherit; }
@@ -186,3 +185,29 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 .task-notebook > .task-journey { border: 0; border-radius: 0; box-shadow: none; background: transparent; margin: 18px 0 0; padding: 16px 0 0; }
 .task-notebook .task-journey-summary { background: var(--chip); }
 .task-notebook .task-journey-summary::after { background: var(--chip); }
+
+/* Shared dropdowns keep the native select API, labels and keyboard behavior. */
+html body select:not([multiple]) {
+  appearance: none; -webkit-appearance: none; box-sizing: border-box; max-width: 100%; min-height: 44px;
+  border: 1px solid var(--line); border-radius: 14px; padding: 10px 34px 10px 12px;
+  font: 600 14px var(--font); color: var(--ink); background-color: var(--panel-solid); cursor: pointer;
+  background-image: linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);
+  background-position: calc(100% - 17px) 50%,calc(100% - 12px) 50%; background-size: 5px 5px; background-repeat: no-repeat;
+}
+html body select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+html body select:disabled { cursor: default; opacity: .5; }
+html body select option, html body select optgroup { color: var(--ink); background: var(--panel-solid); font: inherit; }
+/* Customizable native pickers theme the opened list too on modern WebViews.
+   Older browsers retain their platform picker and the themed closed control. */
+@supports (appearance: base-select) {
+  html body select:not([multiple]), html body select:not([multiple])::picker(select) { appearance: base-select; }
+  html body select:not([multiple])::picker-icon { display: none; }
+  html body select:not([multiple])::picker(select) {
+    color: var(--ink); background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px;
+    padding: 6px; margin-block: 6px; box-shadow: var(--shadow); max-height: min(50dvh,320px); overflow: auto; font: 600 14px var(--font);
+  }
+  html body select:not([multiple]) option { min-height: 40px; padding: 10px 12px; border-radius: 10px; gap: 12px; }
+  html body select:not([multiple]) option:checked { background: color-mix(in srgb,var(--accent) 16%,var(--panel-solid)); }
+  html body select:not([multiple]) option:hover, html body select:not([multiple]) option:focus { background: var(--chip); }
+  html body select:not([multiple]) option::checkmark { color: var(--accent); margin-inline-start: auto; }
+}
