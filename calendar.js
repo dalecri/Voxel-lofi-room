@@ -10,7 +10,7 @@
 // Embedded Android WebViews may reject Google sign-in; the local calendar works
 // regardless. Use the registered HTTPS browser origin for Google authorization.
 (function(root){
-  const GOOGLE_CLIENT_ID=''; // OWNER CONFIG: OAuth client ID. Blank keeps everything local.
+  const GOOGLE_CLIENT_ID='446703031004-aga4sp6l11dknafmg8rpspi5m7lif8e4.apps.googleusercontent.com'; // OWNER CONFIG: OAuth client ID. Blank keeps everything local.
   const SCOPE='https://www.googleapis.com/auth/calendar.readonly';
   const TASKS_SCOPE='https://www.googleapis.com/auth/tasks.readonly',READ_SCOPES=SCOPE+' '+TASKS_SCOPE;
   const LOG='lr.activityLog',EVENTS='lr.calendarEvents',TOKEN='lr.googleCalendarToken';

@@ -1,5 +1,5 @@
 """npm run build && python3 tests/calendar-browser.py. Private calendar at mobile/desktop widths."""
-import functools,json
+import functools,json,re
 from datetime import date,timedelta
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -12,7 +12,12 @@ server=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']);c=b.new_context(viewport={'width':390,'height':844},timezone_id='America/Toronto')
  c.add_init_script("""localStorage.setItem('lr.intro','true');localStorage.setItem('lr.meta',JSON.stringify({sound:false,music:false,realtime:false,phase:'day',liveExtras:false,liveWeather:false,visitors:false,mischief:false,calmPerformance:true}));const d=new Date(),day=String(d.getFullYear())+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');localStorage.setItem('lr.atlas',JSON.stringify({holidays:{[d.getFullYear()]:{at:Date.now(),rows:[{date:day,name:'Fixture Canadian holiday',localName:'Fixture Canadian holiday'}]}}}));""")
- external=[];c.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else (external.append(r.request.url),r.abort())[-1]);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
+ external=[]
+ def local_route(r):
+  if r.request.url.endswith('/calendar.js'):r.fulfill(content_type='application/javascript',body=re.sub(r"const GOOGLE_CLIENT_ID='[^']*';", "const GOOGLE_CLIENT_ID='';", (ROOT/'www/calendar.js').read_text()))
+  elif r.request.url.startswith('http://127.0.0.1:'):r.continue_()
+  else:external.append(r.request.url);r.abort()
+ c.route('**/*',local_route);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.calendar');page.evaluate('__lr.renderLoop.stop()')
  selected=page.evaluate("""() => {const a=__lr;a.room.items=[];a.room.n=10;a.setMode('explore',true);window.calPiece=a.room.add(a.room.make('calendar',{k:0,u:3,e:10}));window.plant=a.room.add(a.room.make('bonsai',{x:2,z:2}));a.room.add(a.room.make('cat',{x:4,z:3}));window.bowl=a.room.add(a.room.make('foodbowl',{x:4,z:4}));a.changed();const day=LRCalendar.day(new Date());a.calendarModel.append('letter',{id:'fixture-letter'});a.calendarModel.append('tea');a.calendarModel.append('tasks',{id:'1'});a.calendarModel.append('tasks',{id:'2'});a.calendarModel.append('tasks',{id:'3'});a.interact(plant.id);a.interact(bowl.id);a.roomTools.brew(3);a.todayTasks.add('Calendar task');a.todayTasks.check(a.todayTasks.list().at(-1).id,true);const scene=a.files.add('Scenes',{title:'Kyoto memory',decor:LRWidgets.shareDecor(a.room.serialize())});const raw=JSON.parse(localStorage.getItem('lr.scenes'));raw.files.find(f=>f.id===scene.id).createdAt=+new Date(new Date().getFullYear()-1,new Date().getMonth(),new Date().getDate(),12);localStorage.setItem('lr.scenes',JSON.stringify(raw));a.interact(calPiece.id);return day;}""")
  body=page.locator('#sheetBody');assert body.locator('h2').inner_text()=='Calendar';assert body.get_by_role('button',name='Connect Google Calendar',exact=True).is_disabled();assert 'not been configured' in body.inner_text();assert body.locator('.calendar-day').count()>=28
@@ -39,7 +44,7 @@ with sync_playwright() as p:
  def connected_route(r):
   u=r.request.url
   if u.endswith('/calendar.js'):
-   r.fulfill(content_type='application/javascript',body=(ROOT/'www/calendar.js').read_text().replace("const GOOGLE_CLIENT_ID='';","const GOOGLE_CLIENT_ID='fixture-client';"))
+   r.fulfill(content_type='application/javascript',body=re.sub(r"const GOOGLE_CLIENT_ID='[^']*';", "const GOOGLE_CLIENT_ID='fixture-client';", (ROOT/'www/calendar.js').read_text()))
   elif u.startswith('http://127.0.0.1:'):r.continue_()
   elif u=='https://accounts.google.com/gsi/client':
    script_calls.append(u);r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient:o=>{window.oauthOptions={scope:o.scope,include_granted_scopes:o.include_granted_scopes};return {requestAccessToken:()=>o.callback({access_token:'TEST_PRIVATE_TOKEN',scope:o.scope,expires_in:3600})}},revoke:()=>{}}}};")

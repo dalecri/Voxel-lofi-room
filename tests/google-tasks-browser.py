@@ -1,5 +1,5 @@
 """npm run build && python tests/google-tasks-browser.py. Stubbed GIS + read-only Google APIs."""
-import functools,json
+import functools,json,re
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 from threading import Thread
@@ -14,7 +14,7 @@ with sync_playwright() as p:
  calls=[];status={'tasks':200,'events':200}
  def route(r):
   u=r.request.url
-  if u.endswith('/calendar.js'):r.fulfill(content_type='application/javascript',body=(ROOT/'www/calendar.js').read_text().replace("const GOOGLE_CLIENT_ID='';","const GOOGLE_CLIENT_ID='fixture-client';"))
+  if u.endswith('/calendar.js'):r.fulfill(content_type='application/javascript',body=re.sub(r"const GOOGLE_CLIENT_ID='[^']*';", "const GOOGLE_CLIENT_ID='fixture-client';", (ROOT/'www/calendar.js').read_text()))
   elif u.startswith('http://127.0.0.1:'):r.continue_()
   elif u=='https://accounts.google.com/gsi/client':
    calls.append(r.request);r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient:o=>{window.authScope=o.scope;return {requestAccessToken:()=>o.callback({access_token:'TEST_GOOGLE_TOKEN',scope:o.scope,expires_in:3600})}},revoke:(token,cb)=>{window.revokedToken=token;cb()}}}};")
