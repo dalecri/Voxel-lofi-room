@@ -28,21 +28,13 @@ with sync_playwright() as p:
   page.click('#disc');page.locator('#cozyMoments').wait_for();page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
   page.locator('#bMomentDiary').click();assert page.locator('#journalFeed > .d').count()>50;assert page.locator('#journalFeed .journal-paper').count()==0
   page.screenshot(path=f'/tmp/cozy-moments-{width}.png');assert page.locator('#cozyMoments').evaluate('e=>e.getBoundingClientRect().right<=innerWidth');page.keyboard.press('Escape');assert page.locator('#cozyMoments').is_hidden()
-  # The Daily News opens from Control Center.
-  page.click('#bHome');page.locator('#homeView [data-app=news]').click()
-  paper=page.locator('.journal-paper');paper.wait_for();assert paper.locator('h3').inner_text()=='DAILY NEWS';assert paper.locator('.news-day').inner_text()=='Day 1'
-  assert paper.locator('.news-lead h4').inner_text()=='DIEGO: INSPECTED DINNER';assert paper.locator('.news-story').count()>=2
-  assert paper.locator('.news-masthead').evaluate('e=>{const a=e.getBoundingClientRect(),b=e.closest("article").getBoundingClientRect();return a.top>=b.top && a.left>=b.left && a.right<=b.right}')
-  assert paper.locator('.news-sections').inner_text()=='Little moments - The cats’ version'
-  page.locator('.news-reaction').click();reaction=page.locator('.news-response').inner_text();assert reaction
-  page.screenshot(path=f'/tmp/journal-news-{width}.png',full_page=True)
-  assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-  assert paper.evaluate('e=>e.scrollWidth<=e.clientWidth')
-  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.dailyNewsSheet()');page.locator('.news-reaction').click();assert page.locator('.news-response').inner_text()==reaction
-  page.evaluate("localStorage.setItem('lr.catJournal','[]');localStorage.setItem('lr.journalNews',JSON.stringify({days:[],moments:[]}));localStorage.setItem('lr.dailyLog','[]')")
-  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.dailyNewsSheet()');assert page.locator('.journal-paper.is-slim .news-slim').is_visible();assert page.locator('.news-lead').count()==0;assert 'presses rest' not in page.locator('.journal-paper').inner_text();assert page.locator('.news-forecast').is_visible()
+  # There is no Daily News anywhere; Control Center offers the Daily Brief instead.
+  page.click('#bHome');assert page.locator('#homeView [data-app=news]').count()==0;brief=page.locator('#homeView [data-app=digest]');assert 'Daily Brief' in brief.inner_text();brief.click()
+  paper=page.locator('.drift-paper');paper.wait_for();assert page.locator('.drift-masthead').inner_text()=='Daily Brief';assert page.locator('.journal-paper').count()==0;assert page.evaluate('typeof __lr.dailyNewsSheet')=='undefined'
+  assert paper.locator('.drift-section[data-type=forecast]').count()==1;assert page.evaluate('document.documentElement.scrollWidth <= innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
+  page.screenshot(path=f'/tmp/daily-brief-{width}.png')
   page.keyboard.press('Escape');page.wait_for_function('!document.querySelector("#sheet").classList.contains("open")');assert not errors,errors
   context.close()
  browser.close()
 server.shutdown()
-print('PASS: daily paper, deterministic reaction, intact archives, empty state, reload, Escape, mobile/desktop; no console errors')
+print('PASS: To-Do tab, cozy moments card with intact archives, no Daily News, Daily Brief from Control Center, Escape, mobile/desktop; no console errors')

@@ -3,8 +3,7 @@
 (function(root) {
   const TOOLS=[
     ['typewriter','Typewriter','⌨','Write a letter'],
-    ['news','Daily News','🗞','The house front page'],
-    ['digest','Daily Drift','▤','The Sunday magazine'],
+    ['digest','Daily Brief','🗞','Your morning paper at the door'],
     ['captions','Caption studio','🎬','TwoStoryTails clips, ready to copy'],
     ['library','My Library','📖','Letters, sparks, and quick notes'],
     ['mailbox','Future-self mailbox','✉','Send a note to later'],

@@ -117,31 +117,6 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 }
 
 /* A daily sibling to the Drift: the paper keeps its ink in either room theme. */
-#journalFeed > .journal-paper, #journalFeed > .journal-archive-title { grid-column: 1 / -1; }
-.journal-paper { --paper-ink: #684b30; color: var(--paper-ink); background: #f4edcf; border: 1px solid #cab88e; border-radius: 12px 12px 24px 12px; padding: clamp(14px, 2.5vw, 20px); margin: 10px 0 16px; box-shadow: 4px 5px 0 #b7a17a33; overflow-wrap: anywhere; }
-.journal-paper .news-masthead { position: static; padding: 0 0 10px; pointer-events: auto; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--paper-ink); padding-bottom: 10px; }
-.journal-paper .news-masthead h3 { font: 700 clamp(28px, 5vw, 44px)/1 Georgia, 'Times New Roman', serif; letter-spacing: -.045em; margin: 0; flex: 1; }
-.news-day { border: 1px solid var(--paper-ink); border-radius: 5px; padding: 7px; white-space: nowrap; font-weight: 800; font-size: 14px; }
-.journal-paper .news-sections { text-align: center; border-bottom: 1px solid var(--paper-ink); padding: 6px 0; font-size: 11px; font-weight: 800; margin: 0; }
-.journal-paper .news-date { text-align: center; font-size: 11px; margin: 7px 0 10px; }
-.news-columns { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,2.2fr) minmax(0,1fr); gap: 14px; }
-.news-lead { text-align: center; padding: 0 12px; border-inline: 1px solid #ad9672; }
-.journal-paper h4 { font-family: Georgia, 'Times New Roman', serif; color: var(--paper-ink); }
-.news-lead h4 { font-size: clamp(18px,2.5vw,24px); line-height: 1.2; margin: 0 0 8px; }
-.news-lead p { font: 600 15px/1.4 Georgia, 'Times New Roman', serif; margin: 0; }
-.news-story { border-top: 4px solid #94744e; margin-bottom: 10px; padding-top: 6px; }
-.news-story h4 { font-size: 15px; margin: 0 0 7px; }
-.news-story p { font: 13px/1.45 Georgia, 'Times New Roman', serif; margin: 0; }
-.journal-paper footer { text-align: center; border-top: 1px solid #ad9672; margin-top: 12px; padding-top: 10px; }
-.news-reaction { border: 1px solid #a58342; background: #efd181; color: #644a2c; border-radius: 24px; padding: 12px 30px; font-weight: 800; }
-.news-response { font-size: 14px; line-height: 1.5; margin: 12px 0 0; }
-.news-response:empty { display: none; }
-@media(max-width: 520px) {
-  .news-columns { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px; }
-  .news-lead { grid-column: 1 / -1; grid-row: 1; border-inline: 0; padding: 0 0 10px; }
-  .news-left { grid-column: 1; } .news-right { grid-column: 2; }
-  .news-side:empty { display: none; }
-}
 
 /* Read-and-copy drafts, printed inside the daily paper in either room theme. */
 
@@ -275,18 +250,6 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .station-card .station-remove:hover { background:var(--chip); color:var(--ink); }
 body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 75%,#111021); --radio-signal:color-mix(in srgb,var(--ink) 85%,var(--accent)); }
 
-/* Daily News: slim editions, the forecast box and clap buttons share the cream broadsheet. */
-.journal-paper .news-slim { text-align: center; font: italic 600 16px/1.45 Georgia, 'Times New Roman', serif; margin: 6px 0 12px; padding: 12px 6px; border-bottom: 1px solid #ad9672; }
-.journal-paper .news-lead .press-kicker, .journal-paper .news-story .press-kicker { margin-bottom: 4px; }
-.journal-paper .news-lead .press-clap, .journal-paper .news-story .press-clap, .journal-paper .news-forecast .press-clap { margin-top: 8px; }
-.journal-paper .news-story.is-shrunk h4 { font-size: 13px; }
-.journal-paper .news-story.is-shrunk p { display: none; }
-.news-forecast { margin: 12px 0 0; padding: 10px 12px; border: 2px solid var(--paper-ink); background: #efe4c0; }
-.news-forecast h4 { margin: 0 0 6px; font-size: 17px; letter-spacing: .02em; }
-.news-forecast .news-forecast-line { margin: 0 0 6px; font: italic 600 15px/1.4 Georgia, 'Times New Roman', serif; }
-.news-forecast ul { margin: 0; padding: 0; list-style: none; font: 13px/1.5 Georgia, 'Times New Roman', serif; }
-.news-forecast li b { font-family: Nunito, sans-serif; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-right: 4px; }
-.news-forecast.is-shrunk ul { display: none; }
 /* Cozy moments: a floating card under the room name (checklist + the cats' version). */
 .cozy-pop { position: fixed; z-index: 12; top: calc(var(--sat, 0px) + 76px); left: max(16px, env(safe-area-inset-left)); width: min(400px, calc(100vw - 32px)); max-height: min(70dvh, 620px); display: flex; flex-direction: column; padding: 12px 12px 14px; border-radius: 22px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); box-sizing: border-box; }
 .cozy-pop[hidden] { display: none; }

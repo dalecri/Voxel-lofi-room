@@ -346,7 +346,6 @@ function startLofiRooms() {
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
     if(p.id==='library')library.open();
     else if(p.id==='digest')digestUI.open();
-    else if(p.id==='news')dailyNewsSheet();
     else if(p.id==='captions')captionStudio();
     else if(p.id==='typewriter')letters.open();
     else if(p.id==='french')frenchUI.open();
@@ -456,9 +455,8 @@ function startLofiRooms() {
   // The house press: pattern stories, tomorrow's box, pet sagas and claps (private, lr.press).
   const press = LRPress.create({ store });
   function pressSources() {
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     let google = [], tasks = [];
-    try { google = googleCalendar.cachedEvents?.(tomorrow) || []; tasks = googleCalendar.cachedTasks || []; } catch (e) { /* Google stays optional and read-only */ }
+    try { google = googleCalendar.cachedEvents?.(new Date()) || []; tasks = googleCalendar.cachedTasks || []; } catch (e) { /* Google stays optional and read-only */ }
     return { activity: calendarModel.activity(), catLog: catJournal.entries, focus: focusGarden.state.sessions, tally: roomTools.state.tally,
       events: calendarModel.events(), google, tasks, weather: meta.liveWeather ? meta.weatherDetails : null, rooms };
   }
@@ -2081,61 +2079,6 @@ function startLofiRooms() {
     if (!cats.length) $('#crownCats').textContent = 'Add a cat from the Pets tab first.';
     $('#crownClose').onclick = closeSheets; openSheet();
   }
-  // The Daily News front page, opened from Control Center. The Journal keeps only the diaries.
-  function newsPaper() {
-    const diary = journalNews.edition(catJournal.entries);
-    let news;
-    try { news = press.news({ ...pressSources(), diary }); }
-    catch (e) { news = { date: diary.date, day: diary.day, slim: !diary.lead, lead: diary.lead ? { type: 'diary', headline: diary.headline, body: diary.dek } : null, stories: [], diary: diary.remaining, forecast: null, sections: diary.sections, reaction: diary.reaction }; }
-    const paper = document.createElement('article'); paper.className = 'journal-paper' + (news.slim ? ' is-slim' : ''); paper.setAttribute('aria-label', 'Daily News');
-    paper.innerHTML = `<header class="news-masthead"><h3>DAILY NEWS</h3><span class="news-day">Day ${news.day}</span></header>
-      <p class="news-sections">${esc(news.sections.join(' - ') || (news.slim ? 'Slim edition' : 'A quiet edition'))}</p>
-      <p class="news-date">${esc(new Date(news.date+'T12:00').toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'}))}</p>
-      ${news.slim ? '<p class="news-slim">Quiet day in the house. The full front page returns when there is news.</p>' : '<div class="news-columns"><div class="news-side news-left"></div><div class="news-lead"></div><div class="news-side news-right"></div></div>'}
-      <footer><button type="button" class="news-reaction">Mmmh…</button><p class="news-response" role="status"></p></footer>`;
-    const clapFor = type => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'press-clap';
-      const label = LRPress.TYPE_LABEL[type] || 'this';
-      const paint = () => { b.textContent = `👏 ${press.claps(type) || ''}`.trim(); b.setAttribute('aria-pressed', String(press.clapped('news', type))); };
-      b.setAttribute('aria-label', `Clap for ${label.toLowerCase()} stories`); paint();
-      b.onclick = () => { try { press.clap('news', type); paint(); } catch (e) { toast(`<span>${esc(e.message)}</span>`, 2200, true); } };
-      return b;
-    };
-    const kicker = type => { const k = document.createElement('p'); k.className = 'press-kicker'; k.textContent = LRPress.TYPE_LABEL[type] || ''; return k; };
-    if (!news.slim && news.lead) {
-      const lead = paper.querySelector('.news-lead'); lead.dataset.type = news.lead.type;
-      const h = document.createElement('h4'); h.textContent = news.lead.headline;
-      const p = document.createElement('p'); p.textContent = news.lead.body;
-      lead.append(kicker(news.lead.type), h, p, clapFor(news.lead.type));
-    }
-    const sides = news.slim ? [] : [...news.stories.map(s => ({ ...s, pattern: true })), ...news.diary.map(e => ({ type: 'diary', headline: e.title, body: e.text }))];
-    sides.forEach((entry, index) => {
-      const story = document.createElement('section'); story.className = 'news-story' + (entry.shrunk ? ' is-shrunk' : ''); story.dataset.type = entry.type;
-      const heading = document.createElement('h4'); heading.textContent = entry.headline;
-      const text = document.createElement('p'); text.textContent = entry.body;
-      if (entry.pattern) story.append(kicker(entry.type), heading, text, clapFor(entry.type)); else story.append(heading, text);
-      paper.querySelector(index % 2 ? '.news-right' : '.news-left').appendChild(story);
-    });
-    if (news.forecast) {
-      const f = news.forecast, box = document.createElement('aside'); box.className = 'news-forecast' + (f.shrunk ? ' is-shrunk' : ''); box.setAttribute('aria-label', 'Tomorrow in the house');
-      const h = document.createElement('h4'); h.textContent = 'Tomorrow in the house';
-      const line = document.createElement('p'); line.className = 'news-forecast-line'; line.textContent = f.prediction;
-      const list = document.createElement('ul');
-      const item = (label, value) => { const li = document.createElement('li'); const b = document.createElement('b'); b.textContent = label; li.append(b, document.createTextNode(' ' + value)); list.appendChild(li); };
-      for (const e of f.events.slice(0, 4)) item(e.time || 'All day', e.title);
-      if (f.weather) item('Sky', f.weather);
-      if (f.tasks.length) item('Due', f.tasks.slice(0, 3).join(' · ') + (f.tasks.length > 3 ? ` · +${f.tasks.length - 3}` : ''));
-      if (!list.children.length) item('Calendar', 'Nothing booked yet.');
-      box.append(h, line, list, clapFor('forecast'));
-      paper.insertBefore(box, paper.querySelector('footer'));
-    }
-    const reaction = news.reaction || diary.reaction;
-    paper.querySelector('.news-reaction').onclick = () => { paper.querySelector('.news-response').textContent = reaction; companion?.say(reaction); };
-    return paper;
-  }
-  function dailyNewsSheet() {
-    codeSheet('Daily News', 'The house front page, kept on this device.', h => { h('div', 'news-reader').appendChild(newsPaper()); });
-  }
   // TwoStoryTails captions: a pixel studio sheet, from Control Center or the clapperboard.
   function captionStudio() {
     codeSheet('Caption studio', 'TwoStoryTails clips, ready to copy.', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); });
@@ -3020,7 +2963,7 @@ function startLofiRooms() {
     if (clockT > 20) { clockT = 0; wardrobe.sync(); if (meta.realtime && realPhase() !== meta.phase) setPhase(realPhase()); checkDrift(); liveWeather.refresh(); }
     momentT += dt;
     worldT += dt;
-    if (worldT >= 1) { driftPaper.update();googleCalendar.check();calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !library.active && !letters.active && !barnaby.active && !frenchUI?.active && !rituals.breath.active && !filming); worldT = 0; }
+    if (worldT >= 1) { driftPaper.update();try{press.track(roomTools.state.tally);}catch(e){/* records are optional */}googleCalendar.check();calendar.refresh();tickWorld(worldT); roomToolsUI.tick(!document.hidden && !library.active && !letters.active && !barnaby.active && !frenchUI?.active && !rituals.breath.active && !filming); worldT = 0; }
     if (momentT > 2) {
       momentT = 0;
       if (view.petNapping()) discover('catnap');
@@ -3063,7 +3006,7 @@ function startLofiRooms() {
     hidden:()=>library.active || letters.active || barnaby.active || frenchUI?.active || home.active || filming || view.capturing || document.hidden || $('#photo').classList.contains('open')
   });
   const calendar=LRCalendar.createView({model:calendarModel,google:googleCalendar,sheet:codeSheet,atlas,meta,scenes:()=>files.list('Scenes'),seasons:LR.SEASONS || [],thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s)});
-  const digest=LRDigest.create({store,sources:()=>({...pressSources(),scenes:files.list('Scenes'),ideas:roomTools.state.ideas,streak:store.get('lr.dailyStreak',{}),guestbook:store.get('lr.guestbook',[]),catLog:catJournal.entries,events:calendarModel.events()}),magazine:(issue,src)=>press.magazine(issue,src),arrange:sections=>press.arrange(sections)});
+  const digest=LRDigest.create({store,sources:()=>({...pressSources(),scenes:files.list('Scenes'),ideas:roomTools.state.ideas,streak:store.get('lr.dailyStreak',{}),guestbook:store.get('lr.guestbook',[]),catLog:catJournal.entries,events:calendarModel.events()}),brief:src=>press.brief(src),magazine:(issue,src)=>press.magazine(issue,src),arrange:sections=>press.arrange(sections)});
   const digestUI=LRDigest.createView({model:digest,press,sheet:codeSheet,sound:Sound,scenes:()=>files.list('Scenes'),thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s),onRead:()=>driftPaper.update(),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
   driftPaper=LRDigest.createPaper({view,room,model:digest,open:()=>digestUI.open(),hidden:()=>state.mode!=='explore'||home.active||library.active||letters.active||barnaby.active||frenchUI?.active||rituals.breath.active||filming||view.capturing||document.hidden||!!view.fp||$('#intro').classList.contains('open')||$('#photo').classList.contains('open'),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
   driftPaper.update();
@@ -3082,7 +3025,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { openCozyMoments,closeCozyMoments,press,dailyNewsSheet,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

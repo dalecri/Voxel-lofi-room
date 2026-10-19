@@ -66,7 +66,8 @@ test('detectors are pure: identical inputs give identical stories and inputs are
 });
 
 test('tomorrow box reads events, weather and due tasks, with a pattern-based prediction',()=>{
- const tomorrow=P.addDays(T,1),f=P.forecast({today:T,events:[{date:tomorrow,title:'Vet visit'}],google:[{date:tomorrow,endDate:tomorrow,title:'French class',startAt:new Date(2026,9,20,11).toISOString()}],tasks:[{title:'File report',due:tomorrow},{title:'Later',due:T}],weather:{forecast:[{date:tomorrow,condition:'rain',high:9.4,low:3.6}]},L:L([0,'tea'],[1,'tea'])});
+ const tomorrow=P.addDays(T,1),today=P.forecast({today:T,ahead:0,events:[{date:T,title:'Standup'}],L:L([1,'tea'],[2,'tea'])});assert.equal(today.prediction,'Standup on the calendar. Tea streak on the line: day 3.');assert.equal(today.date,T);
+ const f=P.forecast({today:T,events:[{date:tomorrow,title:'Vet visit'}],google:[{date:tomorrow,endDate:tomorrow,title:'French class',startAt:new Date(2026,9,20,11).toISOString()}],tasks:[{title:'File report',due:tomorrow},{title:'Later',due:T}],weather:{forecast:[{date:tomorrow,condition:'rain',high:9.4,low:3.6}]},L:L([0,'tea'],[1,'tea'])});
  assert.deepEqual(f.events,[{title:'French class',time:'11am'},{title:'Vet visit',time:''}]);assert.deepEqual(f.tasks,['File report']);assert.equal(f.weather,'Rain on the way, 4° to 9°');
  assert.equal(f.prediction,'French class at 11am, rain on the way. Tea streak on the line: day 3.');
  const habit=P.forecast({today:T,L:L([6,'french'],[13,'french'],[20,'french'])});assert.equal(habit.prediction,'Tuesdays usually bring French sessions (3 of the last 4).');
@@ -112,9 +113,9 @@ test('slim-edition rule: only pattern stories or diary news earn a full front pa
  for(const type of ['streak','first','record','drought','diary'])assert.equal(P.isSlim([{type}]),false);
 });
 
-test('the two papers own disjoint story types',()=>{
- const news=new Set(P.ALLOCATION.news);assert.ok(P.ALLOCATION.drift.every(t=>!news.has(t)));
- for(const t of [...P.ALLOCATION.news,...P.ALLOCATION.drift])assert.ok(P.TYPE_LABEL[t],t);
+test('daily brief types and Sunday-only pages never overlap',()=>{
+ const daily=new Set(P.ALLOCATION.daily);assert.ok(P.ALLOCATION.sunday.every(t=>!daily.has(t)));
+ for(const t of [...P.ALLOCATION.daily,...P.ALLOCATION.sunday])assert.ok(P.TYPE_LABEL[t],t);
 });
 
 test('village gossip compares room sizes against the last issue',()=>{
@@ -122,15 +123,16 @@ test('village gossip compares room sizes against the last issue',()=>{
  const next=P.gossip([{id:1,name:'Study',n:26},{id:2,name:'Attic',n:4},{id:3,name:'Den',n:1}],first.snapshot);assert.deepEqual(next.lines,['Study grew by 6 pieces since the last issue. The neighbours have noticed.','A new address on the street: Den.']);
 });
 
-test('press model: seeded four-cat sagas, news edition with lead, slim day and private storage',()=>{
- const s=store();let now=new Date(2026,9,19,9);const press=P.create({store:s,now:()=>now});
+test('press model: seeded four-cat sagas, morning brief with lead and today box, slim day and private storage',()=>{
+ const s=store();let now=new Date(2026,9,19,7);const press=P.create({store:s,now:()=>now});
  assert.deepEqual(press.state.sagas.map(x=>[x.cat,x.week]),[['Cali',1],['Neo',1],['Diego',1],['Ramses',1]]);
- const quiet=press.news({});assert.equal(quiet.slim,true);assert.equal(quiet.lead,null);assert.ok(quiet.forecast.prediction);
- const busy=press.news({activity:log([0,'tea',3],[5,'tea',2],[9,'tea']),tally:{date:T,count:30},diary:{day:4,lead:{title:'Diego: Napped'},headline:'DIEGO: NAPPED',dek:'A nap.',remaining:[{title:'Luna',text:'Ate.'}],sections:['The cats’ version'],reaction:'Hm.'}});
- assert.equal(busy.slim,false);assert.equal(busy.lead.type,'record');assert.equal(busy.stories.find(x=>x.type==='diary').headline,'DIEGO: NAPPED');assert.deepEqual(busy.diary,[{title:'Luna',text:'Ate.'}]);assert.equal(busy.day,4);
- assert.equal(press.state.reps[T],30);
- const diaryOnly=press.news({diary:{day:1,lead:{title:'x'},headline:'DIEGO: INSPECTED DINNER',dek:'d',remaining:[],sections:[]}});assert.equal(diaryOnly.lead.headline,'DIEGO: INSPECTED DINNER');
- assert.equal(press.clap('news','record'),1);assert.equal(press.clapped('news','record'),true);
+ const quiet=press.brief({});assert.equal(quiet.slim,true);assert.deepEqual(quiet.sections.map(x=>x.type),['forecast']);assert.match(quiet.sections[0].body,/blank page today/);
+ press.track({date:back(1),count:30});assert.equal(press.state.reps[back(1)],30);
+ const yesterday=t=>+new Date(2026,9,18,t),busy=press.brief({activity:log([1,'tea',3],[5,'tea',2],[9,'tea']),catLog:[{name:'Diego',kind:'nap',text:'Napped. Woke up.',time:yesterday(15)},{name:'Luna',kind:'eat',text:'Ate the evidence.',time:yesterday(9)},{name:'Old',kind:'eat',text:'Too old.',time:+new Date(2026,9,10,9)}],events:[{date:T,title:'French class'}]});
+ assert.equal(busy.slim,false);assert.equal(busy.sections[0].lead,true);assert.equal(busy.sections[0].type,'record');assert.equal(busy.sections[1].type,'forecast');assert.equal(busy.sections[1].title,'Today in the house');
+ assert.match(busy.sections[1].body,/^French class on the calendar\./);assert.equal(busy.sections.find(x=>x.type==='diary'&&!x.items).title,'Diego: Napped');
+ assert.deepEqual(busy.sections.find(x=>x.id==='diary-notes').items,[{label:'Luna',value:'Ate the evidence.'}]);assert.ok(!JSON.stringify(busy).includes('Too old'));
+ assert.equal(press.clap('brief','record'),1);assert.equal(press.clapped('brief','record'),false);press.seen('brief',T,['record']);press.clap('brief','record');assert.equal(press.clapped('brief','record'),true);
  assert.deepEqual(Object.keys(s.values),['lr.press']);
  // a magazine issue advances sagas once per issue week and writes room gossip
  const issue={week:'2026-W43',from:'2026-10-12',through:'2026-10-18'};
@@ -138,7 +140,7 @@ test('press model: seeded four-cat sagas, news edition with lead, slim day and p
  assert.equal(sections.filter(x=>x.type==='saga').length,4);assert.match(sections.find(x=>x.cat==='Neo').body,/Week 1 of The Dinner-Time Campaign/);
  const next=press.magazine({week:'2026-W44',from:'2026-10-19',through:'2026-10-25'},{catLog:[{name:'Neo',kind:'eat',time:+new Date(2026,9,20,18)}]});
  assert.match(next.find(x=>x.cat==='Neo').body,/Week 2 of the campaign/);assert.match(next.find(x=>x.cat==='Cali').body,/Week 2 of the review season\. No new developments/);
- assert.ok(sections.every(x=>P.ALLOCATION.drift.includes(x.type)));
+ assert.ok(sections.every(x=>P.ALLOCATION.sunday.includes(x.type)));
  // nothing from the press can reach a shared room code
  const decor={v:1,name:'Room',n:10,wall:{style:'paint'},floor:{style:'oak'},press:s.values['lr.press'],items:[]};assert.ok(!JSON.stringify(W.shareDecor(decor)).includes('Dinner'));assert.ok(!('press' in W.shareDecor(decor)));
 });
