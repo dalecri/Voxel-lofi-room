@@ -169,9 +169,9 @@
           const state=changes.get(key(listId,task.id));if(state?.done&&now()>=state.hideAt)continue;
           const row=el('li','google-task-row'+(state?.done?' completed':''));row.dataset.task=task.id;
           const check=el('button','google-task-check');check.type='button';check.setAttribute('role','checkbox');check.setAttribute('aria-label',task.title);check.setAttribute('aria-checked',String(!!state?.done));check.disabled=!google.canCompleteTasks;check.setAttribute('aria-disabled',String(!!state?.busy||!google.canCompleteTasks));check.setAttribute('aria-busy',String(!!state?.busy));
-          if(state?.done)check.innerHTML=checkIcon;
+          const mark=el('span','task-checkmark');mark.setAttribute('aria-hidden','true');if(state?.done)mark.innerHTML=checkIcon;check.appendChild(mark);
           check.dataset.taskAction='check:'+task.id;check.onclick=()=>change(task,listId,!state?.done,visible.indexOf(task));
-          const text=el('span','google-task-copy');text.appendChild(el('b','',task.title));if(task.due){const when=el('time');when.dateTime=task.due;when.textContent=date(task.due).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});text.appendChild(when);}row.append(check,text);list.appendChild(row);
+          const text=el('span','google-task-copy');text.appendChild(el('b','',task.title));row.append(check,text);list.appendChild(row);
         }
         if(!list.children.length)section.appendChild(el('p','muted small google-task-empty',group.id==='today'?'Nothing scheduled for today.':'Nothing scheduled for tomorrow.'));
       }

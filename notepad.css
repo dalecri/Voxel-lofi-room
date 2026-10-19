@@ -26,9 +26,9 @@
   min-height:44px; padding:0; border:0; border-radius:0; background:transparent;
 }
 .task-notebook .today-task-copy { display:flex; align-items:center; justify-content:space-between; gap:5px; min-width:0; }
-.task-notebook .today-task-text,.grocery-notebook .grocery-name { color:var(--note-ink); font:600 15px/1.35 Nunito,sans-serif; }
+.task-notebook .today-task-text,.task-notebook .google-task-copy b,.grocery-notebook .grocery-name { color:var(--note-ink); font:600 15px/1.35 Nunito,sans-serif; }
 .task-notebook .today-task.done .today-task-text,.grocery-notebook .grocery-row.done .grocery-name { color:#626d5e; text-decoration:none; }
-.task-notebook .today-task-check,.task-notebook .today-task-check[aria-checked=true] {
+.task-notebook .today-task-check,.task-notebook .today-task-check[aria-checked=true],.task-notebook .google-task-check,.task-notebook .google-task-check[aria-checked=true] {
   box-sizing:border-box; width:36px; height:44px; padding:0; border:0; border-radius:0; background:transparent; color:var(--note-ink); box-shadow:none;
 }
 .task-notebook .task-checkmark,.grocery-notebook .grocery-check {
@@ -36,7 +36,7 @@
   border:2px solid #8e9885; border-radius:3px; background:#fffbea; color:#435c46; opacity:1;
 }
 .task-notebook .task-checkmark svg,.grocery-notebook .grocery-check svg { width:19px; height:19px; opacity:0; }
-.task-notebook .today-task-check[aria-checked=true] .task-checkmark svg { opacity:1; }
+.task-notebook .today-task-check[aria-checked=true] .task-checkmark svg,.task-notebook .google-task-check[aria-checked=true] .task-checkmark svg { opacity:1; }
 .task-notebook .today-task-icon { width:28px; height:44px; min-height:44px; border:0; border-radius:4px; padding:0; background:transparent; font-size:16px; opacity:.65; }
 .task-notebook .today-task-icon:hover,.task-notebook .today-task-icon:focus-visible { opacity:1; }
 .task-notebook .today-task-remove { flex:none; width:24px; min-height:44px; padding:0; border:0; border-radius:4px; background:transparent; color:#808674; font:400 19px/1 Nunito,sans-serif; text-align:center; }
@@ -91,3 +91,13 @@
 
 .task-google-page .google-task-day-date { color:var(--note-muted); }
 .task-google-page .google-task-day-heading { border-color:var(--note-rule); }
+
+/* Google's two day groups use the same small checks and ink as My list. */
+.task-google-page .google-task-row { display:grid; grid-template-columns:36px minmax(0,1fr); align-items:center; gap:5px; min-height:44px; padding:0; border:0; background:transparent; }
+.task-google-page .google-task-copy { display:block; }
+.task-google-page .google-task-row.completed .google-task-copy b { color:#626d5e; text-decoration:none; opacity:1; }
+.task-google-page .google-task-check { opacity:1; }
+.task-google-page .google-task-check:disabled,.task-google-page .google-task-check[aria-disabled=true] { opacity:.4; }
+.task-google-page .google-task-check:focus-visible { outline:2px solid var(--note-ink); outline-offset:2px; }
+.task-google-page .google-task-day-heading h4 { font:700 15px/1.35 Nunito,sans-serif; }
+.task-google-page .google-task-days { gap:14px; }
