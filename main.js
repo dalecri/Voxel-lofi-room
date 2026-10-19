@@ -240,7 +240,7 @@ function startLofiRooms() {
     }return taskPortraits.get(key);
   }
   const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus,daily:dailyInfo(),streak:store.get('lr.dailyStreak',{}).n||0,letterDraft:!!letters.model.get()?.body,ideaCount:roomTools.homeState.ideas.length}),
-    completeMoment:()=>{dailyCheck(dailyInfo().D.id);const top=$('#sheetBody').scrollTop;renderMenu();$('#sheetBody').scrollTop=top;const card=$('#menu-today .today-moment');card.tabIndex=-1;card.focus({preventScroll:true});},
+    completeMoment:()=>dailyCheck(dailyInfo().D.id),
     openRitual:id=>{closeSheets();if(id==='garden'){const active=rituals.activeFocus.find(f=>f.kind==='garden'&&f.active),bed=room.items.find(i=>i.t==='focusgarden');gardenUI.open(active?.id || bed?.id || null);}else if(id==='letter')letters.open();else if(id==='ideas')launchTool({id:'ideas'});},
     portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
     celebrate:()=>{try{Sound.init();if(Sound.on&&Sound.ctx?.state==='suspended')Sound.ctx.resume().then(()=>Sound.chime()).catch(()=>{});else Sound.chime();}catch(e){/* optional audio */}if(companion){companion.hop();const p=companion.object.position.clone();p.y+=.7;view.sparkle(p,0xf3d276,12);}activity.wake();},
@@ -2115,6 +2115,7 @@ function startLofiRooms() {
     const feed = $('#journalFeed'); if (!feed || cozyPop.hidden) return;
     feed.innerHTML = '';
     cozyPop.querySelector('.cozy-pop-count').textContent = `${found.size} of ${MOMENTS.length} found`;
+    if(journalFeed==='moments')todayUI.mountMoment(feed);
     const archive = document.createElement('h3'); archive.className = 'journal-archive-title'; archive.textContent = journalFeed === 'cats' ? 'The cats’ archive' : 'Cozy moments checklist'; feed.appendChild(archive);
     ['moments', 'cats'].forEach(k => {
       const b = $(k === 'cats' ? '#bCatDiary' : '#bMomentDiary');

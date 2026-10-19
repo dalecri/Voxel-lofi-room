@@ -356,3 +356,13 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 @media(prefers-reduced-motion:no-preference) { .today-feature { transition:grid-template-columns .25s ease; }.today-feature-pane { transition:background .25s ease; } }
 .today-sky.has-task-focus .today-google-focus .chipbtn { background:var(--chip); color:var(--ink); }
 .today-google-focus .google-task-row.completed .google-task-copy b { color:var(--ink-dim); }
+/* The daily invitation belongs with the Cozy Moments checklist. */
+.cozy-pop .today-moment { padding:14px; gap:8px; border-radius:16px; margin-bottom:12px; }
+.cozy-pop .today-moment-name { font-size:19px; }
+.cozy-pop .today-moment-hint { font-size:13px; }
+.cozy-pop .today-got { min-height:44px; margin-top:4px; }
+.today-sky.has-task-focus .today-sky-copy { display:block; }
+.today-sky.has-task-focus .today-date-row { display:flex; align-items:center; flex-wrap:nowrap; gap:8px; min-width:0; }
+.today-sky.has-task-focus .today-date { flex:none; }
+.today-sky.has-task-focus .today-date-row .today-condition { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0 0 0 auto; padding:4px 8px; border-radius:20px; background:var(--chip); font:600 12px/1.35 Nunito,sans-serif; }
+.today-sky.has-task-focus .today-chance[hidden] { display:none; }
