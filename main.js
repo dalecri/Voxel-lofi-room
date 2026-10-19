@@ -450,7 +450,7 @@ function startLofiRooms() {
   ensureDaily();
   const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog, exclusives: LRShop.exclusives });
   const catJournal = LRLife.journal({ store });
-  const captionDesk = LRCaptions.create({store,changed:()=>{const host=$('.caption-studio');if(host)LRCaptions.render(host,captionDesk);}});
+  const captionDesk = LRCaptions.create({store,changed:()=>{const host=$('.caption-studio');if(host)LRCaptions.render(host,captionDesk);const daily=$('.today-caption-desk');if(daily)LRCaptions.renderDaily(daily,captionDesk);}});
   const journalNews = LRLife.newspaper({ store, moments: MOMENTS });
   // The house press: pattern stories, tomorrow's box, pet sagas and claps (private, lr.press).
   const press = LRPress.create({ store });
@@ -2545,7 +2545,7 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     const todoTab = sections['To-Do'];
     h('h2', '', 'To-Do <small>· just yours, on this device</small>', todoTab);
-    todayUI.mount(target,{googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true,openTasks:()=>{store.set('lr.menuTab','To-Do');try{localStorage.setItem('lr.todoTab','google');}catch(e){}renderMenu();}}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
+    todayUI.mount(target,{captions:host=>{LRCaptions.renderDaily(host,captionDesk);captionDesk.refresh();},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true,openTasks:()=>{store.set('lr.menuTab','To-Do');try{localStorage.setItem('lr.todoTab','google');}catch(e){}renderMenu();}}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);

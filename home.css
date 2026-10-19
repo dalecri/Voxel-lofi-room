@@ -277,3 +277,68 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-sky.has-task-focus .today-date { font-size:13px; }
 .today-sky.has-task-focus .today-drops { margin-block:6px; }
 .today-sky.has-task-focus .today-sky-copy > small { margin-bottom:0; font-size:11px; }
+
+/* Today's desk: one sheet of paper, arranged like Cris's sketch. */
+.space-today .today-sky.has-task-focus { --desk-rule:#b7ac92; padding:28px 20px 16px; border:1px solid #c4b99e; border-radius:16px; background:linear-gradient(110deg,#fffdf280,transparent 65%),#f7f0dc; color:#493e32; box-shadow:0 4px 0 #57452d14; overflow:visible; min-height:0; }
+.today-sky.has-task-focus::before { content:''; position:absolute; top:5px; left:14px; right:14px; height:7px; background:radial-gradient(circle at 50% -2px,transparent 7px,#c4b99e 7.5px,#c4b99e 8.5px,transparent 9px) 0 0/18px 10px repeat-x; pointer-events:none; }
+.today-sky.has-task-focus .today-welcome { margin:0 0 22px; }
+.today-sky.has-task-focus .today-welcome h2 { font-size:clamp(24px,5vw,32px); }
+.today-sky.has-task-focus .today-welcome p { display:none; }
+.today-main { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(120px,1fr); gap:18px; align-items:start; }
+.today-side { display:grid; gap:10px; min-width:0; }
+.today-sky.has-task-focus .today-google-focus { background:none; border:0; border-radius:0; padding:0; margin:0; box-shadow:none; min-width:0; }
+.today-google-focus .google-tasks { padding:0; margin:0; min-width:0; }
+.today-google-focus .google-tasks-heading { display:block; }
+.today-google-focus .google-tasks-heading h3 { font-size:20px; }
+.today-google-focus .google-task-source { display:block; margin-top:4px; }
+.today-google-focus .google-task-row { gap:3px; }
+.today-google-focus .google-task-copy b { overflow-wrap:anywhere; }
+.today-google-focus .google-auth-row { flex-wrap:wrap; }
+.today-google-focus .google-auth-row button { max-width:100%; white-space:normal; }
+.today-quick { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.space-today .today-quick .today-ritual { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:62px; min-width:0; padding:8px 3px; margin:0; border:1px solid var(--desk-rule); border-radius:10px; background:#fffbef; color:#493e32; text-align:center; }
+.space-today .today-quick .ritual-icon { font-size:21px; }
+.space-today .today-quick b { font:500 15px Fredoka,sans-serif; }
+.space-today .today-quick small { display:none; }
+.today-side .today-duo { display:block; }
+.space-today .today-side .today-duo .french-today-card { padding:12px 8px 8px; gap:8px; border:1px solid var(--desk-rule); border-radius:12px; background:#fffbef; color:#493e32; }
+.space-today .today-side .today-duo .french-today { min-height:100px; color:inherit; }
+.space-today .today-side .french-today b { font-size:24px; overflow-wrap:anywhere; }
+.space-today .today-side .french-today-kicker { font-size:10px; }
+.space-today .today-side .french-today small { font-size:12px; }
+.space-today .today-side .french-quick-actions { gap:8px; }
+.space-today .today-side .french-quick-actions button { width:40px; height:40px; min-height:44px; background:#f1e9d8; color:#493e32; }
+.today-caption-desk { margin-top:20px; padding:14px 0; border-top:1px solid var(--desk-rule); }
+.today-caption-desk[hidden] { display:none; }
+.today-caption-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.today-caption-heading h3 { margin:0; font:500 20px Fredoka,sans-serif; }
+.today-caption-desk button { min-width:44px; min-height:44px; padding:6px 10px; color:#493e32; background:transparent; border:1px solid transparent; border-radius:8px; }
+.today-caption-desk button:hover { background:#e9dfc7; }
+.today-caption-desk button:disabled { opacity:.4; }
+.today-caption-desk .today-caption-text { margin:12px 0; font-size:16px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+.today-caption-meta { display:block; color:#786c57; font-size:11px; }
+.today-caption-actions { display:flex; align-items:center; gap:4px; margin-top:10px; }
+.today-caption-page { font-size:26px; }
+.today-caption-count { margin-right:auto; font-size:12px; }
+.today-caption-desk .today-caption-copy { border-color:var(--desk-rule); background:#fff9e9; }
+.today-caption-idea { font-size:13px; margin-block:8px; }
+.today-caption-idea summary { cursor:pointer; padding-block:6px; }
+.today-caption-idea p { white-space:pre-wrap; }
+.today-sky.has-task-focus .today-weather-details { padding-top:12px; border-top:1px solid var(--desk-rule); }
+.today-sky.has-task-focus .today-sky-copy { display:grid; grid-template-columns:1fr auto; gap:4px 10px; }
+.today-sky.has-task-focus .today-date-row { margin:0; gap:6px; }
+.today-sky.has-task-focus .today-date { font-size:12px; }
+.today-sky.has-task-focus .today-clock { font-size:18px; align-self:center; text-align:right; }
+.today-sky.has-task-focus .today-sky-copy .today-condition { margin:0; font-size:14px; }
+.today-sky.has-task-focus .today-sky-phase { display:none; }
+.today-sky.has-task-focus .today-chance,.today-sky.has-task-focus .today-drops,.today-sky.has-task-focus .today-sky-copy > small { grid-column:1/-1; margin:0; font-size:11px; }
+.today-sky.has-task-focus .today-drops { font-size:12px; }
+.today-sky.has-task-focus .today-date-row .today-sky-icon { font-size:18px; }
+.today-moment-extra { padding:12px 0; border-bottom:1px solid var(--line); }
+.today-moment-extra > summary { cursor:pointer; font:500 17px Fredoka,sans-serif; padding:4px; }
+.today-moment-extra .today-moment { margin-top:10px; }
+@media(max-width:360px) { .space-today .today-sky.has-task-focus { padding-inline:12px; }.today-main { gap:10px; grid-template-columns:minmax(0,1.25fr) minmax(112px,1fr); }.today-google-focus .google-tasks-heading h3 { font-size:18px; }.today-caption-heading h3 { font-size:18px; }.today-google-focus .google-task-check { width:28px; }.today-google-focus .google-task-row { grid-template-columns:28px minmax(0,1fr); } }
+
+.today-sky .today-caption-actions .today-caption-count { margin:0 auto 0 4px; }
+
+.space-today .today-quick [data-active=true] small { display:block; font-size:10px; line-height:1.3; overflow-wrap:anywhere; }

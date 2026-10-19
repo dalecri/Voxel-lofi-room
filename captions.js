@@ -89,6 +89,25 @@
     });
     add('p','studio-foot','A new reel arrives at midnight.');
   }
-  const api={CAPTIONS_URL,KEY,options,parse,rows,dayIndex,dailyRows,copyPayload,create,copy,render};
+  // A single readable clipping on Today, backed by the same three daily picks.
+  function renderDaily(host,model) {
+    const s=model.state,old=Number(host.dataset.clip)||0;
+    host.replaceChildren();host.hidden=!s.enabled;if(host.hidden)return;
+    const doc=host.ownerDocument;
+    const add=(tag,cls,text,parent=host)=>{const n=doc.createElement(tag);n.className=cls;n.textContent=text;parent.appendChild(n);return n;};
+    const head=add('div','today-caption-heading','');add('h3','','TwoStoryTails caption',head);
+    const refresh=add('button','today-caption-refresh','↻',head);refresh.type='button';refresh.setAttribute('aria-label','Refresh captions');refresh.disabled=s.loading;refresh.onclick=()=>model.refresh();
+    if(!s.rows.length){add('p','today-caption-empty',s.loading?'Bringing a little inspiration…':s.failed?'The caption desk is resting. Try refreshing later.':'No unpublished captions today.');return;}
+    const index=old%s.rows.length;host.dataset.clip=String(index);const clip=s.rows[index];
+    const text=add('p','today-caption-text',copyPayload(clip));text.setAttribute('aria-live','polite');
+    // Keep the idea available verbatim when the generated caption is shown.
+    if(clip.captions.length){const idea=add('details','today-caption-idea','');add('summary','','Original idea',idea);add('p','',clip.desc,idea);}
+    add('small','today-caption-meta',[...clip.selectedTones,clip.platform,s.cached?'cached':''].filter(Boolean).join(' · '));
+    const actions=add('div','today-caption-actions','');
+    for(const [label,delta,symbol] of [['Previous caption',-1,'‹'],['Next caption',1,'›']]){const b=add('button','today-caption-page',symbol,actions);b.type='button';b.setAttribute('aria-label',label);b.disabled=s.rows.length<2;b.onclick=()=>{host.dataset.clip=String((index+delta+s.rows.length)%s.rows.length);renderDaily(host,model);host.querySelector('[aria-label="'+label+'"]').focus();};}
+    add('small','today-caption-count',`${index+1} / ${s.rows.length}`,actions);
+    const button=add('button','today-caption-copy','Copy',actions);button.type='button';button.setAttribute('aria-label','Copy caption');button.onclick=async()=>{const ok=await copy(copyPayload(clip));button.textContent=ok?'Copied':'Try again';setTimeout(()=>{if(button.isConnected)button.textContent='Copy';},1800);};
+  }
+  const api={CAPTIONS_URL,KEY,options,parse,rows,dayIndex,dailyRows,copyPayload,create,copy,render,renderDaily};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCaptions=api;
 })(typeof window!=='undefined'?window:globalThis);

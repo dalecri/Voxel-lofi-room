@@ -19,6 +19,7 @@ with sync_playwright() as p:
   u=r.request.url
   if u.endswith('/calendar.js'):r.fulfill(content_type='application/javascript',body=re.sub(r"const GOOGLE_CLIENT_ID='[^']*';","const GOOGLE_CLIENT_ID='fixture';",(ROOT/'www/calendar.js').read_text()))
   elif u.startswith('http://127.0.0.1:'):r.continue_()
+  elif 'twostorycaptions.json' in u:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]})
   elif u=='https://accounts.google.com/gsi/client':r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient:o=>{window.grant=o;return {requestAccessToken:()=>o.callback({access_token:'NEW_TOKEN',scope:o.scope,expires_in:3600})}},revoke:(t,cb)=>cb()}}}")
   elif u.startswith('https://tasks.googleapis.com/tasks/v1/'):
    if '/users/@me/lists' in u:r.fulfill(json={'items':[{'id':'home','title':'Home'},{'id':'work','title':'Work'}]});return

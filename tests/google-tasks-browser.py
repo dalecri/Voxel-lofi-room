@@ -16,6 +16,7 @@ with sync_playwright() as p:
   u=r.request.url
   if u.endswith('/calendar.js'):r.fulfill(content_type='application/javascript',body=re.sub(r"const GOOGLE_CLIENT_ID='[^']*';", "const GOOGLE_CLIENT_ID='fixture-client';", (ROOT/'www/calendar.js').read_text()))
   elif u.startswith('http://127.0.0.1:'):r.continue_()
+  elif 'twostorycaptions.json' in u:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]})
   elif u=='https://accounts.google.com/gsi/client':
    calls.append(r.request);r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient:o=>{window.authScope=o.scope;return {requestAccessToken:()=>o.callback({access_token:'TEST_GOOGLE_TOKEN',scope:o.scope,expires_in:3600})}},revoke:(token,cb)=>{window.revokedToken=token;cb()}}}};")
   elif u.startswith('https://tasks.googleapis.com/tasks/v1/'):
