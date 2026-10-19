@@ -276,7 +276,7 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .stations { width:100%; max-width:none; margin-inline:0; }
 .station-card { container-type:inline-size; --radio-green:var(--ink); --radio-paper:var(--panel-solid); --radio-display:color-mix(in srgb,#30232c 85%,var(--accent)); --radio-signal:color-mix(in srgb,var(--accent) 32%,#fff3de); border-color:color-mix(in srgb,var(--accent) 45%,var(--panel-solid)); background:var(--radio-grain),linear-gradient(115deg,var(--panel-solid),color-mix(in srgb,var(--accent) 20%,var(--panel-solid))); box-shadow:0 7px 0 color-mix(in srgb,var(--accent) 30%,var(--panel-solid)),0 10px 20px #0002; }
 .station-card.playing { border-color:var(--accent); box-shadow:0 7px 0 color-mix(in srgb,var(--accent) 30%,var(--panel-solid)),0 10px 20px #0002; }
-.station-copy { height:auto; aspect-ratio:1.65; min-height:185px; max-height:300px; border-color:color-mix(in srgb,var(--accent) 35%,var(--radio-display)); background:repeating-linear-gradient(0deg,#fff1 0 1px,transparent 1px 4px),var(--radio-display); color:var(--radio-signal); }
+.station-copy { height:auto; aspect-ratio:2.65; min-height:140px; max-height:195px; border-color:color-mix(in srgb,var(--accent) 35%,var(--radio-display)); background:repeating-linear-gradient(0deg,#fff1 0 1px,transparent 1px 4px),var(--radio-display); color:var(--radio-signal); }
 .station-copy b { font-size:clamp(16px,4cqi,22px); }
 .station-status,.playing .station-status,.station-waveform,.station-copy .muted.small { color:var(--radio-signal); }
 .station-status::after { background:color-mix(in srgb,var(--radio-signal) 55%,var(--radio-display)); }
