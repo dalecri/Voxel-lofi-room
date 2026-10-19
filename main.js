@@ -1877,7 +1877,7 @@ function startLofiRooms() {
     const open = sheet.classList.contains('open');
     const returnFocus = sheet.contains(document.activeElement);
     sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
-    $('#bMenu').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';
+    $('#bMenu').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;
     if (returnFocus) $('#bMenu').focus({preventScroll:true});
     // Dismissal and the pending room transition must survive an unavailable audio device.
     if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
@@ -2215,7 +2215,7 @@ function startLofiRooms() {
     releaseRoomQR();
     home.close(false);
     roomToolsUI.close();
-    const body = $('#sheetBody'); body.innerHTML = '';
+    const body = $('#sheetBody'); delete body.dataset.dashboardFont; body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
     const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
@@ -2458,7 +2458,7 @@ function startLofiRooms() {
     }
   }
   function doorPicker(door, relink) {
-    const body = $('#sheetBody'); body.innerHTML = '';
+    const body = $('#sheetBody'); delete body.dataset.dashboardFont; body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab'); h('h2', '', 'Where does this door go?');
     h('p', 'muted', 'Pick one of your rooms, or start a new one. Walking through brings you back the same way.');
@@ -2536,6 +2536,7 @@ function startLofiRooms() {
     const body = $('#sheetBody'), focused = document.activeElement;
     const focusState = focused?.matches('.toggle') ? {label:focused.textContent,panel:focused.closest('[role=tabpanel]')?.id,top:body.scrollTop} : null;
     body.dataset.merchant = '';
+    body.dataset.dashboardFont=meta.dashboardMono?'mono':'default';
     body.innerHTML = '';
     const sections = LRDashboard.menu(body, store, closeSheets);
     const spotlight=homeSearch(body.querySelector('.menu-actions'));body.insertBefore(spotlight,sections.Today);
@@ -2544,7 +2545,7 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     const todoTab = sections['To-Do'];
     h('h2', '', 'To-Do <small>· just yours, on this device</small>', todoTab);
-    todayUI.mount(target,{google:host=>googleTasksUI.mount(host),tasks:todoTab});
+    todayUI.mount(target,{googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true,openTasks:()=>{store.set('lr.menuTab','To-Do');try{localStorage.setItem('lr.todoTab','google');}catch(e){}renderMenu();}}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
@@ -2680,6 +2681,7 @@ function startLofiRooms() {
     toggle('Rain', meta.weather==='rain' || meta.weather==='storm', () => setControl('rain',!(meta.weather==='rain' || meta.weather==='storm')));
     toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
     settingsNotes.push(['Calm performance','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.']);
+    toggle('Monospace dashboard', meta.dashboardMono===true, () => { meta.dashboardMono=meta.dashboardMono!==true;saveMeta(); });
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
     toggle('Live extras', meta.liveExtras === true, () => { atlas.setEnabled(meta.liveExtras !== true); });
     settingsNotes.push(['Live extras','Public-domain art, aurora watch and Canadian holidays. Radio browsing, book searches, recipes and cat facts connect only when tapped.']);

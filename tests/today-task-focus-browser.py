@@ -1,0 +1,48 @@
+"""Build www first. Scheduled Today tasks and optional dashboard font, fixture Google only."""
+import functools,json
+from pathlib import Path
+from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
+from threading import Thread
+from playwright.sync_api import sync_playwright
+ROOT=Path(__file__).resolve().parents[1]
+class Quiet(SimpleHTTPRequestHandler):
+ def log_message(self,*args):pass
+server=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(ROOT/'www')));Thread(target=server.serve_forever,daemon=True).start()
+with sync_playwright() as p:
+ browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader']);context=browser.new_context(viewport={'width':390,'height':1000},timezone_id='America/Toronto',reduced_motion='reduce')
+ context.add_init_script('''const D=Date,start=D.now();window.__taskClock=new D(2026,9,19,16,59).getTime();window.Date=class extends D{constructor(...a){super(...(a.length?a:[window.__taskClock+D.now()-start]))}static now(){return window.__taskClock+D.now()-start}};if(!localStorage.focusFixture){localStorage.focusFixture='1';for(const [k,v] of Object.entries({'lr.intro':true,'lr.meta':{phase:'day',realtime:false,sound:false,music:false,visitors:false,calmPerformance:true},'lr.googleCalendarToken':{access_token:'FIXTURE_TOKEN',scope:'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks.readonly https://www.googleapis.com/auth/tasks',expiresAt:Date.now()+7*86400000,listId:'other'}}))localStorage.setItem(k,JSON.stringify(v));}''')
+ writes=[];saved={}
+ def route(r):
+  u=r.request.url
+  if u.startswith('http://127.0.0.1:'):r.continue_()
+  elif 'tasks.googleapis.com' in u:
+   if '/users/@me/lists' in u:r.fulfill(json={'items':[{'id':'statcan','title':'StatCan'},{'id':'todo','title':'Todo'},{'id':'other','title':'Other'}]});return
+   parts=u.split('/lists/')[1].split('/');listid=parts[0]
+   if r.request.method=='PATCH':
+    data=r.request.post_data_json;writes.append((listid,parts[2],data));saved[(listid,parts[2])]=data['status'];r.fulfill(json={'id':parts[2],**data});return
+   r.fulfill(json={'items':[{'id':'one','title':listid+' task for today','due':page.evaluate('LRCalendar.day(new Date())')+'T00:00:00Z','status':saved.get((listid,'one'),'needsAction')},{'id':'two','title':listid+' tomorrow task','due':page.evaluate('()=>{const d=new Date();d.setDate(d.getDate()+1);return LRCalendar.day(d)}')+'T00:00:00Z'},{'id':'no-date','title':listid+' no deadline'}]})
+  else:r.abort()
+ context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(20000)
+ def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
+ def open_today():page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
+ def reopen(hour=None,day=19):
+  page.keyboard.press('Escape')
+  if hour is not None:page.evaluate('({hour,day})=>window.__taskClock=new Date(2026,9,day,hour,0).getTime()',{'hour':hour,'day':day})
+  open_today()
+ page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();open_today();focus=page.locator('.today-google-focus');focus.get_by_role('checkbox',name='statcan task for today',exact=True).wait_for();assert focus.locator('[data-day=upcoming]').count()==0;assert 'tomorrow task' not in focus.inner_text();assert 'no deadline' not in focus.inner_text();assert page.evaluate('__lr.googleCalendar.selectedList')=='other'
+ assert focus.evaluate('e=>e.previousElementSibling.classList.contains("today-welcome")&&e.nextElementSibling.classList.contains("today-weather-details")')
+ check=focus.get_by_role('checkbox',name='statcan task for today',exact=True);check.click();focus.get_by_role('button',name='Undo statcan task for today',exact=True).wait_for();assert writes[-1][0]=='statcan';check.wait_for(state='detached',timeout=6000);focus.get_by_role('button',name='Undo statcan task for today',exact=True).click();check.wait_for();assert writes[-1][2]['status']=='needsAction'
+ reopen(17);focus.get_by_role('checkbox',name='todo task for today',exact=True).wait_for();assert 'StatCan' not in focus.inner_text();assert page.evaluate('__lr.googleCalendar.selectedList')=='other'
+ reopen(9,24);focus.get_by_role('checkbox',name='todo task for today',exact=True).wait_for();assert page.evaluate('__lr.googleCalendar.selectedList')=='other'
+ reopen(9,26);focus.get_by_role('checkbox',name='statcan task for today',exact=True).wait_for();focus.get_by_role('button',name='All tasks',exact=True).click();assert page.get_by_role('tab',name='To-Do',exact=True).get_attribute('aria-selected')=='true';manual=page.locator('#menu-todo .task-google-page');manual.get_by_role('checkbox',name='other task for today',exact=True).wait_for()
+ # Font choice persists in lr.meta and stays out of other tool sheets.
+ page.get_by_role('tab',name='Settings',exact=True).click();toggle=page.get_by_role('switch',name='Monospace dashboard',exact=True);toggle.click();assert page.locator('#sheetBody').get_attribute('data-dashboard-font')=='mono';assert page.evaluate('__lr.meta.dashboardMono') is True;assert toggle.evaluate('e=>e===document.activeElement')
+ page.get_by_role('tab',name='Today',exact=True).click();focus.get_by_role('checkbox',name='statcan task for today',exact=True).wait_for();assert focus.locator('.google-task-copy b').evaluate('e=>getComputedStyle(e).fontFamily.includes("VT323")')
+ for phase in ['day','night']:
+  page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
+  for width in [320,390,1280]:
+   page.set_viewport_size({'width':width,'height':1000});page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/today-task-focus-{phase}-{width}.png')
+ page.reload(wait_until='networkidle');ready();open_today();assert page.locator('#sheetBody').get_attribute('data-dashboard-font')=='mono';page.keyboard.press('Escape');page.evaluate("__lr.roomToolsUI.open('tea')");assert page.locator('#sheetBody').get_attribute('data-dashboard-font') is None;page.keyboard.press('Escape');open_today();page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('switch',name='Monospace dashboard',exact=True).click();assert page.locator('#sheetBody').get_attribute('data-dashboard-font')=='default'
+ assert 'statcan task for today' not in page.evaluate('async()=>JSON.stringify(await __lr.readCode(await __lr.roomCode()))');assert page.evaluate('localStorage.getItem("lr.dashboardFont")') is None;assert not errors,errors
+ print('PASS scheduled weekday/17:00/weekend lists, independent manual picker, today-only focus, check/hold/Undo, font toggle/persistence/scope, mobile/desktop day/night, private codes, no console errors',flush=True);browser.close()
+server.shutdown()

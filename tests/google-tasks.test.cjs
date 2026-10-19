@@ -45,3 +45,13 @@ test('task groups follow local midnight, DST and month/year boundaries',()=>{
  for(const [now,today,tomorrow] of [['2026-10-20T02:30:00Z','2026-10-19','2026-10-20'],['2026-03-08T05:30:00Z','2026-03-08','2026-03-09'],['2026-11-01T04:30:00Z','2026-11-01','2026-11-02'],['2026-12-31T17:00:00Z','2026-12-31','2027-01-01']])assert.deepEqual(C.taskDayGroups([],new Date(now)).map(g=>g.date),[today,tomorrow]);
  }finally{if(previous===undefined)delete process.env.TZ;else process.env.TZ=previous;}
 });
+
+test('Today chooses StatCan before 17:00 on weekdays and Todo after hours or on weekends',()=>{
+ const lists=[{id:'work',title:'  statcan  '},{id:'home',title:'TODO'},{id:'other',title:'Other'}];
+ for(const [at,id] of [[new Date(2026,9,19,0,0),'work'],[new Date(2026,9,19,16,59),'work'],[new Date(2026,9,19,17,0),'home'],[new Date(2026,9,23,23,0),'home'],[new Date(2026,9,24,9,0),'home'],[new Date(2026,9,25,9,0),'home'],[new Date(2026,9,26,9,0),'work']])assert.equal(C.scheduledTaskList(lists,at).id,id);
+ assert.deepEqual(C.scheduledTaskList([],new Date(2026,9,19,10)),{id:null,title:'StatCan',requested:'StatCan'});assert.equal(C.scheduledTaskList(lists,new Date(2026,9,24,10)).requested,'Todo');
+});
+test('reading a scheduled list leaves manual list selection and other task caches intact',async()=>{
+ const e=env({fetcher:async url=>({ok:true,status:200,json:async()=>({items:[{id:'task',title:url,due:'2026-10-19T00:00:00Z'}]})})});await e.g.connect();e.g.selectList('other');await e.g.tasks('other');await e.g.tasks('statcan');await e.g.tasks('todo');
+ assert.equal(e.g.selectedList,'other');assert.ok(e.g.cachedTasks[0].title.includes('/other/'));assert.ok(e.g.cachedTasksFor('statcan')[0].title.includes('/statcan/'));assert.ok(e.g.cachedTasksFor('todo')[0].title.includes('/todo/'));assert.equal(JSON.parse(e.map.get(C.TOKEN)).listId,'other');e.g.disconnect();assert.deepEqual(e.g.cachedTasksFor('statcan'),[]);
+});

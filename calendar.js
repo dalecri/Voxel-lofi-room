@@ -46,6 +46,11 @@
   function taskListRows(body){return (Array.isArray(body?.items)?body.items:[]).filter(t=>t&&typeof t.id==='string').map(t=>({id:t.id,title:typeof t.title==='string'?t.title.slice(0,140):'Task list'}));}
   // Google due values are civil dates, not instants: keep the local day boundary,
   // including 23/25-hour days, and leave the full cache intact for the calendar.
+  function scheduledTaskList(lists,now=new Date()){
+    const at=new Date(now),workday=at.getDay()>=1&&at.getDay()<=5&&at.getHours()<17,title=workday?'StatCan':'Todo';
+    const match=(Array.isArray(lists)?lists:[]).find(list=>String(list?.title||'').trim().toLocaleLowerCase()===title.toLocaleLowerCase());
+    return {id:match?.id || null,title:match?.title || title,requested:title};
+  }
   function taskDayGroups(tasks,now=new Date()){
     const today=new Date(now),tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);
     const rows=Array.isArray(tasks)?tasks:[];
@@ -120,7 +125,7 @@
     }
     return {connect,events,taskLists,tasks,setTaskCompleted,get canCompleteTasks(){return connected()&&granted(token.scope,[TASKS_WRITE_SCOPE]);},get taskEditingRequested(){return requested.includes(TASKS_WRITE_SCOPE);},check(){if(token&&!connected())clear(true);return connected();},subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
       get selectedList(){return token?.listId || '@default';},selectList(id){if(!connected()||typeof id!=='string'||!id||id.length>500)return;const before=token.listId;token.listId=id;try{storage.setItem(TOKEN,JSON.stringify(token));}catch(e){token.listId=before;return;}notify();},
-      get cachedLists(){return cached('lists');},cachedEvents:d=>cached('events:'+monthKey(d)),get cachedTasks(){return cached('tasks:'+(token?.listId || '@default'));},
+      get cachedLists(){return cached('lists');},cachedEvents:d=>cached('events:'+monthKey(d)),get cachedTasks(){return cached('tasks:'+(token?.listId || '@default'));},cachedTasksFor(listId){return cached('tasks:'+listId);},
       disconnect(){const value=token?.access_token;clear();if(!value)return;const revoke=()=>{try{root.google.accounts.oauth2.revoke(value,()=>{});}catch(e){/* local disconnect still succeeds */}};
         if(root.google?.accounts?.oauth2?.revoke)revoke();else if(root.document)identityReady().then(revoke).catch(()=>{}); // A restored token may outlive the SDK page load.
       },get scope(){return scope;},get configured(){return !!clientId;},get connected(){return connected();},get reconnect(){return reconnect||!!token&&!connected();}};
@@ -151,20 +156,28 @@
       }catch(e){if(changes.get(k)!==entry)return;changes.delete(k);if(previous&&!done){changes.set(k,previous);}error=e.message||'Could not save your check-off. Try again.';repaint();}
     }
     const checkIcon='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg>';
+    const selection=entry=>entry.scheduled?scheduledTaskList(google.cachedLists,new Date(now())):{id:google.selectedList};
     function paint(entry){
-      const host=entry.host,focus=host.contains(root.document.activeElement)?root.document.activeElement.dataset.taskAction:null;host.replaceChildren();const heading=el('div','google-tasks-heading');if(!host.closest('.task-google-page'))heading.append(el('h3','','Google Tasks'));host.appendChild(heading);   // on the To-Do notepad the tab already names it
-      const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google'});
+      const host=entry.host,focus=host.contains(root.document.activeElement)?root.document.activeElement.dataset.taskAction:null;host.replaceChildren();const heading=el('div','google-tasks-heading');
+      if(entry.scheduled||!host.closest('.task-google-page'))heading.append(el('h3','',entry.scheduled?"Today's tasks":'Google Tasks'));host.appendChild(heading);
+      const chosen=selection(entry);let allTasks=null;
+      if(entry.scheduled&&google.connected){
+        heading.appendChild(el('span','google-task-source',chosen.title+' · Google'));
+        if(entry.openTasks){const all=el('button','chipbtn google-task-all','All tasks');all.type='button';all.onclick=entry.openTasks;allTasks=all;}
+        if(google.taskEditingRequested&&!google.canCompleteTasks){const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google',lists:[]});}
+      } else {const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google',...(entry.scheduled?{lists:[]}: {})});}
       if(error){const note=el('p','google-task-error',error);note.setAttribute('role','status');host.appendChild(note);}
       if(!google.connected)return;
-      const listId=google.selectedList,visible=[...google.cachedTasks];
+      if(entry.scheduled&&!chosen.id){host.appendChild(el('p','muted small',entry.loadedLists?`Your ${chosen.requested} list wasn’t found. You can choose a list in To-Do.`:`Finding your ${chosen.requested} list…`));if(allTasks)host.appendChild(allTasks);return;}
+      const listId=chosen.id,visible=[...(entry.scheduled?google.cachedTasksFor(listId):google.cachedTasks)];
       for(const state of [...changes.values()].sort((a,b)=>a.index-b.index))if(state.listId===listId&&(state.busy||state.done&&now()<state.hideAt)&&!visible.some(t=>t.id===state.task.id))visible.splice(Math.min(state.index,visible.length),0,state.task);
       const groups=el('div','google-task-days');host.appendChild(groups);
-      for(const group of taskDayGroups(visible,now())){
+      for(const group of taskDayGroups(visible,now()).filter(group=>!entry.todayOnly||group.id==='today')){
         const section=el('section','google-task-day'),title=el('div','google-task-day-heading'),list=el('ul','google-task-list');
         section.dataset.day=group.id;section.setAttribute('aria-label',group.title+' Google Tasks');
-        title.appendChild(el('h4','',group.title));
+        if(!entry.todayOnly)title.appendChild(el('h4','',group.title));
         const when=el('time','google-task-day-date');when.dateTime=group.date;when.textContent=(group.id==='upcoming'?'Tomorrow · ':'')+date(group.date).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});title.appendChild(when);
-        section.append(title,list);groups.appendChild(section);
+        if(!entry.todayOnly)section.appendChild(title);section.appendChild(list);groups.appendChild(section);
         for(const task of group.tasks){
           const state=changes.get(key(listId,task.id));if(state?.done&&now()>=state.hideAt)continue;
           const row=el('li','google-task-row'+(state?.done?' completed':''));row.dataset.task=task.id;
@@ -176,11 +189,19 @@
         if(!list.children.length)section.appendChild(el('p','muted small google-task-empty',group.id==='today'?'Nothing scheduled for today.':'Nothing scheduled for tomorrow.'));
       }
       for(const state of changes.values())if(state.listId===listId&&state.done&&!state.busy&&now()<state.until){const feedback=el('div','google-task-feedback'),label=el('span','',state.task.title+' · completed'),undo=el('button','chipbtn','Undo');undo.type='button';undo.setAttribute('aria-label','Undo '+state.task.title);undo.dataset.taskAction='undo:'+state.task.id;undo.onclick=()=>change(state.task,listId,false);feedback.append(label,undo);host.appendChild(feedback);}
+      if(allTasks)host.appendChild(allTasks);
       if(focus){const candidates=[...host.querySelectorAll('[data-task-action]')];(candidates.find(b=>b.dataset.taskAction===focus)||candidates.find(b=>b.dataset.taskAction==='undo:'+focus.slice(focus.indexOf(':')+1))||candidates.find(b=>b.dataset.taskAction==='check:'+focus.slice(focus.indexOf(':')+1)))?.focus({preventScroll:true});}
     }
-    function update(entry){if(!entry.host.isConnected){mounts.delete(entry);return;}const version=++entry.version;paint(entry);if(google.connected)Promise.all([google.taskLists(),google.tasks()]).then(()=>{if(entry.host.isConnected&&entry.version===version)paint(entry);});}
+    function update(entry){
+      if(!entry.host.isConnected){mounts.delete(entry);return;}const version=++entry.version;paint(entry);
+      if(google.connected)(async()=>{
+        await google.taskLists();if(!entry.host.isConnected||entry.version!==version)return;entry.loadedLists=true;
+        const list=selection(entry);if(list.id)await google.tasks(list.id);
+        if(entry.host.isConnected&&entry.version===version)paint(entry);
+      })();
+    }
     google.subscribe(()=>{if(!google.connected){for(const c of changes.values()){clearTimeout(c.hideTimer);clearTimeout(c.undoTimer);}changes.clear();error='';}for(const entry of mounts)update(entry);});
-    return {tick(time){if(time<nextRefresh)return;nextRefresh=time+60000;for(const entry of mounts)if(entry.host.isConnected&&!entry.host.closest('[hidden]')&&entry.host.closest('.sheet.open'))update(entry);},mount(parent,before){for(const entry of mounts)if(!entry.host.isConnected)mounts.delete(entry);const host=el('section','google-tasks');parent.insertBefore(host,before || null);const entry={host,version:0};mounts.add(entry);update(entry);return host;},refresh(){for(const entry of mounts)update(entry);}};
+    return {tick(time){if(time<nextRefresh)return;nextRefresh=time+60000;for(const entry of mounts)if(entry.host.isConnected&&!entry.host.closest('[hidden]')&&entry.host.closest('.sheet.open'))update(entry);},mount(parent,before,options={}){for(const entry of mounts)if(!entry.host.isConnected)mounts.delete(entry);const host=el('section','google-tasks');parent.insertBefore(host,before || null);const entry={host,version:0,...options};mounts.add(entry);update(entry);return host;},refresh(){for(const entry of mounts)update(entry);}};
   }
   function createView({model,google,sheet,atlas,meta,scenes,seasons=[],thumb,openScene,now=()=>new Date()}){
     const el=(tag,cls,text)=>{const n=root.document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -204,5 +225,5 @@
     });}
     return {open(){current=now();selected=day(current);month();},month,detail,refresh(){const host=root.document.querySelector('.calendar-view');if(host?.isConnected&&host.closest('.sheet.open')&&sources()!==observed)month();}};
   }
-  const api={GOOGLE_CLIENT_ID,SCOPE,TASKS_SCOPE,READ_SCOPES,TASKS_WRITE_SCOPE,TASKS_EDIT_SCOPES,LOG,EVENTS,TOKEN,KINDS,day,date,valid,moon,grid,activityRows,activityWords,memoryFor,seasonalNotes,googleRows,taskRows,taskListRows,taskDayGroups,markers,create,authorizeGoogle,createGoogle,googleAuth,createTasksView,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCalendar=api;
+  const api={GOOGLE_CLIENT_ID,SCOPE,TASKS_SCOPE,READ_SCOPES,TASKS_WRITE_SCOPE,TASKS_EDIT_SCOPES,LOG,EVENTS,TOKEN,KINDS,day,date,valid,moon,grid,activityRows,activityWords,memoryFor,seasonalNotes,googleRows,taskRows,taskListRows,taskDayGroups,scheduledTaskList,markers,create,authorizeGoogle,createGoogle,googleAuth,createTasksView,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCalendar=api;
 })(typeof window!=='undefined'?window:globalThis);

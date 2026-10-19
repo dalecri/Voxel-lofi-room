@@ -52,3 +52,13 @@
 .settings-help summary { cursor:pointer; padding:8px 0; border-radius:8px; }
 .settings-help p { margin:10px 0; }
 @media(max-width:360px) { #menu-settings .settings-toggle-grid .toggle { padding:8px; gap:6px; font-size:12px; } }
+
+/* Optional dashboard-only pixel monospace; VT323 is bundled for offline use. */
+#sheetBody[data-dashboard-font=mono] { --font:'VT323',ui-monospace,monospace; --display:'VT323',ui-monospace,monospace; font-family:var(--font); font-size:20px; }
+#sheetBody[data-dashboard-font=mono] :where(h2,h3,h4,p,b,strong,small,span,button,input,select,label,summary,li,time,a,legend) { font-family:'VT323',ui-monospace,monospace; }
+#sheetBody[data-dashboard-font=mono] :where(button,input,select,label,p,li) { font-size:20px; }
+#sheetBody[data-dashboard-font=mono] :where(.muted,.small,small,time,.google-task-source,.task-counter) { font-size:17px; }
+#sheetBody[data-dashboard-font=mono] :where(.today-task-text,.google-task-copy b,.toggle span) { font:400 21px/1.2 'VT323',ui-monospace,monospace; }
+#sheetBody[data-dashboard-font=mono] :where(h2,.today-welcome h2) { font:400 29px/1.15 'VT323',ui-monospace,monospace; }
+#sheetBody[data-dashboard-font=mono] :where(h3,h4,.google-tasks-heading h3,.google-task-day-heading h4) { font:400 25px/1.15 'VT323',ui-monospace,monospace; }
+#sheetBody[data-dashboard-font=mono] .settings-toggle-grid .toggle { font-family:'VT323',ui-monospace,monospace; }
