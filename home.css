@@ -287,3 +287,14 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .news-forecast ul { margin: 0; padding: 0; list-style: none; font: 13px/1.5 Georgia, 'Times New Roman', serif; }
 .news-forecast li b { font-family: Nunito, sans-serif; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-right: 4px; }
 .news-forecast.is-shrunk ul { display: none; }
+/* Cozy moments: a floating card under the room name (checklist + the cats' version). */
+.cozy-pop { position: fixed; z-index: 12; top: calc(var(--sat, 0px) + 76px); left: max(16px, env(safe-area-inset-left)); width: min(400px, calc(100vw - 32px)); max-height: min(70dvh, 620px); display: flex; flex-direction: column; padding: 12px 12px 14px; border-radius: 22px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); box-sizing: border-box; }
+.cozy-pop[hidden] { display: none; }
+.cozy-pop-head { display: flex; align-items: center; gap: 8px; padding: 0 2px 8px; }
+.cozy-pop-head h2 { margin: 0; flex: 1; font-size: 19px; }
+.cozy-pop-count { font-size: 12px; font-weight: 800; color: var(--ink-dim); white-space: nowrap; }
+.cozy-pop-tabs { display: flex; gap: 6px; margin: 0 0 10px; }
+.cozy-pop-tabs .chipbtn { flex: 1; min-height: 44px; margin: 0; }
+.cozy-pop-feed { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; align-content: start; }
+.cozy-pop-feed > .journal-archive-title { display: none; }
+#cozyMoments #catDiary { grid-column: 1 / -1; display: grid; gap: 6px; }

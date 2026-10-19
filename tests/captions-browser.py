@@ -27,8 +27,8 @@ with sync_playwright() as p:
   context.route('**/twostorycaptions.json',caption_route)
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu')
-  # The Journal tab keeps only the diaries: no captions and no Daily News, and no fetch.
-  page.get_by_role('tab',name='Journal',exact=True).click();assert page.locator('#journalFeed .caption-studio, #journalFeed .journal-paper').count()==0;assert request['count']==0;page.keyboard.press('Escape')
+  # The menu has no captions and no Daily News, and opening it never fetches.
+  page.get_by_role('tab',name='To-Do',exact=True).click();assert page.locator('#sheetBody .caption-studio, #sheetBody .journal-paper').count()==0;assert request['count']==0;page.keyboard.press('Escape')
   # Control Center opens the caption studio, which fetches once.
   page.click('#bHome');page.locator('#homeView [data-app=captions]').click();page.wait_for_function('document.querySelectorAll(".caption-clip").length===3')
   desk=page.locator('.caption-studio');assert request['count']==1;assert desk.locator('h4').inner_text()=='Caption studio';assert desk.locator('.studio-house svg rect').count()>40
@@ -51,4 +51,4 @@ with sync_playwright() as p:
   page.keyboard.press('Escape');assert not errors,errors;context.close()
  browser.close()
 server.shutdown()
-print('PASS: studio-only fetch from Control Center and the clapperboard, no captions or news in Journal; 3 deterministic daily clips; verbatim safe text; options/copy/fallback; cache/reload/malformed JSON; mobile/desktop, no console errors')
+print('PASS: studio-only fetch from Control Center and the clapperboard, no captions or news in the menu; 3 deterministic daily clips; verbatim safe text; options/copy/fallback; cache/reload/malformed JSON; mobile/desktop, no console errors')

@@ -18,7 +18,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu')
  body=page.locator('#sheetBody');tabs=page.get_by_role('tablist',name='Menu sections');icon=page.get_by_role('button',name='Search your space',exact=True);search=page.locator('.space-search .home-search')
  assert body.evaluate('e=>e.firstElementChild.classList.contains("menu-nav")')
- assert tabs.locator('button').all_text_contents()==['']*5;assert tabs.locator('button').evaluate_all('es=>es.map(b=>b.getAttribute("aria-label"))')==['Today','Rooms','Journal','Sound','Settings'];assert tabs.evaluate('e=>[...e.children].every(b=>b.title===b.getAttribute("aria-label")&&b.querySelector("svg[aria-hidden=true]"))')
+ assert tabs.locator('button').all_text_contents()==['']*5;assert tabs.locator('button').evaluate_all('es=>es.map(b=>b.getAttribute("aria-label"))')==['Today','Rooms','To-Do','Sound','Settings'];assert tabs.evaluate('e=>[...e.children].every(b=>b.title===b.getAttribute("aria-label")&&b.querySelector("svg[aria-hidden=true]"))')
  assert tabs.evaluate('e=>[...e.children].every(b=>b.getAttribute("role")==="tab" && document.getElementById(b.getAttribute("aria-controls")).getAttribute("role")==="tabpanel")')
  close=page.get_by_role('button',name='Close',exact=True);actions=page.get_by_role('group',name='Sheet actions',exact=True)
  assert actions.locator('button').count()==2;assert actions.locator('button').first.get_attribute('aria-label')=='Search your space';assert actions.locator('button').last.get_attribute('aria-label')=='Close';assert close.inner_text()=='';assert close.locator('svg').count()==1

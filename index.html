@@ -128,6 +128,8 @@
   .savechip svg { width: 17px; height: 17px; }
   @keyframes savein { from { transform: translateY(-6px) scale(.9); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .savechip { animation: none; } }
+  .brand #disc { font-size: 12px; color: var(--ink-dim); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0; text-align: left; background: none; border: 0; cursor: pointer; }
+  .brand #disc:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
   .brand span { font-size: 12px; color: var(--ink-dim); font-weight: 700; white-space: nowrap; display: block; overflow: hidden; text-overflow: ellipsis; }
   .chips { display: flex; gap: 1px; padding: 5px; border-radius: 18px; flex: none; }
   .chip { width: 34px; height: 38px; border-radius: 13px; display: grid; place-items: center; transition: background .2s, transform .15s; position: relative; }
@@ -460,7 +462,7 @@
 <link rel="stylesheet" href="postcard.css?v=20261019">
 <link rel="stylesheet" href="focus-garden.css">
 <link rel="stylesheet" href="dashboard.css?v=20261018-compact-settings">
-<link rel="stylesheet" href="home.css?v=20261019-press">
+<link rel="stylesheet" href="home.css?v=20261019-todo">
 <link rel="stylesheet" href="notepad.css?v=20261018">
 <link rel="stylesheet" href="room-qr.css">
 <link rel="stylesheet" href="digest.css?v=20261019-sunday">
@@ -475,7 +477,7 @@
 <div id="driftfx"></div>
 
 <header>
-  <div class="brand panel"><button id="brand" aria-label="Rename this room"><b id="roomName">Lofi Rooms</b></button><span id="disc">0 cozy moments</span></div>
+  <div class="brand panel"><button id="brand" aria-label="Rename this room"><b id="roomName">Lofi Rooms</b></button><button type="button" id="disc" aria-haspopup="dialog" aria-controls="cozyMoments" aria-expanded="false">0 cozy moments</button></div>
   <div id="pills"><button class="panel savechip" id="bSave" aria-label="Save" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg><span>Save</span></button><button class="panel guestchip" id="bGuest" aria-label="Sign the guest book" hidden><span>✍ Guest book</span></button></div>
   <div class="chips panel">
     <button class="chip" id="bTime" aria-label="Time of day">

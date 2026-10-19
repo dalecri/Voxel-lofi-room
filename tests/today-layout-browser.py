@@ -18,7 +18,7 @@ with sync_playwright() as p:
  assert panel.locator('.today-welcome').evaluate('e=>e.closest(".today-sky")!==null');date=panel.locator('.today-date').inner_text();assert panel.inner_text().count(date)==1
  for phase,greeting in [('morning','Good morning'),('day','Good afternoon'),('evening','Good evening'),('night','Good evening')]:
   page.evaluate('p=>{__lr.meta.phase=p;__lr.todayUI.refresh()}',phase);assert panel.locator('.today-sky').get_attribute('data-phase')==phase;assert greeting in page.locator('.today-welcome h2').inner_text();page.screenshot(path=f'/tmp/today-hero-{phase}.png')
- for tab in ['Rooms','Journal','Sound','Settings']:
+ for tab in ['Rooms','To-Do','Sound','Settings']:
   page.get_by_role('tab',name=tab,exact=True).click();assert page.locator('.today-welcome').is_hidden();assert page.locator('#sheetBody > h2').count()==0
  page.get_by_role('tab',name='Today',exact=True).click()
  page.wait_for_function('document.querySelector(".french-today b")?.textContent.length>0');french=panel.locator('.french-today');before=page.evaluate('localStorage.getItem("lr.french.progress")');french.focus();page.keyboard.press('Enter');assert french.get_attribute('aria-pressed')=='true';assert french.locator('.french-example').is_visible();assert french.locator('.french-example').inner_text();page.keyboard.press('Space');assert french.get_attribute('aria-pressed')=='false';assert page.evaluate('localStorage.getItem("lr.french.progress")')==before

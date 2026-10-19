@@ -266,7 +266,7 @@ function startLofiRooms() {
     }
   }
 
-  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','journal','settings','breathing'].includes(p.id));
+  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','todo','moments','settings','breathing'].includes(p.id));
   // A device-private destination ID, resolved from the same directory as Control Centre.
   const APP_SHORTCUT_KEY='lr.appShortcut';
   const shortcutApp=()=>{const id=store.get(APP_SHORTCUT_KEY,null);return controlApps().find(p=>p.id===id);};
@@ -359,7 +359,8 @@ function startLofiRooms() {
     else if(p.id==='newspaper')newspaperSheet();
     else if(p.id==='calendar')calendar.open();
     else if(p.id==='tst')widgetAction(find('tstcorkboard') || {t:'tstcorkboard',id:null});
-    else if(['journal','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
+    else if(p.id==='moments'){closeSheets();openCozyMoments();}
+    else if(['todo','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id==='todo'?'To-Do':p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
   }
   $('#bHome').onclick=()=>home.open();
 
@@ -2140,9 +2141,36 @@ function startLofiRooms() {
     codeSheet('Caption studio', 'TwoStoryTails clips, ready to copy.', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); });
     captionDesk.refresh();
   }
+  // Cozy moments: a floating card under the room name, with the checklist and the cats' diary.
+  const cozyPop = document.createElement('section');
+  cozyPop.id = 'cozyMoments'; cozyPop.className = 'cozy-pop panel'; cozyPop.hidden = true;
+  cozyPop.setAttribute('role', 'dialog'); cozyPop.setAttribute('aria-labelledby', 'cozyMomentsTitle');
+  cozyPop.innerHTML = `<div class="cozy-pop-head"><h2 id="cozyMomentsTitle">Cozy moments</h2><span class="cozy-pop-count"></span><button type="button" class="chipbtn sheet-icon cozy-pop-close" aria-label="Close cozy moments"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="cozy-pop-tabs" role="group" aria-label="Journal feeds"><button type="button" class="chipbtn" id="bMomentDiary">Checklist</button><button type="button" class="chipbtn" id="bCatDiary">The cats’ version</button></div>
+    <div class="disc cozy-pop-feed" id="journalFeed"></div>`;
+  document.body.appendChild(cozyPop);
+  cozyPop.querySelector('#bMomentDiary').onclick = () => { journalFeed = 'moments'; renderJournal(); };
+  cozyPop.querySelector('#bCatDiary').onclick = () => { journalFeed = 'cats'; renderJournal(); };
+  const cozyOpen = () => !cozyPop.hidden;
+  function openCozyMoments(feed) {
+    if (feed) journalFeed = feed;
+    cozyPop.hidden = false; $('#disc').setAttribute('aria-expanded', 'true'); renderJournal();
+    try { Sound.slide(true); } catch (e) { /* optional interface sound */ }
+    cozyPop.querySelector(journalFeed === 'cats' ? '#bCatDiary' : '#bMomentDiary').focus({ preventScroll: true });
+  }
+  function closeCozyMoments(focus = true) {
+    if (!cozyOpen()) return;
+    cozyPop.hidden = true; $('#disc').setAttribute('aria-expanded', 'false');
+    if (focus && (cozyPop.contains(document.activeElement) || document.activeElement === document.body)) $('#disc').focus({ preventScroll: true });
+  }
+  cozyPop.querySelector('.cozy-pop-close').onclick = () => closeCozyMoments();
+  document.addEventListener('pointerdown', e => { if (cozyOpen() && !cozyPop.contains(e.target) && !e.target.closest?.('#disc')) closeCozyMoments(false); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && cozyOpen()) { e.preventDefault(); e.stopImmediatePropagation(); closeCozyMoments(); } }, true);
+  $('#disc').onclick = () => cozyOpen() ? closeCozyMoments() : openCozyMoments();
   function renderJournal() {
-    const feed = $('#journalFeed'); if (!feed) return;
+    const feed = $('#journalFeed'); if (!feed || cozyPop.hidden) return;
     feed.innerHTML = '';
+    cozyPop.querySelector('.cozy-pop-count').textContent = `${found.size} of ${MOMENTS.length} found`;
     const archive = document.createElement('h3'); archive.className = 'journal-archive-title'; archive.textContent = journalFeed === 'cats' ? 'The cats’ archive' : 'Cozy moments checklist'; feed.appendChild(archive);
     ['moments', 'cats'].forEach(k => {
       const b = $(k === 'cats' ? '#bCatDiary' : '#bMomentDiary');
@@ -2571,7 +2599,9 @@ function startLofiRooms() {
     spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
-    todayUI.mount(target,{google:host=>googleTasksUI.mount(host)});
+    const todoTab = sections['To-Do'];
+    h('h2', '', 'To-Do <small>· just yours, on this device</small>', todoTab);
+    todayUI.mount(target,{google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
@@ -2634,16 +2664,6 @@ function startLofiRooms() {
     h('h2', '', 'Start a new room');
     h('p', 'muted', 'New rooms start unsaved, so you can play around. Tap Save to keep one.');
     target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }, true));
-    target = sections.Journal;
-    h('h2', '', 'Room journal');
-    const feeds = h('div', 'rowbtns');
-    ['moments', 'cats'].forEach(feed => {
-      const b = document.createElement('button'); b.className = 'chipbtn'; b.id = feed === 'cats' ? 'bCatDiary' : 'bMomentDiary';
-      b.textContent = feed === 'cats' ? 'The cats’ version' : `Cozy moments · ${found.size}/${MOMENTS.length}`;
-      b.onclick = () => { journalFeed = feed; renderJournal(); }; feeds.appendChild(b);
-    });
-    h('div', 'disc').id = 'journalFeed'; renderJournal();
-    h('div', 'saved-scenes-shelf').setAttribute('aria-label', 'Future saved scenes shelf');
     target = sections.Sound;
     const settingsNotes=[];
     const toggle = (label, on, fn) => {
@@ -3062,7 +3082,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { press,dailyNewsSheet,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { openCozyMoments,closeCozyMoments,press,dailyNewsSheet,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
