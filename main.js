@@ -2515,9 +2515,8 @@ function startLofiRooms() {
     spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
-    todayUI.mount(target);
+    todayUI.mount(target,{google:host=>googleTasksUI.mount(host)});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
-    googleTasksUI.mount(target.querySelector('.today-sky'));
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
     roomVillage(target);

@@ -29,7 +29,7 @@ with sync_playwright() as p:
    else:r.fulfill(json={'items':[t for t in items if t['status']=='needsAction']})
   else:r.abort()
  c.route('**/*',route);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' and '503' not in m.text else None)
- page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
+ page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.get_by_role('tab',name='Google',exact=True).click()
  section=page.locator('.google-tasks');a=lambda:section.get_by_role('checkbox',name='PRIVATE_TASK_A',exact=True);b=lambda:section.get_by_role('checkbox',name='PRIVATE_TASK_B',exact=True)
  a().wait_for();assert a().is_disabled();assert section.locator('.google-readonly').count()==0
  section.get_by_role('button',name='Reconnect to enable task check-offs',exact=True).click();page.wait_for_function('document.querySelector(".google-task-check")?.disabled===false');assert page.evaluate('grant.include_granted_scopes') is True;assert page.evaluate('grant.scope.includes("https://www.googleapis.com/auth/tasks")');assert not page.evaluate('grant.scope.includes("calendar.events")')

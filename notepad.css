@@ -74,3 +74,17 @@
 .grocery-notebook .grocery-add { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:6px; margin:14px 0 0; padding-top:12px; border-top:1px solid #9eaa9155; }
 .grocery-notebook .grocery-add .roomtool-field { margin:0; min-width:0; color:var(--note-muted); font-size:12px; }
 @media(max-width:360px) { .task-notebook,.grocery-notebook { padding-inline:10px; } }
+
+/* The To-Do notepad's little tabs: your local list, and Google Tasks (cream in day and night alike) */
+.task-notebook .task-tabs { display:flex; gap:3px; padding:3px; border-radius:10px; background:#e9dfc5; }
+.task-notebook .task-tab { padding:5px 13px; border-radius:8px; font:600 16px Fredoka,sans-serif; color:var(--note-muted); }
+.task-notebook .task-tab[aria-selected=true] { background:#fffaf0; color:var(--note-ink); box-shadow:0 1px 2px rgba(74,53,48,.2); }
+.task-notebook .task-tab:focus-visible { outline:2px solid #849b77; outline-offset:2px; }
+.task-notebook[data-tab=google] > :not(.task-notebook-heading):not(.task-google-page) { display:none; }
+.task-notebook[data-tab=google] + p { display:none; }
+.task-notebook .task-counter[hidden] { display:none; }
+.task-google-page { color:var(--note-ink); }
+.task-google-page .google-tasks { padding:4px 0 0; margin:0; border:0; border-radius:0; background:none; color:var(--note-ink); }
+.task-google-page .muted, .task-google-page .google-task-row time, .task-google-page p { color:var(--note-muted); }
+.task-google-page .chipbtn { background:#e9dfc5; color:var(--note-ink); }
+.task-google-page select { background:#fffaf0; color:var(--note-ink); border:1px solid #d6caa9; }

@@ -49,6 +49,22 @@
     }
   });
 
+  // A chunky rustic ceiling beam: placed on the floor grid like the pendant lamp, drawn up high with its
+  // underside exactly at LR.HANG, so a pendant on a cell beneath it hangs from real wood instead of air.
+  def('beam', {name:'Ceiling beam',kind:'floor',group:'decor',size:[4,1],ceiling:'beam',noShadow:true,   // no long sun streaks across the room
+    vars:[[WOOD.oak],[WOOD.walnut],[WOOD.white]],
+    build(m,[c]) {
+      const y0=LR.HANG,y1=y0+4,z0=1,z1=6;   // half a cell tall, a little wider than tall
+      m.box(0,y0,z0,32,y1,z1,(x,y,z)=>{
+        const edge=(y===y1-1&&(z===z0||z===z1-1))||(y===y0&&(z===z0||z===z1-1));   // softened, slightly worn corners
+        const plank=shade(c,(hash3(x>>2,y,z,11)*.08+.96)*(Math.floor(x/7)%2?1:.97));
+        return edge?shade(plank,.86):y===y1-1?shade(plank,1.05):y===y0?shade(plank,.9):plank;
+      });
+      for(const x of [0,31])m.box(x,y0,z0,x+1,y1,z1,(xx,y,z)=>shade(c,(y+z)%3===0?.72:.8));   // end grain caps
+      for(const x of [3,28])m.box(x,y0,z0-1,x+1,y1,z1+1,shade(0x3a3638,1+.05*(x===3)));      // two dark iron straps near the ends
+    }
+  });
+
   def('phone', {name:'Phone launcher',kind:'small',group:'tech',size:[1,1],tap:'launcher',vars:[[0x586873],[0xa98eac]],build(m,[c]) {
     m.box(2,0,1,6,1,7,c).box(2,1,1,6,2,7,0x242d38).box(2,2,2,6,3,6,0xb1dcd4);
     for(let x=2;x<6;x+=2)for(let z=2;z<6;z+=2)m.set(x,3,z,0xf7dfad,true);
@@ -569,7 +585,8 @@
     light: { at: [4, 31, 4], color: 0xffd29b, i: 4, d: 8 },
     vars: [[0xdbaa63], [0xece9dd], [0x6f9280]],
     build(m, [c], s) {
-      m.box(2,54,2,6,56,6,shade(c,.65)).box(3,36,3,4,54,4,DARK).box(2,35,2,6,37,6,CHROME);
+      const top=LR.HANG;   // the canopy meets the ceiling (or a beam's underside) here; the cord runs up to it
+      m.box(2,top-2,2,6,top,6,shade(c,.65)).box(3,36,3,4,top-2,4,DARK).box(2,35,2,6,37,6,CHROME);
       const glass=s.on?mix(c,0xffebbf,.25):shade(c,.75);
       m.box(1,30,1,7,31,7,glass).box(2,35,2,6,36,6,glass);
       for(const x of [1,6])m.box(x,31,1,x+1,35,7,glass);

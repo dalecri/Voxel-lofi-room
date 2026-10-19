@@ -170,9 +170,6 @@ body:has(#sheet.open .tea-focus) .timer-badges{display:none}
 .space-search .home-search[hidden], .space-search .home-results[hidden] { display: none; }
 /* Weather and Google's existing tasks UI share one continuous hero surface. */
 .today-weather { position: relative; padding-bottom: 12px; }
-.today-sky > .google-tasks { padding: 20px 0 0; margin: 0; border: 0; border-radius: 0; background: transparent; color: inherit; }
-.space-today .today-sky .google-tasks small { display: inline; margin: 0; }
-.today-sky .google-task-picker, .today-sky .google-task-row time { color: inherit; }
 
 /* Welcome belongs to the sky: a single date below it, with no duplicate header. */
 .today-welcome { margin-bottom: 18px; }
@@ -292,3 +289,4 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .station-vents i,.station-power { background:color-mix(in srgb,var(--ink) 40%,var(--panel-solid)); box-shadow:inset 0 2px 2px #0002; }
 .station-card .station-remove:hover { background:var(--chip); color:var(--ink); }
 body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 75%,#111021); --radio-signal:color-mix(in srgb,var(--ink) 85%,var(--accent)); }
+
