@@ -34,3 +34,14 @@ test('legacy calendar-only consent requires reconnect for both scopes; expiry no
  const e=env();e.map.set(C.TOKEN,JSON.stringify({access_token:'legacy',expiresAt:5000}));const upgraded=C.createGoogle(e.options);assert(!upgraded.connected);assert(upgraded.reconnect);assert.equal(e.map.size,0);assert.deepEqual(await upgraded.tasks(),[]);
  await upgraded.connect();await upgraded.tasks();let changes=0;upgraded.subscribe(()=>changes++);e.advance(3600001);assert.equal(upgraded.check(),false);assert(upgraded.reconnect);assert.equal(changes,1);assert.deepEqual(upgraded.cachedTasks,[]);assert.equal(e.map.size,0);
 });
+
+test('dashboard task groups include only due today and tomorrow without changing the calendar cache',()=>{
+ const rows=C.taskRows({items:[{id:'today',due:'2026-10-19T00:00:00Z'},{id:'tomorrow',due:'2026-10-20T00:00:00Z'},{id:'past',due:'2026-10-18T00:00:00Z'},{id:'later',due:'2026-10-21T00:00:00Z'},{id:'undated'},{id:'done',due:'2026-10-19T00:00:00Z',status:'completed'}]}),before=structuredClone(rows),groups=C.taskDayGroups(rows,new Date(2026,9,19,23,59));
+ assert.deepEqual(groups.map(g=>[g.id,g.date,g.tasks.map(t=>t.id)]),[['today','2026-10-19',['today']],['upcoming','2026-10-20',['tomorrow']]]);assert.deepEqual(rows,before);assert.equal(C.markers('2026-10-21',{tasks:rows}).tasks[0].id,'later');
+ const next=C.taskDayGroups(rows,new Date(2026,9,20,0,0));assert.deepEqual(next.map(g=>g.tasks.map(t=>t.id)),[['tomorrow'],['later']]);assert.ok(C.taskDayGroups([],new Date()).every(g=>g.tasks.length===0));
+});
+test('task groups follow local midnight, DST and month/year boundaries',()=>{
+ const previous=process.env.TZ;try{process.env.TZ='America/Toronto';
+ for(const [now,today,tomorrow] of [['2026-10-20T02:30:00Z','2026-10-19','2026-10-20'],['2026-03-08T05:30:00Z','2026-03-08','2026-03-09'],['2026-11-01T04:30:00Z','2026-11-01','2026-11-02'],['2026-12-31T17:00:00Z','2026-12-31','2027-01-01']])assert.deepEqual(C.taskDayGroups([],new Date(now)).map(g=>g.date),[today,tomorrow]);
+ }finally{if(previous===undefined)delete process.env.TZ;else process.env.TZ=previous;}
+});

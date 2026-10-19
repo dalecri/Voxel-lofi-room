@@ -88,3 +88,6 @@
 .task-google-page .muted, .task-google-page .google-task-row time, .task-google-page p { color:var(--note-muted); }
 .task-google-page .chipbtn { background:#e9dfc5; color:var(--note-ink); }
 .task-google-page select { background:#fffaf0; color:var(--note-ink); border:1px solid #d6caa9; }
+
+.task-google-page .google-task-day-date { color:var(--note-muted); }
+.task-google-page .google-task-day-heading { border-color:var(--note-rule); }

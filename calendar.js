@@ -44,6 +44,14 @@
     return {id:t.id,title:typeof t.title==='string'?t.title.trim().slice(0,300)||'Untitled task':'Untitled task',notes:typeof t.notes==='string'?t.notes.slice(0,2000):'',due:valid(due)?due:null,status:'needsAction'};
   });}
   function taskListRows(body){return (Array.isArray(body?.items)?body.items:[]).filter(t=>t&&typeof t.id==='string').map(t=>({id:t.id,title:typeof t.title==='string'?t.title.slice(0,140):'Task list'}));}
+  // Google due values are civil dates, not instants: keep the local day boundary,
+  // including 23/25-hour days, and leave the full cache intact for the calendar.
+  function taskDayGroups(tasks,now=new Date()){
+    const today=new Date(now),tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);
+    const rows=Array.isArray(tasks)?tasks:[];
+    return [{id:'today',title:'Today',date:day(today)},{id:'upcoming',title:'Upcoming',date:day(tomorrow)}]
+      .map(group=>({...group,tasks:rows.filter(task=>task?.due===group.date)}));
+  }
   function markers(selected,{activity=[],events=[],holidays=[],google=[],tasks=[]}={}){return {tasks:tasks.filter(t=>t.due===selected),kinds:[...new Set(activity.find(r=>r.date===selected)?.events || [])],events:events.filter(e=>e.date===selected),holidays:holidays.filter(h=>h.date===selected),google:google.filter(e=>e.date<=selected&&(e.allDay?selected<e.endDate || e.endDate===e.date:selected<=e.endDate))};}
   function grid(d){const [start,end]=monthBounds(d),cells=Array.from({length:(start.getDay()+6)%7},()=>null);
     const count=new Date(end.getFullYear(),end.getMonth(),0).getDate();for(let n=1;n<=count;n++)cells.push(day(new Date(start.getFullYear(),start.getMonth(),n)));return cells;}
@@ -148,17 +156,25 @@
       const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google'});
       if(error){const note=el('p','google-task-error',error);note.setAttribute('role','status');host.appendChild(note);}
       if(!google.connected)return;
-      const listId=google.selectedList,list=el('ul','google-task-list'),visible=[...google.cachedTasks];
+      const listId=google.selectedList,visible=[...google.cachedTasks];
       for(const state of [...changes.values()].sort((a,b)=>a.index-b.index))if(state.listId===listId&&(state.busy||state.done&&now()<state.hideAt)&&!visible.some(t=>t.id===state.task.id))visible.splice(Math.min(state.index,visible.length),0,state.task);
-      for(const task of visible){
-        const state=changes.get(key(listId,task.id));if(state?.done&&now()>=state.hideAt)continue;
-        const row=el('li','google-task-row'+(state?.done?' completed':''));row.dataset.task=task.id;
-        const check=el('button','google-task-check');check.type='button';check.setAttribute('role','checkbox');check.setAttribute('aria-label',task.title);check.setAttribute('aria-checked',String(!!state?.done));check.disabled=!google.canCompleteTasks;check.setAttribute('aria-disabled',String(!!state?.busy||!google.canCompleteTasks));check.setAttribute('aria-busy',String(!!state?.busy));
-        if(state?.done)check.innerHTML=checkIcon;
-        check.dataset.taskAction='check:'+task.id;check.onclick=()=>change(task,listId,!state?.done,visible.indexOf(task));
-        const text=el('span','google-task-copy');text.appendChild(el('b','',task.title));if(task.due){const when=el('time');when.dateTime=task.due;when.textContent=date(task.due).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});text.appendChild(when);}row.append(check,text);list.appendChild(row);
+      const groups=el('div','google-task-days');host.appendChild(groups);
+      for(const group of taskDayGroups(visible,now())){
+        const section=el('section','google-task-day'),title=el('div','google-task-day-heading'),list=el('ul','google-task-list');
+        section.dataset.day=group.id;section.setAttribute('aria-label',group.title+' Google Tasks');
+        title.appendChild(el('h4','',group.title));
+        const when=el('time','google-task-day-date');when.dateTime=group.date;when.textContent=(group.id==='upcoming'?'Tomorrow · ':'')+date(group.date).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});title.appendChild(when);
+        section.append(title,list);groups.appendChild(section);
+        for(const task of group.tasks){
+          const state=changes.get(key(listId,task.id));if(state?.done&&now()>=state.hideAt)continue;
+          const row=el('li','google-task-row'+(state?.done?' completed':''));row.dataset.task=task.id;
+          const check=el('button','google-task-check');check.type='button';check.setAttribute('role','checkbox');check.setAttribute('aria-label',task.title);check.setAttribute('aria-checked',String(!!state?.done));check.disabled=!google.canCompleteTasks;check.setAttribute('aria-disabled',String(!!state?.busy||!google.canCompleteTasks));check.setAttribute('aria-busy',String(!!state?.busy));
+          if(state?.done)check.innerHTML=checkIcon;
+          check.dataset.taskAction='check:'+task.id;check.onclick=()=>change(task,listId,!state?.done,visible.indexOf(task));
+          const text=el('span','google-task-copy');text.appendChild(el('b','',task.title));if(task.due){const when=el('time');when.dateTime=task.due;when.textContent=date(task.due).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});text.appendChild(when);}row.append(check,text);list.appendChild(row);
+        }
+        if(!list.children.length)section.appendChild(el('p','muted small google-task-empty',group.id==='today'?'Nothing scheduled for today.':'Nothing scheduled for tomorrow.'));
       }
-      host.appendChild(list);if(!list.children.length)host.appendChild(el('p','muted small','All clear in this list.'));
       for(const state of changes.values())if(state.listId===listId&&state.done&&!state.busy&&now()<state.until){const feedback=el('div','google-task-feedback'),label=el('span','',state.task.title+' · completed'),undo=el('button','chipbtn','Undo');undo.type='button';undo.setAttribute('aria-label','Undo '+state.task.title);undo.dataset.taskAction='undo:'+state.task.id;undo.onclick=()=>change(state.task,listId,false);feedback.append(label,undo);host.appendChild(feedback);}
       if(focus){const candidates=[...host.querySelectorAll('[data-task-action]')];(candidates.find(b=>b.dataset.taskAction===focus)||candidates.find(b=>b.dataset.taskAction==='undo:'+focus.slice(focus.indexOf(':')+1))||candidates.find(b=>b.dataset.taskAction==='check:'+focus.slice(focus.indexOf(':')+1)))?.focus({preventScroll:true});}
     }
@@ -188,5 +204,5 @@
     });}
     return {open(){current=now();selected=day(current);month();},month,detail,refresh(){const host=root.document.querySelector('.calendar-view');if(host?.isConnected&&host.closest('.sheet.open')&&sources()!==observed)month();}};
   }
-  const api={GOOGLE_CLIENT_ID,SCOPE,TASKS_SCOPE,READ_SCOPES,TASKS_WRITE_SCOPE,TASKS_EDIT_SCOPES,LOG,EVENTS,TOKEN,KINDS,day,date,valid,moon,grid,activityRows,activityWords,memoryFor,seasonalNotes,googleRows,taskRows,taskListRows,markers,create,authorizeGoogle,createGoogle,googleAuth,createTasksView,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCalendar=api;
+  const api={GOOGLE_CLIENT_ID,SCOPE,TASKS_SCOPE,READ_SCOPES,TASKS_WRITE_SCOPE,TASKS_EDIT_SCOPES,LOG,EVENTS,TOKEN,KINDS,day,date,valid,moon,grid,activityRows,activityWords,memoryFor,seasonalNotes,googleRows,taskRows,taskListRows,taskDayGroups,markers,create,authorizeGoogle,createGoogle,googleAuth,createTasksView,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCalendar=api;
 })(typeof window!=='undefined'?window:globalThis);
