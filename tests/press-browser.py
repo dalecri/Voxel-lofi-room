@@ -33,7 +33,7 @@ with sync_playwright() as p:
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.press');page.evaluate('__lr.renderLoop.stop()')
   # Live forecast data as the weather service would have stored it (no fetch in this test).
   page.evaluate("__lr.meta.liveWeather=true;__lr.meta.weatherDetails={forecast:[{date:'2026-10-26',high:9.2,low:3.4,condition:'rain'}]}")
-  page.click('#bMenu');paper=page.locator('.journal-paper');paper.wait_for()
+  page.evaluate('__lr.dailyNewsSheet()');paper=page.locator('.journal-paper');paper.wait_for()
   assert not paper.evaluate("e=>e.classList.contains('is-slim')")
   types=paper.locator('[data-type]').evaluate_all('es=>es.map(e=>e.dataset.type)')
   for t in ['streak','first','record','drought','diary']:assert t in types,(t,types)
@@ -61,7 +61,7 @@ with sync_playwright() as p:
   page.keyboard.press('Escape')
   # A section ignored four editions running shrinks quietly.
   page.evaluate("const s=JSON.parse(localStorage.getItem('lr.press'));s.ignored.streak=4;localStorage.setItem('lr.press',JSON.stringify(s))")
-  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.press');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu')
+  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.press');page.evaluate('__lr.renderLoop.stop()');page.evaluate('__lr.dailyNewsSheet()')
   assert page.locator('.journal-paper [data-type=streak].is-shrunk').count()==1
   assert page.locator('.news-story[data-type=drought] .press-clap').get_attribute('aria-pressed')=='true'
   # Nothing from the press reaches a shared room code.

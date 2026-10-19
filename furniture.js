@@ -485,6 +485,19 @@
     },
   });
 
+  // A little clapperboard with a caption card: opens the TwoStoryTails caption studio.
+  def('captionboard', {
+    name: 'Caption clapperboard', kind: 'small', group: 'tech', size: [1, 1], tap: 'captions',
+    vars: [[0x2b2833, 0xf6d83c], [0x2b2833, 0xf2a7b5], [0x3d5a6c, 0xa9d8c4]],
+    build(m, [slate, accent]) {
+      m.box(1, 0, 3, 7, 5, 5, slate);
+      for (let x = 1; x < 7; x++) m.box(x, 5, 3, x + 1, 6, 5, x % 2 ? 0xfff6e3 : slate);
+      for (let x = 1; x < 7; x++) m.box(x, 6, 2, x + 1, 7, 4, x % 2 ? slate : 0xfff6e3);
+      m.box(0, 5, 2, 1, 7, 5, CHROME);
+      m.box(2, 1, 5, 6, 4, 6, 0xfff6e3).box(3, 2, 6, 5, 3, 7, accent);
+    },
+  });
+
   // =================================================================
   def('vintagetypewriter', {
     name: 'Vintage typewriter', kind: 'small', group: 'tech', size: [2,1], tap: 'type',

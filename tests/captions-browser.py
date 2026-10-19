@@ -26,12 +26,15 @@ with sync_playwright() as p:
    else:route.fulfill(json=fixture)
   context.route('**/twostorycaptions.json',caption_route)
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
-  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu');assert request['count']==0
-  page.get_by_role('tab',name='Journal',exact=True).click();page.wait_for_function('document.querySelectorAll(".caption-clip").length===3')
-  desk=page.locator('.caption-desk');assert request['count']==1;assert desk.locator('h4').inner_text()=='The caption desk'
+  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu')
+  # The Journal tab keeps only the diaries: no captions and no Daily News, and no fetch.
+  page.get_by_role('tab',name='Journal',exact=True).click();assert page.locator('#journalFeed .caption-studio, #journalFeed .journal-paper').count()==0;assert request['count']==0;page.keyboard.press('Escape')
+  # Control Center opens the caption studio, which fetches once.
+  page.click('#bHome');page.locator('#homeView [data-app=captions]').click();page.wait_for_function('document.querySelectorAll(".caption-clip").length===3')
+  desk=page.locator('.caption-studio');assert request['count']==1;assert desk.locator('h4').inner_text()=='Caption studio';assert desk.locator('.studio-house svg rect').count()>40
   start=page.evaluate('Math.floor(Date.UTC(new Date().getFullYear(),new Date().getMonth(),new Date().getDate())/86400000)*3%199');pool=list(reversed(fixture['clips'][1:]));selected=[pool[(start+i)%199] for i in range(3)]
   assert desk.locator('.caption-desc').all_text_contents()==[c['desc'] for c in selected];assert desk.locator('.caption-desc b').count()==0
-  assert desk.locator('.caption-options li').count()==2*sum(bool(c['captions']) for c in selected);assert desk.locator('.caption-tag').first.inner_text()=='Relatable';assert desk.locator('.caption-platform').first.inner_text()=='Both'
+  assert desk.locator('.caption-options li').count()==2*sum(bool(c['captions']) for c in selected);tag=desk.locator('.caption-tag').first.inner_text();assert tag=='Relatable',tag;assert desk.locator('.caption-platform').first.inner_text()=='Both'
   has_caption=next(i for i,c in enumerate(selected) if c['captions']);no_caption=next(i for i,c in enumerate(selected) if not c['captions'])
   desk.locator('.caption-copy').nth(has_caption).click();assert page.evaluate('window.copied')=='First option';assert desk.locator('.caption-copy').nth(has_caption).inner_text()=='Copied'
   desk.locator('.caption-copy').nth(no_caption).click();assert page.evaluate('window.copied')==selected[no_caption]['desc']
@@ -39,10 +42,13 @@ with sync_playwright() as p:
   desk.locator('.caption-copy').nth(no_caption).click();assert page.evaluate('window.fallback')==selected[no_caption]['desc']
   request['bad']=True;desk.locator('.caption-refresh').click();page.wait_for_function('document.querySelector(".caption-desk-status").textContent.startsWith("Cached")');assert desk.locator('.caption-clip').count()==3
   desk.locator('.caption-desc').first.scroll_into_view_if_needed();page.screenshot(path=f'/tmp/caption-desk-{width}.png');assert desk.evaluate('e=>e.scrollWidth<=e.clientWidth')
-  page.reload(wait_until='networkidle');page.click('#bMenu');page.locator('.caption-clip').first.wait_for();assert page.locator('.caption-desk-status').inner_text().startswith('Cached');assert desk.locator('.caption-desc').all_text_contents()==[c['desc'] for c in selected]
+  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.captionStudio()');page.locator('.caption-clip').first.wait_for();assert page.locator('.caption-desk-status').inner_text().startswith('Cached');assert desk.locator('.caption-desc').all_text_contents()==[c['desc'] for c in selected]
   page.evaluate('window.captionShift=86400000');desk.locator('.caption-refresh').click();page.wait_for_function('!document.querySelector(".caption-refresh").disabled');assert desk.locator('.caption-desc').all_text_contents()==[pool[(start+3+i)%199]['desc'] for i in range(3)]
-  page.evaluate("localStorage.removeItem('lr.captionDesk')");page.reload(wait_until='networkidle');page.click('#bMenu');page.wait_for_load_state('networkidle');assert desk.is_hidden();assert page.locator('.news-masthead').is_visible();assert page.locator('.caption-clip').count()==0
+  page.evaluate("localStorage.removeItem('lr.captionDesk')");request['bad']=False;before=request['count'];page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.wait_for_load_state('networkidle');assert request['count']==before;assert page.locator('.caption-studio').count()==0
+  # The clapperboard furniture opens the same studio.
+  page.keyboard.press('Escape');page.evaluate('''() => {const a=__lr;a.setMode('explore',true);const it=a.room.make('captionboard',{x:2,z:2});a.room.add(it);a.changed();a.interact(it.id);}''');page.wait_for_function('document.querySelectorAll(".caption-clip").length===3');assert request['count']==before+1
+  page.locator('.caption-studio').screenshot(path=f'/tmp/caption-studio-{width}.png');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
   page.keyboard.press('Escape');assert not errors,errors;context.close()
  browser.close()
 server.shutdown()
-print('PASS: Journal-only fetch; 3 deterministic daily clips; verbatim safe text; options/copy/fallback; cache/reload/malformed JSON; mobile/desktop, no console errors')
+print('PASS: studio-only fetch from Control Center and the clapperboard, no captions or news in Journal; 3 deterministic daily clips; verbatim safe text; options/copy/fallback; cache/reload/malformed JSON; mobile/desktop, no console errors')

@@ -3,7 +3,9 @@
 (function(root) {
   const TOOLS=[
     ['typewriter','Typewriter','⌨','Write a letter'],
-    ['digest','Daily Drift','▤','Your week, gently folded'],
+    ['news','Daily News','🗞','The house front page'],
+    ['digest','Daily Drift','▤','The Sunday magazine'],
+    ['captions','Caption studio','🎬','TwoStoryTails clips, ready to copy'],
     ['library','My Library','📖','Letters, sparks, and quick notes'],
     ['mailbox','Future-self mailbox','✉','Send a note to later'],
     ['groceries','Grocery list','🥬','A little less to remember'],
@@ -31,7 +33,7 @@
   ].map(([id,label,icon,description])=>({id,label,icon,description}));
   // The first ID is the preview when absent. Any matching piece in the room
   // supplies its actual model and variant; an absent asset is grayed in CSS only.
-  const FURNITURE={tally:['tallycounter'],library:['lectern'],calendar:['calendar'],typewriter:['typewriter'],mailbox:['letterbox','mailbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook'],french:['frenchdesk'],whiteboard:['whiteboard'],wardrobe:['dresser'],merchant:['marketstall'],letters:['filecab'],scenes:['filecab'],photos:['filecab'],newspaper:['newspaper'],tst:['tstcorkboard'],sound:['record','jukebox']};
+  const FURNITURE={captions:['captionboard'],tally:['tallycounter'],library:['lectern'],calendar:['calendar'],typewriter:['typewriter'],mailbox:['letterbox','mailbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook'],french:['frenchdesk'],whiteboard:['whiteboard'],wardrobe:['dresser'],merchant:['marketstall'],letters:['filecab'],scenes:['filecab'],photos:['filecab'],newspaper:['newspaper'],tst:['tstcorkboard'],sound:['record','jukebox']};
   function furniture(entry,items,CAT) {
     const ids=entry.furnitureId?[entry.furnitureId]:FURNITURE[entry.id] || [];
     const it=items.find(i=>!i.visitor&&ids.includes(i.t));
