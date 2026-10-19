@@ -362,7 +362,10 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .cozy-pop .today-moment-hint { font-size:13px; }
 .cozy-pop .today-got { min-height:44px; margin-top:4px; }
 .today-sky.has-task-focus .today-sky-copy { display:block; }
-.today-sky.has-task-focus .today-date-row { display:flex; align-items:center; flex-wrap:nowrap; gap:8px; min-width:0; }
-.today-sky.has-task-focus .today-date { flex:none; }
-.today-sky.has-task-focus .today-date-row .today-condition { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0 0 0 auto; padding:4px 8px; border-radius:20px; background:var(--chip); font:600 12px/1.35 Nunito,sans-serif; }
 .today-sky.has-task-focus .today-chance[hidden] { display:none; }
+
+/* Weather shares the greeting; the week strip supplies the date context. */
+.today-sky.has-task-focus .today-welcome { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px; }
+.today-sky.has-task-focus .today-welcome h2 { flex:1; min-width:0; margin:0; font-size:clamp(20px,4.8vw,30px); }
+.space-today .today-sky.has-task-focus .today-welcome .today-condition { display:block; flex:0 1 auto; max-width:42%; min-width:0; margin:0; padding:5px 9px; border-radius:20px; background:var(--chip); color:var(--ink); font:600 12px/1.35 Nunito,sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.today-weather-details[hidden] { display:none; }
