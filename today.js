@@ -73,7 +73,7 @@
       // Google Tasks is just another little tab on the same notepad (it used to live in the weather card).
       if(google){const tabs=el('div','task-tabs'),googlePage=el('div','task-google-page'),uid='tasktab'+(++tabSeq);tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Task lists');googlePage.id=uid+'-google';googlePage.setAttribute('role','tabpanel');
         const mk=(id,label)=>{const b=el('button','task-tab',label);b.type='button';b.id=uid+'-'+id;b.dataset.tab=id;b.setAttribute('role','tab');tabs.appendChild(b);return b;};
-        const local=mk('todo','To-Do'),remote=mk('google','Google');remote.setAttribute('aria-controls',googlePage.id);googlePage.setAttribute('aria-labelledby',remote.id);
+        const local=mk('todo','My list'),remote=mk('google','Google');remote.setAttribute('aria-controls',googlePage.id);googlePage.setAttribute('aria-labelledby',remote.id);
         const show=(id,focus)=>{notebook.dataset.tab=id;googlePage.hidden=id!=='google';counter.hidden=id==='google';for(const b of [local,remote]){const on=b.dataset.tab===id;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;}try{localStorage.setItem('lr.todoTab',id);}catch(e){}if(focus)(id==='google'?remote:local).focus();};
         local.onclick=()=>show('todo');remote.onclick=()=>show('google');tabs.onkeydown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();show(notebook.dataset.tab==='google'?'todo':'google',true);}};
         pageTitle.replaceWith(tabs);notebook.appendChild(googlePage);mountGoogle=()=>google(googlePage);let saved='todo';try{saved=localStorage.getItem('lr.todoTab')==='google'?'google':'todo';}catch(e){}show(saved);}section.append(notebook,sub);

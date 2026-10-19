@@ -23,7 +23,7 @@ with sync_playwright() as p:
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr')
   # A saved 'Journal' menu choice now lands on the To-Do tab, which holds the task notebook.
-  page.click('#bMenu');assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='To-Do';assert page.locator('#menu-todo .today-tasks').is_visible();page.keyboard.press('Escape')
+  page.click('#bMenu');assert page.locator('.menu-nav [role=tab][aria-selected=true]').get_attribute('aria-label')=='To-Do';assert page.locator('#menu-todo .today-tasks').is_visible();page.keyboard.press('Escape')
   # The diaries live in the Cozy moments card under the room name.
   page.click('#disc');page.locator('#cozyMoments').wait_for();page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
   page.locator('#bMomentDiary').click();assert page.locator('#journalFeed > .d').count()>50;assert page.locator('#journalFeed .journal-paper').count()==0
