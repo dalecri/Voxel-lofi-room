@@ -6,7 +6,7 @@
 (function (root) {
   const N = 10;            // the default floor is N × N cells
   const SIZES = [10, 14, 20, 24];   // plot sizes you can pick
-  const HC = 7;            // walls are HC cells tall
+  const HC = 7;            // walls are HC cells tall; LR.HANG (HC * V voxels) is where pendant lights hang from and ceiling beams' undersides sit
   const V = 8;             // voxels per cell
   const GLOW = 1 << 24;    // flag on a voxel colour: drawn unlit (screens, bulbs, flames)
 
@@ -879,12 +879,13 @@
     const [fw, fd] = fp(it);
     if (it.x < 0 || it.z < 0 || it.x + fw > N || it.z + fd > N) return false;
     if (C.kind === 'pet') return !others.some(o => CAT[o.t].kind === 'pet' && o.x === it.x && o.z === it.z);
-    // Hanging lights use floor coordinates but can share a cell with furniture below.
-    const layer = C.ceiling ? 'ceiling' : C.kind === 'rug' ? 'rug' : 'floor';
+    // Hanging lights use floor coordinates but can share a cell with furniture below; ceiling beams
+    // ride a layer of their own, so a pendant can hang from a beam and beams just can't overlap.
+    const layerOf = K => (K.ceiling ? (K.ceiling === 'beam' ? 'beam' : 'ceiling') : K.kind === 'rug' ? 'rug' : 'floor'), layer = layerOf(C);
     return !others.some(o => {
       const OC = CAT[o.t];
       if (OC.roomTrim || OC.kind === 'wall' || OC.kind === 'pet' || o.p) return false;
-      if ((OC.ceiling ? 'ceiling' : OC.kind === 'rug' ? 'rug' : 'floor') !== layer) return false;
+      if (layerOf(OC) !== layer) return false;
       const [ow, od] = fp(o);
       return it.x < o.x + ow && o.x < it.x + fw && it.z < o.z + od && o.z < it.z + fd;
     });
@@ -1218,7 +1219,7 @@
   };
 
   const LR = {
-    N, SIZES, HC, V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART, MOMENTS: [], addGroup,
+    N, SIZES, HC, V, HANG: HC * V, GLOW, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, THEMES, CATS, ART, MOMENTS: [], addGroup,
     Model, Room, hash3, mulberry, shade, mix, hex, fp, skyColor, topOf, VIEWS,
     def, grain, stripes, WOOD, FABRIC, BOOKS, POTS, GREEN, GREEN_D, GREEN_L, buildRoom: build,
   };

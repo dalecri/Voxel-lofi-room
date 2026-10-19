@@ -672,7 +672,7 @@
       if (name !== 'main') { holder.position.set(P.pivot[0] * S, P.pivot[1] * S, P.pivot[2] * S); inner.add(holder); obj.userData.parts[name] = holder; if (name.startsWith('private')) holder.visible = false; }
       if (P.solid) {
         const m = new THREE.Mesh(P.solid, ghost ? ghost : this.solidMat);
-        m.castShadow = !ghost && C.kind !== 'rug'; m.receiveShadow = !ghost;
+        m.castShadow = !ghost && C.kind !== 'rug' && !C.noShadow; m.receiveShadow = !ghost;   // noShadow: high, thin pieces like ceiling beams
         holder.add(m); obj.userData.meshes.push(m);
       }
       if (P.glow) {
