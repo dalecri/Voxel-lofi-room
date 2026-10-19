@@ -144,7 +144,7 @@
     }
     const checkIcon='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg>';
     function paint(entry){
-      const host=entry.host,focus=host.contains(root.document.activeElement)?root.document.activeElement.dataset.taskAction:null;host.replaceChildren();const heading=el('div','google-tasks-heading');heading.append(el('h3','','Google Tasks'));host.appendChild(heading);
+      const host=entry.host,focus=host.contains(root.document.activeElement)?root.document.activeElement.dataset.taskAction:null;host.replaceChildren();const heading=el('div','google-tasks-heading');if(!host.closest('.task-google-page'))heading.append(el('h3','','Google Tasks'));host.appendChild(heading);   // on the To-Do notepad the tab already names it
       const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google'});
       if(error){const note=el('p','google-task-error',error);note.setAttribute('role','status');host.appendChild(note);}
       if(!google.connected)return;

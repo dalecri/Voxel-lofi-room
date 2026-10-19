@@ -20,7 +20,7 @@ with sync_playwright() as p:
  def tab(name):page.get_by_role('tab',name=name,exact=True).click()
  def escape():page.keyboard.press('Escape');assert 'open' not in sheet.get_attribute('class')
  def tap(t):page.evaluate("t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id)",t)
- page.click('#bMenu');assert page.get_by_role('tab').evaluate_all('es=>es.map(e=>e.ariaLabel)')==['Today','Rooms','Journal','Sound','Settings']
+ page.click('#bMenu');assert page.locator('.menu-nav [role=tab]').evaluate_all('es=>es.map(e=>e.ariaLabel)')==['Today','Rooms','Journal','Sound','Settings']
  assert page.locator('#sheetBody > h2').inner_text()=='Your Space';assert page.locator('#menu-today .today-sky').is_visible();assert page.locator('.ritual-cards').count()==0;assert page.locator('#menu-today .daily-badge').count()==0
  tab('Rooms');page.locator('#menu-rooms details.preset-group summary').first.click();page.locator('#menu-rooms details.preset-group summary').last.click();assert page.locator('#bImportCode').is_visible();assert page.locator('#bShareCode').is_visible();assert page.locator('.roomstack').count() or 'Your home' in body.inner_text()
  # Every preset remains present and visible in Rooms.
