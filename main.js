@@ -1431,6 +1431,7 @@ function startLofiRooms() {
     if (!$('#sheet').classList.contains('open') || letters.active) return;
     // Let an open native picker handle Escape and its own keyboard navigation.
     try { if (document.querySelector('select:open')) return; } catch (_) {}
+    if(e.target.matches('.today-feature-toggle')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
     if(e.target.matches('.pixel-grid')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' ','z','Z'].includes(e.key))return;
     const typing = e.target.matches('input, textarea, select') || e.target.isContentEditable;
     const menuShortcut = !typing && !e.ctrlKey && !e.metaKey && !e.altKey && ['h','?'].includes(e.key.toLowerCase()) && !!$('#menu-today');
@@ -2545,7 +2546,7 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     const todoTab = sections['To-Do'];
     h('h2', '', 'To-Do <small>· just yours, on this device</small>', todoTab);
-    todayUI.mount(target,{captions:host=>{LRCaptions.renderDaily(host,captionDesk);captionDesk.refresh();},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true,openTasks:()=>{store.set('lr.menuTab','To-Do');try{localStorage.setItem('lr.todoTab','google');}catch(e){}renderMenu();}}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
+    todayUI.mount(target,{openDay:date=>calendar.openDay(date),captions:host=>{LRCaptions.renderDaily(host,captionDesk);captionDesk.refresh();},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true,openTasks:()=>{store.set('lr.menuTab','To-Do');try{localStorage.setItem('lr.todoTab','google');}catch(e){}renderMenu();}}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);

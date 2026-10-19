@@ -278,53 +278,69 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-sky.has-task-focus .today-drops { margin-block:6px; }
 .today-sky.has-task-focus .today-sky-copy > small { margin-bottom:0; font-size:11px; }
 
-/* Today's desk: one sheet of paper, arranged like Cris's sketch. */
-.space-today .today-sky.has-task-focus { --desk-rule:#b7ac92; padding:28px 20px 16px; border:1px solid #c4b99e; border-radius:16px; background:linear-gradient(110deg,#fffdf280,transparent 65%),#f7f0dc; color:#493e32; box-shadow:0 4px 0 #57452d14; overflow:visible; min-height:0; }
-.today-sky.has-task-focus::before { content:''; position:absolute; top:5px; left:14px; right:14px; height:7px; background:radial-gradient(circle at 50% -2px,transparent 7px,#c4b99e 7.5px,#c4b99e 8.5px,transparent 9px) 0 0/18px 10px repeat-x; pointer-events:none; }
+/* Today: a week at a glance and two expandable daily cards. */
+.space-today .today-sky.has-task-focus { --today-gold:#f7d27c; --today-gold-ink:#493922; --today-caption:#e7d9ca; --today-caption-ink:#4d4037; padding:8px 4px 0; border:0; border-radius:0; background:none; color:var(--ink); box-shadow:none; overflow:visible; min-height:0; }
+.today-sky.has-task-focus[data-phase=night] { --today-gold:#6c547f; --today-gold-ink:#fff0df; --today-caption:#51455d; --today-caption-ink:#fff0df; }
 .today-sky.has-task-focus .today-welcome { margin:0 0 22px; }
-.today-sky.has-task-focus .today-welcome h2 { font-size:clamp(24px,5vw,32px); }
+.today-sky.has-task-focus .today-welcome h2 { font-size:clamp(26px,5vw,34px); letter-spacing:-.025em; }
 .today-sky.has-task-focus .today-welcome p { display:none; }
-.today-main { display:grid; grid-template-columns:minmax(0,1fr) 106px; gap:18px; align-items:start; }
-.today-side { display:grid; gap:10px; min-width:0; }
-.today-sky.has-task-focus .today-google-focus { background:none; border:0; border-radius:0; padding:0; margin:0; box-shadow:none; min-width:0; }
-.today-google-focus .google-tasks { padding:0; margin:0; min-width:0; }
-.today-google-focus .google-tasks-heading { display:block; }
-.today-google-focus .google-tasks-heading h3 { font-size:20px; }
-.today-google-focus .google-task-source { display:block; margin-top:4px; }
-.today-google-focus .google-task-row { gap:3px; }
-.today-google-focus .google-task-copy b { overflow-wrap:anywhere; }
-.today-google-focus .google-auth-row { flex-wrap:wrap; }
-.today-google-focus .google-auth-row button { max-width:100%; white-space:normal; }
-.today-quick { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.space-today .today-quick .today-ritual { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:62px; min-width:0; padding:8px 3px; margin:0; border:1px solid var(--desk-rule); border-radius:10px; background:#fffbef; color:#493e32; text-align:center; }
-.space-today .today-quick .ritual-icon { font-size:21px; }
-.space-today .today-quick b { font:500 15px Fredoka,sans-serif; }
-.space-today .today-quick small { display:none; }
-.today-french { display:block; margin-top:18px; }
-.space-today .today-french .french-today-card { padding:12px 8px 8px; gap:8px; border:1px solid var(--desk-rule); border-radius:12px; background:#fffbef; color:#493e32; }
-.space-today .today-french .french-today { min-height:100px; color:inherit; }
-.space-today .today-french .french-today b { font-size:24px; overflow-wrap:anywhere; }
-.space-today .today-french .french-today-kicker { font-size:10px; }
-.space-today .today-french .french-today small { font-size:12px; }
-.space-today .today-french .french-quick-actions { gap:8px; }
-.space-today .today-french .french-quick-actions button { width:40px; height:40px; min-height:44px; background:#f1e9d8; color:#493e32; }
-.today-caption-desk { margin-top:20px; padding:14px 0; border-top:1px solid var(--desk-rule); }
+.today-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; margin-bottom:26px; }
+.today-week-day { display:flex; flex-direction:column; align-items:center; gap:9px; padding:0; min-width:0; min-height:72px; color:var(--ink-dim); background:none; border:0; border-radius:24px; }
+.today-week-day > span { font-size:12px; line-height:1.5; }
+.today-week-day > b { display:grid; place-items:center; width:100%; max-width:46px; aspect-ratio:1; background:var(--chip); border-radius:50%; font:600 18px/1 Nunito,sans-serif; color:var(--ink); }
+.today-week-day[aria-current=date] > span { color:var(--ink); font-weight:900; }
+.today-week-day[aria-current=date] > b { background:var(--accent); color:var(--accent-ink,#fff); }
+.today-week-day:hover > b { outline:1px solid var(--accent); outline-offset:2px; }
+.today-feature { display:grid; grid-template-columns:minmax(0,1fr) 56px; gap:10px; align-items:stretch; margin-bottom:26px; }
+.today-feature[data-active=caption] { grid-template-columns:56px minmax(0,1fr); }
+.today-feature.french-only { grid-template-columns:minmax(0,1fr); }
+.today-feature-pane { position:relative; min-width:0; display:flex; flex-direction:column; border-radius:24px; overflow:hidden; background:var(--today-gold); color:var(--today-gold-ink); min-height:290px; }
+.today-feature-pane + .today-feature-pane { background:var(--today-caption); color:var(--today-caption-ink); }
+.today-feature-pane[hidden] { display:none; }
+.today-feature-toggle { flex:none; display:block; width:100%; padding:22px 16px 8px; background:none; color:inherit; border:0; border-radius:0; font:500 23px/1.25 Fredoka,sans-serif; text-align:center; }
+.today-feature-toggle[aria-expanded=false] { display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; transform:rotate(180deg); padding:18px 10px; position:absolute; inset:0; height:auto; min-height:0; font-size:18px; cursor:pointer; }
+.today-feature-toggle:focus-visible { outline-offset:-5px!important; border-radius:24px; }
+.today-french { display:block; margin:0; flex:1; }
+.today-french[hidden] { display:none; }
+.space-today .today-french .french-today-card { border:0; border-radius:0; background:none; color:inherit; padding:8px 18px 20px; min-height:235px; justify-content:center; }
+.space-today .today-french .french-today-card .french-today { min-height:125px; flex:1; color:inherit; }
+.space-today .today-french .french-today b { font-size:clamp(30px,6vw,38px); overflow-wrap:anywhere; }
+.space-today .today-french .french-today-kicker { display:none; }
+.space-today .today-french .french-today small,.space-today .today-french .french-flip-hint,.space-today .today-french .french-example-translation { color:inherit; opacity:.75; }
+.today-french .french-quick-actions { gap:12px; }
+.today-french .french-quick-actions button { width:44px; height:44px; background:#fff6; color:inherit; border-color:#49392233; }
+.today-french .french-review-status { color:inherit; opacity:.8; text-align:center; font-size:12px; }
+.today-caption-desk { padding:0 16px 20px; flex:1; display:flex; flex-direction:column; min-width:0; }
 .today-caption-desk[hidden] { display:none; }
-.today-caption-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.today-caption-heading h3 { margin:0; font:500 20px Fredoka,sans-serif; }
-.today-caption-desk button { min-width:44px; min-height:44px; padding:6px 10px; color:#493e32; background:transparent; border:1px solid transparent; border-radius:8px; }
-.today-caption-desk button:hover { background:#e9dfc7; }
+.today-caption-heading { display:flex; justify-content:flex-end; min-height:32px; }
+.today-caption-heading h3 { display:none; }
+.today-caption-desk button { min-width:44px; min-height:44px; padding:6px 10px; color:inherit; background:transparent; border:1px solid transparent; border-radius:14px; }
+.today-caption-desk button:hover { background:#ffffff35; }
 .today-caption-desk button:disabled { opacity:.4; }
-.today-caption-desk .today-caption-text { margin:12px 0; font-size:16px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
-.today-caption-meta { display:block; color:#786c57; font-size:11px; }
-.today-caption-actions { display:flex; align-items:center; gap:4px; margin-top:10px; }
+.today-caption-desk .today-caption-text { margin:0 0 14px; font-size:17px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; max-height:280px; overflow:auto; }
+.today-caption-meta { display:block; font-size:11px; opacity:.75; }
+.today-caption-actions { display:flex; align-items:center; gap:2px; margin-top:auto; padding-top:12px; }
 .today-caption-page { font-size:26px; }
-.today-caption-count { margin-right:auto; font-size:12px; }
-.today-caption-desk .today-caption-copy { border-color:var(--desk-rule); background:#fff9e9; }
+.today-caption-count { margin:0 auto 0 2px!important; font-size:12px; white-space:nowrap; }
+.today-caption-desk .today-caption-copy { border-color:#49392233; background:#fff6; font-weight:800; }
 .today-caption-idea { font-size:13px; margin-block:8px; }
 .today-caption-idea summary { cursor:pointer; padding-block:6px; }
 .today-caption-idea p { white-space:pre-wrap; }
-.today-sky.has-task-focus .today-weather-details { padding-top:12px; border-top:1px solid var(--desk-rule); }
+.today-main { display:block; min-width:0; }
+.today-sky.has-task-focus .today-google-focus { padding:18px; margin:0 0 14px; border:1px solid var(--line); border-radius:24px; background:var(--panel-solid); box-shadow:none; color:var(--ink); --note-ink:var(--ink); --note-muted:var(--ink-dim); --note-rule:var(--line); }
+.today-google-focus .google-tasks { padding:0; margin:0; min-width:0; }
+.today-google-focus .google-tasks-heading { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:baseline; }
+.today-google-focus .google-tasks-heading h3 { font-size:22px; }
+.today-google-focus .google-task-copy b { overflow-wrap:anywhere; color:var(--ink); }
+.today-google-focus .google-auth-row { flex-wrap:wrap; }
+.today-side { display:block; }
+.today-quick { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+.space-today .today-quick .today-ritual { display:flex; flex-direction:row; align-items:center; gap:10px; min-height:94px; min-width:0; padding:16px; margin:0; border:0; border-radius:22px; background:var(--chip); color:var(--ink); text-align:left; }
+.space-today .today-quick .today-ritual:first-child { background:color-mix(in srgb,var(--accent) 14%,var(--panel-solid)); }
+.space-today .today-quick .ritual-icon { font-size:28px; }
+.space-today .today-quick b { display:block; font:500 21px Fredoka,sans-serif; }
+.space-today .today-quick small { display:block; font-size:12px; line-height:1.4; color:var(--ink-dim); margin-top:4px; }
+.today-sky.has-task-focus .today-weather-details { border:0; padding:12px 0 0; }
 .today-sky.has-task-focus .today-sky-copy { display:grid; grid-template-columns:1fr auto; gap:4px 10px; }
 .today-sky.has-task-focus .today-date-row { margin:0; gap:6px; }
 .today-sky.has-task-focus .today-date { font-size:12px; }
@@ -337,13 +353,7 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-moment-extra { padding:12px 0; border-bottom:1px solid var(--line); }
 .today-moment-extra > summary { cursor:pointer; font:500 17px Fredoka,sans-serif; padding:4px; }
 .today-moment-extra .today-moment { margin-top:10px; }
-@media(max-width:360px) { .space-today .today-sky.has-task-focus { padding-inline:12px; }.today-main { gap:10px; grid-template-columns:minmax(0,1fr) 96px; }.today-google-focus .google-tasks-heading h3 { font-size:18px; }.today-caption-heading h3 { font-size:18px; }.today-google-focus .google-task-check { width:28px; }.today-google-focus .google-task-row { grid-template-columns:28px minmax(0,1fr); } }
-
-.today-sky .today-caption-actions .today-caption-count { margin:0 auto 0 4px; }
-
-.space-today .today-quick [data-active=true] small { display:block; font-size:10px; line-height:1.3; overflow-wrap:anywhere; }
-
-/* French has its own full-width space below the task row. */
-.space-today .today-french .french-today-card { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; padding:12px 16px; column-gap:16px; }
-.space-today .today-french .french-today-card .french-today { min-height:100px; }
-.today-french .french-review-status,.today-french .french-review-done { grid-column:1/-1; margin:0; text-align:center; }
+@media(max-width:360px) { .today-feature { gap:8px; grid-template-columns:minmax(0,1fr) 48px; }.today-feature[data-active=caption] { grid-template-columns:48px minmax(0,1fr); }.today-feature-toggle { font-size:21px; padding-inline:10px; }.today-caption-desk { padding-inline:12px; }.space-today .today-quick .today-ritual { padding:12px; gap:7px; }.space-today .today-quick .ritual-icon { font-size:22px; }.space-today .today-quick b { font-size:19px; } }
+@media(prefers-reduced-motion:no-preference) { .today-feature { transition:grid-template-columns .25s ease; }.today-feature-pane { transition:background .25s ease; } }
+.today-sky.has-task-focus .today-google-focus .chipbtn { background:var(--chip); color:var(--ink); }
+.today-google-focus .google-task-row.completed .google-task-copy b { color:var(--ink-dim); }

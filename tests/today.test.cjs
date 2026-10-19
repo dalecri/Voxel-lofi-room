@@ -62,3 +62,11 @@ test('Today presentation follows the existing four room phases without changing 
  assert.deepEqual(T.daypart('unknown'),T.daypart('day'));
  const j=T.journey([{done:true},{done:false},{done:true},{done:false}]);assert.equal(j.checked,2);assert.equal(j.total,4);assert.equal(j.progress,.5);assert.equal(T.journey([]).progress,0);
 });
+
+test('Today week is Monday-first with exactly one current day through month, year and DST changes',()=>{
+ for(const now of [new Date(2026,9,19,9),new Date(2026,9,25,23),new Date(2027,0,1,0),new Date(2026,2,8,9),new Date(2026,10,1,9)]){
+  const rows=T.weekDays(now);assert.equal(rows.length,7);assert.equal(new Date(rows[0].date+'T12:00:00').getDay(),1);assert.equal(new Date(rows[6].date+'T12:00:00').getDay(),0);assert.equal(new Set(rows.map(r=>r.date)).size,7);assert.equal(rows.filter(r=>r.today).length,1);assert.equal(rows.find(r=>r.today).number,now.getDate());
+  for(let i=1;i<7;i++){const d=new Date(rows[i-1].date+'T12:00:00');d.setDate(d.getDate()+1);assert.equal(d.toDateString(),new Date(rows[i].date+'T12:00:00').toDateString());}
+ }
+ assert.equal(T.weekDays(new Date(2027,0,1))[0].date,'2026-12-28');assert.equal(T.weekDays(new Date(2027,0,1))[6].date,'2027-01-03');
+});

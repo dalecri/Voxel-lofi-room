@@ -92,7 +92,7 @@
   // A single readable clipping on Today, backed by the same three daily picks.
   function renderDaily(host,model) {
     const s=model.state,old=Number(host.dataset.clip)||0;
-    host.replaceChildren();host.hidden=!s.enabled;if(host.hidden)return;
+    host.replaceChildren();host.hidden=!s.enabled||host.closest('.today-feature')?.dataset.active==='french';if(!s.enabled){const pane=host.closest('.today-feature-pane');if(pane)pane.hidden=true;host.closest('.today-feature')?.classList.add('french-only');return;}
     const doc=host.ownerDocument;
     const add=(tag,cls,text,parent=host)=>{const n=doc.createElement(tag);n.className=cls;n.textContent=text;parent.appendChild(n);return n;};
     const head=add('div','today-caption-heading','');add('h3','','TwoStoryTails caption',head);
