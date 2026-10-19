@@ -19,8 +19,6 @@
 .pixel-postcard input.mailwin-val:hover { background:#e9e2d4; }
 .pixel-postcard .postcard-stamp { position:absolute; right:0; top:0; display:grid; place-items:center; width:44px; height:48px; padding:4px; border:3px dashed #49394b; background:#fffaf4; }
 .postcard-stamp svg { width:30px; height:30px; }
-.postcard-picture { display:grid; place-items:center; width:76%; max-width:310px; aspect-ratio:1; margin:24px auto; border:4px solid #393047; box-shadow:5px 5px 0 #789471; background:#fffcfa; }
-.postcard-picture svg { width:64%; height:64%; image-rendering:pixelated; }
 .pixel-postcard .mailwin-page { display:block; }
 .pixel-postcard .mailwin-scroll { display:none; }
 .pixel-postcard .mailwin-body,.pixel-postcard .roomtool-letter { display:block; width:100%; min-height:160px; padding:12px 0 20px; margin:0; border:0; border-radius:0; background:transparent; color:var(--post-ink); font:400 25px/1.3 'VT323',ui-monospace,monospace; box-shadow:none; white-space:pre-wrap; overflow-wrap:anywhere; }
@@ -46,21 +44,10 @@
 .postcard-readhead { display:block; position:relative; inset:auto; pointer-events:auto; margin:0; padding:0; border-bottom:2px solid #78947155; }
 .postcard-readhead > small { display:block; min-height:44px; padding-right:58px; color:#71836b; letter-spacing:.1em; font-size:17px; }
 .postcard-readhead h3 { color:var(--post-pink); font:400 31px/1.1 'VT323',monospace; margin:14px 0; }
-/* The postcard feeds through the existing typewriter; the machine and all its keys stay. */
-#lettersView .mailwin.pixel-postcard { --mw-ink:var(--post-ink); --mw-paper:#fcf6ec; max-width:560px; border:4px solid #3a3049; border-radius:0; padding:24px; background:repeating-linear-gradient(0deg,#b99e7910 0 8px,transparent 8px 16px),repeating-linear-gradient(90deg,#b99e7910 0 8px,transparent 8px 16px),#fcf6ec; box-shadow:inset 0 0 0 4px #839576,inset 0 0 0 7px #fcf6ec,inset 0 0 0 9px #d58a9c; }
-#lettersView .pixel-postcard .mailwin-bar { display:none; }
-#lettersView .pixel-postcard .mailwin-head { padding:0 54px 14px 0; border-bottom:2px solid #78947155; }
-#lettersView .pixel-postcard .mailwin-row { grid-template-columns:48px minmax(0,1fr); }
-#lettersView .pixel-postcard .mailwin-row:last-of-type { grid-template-columns:minmax(0,1fr); }
-#lettersView .pixel-postcard .mailwin-body { font:400 25px/1.3 'VT323',monospace; min-height:200px; color:var(--post-ink); padding:12px 0 20px; }
-#lettersView .pixel-postcard .mailwin-row:last-of-type input { font-size:29px; color:var(--post-pink); }
-#lettersView .pixel-postcard .mailwin-key { color:#71836b; }
-#lettersView .pixel-postcard input.mailwin-val { color:var(--post-ink); }
 @media(max-width:380px) {
   .pixel-postcard,#lettersView .mailwin.pixel-postcard { padding:20px; }
   #letterScroll { padding-inline:0; }
   .pixel-postcard .mailwin-head,#lettersView .pixel-postcard .mailwin-head { padding-right:0; padding-top:54px; }
   .pixel-postcard .mailwin-row:last-of-type { margin-right:0; }
-  .postcard-picture { width:84%; }
   .postcard-picker { gap:8px; }
 }

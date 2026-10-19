@@ -131,8 +131,7 @@
         root.appendChild(ui.form);
         const {form:win,body,due,saved,foot}=ui,from=ui.fields.From,to=ui.fields.To,title=ui.fields.Subject;
         from.addEventListener('change',()=>run(()=>model.setFrom(from.value)));   // the sender is remembered even without a draft
-        let snapshot=sealed?applyTypewriter(ui,sealed):null;const draft=letters.model.get();
-        if(draft)button(foot,'Use my current typewriter letter',()=>{letters.flush();snapshot=applyTypewriter(ui,letters.model.get());},'mailwin-btn mailwin-small');
+        const snapshot=sealed?applyTypewriter(ui,sealed):null;
         const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,cardIcon:ui.postcard.icon,deliverOn:due.value});
         ui.buttons['Save draft'].onclick=()=>run(()=>{model.saveDraft(state());model.setFrom(from.value);const t=new Date();saved.textContent=`Draft saved ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;});
         ui.buttons.Send.onclick=()=>run(()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value,cardIcon:ui.postcard.icon});sound.rustle();mailbox();});
