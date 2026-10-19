@@ -1,5 +1,5 @@
-// The house press: a deterministic story engine for the Daily News (daily front
-// page) and the Daily Drift (Sunday magazine). Everything here is a pure
+// The house press: a deterministic story engine for the Daily Brief, the paper
+// delivered to the door each morning (Sundays add the weekly magazine pages). Everything here is a pure
 // function of stored, private data. State lives under lr.press, never in rooms
 // or share codes. No network and no randomness.
 (function (root) {
@@ -39,11 +39,12 @@
   const DIARY_KINDS = ['mischief', 'sunbeam', 'nap', 'eat'];
 
   // Story types and which paper owns them. They never overlap.
+  // Every brief carries the daily types; the Sunday brief adds the weekly pages.
   const ALLOCATION = {
-    news: ['streak', 'first', 'record', 'drought', 'diary', 'forecast'],
-    drift: ['week', 'roundup', 'saga', 'gossip', 'behind', 'memory', 'ahead', 'closing']
+    daily: ['streak', 'first', 'record', 'drought', 'diary', 'forecast'],
+    sunday: ['week', 'roundup', 'saga', 'gossip', 'behind', 'memory', 'ahead', 'closing']
   };
-  const TYPE_LABEL = { streak: 'On a roll', first: 'A first', record: 'House record', drought: 'Gone quiet', diary: 'From the diary', forecast: 'Tomorrow in the house', week: 'Week over week', roundup: 'Records roundup', saga: 'Pet column', gossip: 'Village gossip', behind: 'Behind the week', memory: 'On this day', ahead: 'The week ahead', closing: 'From the editor' };
+  const TYPE_LABEL = { streak: 'On a roll', first: 'A first', record: 'House record', drought: 'Gone quiet', diary: 'From the diary', forecast: 'Today in the house', week: 'Week over week', roundup: 'Records roundup', saga: 'Pet column', gossip: 'Village gossip', behind: 'Behind the week', memory: 'On this day', ahead: 'The week ahead', closing: 'From the editor' };
   const NEWSWORTHY = ['streak', 'first', 'record', 'drought', 'diary'];
 
   // --- Ledger: one map of kind -> date -> count, built from local stores ----
@@ -170,8 +171,9 @@
   // --- Tomorrow in the house ------------------------------------------------
   const clock = iso => { const d = new Date(iso); if (!Number.isFinite(+d)) return ''; const h = d.getHours(), m = d.getMinutes(); return `${h % 12 || 12}${m ? ':' + String(m).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
   const SKY = { rain: 'rain on the way', storm: 'storms likely', snow: 'snow likely', clear: 'clear skies' };
-  function forecast({ today, events = [], google = [], tasks = [], weather = null, L = {} }) {
-    const tomorrow = addDays(today, 1);
+  // ahead 0 briefs today (the morning paper); ahead 1 looks at tomorrow.
+  function forecast({ today, events = [], google = [], tasks = [], weather = null, L = {}, ahead = 1 }) {
+    const tomorrow = addDays(today, ahead), when = ahead ? 'tomorrow' : 'today', base = ahead ? today : addDays(today, -1);
     const list = [
       ...rows(events).filter(e => e && e.date === tomorrow && typeof e.title === 'string').map(e => ({ title: clip(e.title, 90), time: '', at: '' })),
       ...rows(google).filter(e => e && typeof e.title === 'string' && valid(e.date) && e.date <= tomorrow && (e.endDate || e.date) >= tomorrow && (!e.allDay || e.date === tomorrow || (e.endDate || e.date) > tomorrow)).map(e => ({ title: clip(e.title, 90), time: e.startAt ? clock(e.startAt) : '', at: e.startAt || '' }))
@@ -183,15 +185,15 @@
     const timed = list.find(e => e.time), booked = timed ? `${timed.title} at ${timed.time}` : list[0] ? `${list[0].title} on the calendar` : '';
     const clause = [booked, wx ? SKY[wx.condition] || SKY.clear : ''].filter(Boolean).join(', ');
     let habit = '';
-    const live = Object.keys(L).filter(k => k !== 'reps' && (L[k][today] || 0) > 0).map(k => [k, runEnding(L[k], today)]).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    const live = Object.keys(L).filter(k => k !== 'reps' && (L[k][base] || 0) > 0).map(k => [k, runEnding(L[k], base)]).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
     if (live) habit = `${KINDS[live[0]].label} streak on the line: day ${live[1] + 1}.`;
     else {
       const wd = parse(tomorrow).getDay(), past = [1, 2, 3, 4].map(w => addDays(tomorrow, -7 * w));
       const usual = Object.keys(L).filter(k => k !== 'reps').map(k => [k, past.filter(d => L[k][d]).length]).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
       if (usual) habit = `${WEEKDAYS[wd]}s usually bring ${KINDS[usual[0]].many} (${usual[1]} of the last 4).`;
-      else { const quiet = droughts(L, today)[0] || null; if (quiet) habit = `Odds of ${KINDS[quiet.kind].none} tomorrow: improving.`; }
+      else { const quiet = droughts(L, today)[0] || null; if (quiet) habit = `Odds of ${KINDS[quiet.kind].none} ${when}: improving.`; }
     }
-    const prediction = [clause ? cap(clause) + '.' : '', habit].filter(Boolean).join(' ') || 'A blank page tomorrow. The house has no plans, which is also a plan.';
+    const prediction = [clause ? cap(clause) + '.' : '', habit].filter(Boolean).join(' ') || `A blank page ${when}. The house has no plans, which is also a plan.`;
     return { date: tomorrow, events: list.map(({ title, time }) => ({ title, time })), tasks: due, weather: sky, prediction };
   }
 
@@ -327,22 +329,29 @@
       return true;
     }
     function ledgerFor(src) { return ledger({ activity: src.activity, catLog: src.catLog, focus: src.focus, reps: state.reps }); }
-    function news(src = {}) {
+    // The morning brief: patterns from yesterday and today, the cats' diary from
+    // yesterday, and a box for the day ahead. Returns ready-to-store sections.
+    function brief(src = {}) {
       state = read();
-      const today = day(now()), changedReps = keepReps(src.tally), L = ledgerFor(src);
+      const today = day(now()), yesterday = addDays(today, -1), changedReps = keepReps(src.tally), L = ledgerFor(src);
       const found = strongest(rank([...records(L, today), ...firsts(L, today), ...streaks(L, today), ...droughts(L, today)], prefs()));
-      const diary = src.diary || null;
-      const diaryStory = diary?.lead ? story('diary', 'diary', 20, diary.headline, diary.dek, { lead: diary.lead }) : null;
+      const notes = rows(src.catLog).filter(e => e && typeof e.text === 'string' && dayOf(e.time) === yesterday).sort((a, b) => b.time - a.time || String(a.name).localeCompare(String(b.name)));
+      const title = e => `${clip(e.name || 'A resident cat', 40)}: ${String(e.text).split(/[.!?]/)[0]}`;
+      const diaryStory = notes[0] ? story('diary', 'diary', 20, title(notes[0]), `“${clip(notes[0].text, 200)}” The resident considers the matter settled.`) : null;
       const ranked = rank([...found, ...(diaryStory ? [diaryStory] : [])], prefs()).slice(0, 6);
-      const box = forecast({ today, events: src.events, google: src.google, tasks: src.tasks, weather: src.weather, L });
-      const before = JSON.stringify(prefs());
-      setPrefs(settle(prefs(), 'news', today, [...ranked.map(s => s.type), 'forecast']));
-      if (changedReps || JSON.stringify(prefs()) !== before) save();
-      const slim = isSlim(ranked), lead = ranked[0] || null;
-      return { date: today, day: diary?.day || 0, slim, lead, stories: ranked.slice(1), diary: rows(diary?.remaining), forecast: { ...box, shrunk: shrunk(prefs(), 'forecast') },
-        sections: [...(found.length ? ['House patterns'] : []), ...rows(diary?.sections)], reaction: diary?.reaction || '' };
+      const box = forecast({ today, events: src.events, google: src.google, tasks: src.tasks, weather: src.weather, L, ahead: 0 });
+      const slim = isSlim(ranked), sections = [];
+      if (!slim) ranked.forEach((s, i) => sections.push({ id: s.id, type: s.type, title: s.headline, body: s.body, ...(i === 0 ? { lead: true } : {}) }));
+      const items = [...box.events.slice(0, 4).map(e => ({ label: e.time || 'All day', value: e.title })), ...(box.weather ? [{ label: 'Sky', value: box.weather }] : []), ...(box.tasks.length ? [{ label: 'Due', value: box.tasks.slice(0, 3).join(' · ') + (box.tasks.length > 3 ? ` · +${box.tasks.length - 3}` : '') }] : [])];
+      sections.splice(slim ? 0 : 1, 0, { id: 'today', type: 'forecast', title: 'Today in the house', body: box.prediction, items: items.length ? items : [{ label: 'Calendar', value: 'Nothing booked yet.' }] });
+      const more = notes.slice(ranked.some(x => x.type === 'diary') ? 1 : 0).slice(0, 4).map(e => ({ label: clip(e.name || 'A cat', 40), value: clip(e.text, 160) }));
+      if (!slim && more.length) sections.push({ id: 'diary-notes', type: 'diary', title: 'More from the cats’ diary', body: '', items: more });
+      if (changedReps) save();
+      return { date: today, slim, sections };
     }
-    // Sections for one Drift issue. Saga state advances once per issue week.
+    // Readers see each brief once; record which types it showed for the clap ranking.
+    function track(tally) { state = read(); if (keepReps(tally)) save(); }
+    // Sunday pages for one brief. Saga state advances once per issue week.
     function magazine(issue, src = {}) {
       state = read();
       const L = ledgerFor(src), out = [], add = (id, type, title, body, extra = {}) => out.push({ id, type, title, body, ...extra });
@@ -368,7 +377,7 @@
     }
     function seen(paper, key, types) { state = read(); const before = JSON.stringify(prefs()); setPrefs(settle(prefs(), paper, key, types)); if (JSON.stringify(prefs()) !== before) save(); }
     function applaud(paper, type) { state = read(); setPrefs(clap(prefs(), paper, type)); save(); return state.claps[type]; }
-    return { news, magazine, arrange, seen, clap: applaud, clapped: (paper, type) => rows(read().last[paper]?.clapped).includes(type), claps: type => read().claps[type] || 0, isShrunk: type => shrunk(read(), type), get state() { return copy(read()); } };
+    return { brief, track, magazine, arrange, seen, clap: applaud, clapped: (paper, type) => rows(read().last[paper]?.clapped).includes(type), claps: type => read().claps[type] || 0, isShrunk: type => shrunk(read(), type), get state() { return copy(read()); } };
   }
 
   const api = { KEY, KINDS, ALLOCATION, TYPE_LABEL, NEWSWORTHY, SAGAS, SEED, ledger, streaks, firsts, records, droughts, weekChange, roundup, busiest, forecast, seedSagas, sagaEvidence, advanceSaga, column, gossip, rank, settle, clap, boost, shrunk, isSlim, create, addDays, day };

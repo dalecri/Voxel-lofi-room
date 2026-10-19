@@ -1,5 +1,6 @@
-// Daily Drift: a private, deterministic weekly paper. Delivery week is the
-// current ISO week; its recap covers the previous completed Monday–Sunday.
+// Daily Brief: a private, deterministic paper delivered to the door each morning.
+// Sunday's brief also carries the weekly pages: the recap of Monday to Sunday,
+// pet columns and records. issue() builds those weekly pages.
 (function(root){
   const Calendar=typeof module!=='undefined'&&module.exports?require('./calendar.js'):root.LRCalendar;
   const KEY='lr.digest',DAY=86400000,day=Calendar.day,rows=v=>Array.isArray(v)?v:[],copy=v=>JSON.parse(JSON.stringify(v)),clip=(v,n=180)=>String(v??'').slice(0,n);
@@ -21,7 +22,7 @@
     if(counts.tip)add('generosity','A little generosity',`Mallow received ${counts.tip} kind tip${counts.tip===1?'':'s'} this week. A small spin was observed. The satchel remains strictly his business.`);
     const scenes=rows(sources.scenes).filter(s=>s&&within(s.createdAt)).sort((a,b)=>b.createdAt-a.createdAt||String(a.id).localeCompare(String(b.id)));
     if(scenes.length)add('scenes','Rooms worth remembering',`${scenes.length} scene${scenes.length===1?' was':'s were'} tucked away: ${scenes.slice(0,3).map(s=>clip(s.title||'An untitled scene',80)).join(' · ')}. A little light, kept for later.`,{sceneId:scenes[0].id});
-    // Streaks belong to the Daily News front page now; the Drift never repeats them.
+    // Streaks are daily brief stories; the weekly pages never repeat them.
     const notes=rows(sources.guestbook).filter(n=>n&&within(n.d)).sort((a,b)=>String(b.d).localeCompare(String(a.d))||String(a.n).localeCompare(String(b.n)));
     if(notes.length)add('visitors','Post from the doorstep',notes.slice(0,3).map(n=>`${clip(n.n||'A friend',40)} ${n.t?`left a note: “${clip(n.t,160)}”`:'left a little sticker'}.`).join(' '));
     // Current main has cat diary observations but no persisted companion log.
@@ -34,31 +35,53 @@
     const memory=Calendar.memoryFor(rows(sources.scenes),date);if(memory)add('memory','On this day, another year',`${new Date(memory.createdAt).getFullYear()} · ${clip(memory.title||'A room memory',100)}. The light looked a little different then.`,{sceneId:memory.id});
     add('closing','From the editor','Fold this week gently. There is room for whatever comes next.');return {week,date,from,through,sections,read:false};
   }
-  function create({store,now=()=>new Date(),sources=()=>({}),magazine=null,arrange=v=>v}){
-    const read=()=>{const s=store.get(KEY,{})||{};return {lastIssueWeek:/^\d{4}-W\d{2}$/.test(s.lastIssueWeek)?s.lastIssueWeek:'',issues:rows(s.issues).filter(i=>i&&/^\d{4}-W\d{2}$/.test(i.week)&&Array.isArray(i.sections))};};
-    const save=s=>{store.set(KEY,s);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(s))throw Error('Could not keep the Daily Drift on this device.');};
-    // The house press adds pet columns, records and gossip once per issue. An issue
-    // printed before the press existed gets its magazine pages once, then stays fixed.
-    function extend(target,src){if(!magazine||target.press)return false;target.sections=arrange([...target.sections.filter(x=>x.id!=='closing'),...magazine(target,src),...target.sections.filter(x=>x.id==='closing')]);target.press=1;return true;}
-    function ensure(){const s=read(),week=isoWeek(delivery(now())),existing=s.issues.find(i=>i.week===week);if(existing){if(magazine&&!existing.press&&extend(existing,sources()))save(s);return copy(existing);}if(s.lastIssueWeek>=week)return copy(s.issues[0]||null);const src=sources(),next=issue(now(),src);extend(next,src);s.issues.unshift(next);s.lastIssueWeek=week;save(s);return copy(next);}
-    return {ensure,get issues(){return copy(read().issues);},get latest(){return copy(read().issues[0]||null);},open(week){ensure();const s=read(),found=s.issues.find(i=>i.week===week)||s.issues[0];if(!found)return null;if(!found.read){found.read=true;save(s);}return copy(found);}};
+  // One brief per local day, kept immutable once delivered. Older weekly issues
+  // (from before the brief) stay readable in the archive.
+  function create({store,now=()=>new Date(),sources=()=>({}),brief=null,magazine=null,arrange=v=>v,keep=60}){
+    const read=()=>{const s=store.get(KEY,{})||{};return {lastDate:Calendar.valid(s.lastDate)?s.lastDate:'',issues:rows(s.issues).filter(i=>i&&Calendar.valid(i.date)&&Array.isArray(i.sections))};};
+    const save=s=>{const keepS={lastDate:s.lastDate,issues:s.issues.slice(0,keep)};store.set(KEY,keepS);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(keepS))throw Error('Could not keep the Daily Brief on this device.');};
+    const isBrief=i=>i.brief===1;
+    function build(at,src){
+      const date=day(at),daily=brief?brief(src):{slim:true,sections:[]},sunday=at.getDay()===0,s=read();
+      let sections=[...daily.sections],week=isoWeek(at),from='',through='';
+      if(sunday){const recap=issue(at,src);week=recap.week;from=recap.from;through=recap.through;
+        const pages=[...(magazine?magazine({week,from,through,date},src):[]),...recap.sections.filter(x=>x.id!=='closing')];
+        sections=[...sections,...arrange(pages),...recap.sections.filter(x=>x.id==='closing')];}
+      return {brief:1,date,week,from,through,sunday,slim:!!daily.slim&&!sunday,no:s.issues.filter(isBrief).length+1,sections,read:false};
+    }
+    function ensure(){const s=read(),date=day(now()),existing=s.issues.find(i=>isBrief(i)&&i.date===date);if(existing)return copy(existing);if(s.lastDate>date)return copy(s.issues[0]||null);
+      const next=build(now(),sources());s.issues.unshift(next);s.lastDate=date;save(s);return copy(next);}
+    return {ensure,get issues(){return copy(read().issues);},get latest(){return copy(read().issues[0]||null);},
+      open(key){ensure();const s=read(),found=s.issues.find(i=>(i.brief?i.date:i.week)===key)||s.issues[0];if(!found)return null;if(!found.read){found.read=true;save(s);}return copy(found);}};
   }
   // Story labels and claps come from the house press when it is present.
-  const LABEL={behind:'Behind the week',gossip:'Village gossip',ahead:'The week ahead',memory:'On this day',saga:'Pet column',week:'Week over week',roundup:'Records roundup',closing:'From the editor'};
+  const LABEL={behind:'Behind the week',gossip:'Village gossip',ahead:'The week ahead',memory:'On this day',saga:'Pet column',week:'Week over week',roundup:'Records roundup',closing:'From the editor',streak:'On a roll',first:'A first',record:'House record',drought:'Gone quiet',diary:'From the diary',forecast:'Today in the house'};
+  const keyOf=i=>i.brief?i.date:i.week;
   function createView({model,sheet,sound,scenes=()=>[],thumb=()=>null,openScene=()=>{},onRead=()=>{},notice=()=>{},press=null}){
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;};
-    function clapButton(type,label){const b=el('button','press-clap');b.type='button';const count=()=>press.claps(type);const paint=()=>{b.textContent=`👏 ${count()||''}`.trim();b.setAttribute('aria-pressed',String(press.clapped('drift',type)));};b.setAttribute('aria-label',`Clap for ${label.toLowerCase()} stories`);paint();b.onclick=()=>{try{press.clap('drift',type);paint();}catch(e){notice(e.message);}};return b;}
-    function open(week){try{model.ensure();const current=model.open(week);if(!current)return;onRead();try{sound.flip();}catch(e){/* optional paper rustle */}sheet('Daily Drift','The Sunday magazine, kept on this device. Nothing leaves your room.',h=>{
+    function clapButton(type,label){const b=el('button','press-clap');b.type='button';const paint=()=>{b.textContent=`👏 ${press.claps(type)||''}`.trim();b.setAttribute('aria-pressed',String(press.clapped('brief',type)));};b.setAttribute('aria-label',`Clap for ${label.toLowerCase()} stories`);paint();b.onclick=()=>{try{press.clap('brief',type);paint();}catch(e){notice(e.message);}};return b;}
+    const longDate=d=>new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    const shortDate=d=>new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+    function open(key){try{model.ensure();const current=model.open(key);if(!current)return;onRead();try{sound.flip();}catch(e){/* optional paper rustle */}sheet('Daily Brief','Your morning paper, kept on this device. Nothing leaves your room.',h=>{
       const root=h('div','drift-reader');
-      function section(value){const type=value.type||'behind',label=LABEL[type]||'',block=el('section','drift-section'+(type==='saga'?' drift-column':'')+(press&&type!=='closing'&&press.isShrunk(type)?' is-shrunk':''));block.dataset.type=type;if(label&&type!=='closing')block.appendChild(el('p','press-kicker',label));block.append(el('h3','',value.title),el('p','',value.body));
+      function section(value){const type=value.type||'behind',label=LABEL[type]||'',cls='drift-section'+(type==='saga'?' drift-column':'')+(value.lead?' brief-lead':'')+(type==='forecast'?' brief-today':'')+(press&&type!=='closing'&&!value.lead&&press.isShrunk(type)?' is-shrunk':'');
+        const block=el('section',cls);block.dataset.type=type;if(label&&type!=='closing'&&type!=='forecast')block.appendChild(el('p','press-kicker',label));
+        block.appendChild(el(value.lead?'h3':'h3','',value.title));if(value.body)block.appendChild(el('p',type==='forecast'?'brief-today-line':'',value.body));
+        if(Array.isArray(value.items)&&value.items.length){const list=el('ul','brief-items');for(const it of value.items){const li=el('li');li.append(el('b','',it.label),document.createTextNode(' '+it.value));list.appendChild(li);}block.appendChild(list);}
         if(value.sceneId){const scene=scenes().find(s=>s.id===value.sceneId);if(scene){const b=el('button','drift-memory','Open this scene'),src=scene.decor&&thumb({...scene.decor,id:scene.id});b.type='button';if(src){const img=document.createElement('img');img.src=src;img.alt='';b.prepend(img);}b.onclick=()=>openScene(scene);block.appendChild(b);}}
         if(press&&label&&type!=='closing')block.appendChild(clapButton(type,label));return block;}
-      function paint(value){root.replaceChildren();const paper=el('article','drift-paper');paper.append(el('p','drift-eyebrow','THE SUNDAY MAGAZINE OF THE HOUSE'),el('h2','drift-masthead','Daily Drift'),el('p','drift-edition',`${value.week} · The week of ${value.from} to ${value.through}`));
-        const columns=value.sections.filter(s=>s.type==='saga'),rest=value.sections.filter(s=>s.type!=='saga');
+      function paint(value){root.replaceChildren();const paper=el('article','drift-paper'+(value.slim?' is-slim':''));paper.setAttribute('aria-label','Daily Brief');
+        paper.append(el('p','drift-eyebrow',value.brief?'DELIVERED TO YOUR DOOR THIS MORNING':'FROM THE WEEKLY ARCHIVE'),el('h2','drift-masthead','Daily Brief'),
+          el('p','drift-edition',value.brief?`${longDate(value.date)} · No. ${value.no}${value.sunday?' · Sunday edition':''}`:`${value.week} · The week of ${value.from} to ${value.through}`));
+        const daily=new Set(['streak','first','record','drought','diary','forecast']),front=value.sections.filter(s=>value.brief&&daily.has(s.type)),columns=value.sections.filter(s=>s.type==='saga'),rest=value.sections.filter(s=>!front.includes(s)&&s.type!=='saga');
+        if(value.slim)paper.appendChild(el('p','brief-slim','A quiet night in the house. A slim brief today.'));
+        if(front.length){const top=el('div','brief-front');const lead=front.find(s=>s.lead),today=front.find(s=>s.type==='forecast');if(lead)top.appendChild(section(lead));if(today)top.appendChild(section(today));paper.appendChild(top);
+          const others=front.filter(s=>s!==lead&&s!==today);if(others.length){const cols=el('div','drift-columns');for(const s of others)cols.appendChild(section(s));paper.appendChild(cols);}}
         if(columns.length){const desk=el('section','drift-pets');desk.append(el('h3','drift-desk','The pet columns'));const grid=el('div','drift-pet-grid');for(const c of columns)grid.appendChild(section(c));desk.appendChild(grid);paper.appendChild(desk);}
-        const cols=el('div','drift-columns');for(const s of rest)cols.appendChild(section(s));paper.appendChild(cols);root.appendChild(paper);
-        if(press&&value.week===model.latest?.week)try{press.seen('drift',value.week,value.sections.map(s=>s.type).filter(t=>t&&t!=='closing'));}catch(e){/* preferences are optional */}
-        const past=el('section','drift-archive');past.append(el('h3','','Past issues'));for(const saved of model.issues){const b=el('button','chipbtn',saved.week+(saved.week===value.week?' · reading':''));b.type='button';b.setAttribute('aria-pressed',String(saved.week===value.week));b.onclick=()=>{try{const next=model.open(saved.week);onRead();paint(next);}catch(e){notice(e.message);}};past.appendChild(b);}root.appendChild(past);}
+        if(rest.length){if(value.sunday)paper.appendChild(el('h3','brief-weekly','The week, folded'));const cols=el('div','drift-columns');for(const s of rest)cols.appendChild(section(s));paper.appendChild(cols);}
+        root.appendChild(paper);
+        if(press&&keyOf(value)===keyOf(model.latest||{}))try{press.seen('brief',keyOf(value),value.sections.map(s=>s.type).filter(t=>t&&t!=='closing'));}catch(e){/* preferences are optional */}
+        const past=el('section','drift-archive');past.append(el('h3','','Past briefs'));for(const saved of model.issues.slice(0,14)){const label=saved.brief?shortDate(saved.date):saved.week,b=el('button','chipbtn',label+(keyOf(saved)===keyOf(value)?' · reading':''));b.type='button';b.setAttribute('aria-pressed',String(keyOf(saved)===keyOf(value)));b.onclick=()=>{try{const next=model.open(keyOf(saved));onRead();paint(next);}catch(e){notice(e.message);}};past.appendChild(b);}root.appendChild(past);}
       paint(current);
     });}catch(e){notice(e.message);}}
     return {open};

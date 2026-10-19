@@ -1,4 +1,4 @@
-/* Daily Drift: the Sunday magazine, cream broadsheet with a serif masthead. The paper stays cream at night. */
+/* Daily Brief: the morning paper at the door, cream broadsheet with a serif masthead. The paper stays cream at night. */
 .drift-reader{padding:6px 0}
 .drift-paper{--paper-ink:#684b30;--paper-rule:#ad9672;padding:clamp(16px,3vw,26px);border:1px solid #cab88e;border-radius:12px 12px 24px 12px;background:#f4edcf;color:var(--paper-ink);box-shadow:4px 5px 0 #b7a17a33;overflow-wrap:anywhere}
 .drift-eyebrow{text-align:center;font:800 10px Nunito,sans-serif;letter-spacing:.18em;margin:0;color:var(--paper-ink);opacity:.8}
@@ -21,3 +21,18 @@
 .drift-memory img{width:88px;height:72px;object-fit:contain}
 .drift-reader button:focus-visible{outline:3px solid #94744e;outline-offset:3px}
 @media(max-width:400px){.drift-paper{padding:16px 12px}.drift-columns{columns:1}}
+/* The brief's front: the lead story beside "Today in the house". */
+.brief-front{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;margin:0 0 18px;align-items:start}
+.brief-front .drift-section{margin:0}
+.brief-lead{border-top-width:4px}
+.brief-lead h3{font-size:clamp(24px,4.4vw,32px);line-height:1.15}
+.brief-lead > p:not(.press-kicker){font-size:16px;font-weight:600}
+.brief-today{padding:10px 12px;border:2px solid var(--paper-ink);background:#efe4c0}
+.brief-today h3{font-size:18px;margin-top:0}
+.brief-today .brief-today-line{font-style:italic;font-weight:600}
+.brief-items{list-style:none;margin:8px 0 0;padding:0;font:13px/1.5 Georgia,'Times New Roman',serif}
+.brief-items b{font:800 11px Nunito,sans-serif;letter-spacing:.08em;text-transform:uppercase;margin-right:4px}
+.brief-slim{text-align:center;font:italic 600 16px/1.45 Georgia,'Times New Roman',serif;margin:0 0 14px;padding:10px 6px;border-bottom:1px solid var(--paper-rule)}
+.drift-paper.is-slim .brief-today{max-width:520px;margin:0 auto 10px}
+.brief-weekly{text-align:center;font:italic 700 22px Georgia,'Times New Roman',serif;margin:6px 0 12px;padding-top:10px;border-top:2px solid var(--paper-ink)}
+@media(max-width:560px){.brief-front{grid-template-columns:1fr}}
