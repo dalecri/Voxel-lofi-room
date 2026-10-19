@@ -37,6 +37,18 @@
 
 /* A warm tint separates navigation from the sheet; only Close is a boxed action. */
 .menu-nav { border-radius:22px; background:var(--panel-solid); background:color-mix(in srgb,#ed955e 13%,var(--panel-solid)); }
+/* A light warm tint over frosted glass, with an opaque fallback. */
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .menu-nav {
+    background:color-mix(in srgb,var(--accent) 5%,color-mix(in srgb,var(--panel-solid) 64%,transparent));
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:inset 0 1px 0 #ffffff20,0 4px 16px #0000000a;
+  }
+}
+@media(prefers-reduced-transparency:reduce) {
+  .menu-nav { background:var(--panel-solid); -webkit-backdrop-filter:none; backdrop-filter:none; }
+}
 .menu-nav .dashboard-tabs.menu-tabs { background:transparent; }
 .menu-nav .menu-actions .space-search-toggle { background:transparent; border:0; box-shadow:none; }
 
