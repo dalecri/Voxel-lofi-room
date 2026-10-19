@@ -21,6 +21,34 @@
   }
   const legs4 = (m, x0, z0, x1, z1, h, col) => [[x0, z0], [x1 - 1, z0], [x0, z1 - 1], [x1 - 1, z1 - 1]].forEach(([x, z]) => m.box(x, 0, z, x + 1, h, z + 1, col));
 
+  // One perimeter finish. Each side is split into local-coordinate parts so
+  // 32-cell rooms stay inside Model's packed voxel-coordinate range.
+  def('eaves', {name:'Roof eaves',kind:'floor',group:'decor',size:[1,1],roomTrim:true,singleton:true,
+    vars:[[0xb96d4d],[0x727c89],[0x976d49],[0xe6dcc2]],
+    build(m,[c],s={}) {
+      const n=Number.isInteger(s.roomSize)?Math.max(6,Math.min(32,s.roomSize)):LR.N,edge=n*LR.V,h=LR.HC*LR.V;
+      for(let wall=0;wall<4;wall++){
+        const across=wall%2===0,far=wall>=2,start=across?-8:1,end=across?edge+8:edge-1;
+        for(let offset=start,segment=0;offset<end;offset+=128,segment++){
+          const length=Math.min(128,end-offset),pivot=across?[offset,0,far?edge:0]:[far?edge:0,0,offset];
+          m.part(`eaves${wall}_${segment}`,pivot,'y',true);
+          const strip=(depth,y0,y1,color)=>{
+            const q=far?depth:-1-depth;
+            if(across)m.box(0,y0,q,length,y1,q+1,color);
+            else m.box(q,y0,0,q+1,y1,length,color);
+          };
+          for(let depth=-1;depth<8;depth++){
+            const top=h+4-Math.floor((depth+1)/3);
+            strip(depth,h,top,(x,y,z)=>shade(c,(Math.floor(((across?x:z)+offset)/4)%2===0?1:.92)*(y===top-1?1.06:1)));
+          }
+          strip(6,h-2,h,shade(c,.74));       // fascia beneath the overhang
+          strip(7,h-2,h-1,shade(c,.52));     // a thin, continuous gutter line
+        }
+      }
+      m.main();
+    }
+  });
+
   def('phone', {name:'Phone launcher',kind:'small',group:'tech',size:[1,1],tap:'launcher',vars:[[0x586873],[0xa98eac]],build(m,[c]) {
     m.box(2,0,1,6,1,7,c).box(2,1,1,6,2,7,0x242d38).box(2,2,2,6,3,6,0xb1dcd4);
     for(let x=2;x<6;x+=2)for(let z=2;z<6;z+=2)m.set(x,3,z,0xf7dfad,true);

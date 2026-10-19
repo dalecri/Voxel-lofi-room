@@ -43,8 +43,9 @@
     this.parts = { main: { vox: new Map(), pivot: [0, 0, 0], axis: 'y' } };
     this.cur = this.parts.main;
   }
-  Model.prototype.part = function (name, pivot, axis) {
-    this.cur = this.parts[name] = { vox: new Map(), pivot, axis: axis || 'y' };
+  // Local parts keep their voxels near zero and translate by pivot (large modular trim).
+  Model.prototype.part = function (name, pivot, axis, local = false) {
+    this.cur = this.parts[name] = { vox: new Map(), pivot, axis: axis || 'y', local };
     return this;
   };
   Model.prototype.main = function () { this.cur = this.parts.main; return this; };
@@ -824,6 +825,7 @@
     return Object.assign({ id: 0, t, c: 0, r: 0, on: C.on !== undefined ? C.on : false }, o || {});
   };
   RP.add = function (it) {
+    if (CAT[it.t].singleton) for (const old of this.items.filter(o => o.t === it.t)) this.remove(old.id);
     it.id = this.next++;
     if (!it.seed && (CAT[it.t].dyn || CAT[it.t].seeded)) it.seed = 1 + ((Math.random() * 1000) | 0);
     this.items.push(it);
@@ -852,6 +854,8 @@
     const N = this.n;
     const C = CAT[it.t];
     if (!C) return false;
+    // Room trim is anchored to the shell, not the occupied cell it was dropped on.
+    if (C.roomTrim) return !it.p && Number.isFinite(it.x) && Number.isFinite(it.z) && it.x >= 0 && it.z >= 0 && it.x < N && it.z < N;
     const skip = new Set([ignore, ...(ignore ? this.descendants(ignore).map(i => i.id) : [])]);
     const others = this.items.filter(i => !skip.has(i.id));
     if (C.kind === 'wall') {
@@ -879,7 +883,7 @@
     const layer = C.ceiling ? 'ceiling' : C.kind === 'rug' ? 'rug' : 'floor';
     return !others.some(o => {
       const OC = CAT[o.t];
-      if (OC.kind === 'wall' || OC.kind === 'pet' || o.p) return false;
+      if (OC.roomTrim || OC.kind === 'wall' || OC.kind === 'pet' || o.p) return false;
       if ((OC.ceiling ? 'ceiling' : OC.kind === 'rug' ? 'rug' : 'floor') !== layer) return false;
       const [ow, od] = fp(o);
       return it.x < o.x + ow && o.x < it.x + fw && it.z < o.z + od && o.z < it.z + fd;
@@ -892,7 +896,7 @@
     const g = new Uint8Array(N * N).fill(1);
     for (const o of this.items) {
       const C = CAT[o.t];
-      if (o.p || C.ceiling || C.kind === 'wall' || C.kind === 'pet' || C.kind === 'rug') continue;
+      if (o.p || C.roomTrim || C.ceiling || C.kind === 'wall' || C.kind === 'pet' || C.kind === 'rug') continue;
       const [fw, fd] = fp(o);
       for (let x = o.x; x < o.x + fw; x++) for (let z = o.z; z < o.z + fd; z++) g[z * N + x] = C.walk ? 2 : 0;
     }
@@ -915,6 +919,8 @@
     if (!FLOORS[this.floor.style]) this.floor.style = 'oak';
     // The retired 25-minute candle becomes ordinary decor without losing its placement.
     this.items = d.items.map(i => Object.assign({}, i, i.t === 'focuscandle' ? { t: 'candle' } : {})).filter(i => CAT[i.t]);
+    const lastSingleton=new Map();this.items.forEach((it,index)=>{if(CAT[it.t].singleton)lastSingleton.set(it.t,index);});
+    this.items=this.items.filter((it,index)=>!CAT[it.t].singleton || lastSingleton.get(it.t)===index);
     this.items.forEach(i => { i.c = Math.min(i.c | 0, CAT[i.t].vars.length - 1); });
     this.next = Math.max(d.next || 1, ...this.items.map(i => i.id + 1), 1);
     this.seed = d.seed || 1;

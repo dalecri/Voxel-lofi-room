@@ -82,7 +82,7 @@
   const GEO = new Map();
   function itemKey(it, env, definition) {
     const C = definition || CAT[it.t];
-    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') + (env.view || '') : '', it.blanket ? 'b' : '', it.t === 'cat' && it.crown ? 'crown' : ''].join('|');
+    return [it.t, it.c | 0, it.on ? 1 : 0, C.dyn || C.seeded ? it.seed || 0 : 0, C.dyn ? env.phase + (env.rain ? 'r' : '') + (env.view || '') : '', it.blanket ? 'b' : '', it.t === 'cat' && it.crown ? 'crown' : '', C.roomTrim ? env.roomSize || LR.N : ''].join('|');
   }
   // a little plaid throw laid over the top of a bed (dropped there with Move)
   function drapeBlanket(m, C) {
@@ -102,7 +102,7 @@
     if (g) return g;
     const C = definition || CAT[it.t];
     const m = new Model();
-    C.build(m, C.vars[Math.min(it.c | 0, C.vars.length - 1)], { on: !!it.on, phase: env.phase, rain: env.rain, seed: it.seed || 1, blanket: !!it.blanket });
+    C.build(m, C.vars[Math.min(it.c | 0, C.vars.length - 1)], { on: !!it.on, phase: env.phase, rain: env.rain, seed: it.seed || 1, blanket: !!it.blanket, roomSize: env.roomSize });
     if (it.t === 'cat' && it.crown) {
       m.main();
       m.box(1, 9, 4, 7, 10, 8, 0xd9ad57).clear(2, 9, 5, 6, 10, 7);
@@ -116,7 +116,7 @@
       const KEY = (x, y, z) => (x + 64) | ((y + 64) << 8) | ((z + 64) << 16);
       const get = (x, y, z) => (x < -64 || y < -64 || z < -64 || x > 191 || y > 191 || z > 191 ? 0 : vox.get(KEY(x, y, z)));
       const each = cb => vox.forEach((val, k) => { const [x, y, z] = Model.decode(k); cb(x, y, z, val); });
-      g[name] = Object.assign(meshVoxels(get, each, name === 'main' ? [0, 0, 0] : P.pivot), { pivot: P.pivot, axis: P.axis });
+      g[name] = Object.assign(meshVoxels(get, each, name === 'main' || P.local ? [0, 0, 0] : P.pivot), { pivot: P.pivot, axis: P.axis });
     }
     GEO.set(key, g);
     return g;
@@ -660,9 +660,10 @@
     const obj = new THREE.Group(), inner = new THREE.Group();
     obj.add(inner);
     const [w, d] = C.size;
-    if (C.kind === 'wall') inner.position.set(-w / 2, 0, 0);
+    if (C.roomTrim) inner.position.set(0,0,0);
+    else if (C.kind === 'wall') inner.position.set(-w / 2, 0, 0);
     else inner.position.set(-w / 2, 0, -d / 2);
-    obj.userData = { id: it.id, key: itemKey(it, this.env, definition), inner, parts: {}, meshes: [], boing: 0, glowMat: null };
+    obj.userData = { id: it.id, roomTrim:!!C.roomTrim, key: itemKey(it, this.env, definition), inner, parts: {}, meshes: [], boing: 0, glowMat: null };
     let glowMat = this.glowMat;
     if (!ghost && ['twinkle', 'fire', 'flame', 'rgb', 'lava', 'buzz'].includes(C.anim)) glowMat = obj.userData.glowMat = this.glowMat.clone();
     for (const name in g) {
@@ -791,7 +792,9 @@
   R.placeObject = function (obj, it, room) {
     const C = CAT[it.t];
     let parent = this.root;
-    if (C.kind === 'wall') {
+    if (C.roomTrim) {
+      obj.position.set(0,0,0);obj.rotation.set(0,0,0);this.applyTrimMask(obj,this.mask);
+    } else if (C.kind === 'wall') {
       const W = WALLDEF[it.k], [w] = C.size;
       obj.position.set(W.o[0] + W.a[0] * (it.u + w / 2), it.e, W.o[2] + W.a[2] * (it.u + w / 2));
       obj.rotation.set(0, W.th, 0);
@@ -843,6 +846,7 @@
     if(this.gildActive !== (room.gild===JSON.stringify([room.wall,room.floor])))this.applyPhase(this.phaseT);
     this.env.view = LR.viewNow = room.view || 'city';   // what the windows look out on
     this.setSize(room.n || LR.N);
+    this.env.roomSize=room.n || LR.N;
     this.buildShell(room, this.visibleMask());
     const depth = it => { let d = 0, p = it.p; while (p && d < 8) { const o = room.get(p); p = o ? o.p : 0; d++; } return d; };
     const order = room.items.slice().sort((a, b) => depth(a) - depth(b));
@@ -878,14 +882,21 @@
     this.assignLights();
   };
 
+  R.applyTrimMask = function (obj,mask) {
+    for(const [name,part] of Object.entries(obj.userData.parts)){
+      const match=/^eaves([0-3])_/.exec(name);if(match)part.visible=!!(mask & (1<<Number(match[1])));
+    }
+  };
   R.applyVisibility = function () {
     if (!this.room) return;
     for (const it of this.room.items) {
       const obj = this.objs.get(it.id);
       if (!obj) continue;
       const C = CAT[it.t];
-      obj.visible = it.id !== this.hiddenId && (C.kind !== 'wall' || !!((this.mask >> it.k) & 1));
+      obj.visible = it.id !== this.hiddenId && (C.kind !== 'wall' || !!((this.mask >> it.k) & 1)) && (!C.roomTrim || !!this.mask);
+      if(C.roomTrim)this.applyTrimMask(obj,this.mask);
     }
+    if(this.ghost?.userData.roomTrim)this.applyTrimMask(this.ghost,this.mask);
   };
   R.isShown = function (obj) {
     for (let o = obj; o; o = o.parent) { if (!o.visible) return false; if (o === this.root) return true; }
@@ -940,7 +951,7 @@
     this.placeObject(this.ghost, it, room);
     this.ghost.position.y += 0.02;
     const C = CAT[it.t];
-    if (C.kind === 'floor' || C.kind === 'rug' || C.kind === 'pet' || (C.kind === 'small' && !it.p)) {
+    if (!C.roomTrim && (C.kind === 'floor' || C.kind === 'rug' || C.kind === 'pet' || (C.kind === 'small' && !it.p))) {
       const [fw, fd] = fp(it);
       this.plate.scale.set(fw, 1, fd);
       this.plate.position.set(it.x + fw / 2, 0.03, it.z + fd / 2);
@@ -963,7 +974,7 @@
     const list = [];
     for (const [id, obj] of this.objs) {
       if (ex.has(id) || !this.isShown(obj)) continue;
-      obj.userData.meshes.forEach(m => list.push(m));
+      obj.userData.meshes.forEach(m => { if(this.isShown(m))list.push(m); });
     }
     const rect = this.r.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((cx - rect.left) / rect.width) * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1);
@@ -1042,7 +1053,7 @@
       this.glowFx.spawn(p.x, p.y, p.z, Math.cos(a) * s, 1 + Math.random() * 1.2, Math.sin(a) * s, col || 0xfff0a0, 0.06, 0.6 + Math.random() * 0.4, 3, 1.2);
     }
   };
-  R.boing = function (id) { const o = this.objs.get(id); if (o && !this.reducedMotion) o.userData.boing = 1; };
+  R.boing = function (id) { const o = this.objs.get(id); if (o && !o.userData.roomTrim && !this.reducedMotion) o.userData.boing = 1; };
 
   // ---- cats ----
   R.syncPet = function (it, obj, room) {
@@ -1986,7 +1997,7 @@
         tile(-.22,y+.5,n-u-.5,.44,1,1,wfn(wallColor,u*V+68,y*V+4));
       }
       group.add(tiles);
-      const preview=Object.create(this);preview.env={phase:'day',rain:false,view:data.view || 'city'};preview.glowMat=this.glowMat.clone();preview.glowMat.color.setScalar(1);owned.push(preview.glowMat);
+      const preview=Object.create(this);preview.env={phase:'day',rain:false,view:data.view || 'city',roomSize:n};preview.glowMat=this.glowMat.clone();preview.glowMat.color.setScalar(1);owned.push(preview.glowMat);
       const previousView=LR.viewNow;
       try {
         // Window builders use this legacy global. Restore it before returning so
@@ -2000,7 +2011,9 @@
         }
         for(const it of data.items || []){
           const obj=objects.get(it.id);if(!obj)continue;const C=CAT[it.t];
-          if(C.kind==='wall'){
+          if(C.roomTrim){
+            obj.position.set(0,0,0);obj.rotation.set(0,0,0);obj.visible=!open;preview.applyTrimMask(obj,open?0:3);
+          } else if(C.kind==='wall'){
             const W=walls[it.k];if(!W){obj.visible=false;continue;}obj.position.set(W.o[0]+W.a[0]*(it.u+C.size[0]/2),it.e || 0,W.o[2]+W.a[2]*(it.u+C.size[0]/2));obj.rotation.y=W.th;
           } else if(it.p){
             const owner=(data.items || []).find(p=>p.id===it.p),parent=objects.get(it.p);
