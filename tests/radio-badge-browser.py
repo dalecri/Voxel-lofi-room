@@ -23,7 +23,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  assert page.evaluate('__lr.meta.current')==101;assert page.evaluate('JSON.parse(localStorage.getItem("lr.room.102")).name')=='Living draft restored'
  menu('Today');assert page.locator('#menu-today .daily-notice').count()==0;assert page.locator('#menu-today .today-got').is_visible()
- page.get_by_role('tab',name='Journal',exact=True).click();assert page.locator('#menu-journal .daily-notice,#menu-journal .journal-streak').count()==0;assert page.locator('#bMomentDiary').is_visible();assert page.locator('#bCatDiary').is_visible();esc()
+ page.get_by_role('tab',name='To-Do',exact=True).click();assert page.locator('#menu-todo .daily-notice,#menu-todo .journal-streak').count()==0;esc();page.click('#disc');assert page.locator('#bMomentDiary').is_visible();assert page.locator('#bCatDiary').is_visible();esc()
  def set_icon(name,icon):
   page.get_by_role('button',name='Edit icon for '+name,exact=True).click();page.get_by_role('button',name='Use '+icon+' for '+name,exact=True).click()
  page.evaluate("HTMLMediaElement.prototype.play=function(){return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){}")

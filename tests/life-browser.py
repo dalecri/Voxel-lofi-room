@@ -101,14 +101,14 @@ with sync_playwright() as p:
     assert sum(e['kind'] == 'pet' for e in entries) == 1
     assert any(e['kind'] in ('sunbeam', 'nap') for e in entries)
     assert any(e['kind'] == 'eat' for e in entries)
-    page.click('#bMenu');page.get_by_role('tab',name='Journal',exact=True).click();page.click('#bCatDiary')
+    page.click('#disc');page.locator('#cozyMoments').wait_for();page.click('#bCatDiary')
     assert page.locator('#catDiary .d').count() == len(entries)
     assert page.locator('#catDiary').evaluate('e=>e.clientWidth >= e.parentElement.clientWidth - 2')
     assert 'evidence' in page.locator('#catDiary').inner_text() or 'fed' in page.locator('#catDiary').inner_text()
     page.screenshot(path='/tmp/cat-journal-mobile.png')
     page.reload(wait_until='networkidle'); page.wait_for_function('!!window.__lr')
     assert len(page.evaluate('__lr.catJournal.entries')) >= len(entries)
-    page.click('#bMenu');page.get_by_role('tab',name='Journal',exact=True).click();page.click('#bCatDiary')
+    page.click('#disc');page.locator('#cozyMoments').wait_for();page.click('#bCatDiary')
     assert page.locator('#catDiary .d').count() >= len(entries)
     page.click('#bMomentDiary')
     assert page.locator('#journalFeed .d').count() > 50

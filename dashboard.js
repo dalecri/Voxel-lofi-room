@@ -1,10 +1,10 @@
 // Private directories and files. Room items never store destinations or file contents.
 (function(root) {
-  const MENU_TABS = ['Today','Rooms','Journal','Sound','Settings'];
+  const MENU_TABS = ['Today','Rooms','To-Do','Sound','Settings'];
   const MENU_ICONS = {
     Today:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
     Rooms:'<path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/>',
-    Journal:'<path d="M12 5v16M3 3h4a7 7 0 0 1 5 2 7 7 0 0 1 5-2h4v16h-4a7 7 0 0 0-5 2 7 7 0 0 0-5-2H3Z"/>',
+    'To-Do':'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 1.5 1.5L12 8M8 15l1.5 1.5L12 14M14 9.5h3M14 15.5h3"/>',
     Sound:'<path d="M9 18V5l12-2v13M9 8l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/>',
     Settings:'<path d="m9 3 1-1h4l1 3 2 1 3-1 2 3-2 2v3l2 2-2 3-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-3 2-2v-3L2 8l2-3 3 1 2-1Z"/><circle cx="12" cy="11" r="3"/>'
   };
@@ -44,7 +44,7 @@
   function tabs(parent,names,selected,change,prefix) {
     const bar=element('div','dashboard-tabs');bar.setAttribute('role','tablist');bar.setAttribute('aria-label',prefix==='menu'?'Menu sections':'File categories');parent.appendChild(bar);
     const panels={};
-    names.forEach(name=>{const id=prefix+'-'+name.toLowerCase(),panel=element('section','dashboard-panel');panel.id=id;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',id+'-tab');panels[name]=panel;
+    names.forEach(name=>{const id=prefix+'-'+name.toLowerCase().replace(/[^a-z]/g,''),panel=element('section','dashboard-panel');panel.id=id;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',id+'-tab');panels[name]=panel;
       const b=button(bar,name,()=>select(name));b.id=id+'-tab';b.setAttribute('role','tab');b.setAttribute('aria-controls',id);
     });
     Object.values(panels).forEach(p=>parent.appendChild(p));
@@ -53,9 +53,11 @@
   }
   function tabKey(e){const list=e.target.closest?.('[role=tablist]');if(!list || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const b=[...list.querySelectorAll('[role=tab]')],i=b.indexOf(e.target);if(i<0)return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?b.length-1:(i+(e.key==='ArrowRight'?1:b.length-1))%b.length;b[next].click();b[next].focus();}
   function menu(body,store,close,onSelect=()=>{}) {
-    const panels=tabs(body,MENU_TABS,store.get('lr.menuTab','Today'),name=>{store.set('lr.menuTab',name);onSelect(name);},'menu');
+    // The old Journal tab is now the To-Do tab; a saved 'Journal' choice lands there.
+    const saved=store.get('lr.menuTab','Today');
+    const panels=tabs(body,MENU_TABS,saved==='Journal'?'To-Do':saved,name=>{store.set('lr.menuTab',name);onSelect(name);},'menu');
     const bar=body.querySelector('[role=tablist]'),nav=element('div','menu-nav');bar.classList.add('menu-tabs');body.insertBefore(nav,bar);nav.appendChild(bar);
-    for(const name of MENU_TABS){const b=bar.querySelector('[aria-controls="menu-'+name.toLowerCase()+'"]');b.setAttribute('aria-label',name);b.title=name;b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+MENU_ICONS[name]+'</svg>';}
+    for(const name of MENU_TABS){const b=bar.querySelector('[aria-controls="menu-'+name.toLowerCase().replace(/[^a-z]/g,'')+'"]');b.setAttribute('aria-label',name);b.title=name;b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+MENU_ICONS[name]+'</svg>';}
     // On narrow phones the tabs scroll while the two actions stay fixed.
     const revealTab=()=>{if(!nav.isConnected)return;const tab=bar.querySelector('[aria-selected=true]');if(!tab)return;const a=tab.getBoundingClientRect(),b=bar.getBoundingClientRect();if(a.right>b.right)bar.scrollLeft+=a.right-b.right;else if(a.left<b.left)bar.scrollLeft-=b.left-a.left;};
     bar.addEventListener('click',revealTab);requestAnimationFrame(revealTab);

@@ -14,7 +14,7 @@ with sync_playwright() as p:
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort());context.route('**/twostorycaptions.json',lambda r:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}))
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(15000)
  def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
- def menu():page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
+ def menu():page.click('#bMenu');page.get_by_role('tab',name='To-Do',exact=True).click()
  def fit():assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();menu();tasks=page.locator('.task-notebook')
  for text in ['Take daily supplements','Scoop cat litter','Daily home chore','Workout','One important thing','TwoStoryTails Post']:

@@ -21,11 +21,13 @@ with sync_playwright() as p:
   context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
   context.route('**/twostorycaptions.json',lambda r:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','exportedAt':'','clips':[]}))
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
-  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu')
-  # The Journal tab holds only the diaries now.
-  page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
+  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr')
+  # A saved 'Journal' menu choice now lands on the To-Do tab, which holds the task notebook.
+  page.click('#bMenu');assert page.locator('.menu-nav [role=tab][aria-selected=true]').get_attribute('aria-label')=='To-Do';assert page.locator('#menu-todo .today-tasks').is_visible();page.keyboard.press('Escape')
+  # The diaries live in the Cozy moments card under the room name.
+  page.click('#disc');page.locator('#cozyMoments').wait_for();page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
   page.locator('#bMomentDiary').click();assert page.locator('#journalFeed > .d').count()>50;assert page.locator('#journalFeed .journal-paper').count()==0
-  page.screenshot(path=f'/tmp/journal-tab-{width}.png',full_page=True);page.keyboard.press('Escape')
+  page.screenshot(path=f'/tmp/cozy-moments-{width}.png');assert page.locator('#cozyMoments').evaluate('e=>e.getBoundingClientRect().right<=innerWidth');page.keyboard.press('Escape');assert page.locator('#cozyMoments').is_hidden()
   # The Daily News opens from Control Center.
   page.click('#bHome');page.locator('#homeView [data-app=news]').click()
   paper=page.locator('.journal-paper');paper.wait_for();assert paper.locator('h3').inner_text()=='DAILY NEWS';assert paper.locator('.news-day').inner_text()=='Day 1'

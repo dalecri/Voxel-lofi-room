@@ -29,19 +29,19 @@ with sync_playwright() as p:
  affordance(False);assert page.evaluate('localStorage.getItem("lr.mode")') is None
  for width in [390,1280]:
   page.set_viewport_size({'width':width,'height':844})
-  assert page.locator('#disc').evaluate('e=>!e.closest("button") && e.parentElement===document.querySelector("#brand").parentElement')
-  before=len(dialogs);page.click('#disc');assert len(dialogs)==before;page.click('#brand');assert dialogs[-1]=='Name this room'
+  assert page.locator('#disc').evaluate('e=>e.tagName==="BUTTON" && !e.closest("#brand") && e.parentElement===document.querySelector("#brand").parentElement')
+  before=len(dialogs);page.click('#disc');assert len(dialogs)==before;assert page.locator('#cozyMoments').is_visible();page.keyboard.press('Escape');assert page.locator('#cozyMoments').is_hidden();page.click('#brand');assert dialogs[-1]=='Name this room'
   for action in ['h','Escape','Close','Menu keyboard','Menu tap']:
    open_menu()
    if action=='h':page.keyboard.press('h')
-   elif action=='Escape':page.get_by_role('textbox',name='A little task',exact=True).focus();page.keyboard.press('Escape')
+   elif action=='Escape':page.get_by_role('tab',name='To-Do',exact=True).click();page.get_by_role('textbox',name='A little task',exact=True).focus();page.keyboard.press('Escape')
    elif action=='Close':page.locator('#sheetBody .menu-nav .menu-actions > .sheet-close').click()
    elif action=='Menu keyboard':page.locator('#bMenu').focus();page.keyboard.press('Enter')
    else:
     box=page.locator('#bMenu').bounding_box();page.mouse.click(box['x']+box['width']/2,box['y']+box['height']/2)
    closed()
   # H must remain usable as a letter while editing a task; Escape still dismisses.
-  open_menu();task=page.get_by_role('textbox',name='A little task',exact=True);task.focus();page.keyboard.type('hello');assert task.input_value()=='hello';assert page.locator('#sheet').get_attribute('aria-hidden')=='false';page.keyboard.press('Escape');closed()
+  open_menu('To-Do');task=page.get_by_role('textbox',name='A little task',exact=True);task.focus();page.keyboard.type('hello');assert task.input_value()=='hello';assert page.locator('#sheet').get_attribute('aria-hidden')=='false';page.keyboard.press('Escape');closed()
   page.click('#bEdit');affordance(True)
   if width==390:
    page.wait_for_function('[...document.querySelectorAll("#toasts .toast")].some(e=>e.textContent.includes("Mouse & keys"))')
@@ -51,7 +51,7 @@ with sync_playwright() as p:
   page.keyboard.press('x');affordance(True);page.keyboard.press('x');affordance(False)
   page.click('#bEdit');affordance(True);page.evaluate('localStorage.setItem("lr.mode",JSON.stringify("edit"))');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');affordance(False);assert page.evaluate('localStorage.getItem("lr.mode")') is None
   open_menu('Rooms');assert re.sub(r'\s+',' ',page.locator('#menu-rooms h2').first.text_content())=='Your home · 1 room';page.keyboard.press('Escape');closed()
-  open_menu('Today');heads=page.locator('#menu-today h2,#menu-today h3').all_text_contents();assert heads[0].startswith('Good ');assert heads[1:]==["Today's moment"],heads;assert page.locator('#menu-today .task-notebook .google-tasks').count()==1
+  open_menu('Today');heads=page.locator('#menu-today h2,#menu-today h3').all_text_contents();assert heads[0].startswith('Good ');assert heads[1:]==["Today's moment"],heads;assert page.locator('#menu-today .task-notebook').count()==0;assert page.locator('#menu-todo .task-notebook .google-tasks').count()==1
   assert page.locator('#menu-today .daily-notice').count()==0;assert page.locator('#menu-today .today-sky').evaluate('e=>e.nextElementSibling.classList.contains("today-duo")');page.screenshot(path=f'/tmp/uiux-today-{width}.png');page.get_by_role('tab',name='Settings',exact=True).click()
   switches=page.locator('#menu-settings .toggle');assert switches.count()==13
   assert switches.evaluate_all('es=>es.every(e=>e.getAttribute("role")==="switch" && e.getAttribute("aria-pressed")===String(e.classList.contains("on")) && e.getAttribute("aria-checked")===e.getAttribute("aria-pressed"))')
