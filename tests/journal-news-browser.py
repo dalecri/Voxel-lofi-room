@@ -34,7 +34,7 @@ with sync_playwright() as p:
   assert paper.evaluate('e=>e.scrollWidth<=e.clientWidth')
   page.reload(wait_until='networkidle');page.click('#bMenu');page.locator('.news-reaction').click();assert page.locator('.news-response').inner_text()==reaction
   page.evaluate("localStorage.setItem('lr.catJournal','[]');localStorage.setItem('lr.journalNews',JSON.stringify({days:[],moments:[]}));localStorage.setItem('lr.dailyLog','[]')")
-  page.reload(wait_until='networkidle');page.click('#bMenu');assert page.locator('.news-lead h4').inner_text()=='No news today. The presses rest.'
+  page.reload(wait_until='networkidle');page.click('#bMenu');assert page.locator('.journal-paper.is-slim .news-slim').is_visible();assert page.locator('.news-lead').count()==0;assert 'presses rest' not in page.locator('.journal-paper').inner_text();assert page.locator('.news-forecast').is_visible()
   page.keyboard.press('Escape');page.wait_for_function('!document.querySelector("#sheet").classList.contains("open")');assert not errors,errors
   context.close()
  browser.close()
