@@ -281,7 +281,7 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 /* Today: a week at a glance and two expandable daily cards. */
 .space-today .today-sky.has-task-focus { --today-gold:#f7d27c; --today-gold-ink:#493922; --today-caption:#e7d9ca; --today-caption-ink:#4d4037; padding:8px 4px 0; border:0; border-radius:0; background:none; color:var(--ink); box-shadow:none; overflow:visible; min-height:0; }
 .today-sky.has-task-focus[data-phase=night] { --today-gold:#6c547f; --today-gold-ink:#fff0df; --today-caption:#51455d; --today-caption-ink:#fff0df; }
-.today-sky.has-task-focus .today-welcome { margin:0 0 22px; }
+.today-sky.has-task-focus .today-welcome { margin:0 0 8px; }
 .today-sky.has-task-focus .today-welcome h2 { font-size:clamp(26px,5vw,34px); letter-spacing:-.025em; }
 .today-sky.has-task-focus .today-welcome p { display:none; }
 .today-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; margin-bottom:26px; }
@@ -334,13 +334,12 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-google-focus .google-task-copy b { overflow-wrap:anywhere; color:var(--ink); }
 .today-google-focus .google-auth-row { flex-wrap:wrap; }
 .today-side { display:block; }
-.today-quick { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
-.space-today .today-quick .today-ritual { display:flex; flex-direction:row; align-items:center; gap:10px; min-height:94px; min-width:0; padding:16px; margin:0; border:0; border-radius:22px; background:var(--chip); color:var(--ink); text-align:left; }
-.space-today .today-quick .today-ritual:first-child { background:color-mix(in srgb,var(--accent) 14%,var(--panel-solid)); }
+.today-quick { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:20px; padding:0; overflow:visible; }
+.space-today .today-quick .today-ritual { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; min-height:110px; min-width:0; max-width:none; width:100%; box-sizing:border-box; padding:14px 6px; margin:0; border:0; border-radius:20px; background:var(--chip); color:var(--ink); text-align:center; }
 .space-today .today-quick .ritual-icon { font-size:28px; }
-.space-today .today-quick b { display:block; font:500 21px Fredoka,sans-serif; }
-.space-today .today-quick small { display:block; font-size:12px; line-height:1.4; color:var(--ink-dim); margin-top:4px; }
-.today-sky.has-task-focus .today-weather-details { border:0; padding:12px 0 0; }
+.space-today .today-quick b { display:block; font:500 17px Fredoka,sans-serif; }
+.space-today .today-quick small { display:block; font-size:11px; line-height:1.35; color:var(--ink-dim); margin-top:4px; overflow-wrap:anywhere; }
+.today-sky.has-task-focus .today-weather-details { border:0; padding:0; margin-bottom:22px; }
 .today-sky.has-task-focus .today-sky-copy { display:grid; grid-template-columns:1fr auto; gap:4px 10px; }
 .today-sky.has-task-focus .today-date-row { margin:0; gap:6px; }
 .today-sky.has-task-focus .today-date { font-size:12px; }
@@ -353,7 +352,7 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-moment-extra { padding:12px 0; border-bottom:1px solid var(--line); }
 .today-moment-extra > summary { cursor:pointer; font:500 17px Fredoka,sans-serif; padding:4px; }
 .today-moment-extra .today-moment { margin-top:10px; }
-@media(max-width:360px) { .today-feature { gap:8px; grid-template-columns:minmax(0,1fr) 48px; }.today-feature[data-active=caption] { grid-template-columns:48px minmax(0,1fr); }.today-feature-toggle { font-size:21px; padding-inline:10px; }.today-caption-desk { padding-inline:12px; }.space-today .today-quick .today-ritual { padding:12px; gap:7px; }.space-today .today-quick .ritual-icon { font-size:22px; }.space-today .today-quick b { font-size:19px; } }
+@media(max-width:360px) { .today-feature { gap:8px; grid-template-columns:minmax(0,1fr) 48px; }.today-feature[data-active=caption] { grid-template-columns:48px minmax(0,1fr); }.today-feature-toggle { font-size:21px; padding-inline:10px; }.today-caption-desk { padding-inline:12px; }.space-today .today-quick .today-ritual { padding:12px 4px; gap:7px; }.space-today .today-quick .ritual-icon { font-size:22px; }.space-today .today-quick b { font-size:16px; } }
 @media(prefers-reduced-motion:no-preference) { .today-feature { transition:grid-template-columns .25s ease; }.today-feature-pane { transition:background .25s ease; } }
 .today-sky.has-task-focus .today-google-focus .chipbtn { background:var(--chip); color:var(--ink); }
 .today-google-focus .google-task-row.completed .google-task-copy b { color:var(--ink-dim); }
