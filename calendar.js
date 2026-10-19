@@ -112,7 +112,7 @@
     }
     return {connect,events,taskLists,tasks,setTaskCompleted,get canCompleteTasks(){return connected()&&granted(token.scope,[TASKS_WRITE_SCOPE]);},get taskEditingRequested(){return requested.includes(TASKS_WRITE_SCOPE);},check(){if(token&&!connected())clear(true);return connected();},subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
       get selectedList(){return token?.listId || '@default';},selectList(id){if(!connected()||typeof id!=='string'||!id||id.length>500)return;const before=token.listId;token.listId=id;try{storage.setItem(TOKEN,JSON.stringify(token));}catch(e){token.listId=before;return;}notify();},
-      get cachedLists(){return cached('lists');},get cachedTasks(){return cached('tasks:'+(token?.listId || '@default'));},
+      get cachedLists(){return cached('lists');},cachedEvents:d=>cached('events:'+monthKey(d)),get cachedTasks(){return cached('tasks:'+(token?.listId || '@default'));},
       disconnect(){const value=token?.access_token;clear();if(!value)return;const revoke=()=>{try{root.google.accounts.oauth2.revoke(value,()=>{});}catch(e){/* local disconnect still succeeds */}};
         if(root.google?.accounts?.oauth2?.revoke)revoke();else if(root.document)identityReady().then(revoke).catch(()=>{}); // A restored token may outlive the SDK page load.
       },get scope(){return scope;},get configured(){return !!clientId;},get connected(){return connected();},get reconnect(){return reconnect||!!token&&!connected();}};

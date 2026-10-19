@@ -290,3 +290,15 @@ html body select option, html body select optgroup { color: var(--ink); backgrou
 .station-card .station-remove:hover { background:var(--chip); color:var(--ink); }
 body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 75%,#111021); --radio-signal:color-mix(in srgb,var(--ink) 85%,var(--accent)); }
 
+/* Daily News: slim editions, the forecast box and clap buttons share the cream broadsheet. */
+.journal-paper .news-slim { text-align: center; font: italic 600 16px/1.45 Georgia, 'Times New Roman', serif; margin: 6px 0 12px; padding: 12px 6px; border-bottom: 1px solid #ad9672; }
+.journal-paper .news-lead .press-kicker, .journal-paper .news-story .press-kicker { margin-bottom: 4px; }
+.journal-paper .news-lead .press-clap, .journal-paper .news-story .press-clap, .journal-paper .news-forecast .press-clap { margin-top: 8px; }
+.journal-paper .news-story.is-shrunk h4 { font-size: 13px; }
+.journal-paper .news-story.is-shrunk p { display: none; }
+.news-forecast { margin: 12px 0 0; padding: 10px 12px; border: 2px solid var(--paper-ink); background: #efe4c0; }
+.news-forecast h4 { margin: 0 0 6px; font-size: 17px; letter-spacing: .02em; }
+.news-forecast .news-forecast-line { margin: 0 0 6px; font: italic 600 15px/1.4 Georgia, 'Times New Roman', serif; }
+.news-forecast ul { margin: 0; padding: 0; list-style: none; font: 13px/1.5 Georgia, 'Times New Roman', serif; }
+.news-forecast li b { font-family: Nunito, sans-serif; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-right: 4px; }
+.news-forecast.is-shrunk ul { display: none; }
