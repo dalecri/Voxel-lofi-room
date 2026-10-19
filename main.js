@@ -346,6 +346,8 @@ function startLofiRooms() {
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
     if(p.id==='library')library.open();
     else if(p.id==='digest')digestUI.open();
+    else if(p.id==='news')dailyNewsSheet();
+    else if(p.id==='captions')captionStudio();
     else if(p.id==='typewriter')letters.open();
     else if(p.id==='french')frenchUI.open();
     else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
@@ -448,7 +450,7 @@ function startLofiRooms() {
   ensureDaily();
   const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog, exclusives: LRShop.exclusives });
   const catJournal = LRLife.journal({ store });
-  const captionDesk = LRCaptions.create({store,changed:()=>{const host=$('.caption-desk');if(host)LRCaptions.render(host,captionDesk);}});
+  const captionDesk = LRCaptions.create({store,changed:()=>{const host=$('.caption-studio');if(host)LRCaptions.render(host,captionDesk);}});
   const journalNews = LRLife.newspaper({ store, moments: MOMENTS });
   // The house press: pattern stories, tomorrow's box, pet sagas and claps (private, lr.press).
   const press = LRPress.create({ store });
@@ -906,6 +908,7 @@ function startLofiRooms() {
     if (tap === 'library') { library.open(); return; }
     if (tap === 'barnaby') { Sound.coin(); discover('gamer'); barnaby.open(); return; }
     if (tap === 'french') { Sound.flip(); frenchUI.open(); return; }
+    if (tap === 'captions') { Sound.flip(); captionStudio(); return; }
     if (tap === 'wardrobe') { wardrobeSheet(); return; }
     if (tap === 'newspaper') { newspaperSheet(); return; }
     if (tap === 'shop') { openShop(id); return; }
@@ -2077,9 +2080,8 @@ function startLofiRooms() {
     if (!cats.length) $('#crownCats').textContent = 'Add a cat from the Pets tab first.';
     $('#crownClose').onclick = closeSheets; openSheet();
   }
-  function renderJournal() {
-    const feed = $('#journalFeed'); if (!feed) return;
-    feed.innerHTML = '';
+  // The Daily News front page, opened from Control Center. The Journal keeps only the diaries.
+  function newsPaper() {
     const diary = journalNews.edition(catJournal.entries);
     let news;
     try { news = press.news({ ...pressSources(), diary }); }
@@ -2128,8 +2130,19 @@ function startLofiRooms() {
     }
     const reaction = news.reaction || diary.reaction;
     paper.querySelector('.news-reaction').onclick = () => { paper.querySelector('.news-response').textContent = reaction; companion?.say(reaction); };
-    const desk=document.createElement('section');desk.className='caption-desk';desk.setAttribute('aria-label','The caption desk');paper.insertBefore(desk,paper.querySelector('footer'));LRCaptions.render(desk,captionDesk);
-    feed.appendChild(paper);
+    return paper;
+  }
+  function dailyNewsSheet() {
+    codeSheet('Daily News', 'The house front page, kept on this device.', h => { h('div', 'news-reader').appendChild(newsPaper()); });
+  }
+  // TwoStoryTails captions: a pixel studio sheet, from Control Center or the clapperboard.
+  function captionStudio() {
+    codeSheet('Caption studio', 'TwoStoryTails clips, ready to copy.', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); });
+    captionDesk.refresh();
+  }
+  function renderJournal() {
+    const feed = $('#journalFeed'); if (!feed) return;
+    feed.innerHTML = '';
     const archive = document.createElement('h3'); archive.className = 'journal-archive-title'; archive.textContent = journalFeed === 'cats' ? 'The cats’ archive' : 'Cozy moments checklist'; feed.appendChild(archive);
     ['moments', 'cats'].forEach(k => {
       const b = $(k === 'cats' ? '#bCatDiary' : '#bMomentDiary');
@@ -2553,7 +2566,7 @@ function startLofiRooms() {
     const focusState = focused?.matches('.toggle') ? {label:focused.textContent,panel:focused.closest('[role=tabpanel]')?.id,top:body.scrollTop} : null;
     body.dataset.merchant = '';
     body.innerHTML = '';
-    const sections = LRDashboard.menu(body, store, closeSheets, name=>{if(name==='Journal')captionDesk.refresh();});
+    const sections = LRDashboard.menu(body, store, closeSheets);
     const spotlight=homeSearch(body.querySelector('.menu-actions'));body.insertBefore(spotlight,sections.Today);
     spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
@@ -3049,7 +3062,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { press,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { press,dailyNewsSheet,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

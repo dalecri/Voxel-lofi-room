@@ -95,7 +95,7 @@ with sync_playwright() as p:
  for width,height in [(320,844),(390,400),(1280,844)]:
   page.set_viewport_size({'width':width,'height':height});body.click();page.keyboard.press('Control+End')
   bounds=page.locator('.letter-tools').bounding_box();assert bounds['y']>=0 and bounds['y']+bounds['height']<=height
-  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();return scroll.height>0 && scroll.height<=innerHeight*.49 && sheet.top>0}''')
+  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();const machine=document.querySelector('.letter-machine').getBoundingClientRect();return scroll.height>=(innerHeight>500?240:60) && sheet.top===0 && Math.abs(sheet.height-innerHeight)<2 && machine.bottom<=innerHeight+1 && scroll.bottom<=machine.top+1}''')
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   for phase in ['day','night']:
    page.evaluate('phase=>__lr.view.setPhase(phase,true)',phase)

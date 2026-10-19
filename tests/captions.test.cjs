@@ -63,7 +63,10 @@ test('local-day indexing respects midnight and DST, rather than elapsed 24-hour 
  assert.equal(C.dayIndex(new Date(1970,0,1,23,59)),0);
  for(const [month,day] of [[2,8],[10,1]]){const a=new Date(2026,month,day),b=new Date(2026,month,day+1);assert.equal(C.dayIndex(b)-C.dayIndex(a),1);}
 });
-test('an empty unpublished pool hides the newspaper section',async()=>{
+test('an empty unpublished pool shows a gentle studio empty state instead of a blank sheet',async()=>{
  const m=C.create({store:store(),fetcher:async()=>({ok:true,json:async()=>({...fixture,clips:[fixture.clips[1]]})})});await m.refresh();
- const host={replaceChildren(){}};C.render(host,m);assert.equal(host.hidden,true);
+ const made=[],node=tag=>{const n={tag,children:[],className:'',textContent:'',appendChild(c){this.children.push(c);return c;},setAttribute(){},set innerHTML(v){this.html=v;}};made.push(n);return n;};
+ const host={ownerDocument:{createElement:node,createTextNode:t=>({text:t})},replaceChildren(){},appendChild(c){return c;}};C.render(host,m);
+ assert.equal(host.hidden,false);assert.match(made.find(n=>n.className==='caption-empty').textContent,/Every clip is published/);assert.ok(!made.some(n=>n.className==='caption-clip'));
+ assert.match(made.find(n=>n.className==='studio-house').html,/crispEdges/);
 });

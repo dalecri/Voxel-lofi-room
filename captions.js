@@ -1,4 +1,4 @@
-// TwoStoryTails' read-and-copy desk. Drafts stay in device storage, never decor.
+// TwoStoryTails' read-and-copy caption studio. Drafts stay in device storage, never decor.
 (function(root) {
   // Owner config: blank hides the desk. Keep /raw/ unpinned so new exports arrive.
   const CAPTIONS_URL = 'https://gist.githubusercontent.com/dalecri/68454da1acd86b8860acd23a35c3206a/raw/twostorycaptions.json';
@@ -59,24 +59,35 @@
     try {return document.execCommand('copy')===true;} catch(e) {return false;}
     finally {area.remove();active?.focus?.({preventScroll:true});}
   }
+  // A tiny two-story house: two cats upstairs, one window and the door downstairs.
+  const HOUSE=['.......oo.......','......orro......','.....orrrro.....','....orrrrrro....','...orrrrrrrro...','..oooooooooooo..','..owwwwwwwwwwo..','..owyyywwyyywo..','..owykywwykywo..','..owyyywwyyywo..','..oooooooooooo..','..owwwwwwwwwwo..','..owyyywwbbbwo..','..owykywwbbbwo..','..owyyywwbbbwo..','..oooooooooooo..'];
+  const HOUSE_COLORS={o:'#2b2833',r:'#d9737f',w:'#fff1d6',y:'#f6d83c',k:'#2b2833',b:'#9a6b4f'};
+  const house=()=>'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges">'+HOUSE.flatMap((row,y)=>[...row].flatMap((c,x)=>HOUSE_COLORS[c]?[`<rect x="${x}" y="${y}" width="1" height="1" fill="${HOUSE_COLORS[c]}"/>`]:[])).join('')+'</svg>';
+  // The caption studio: a pixel film reel of today's three unpublished clips.
   function render(host,model) {
-    host.replaceChildren();const s=model.state;host.hidden=!s.enabled||!s.rows.length;if(host.hidden)return;
+    host.replaceChildren();const s=model.state;host.hidden=!s.enabled;if(host.hidden)return;
     const doc=host.ownerDocument;
     const add=(tag,cls,text,parent=host)=>{const el=doc.createElement(tag);el.className=cls;el.textContent=text;parent.appendChild(el);return el;};
-    const head=add('div','caption-desk-head','');add('h4','','The caption desk',head);
-    const refresh=add('button','caption-refresh',s.loading?'Refreshing…':'Refresh',head);refresh.type='button';refresh.disabled=s.loading;refresh.onclick=()=>model.refresh();
-    const status=add('p','caption-desk-status',s.cached?'Cached · last saved export':s.failed?'The desk is offline. Refresh when you’re back.':s.loading?'Fetching the latest export…':'TwoStoryTails · unpublished');status.setAttribute('role','status');
+    const head=add('div','caption-desk-head studio-head','');
+    const art=add('span','studio-house','',head);art.innerHTML=house();
+    const titles=add('div','studio-titles','',head);add('h4','','Caption studio',titles);
+    const status=add('p','caption-desk-status',s.cached?'Cached · last saved export':s.failed?'The studio is offline. Refresh when you’re back.':s.loading?'Fetching the latest export…':'TwoStoryTails · unpublished',titles);status.setAttribute('role','status');
     if(s.data?.exportedAt){const date=new Date(s.data.exportedAt);if(Number.isFinite(date.getTime()))status.appendChild(doc.createTextNode(' · Exported '+date.toLocaleString()));}
-    for(const clip of s.rows){
-      const article=add('article','caption-clip','');
-      add('p','caption-desc',clip.desc,article);
-      const meta=add('div','caption-meta','',article);
+    const refresh=add('button','caption-refresh',s.loading?'Refreshing…':'Refresh',head);refresh.type='button';refresh.disabled=s.loading;refresh.onclick=()=>model.refresh();
+    if(!s.rows.length){add('p','caption-empty',s.loading?'Threading the film… one moment.':s.failed?'No clips reached the studio yet. Try Refresh when you’re online.':'Every clip is published. The studio cats are taking a well-earned nap.');return;}
+    const reel=add('div','studio-reel','');
+    s.rows.forEach((clip,index)=>{
+      const article=add('article','caption-clip','',reel);
+      const top=add('div','studio-frame-head','',article);add('span','studio-take',`CLIP ${String(index+1).padStart(2,'0')}`,top);
+      const meta=add('div','caption-meta','',top);
       for(const tone of clip.selectedTones)add('span','caption-tag',tone,meta);
       if(clip.platform)add('small','caption-platform',clip.platform,meta);
+      add('p','caption-desc',clip.desc,article);
       if(clip.captions.length){const list=add('ol','caption-options','',article);for(const option of clip.captions)add('li','',option,list);}
       const button=add('button','caption-copy','Copy',article);button.type='button';button.setAttribute('aria-label','Copy caption: '+clip.desc);
-      button.onclick=async()=>{const ok=await copy(copyPayload(clip));button.textContent=ok?'Copied':'Copy failed';button.setAttribute('aria-label',ok?'Caption copied':'Copy failed — try again');setTimeout(()=>{if(button.isConnected){button.textContent='Copy';button.setAttribute('aria-label','Copy caption: '+clip.desc);}},1600);};
-    }
+      button.onclick=async()=>{const ok=await copy(copyPayload(clip));button.textContent=ok?'Copied':'Copy failed';button.classList.toggle('is-copied',ok);button.setAttribute('aria-label',ok?'Caption copied':'Copy failed, try again');setTimeout(()=>{if(button.isConnected){button.textContent='Copy';button.classList.remove('is-copied');button.setAttribute('aria-label','Copy caption: '+clip.desc);}},1800);};
+    });
+    add('p','studio-foot','A new reel arrives at midnight.');
   }
   const api={CAPTIONS_URL,KEY,options,parse,rows,dayIndex,dailyRows,copyPayload,create,copy,render};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRCaptions=api;

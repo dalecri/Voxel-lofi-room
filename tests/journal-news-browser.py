@@ -22,19 +22,23 @@ with sync_playwright() as p:
   context.route('**/twostorycaptions.json',lambda r:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','exportedAt':'','clips':[]}))
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu')
+  # The Journal tab holds only the diaries now.
+  page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
+  page.locator('#bMomentDiary').click();assert page.locator('#journalFeed > .d').count()>50;assert page.locator('#journalFeed .journal-paper').count()==0
+  page.screenshot(path=f'/tmp/journal-tab-{width}.png',full_page=True);page.keyboard.press('Escape')
+  # The Daily News opens from Control Center.
+  page.click('#bHome');page.locator('#homeView [data-app=news]').click()
   paper=page.locator('.journal-paper');paper.wait_for();assert paper.locator('h3').inner_text()=='DAILY NEWS';assert paper.locator('.news-day').inner_text()=='Day 1'
   assert paper.locator('.news-lead h4').inner_text()=='DIEGO: INSPECTED DINNER';assert paper.locator('.news-story').count()>=2
   assert paper.locator('.news-masthead').evaluate('e=>{const a=e.getBoundingClientRect(),b=e.closest("article").getBoundingClientRect();return a.top>=b.top && a.left>=b.left && a.right<=b.right}')
   assert paper.locator('.news-sections').inner_text()=='Little moments - The cats’ version'
   page.locator('.news-reaction').click();reaction=page.locator('.news-response').inner_text();assert reaction
-  page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
-  page.locator('#bMomentDiary').click();assert page.locator('#journalFeed > .d').count()>50
   page.screenshot(path=f'/tmp/journal-news-{width}.png',full_page=True)
   assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
   assert paper.evaluate('e=>e.scrollWidth<=e.clientWidth')
-  page.reload(wait_until='networkidle');page.click('#bMenu');page.locator('.news-reaction').click();assert page.locator('.news-response').inner_text()==reaction
+  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.dailyNewsSheet()');page.locator('.news-reaction').click();assert page.locator('.news-response').inner_text()==reaction
   page.evaluate("localStorage.setItem('lr.catJournal','[]');localStorage.setItem('lr.journalNews',JSON.stringify({days:[],moments:[]}));localStorage.setItem('lr.dailyLog','[]')")
-  page.reload(wait_until='networkidle');page.click('#bMenu');assert page.locator('.journal-paper.is-slim .news-slim').is_visible();assert page.locator('.news-lead').count()==0;assert 'presses rest' not in page.locator('.journal-paper').inner_text();assert page.locator('.news-forecast').is_visible()
+  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.dailyNewsSheet()');assert page.locator('.journal-paper.is-slim .news-slim').is_visible();assert page.locator('.news-lead').count()==0;assert 'presses rest' not in page.locator('.journal-paper').inner_text();assert page.locator('.news-forecast').is_visible()
   page.keyboard.press('Escape');page.wait_for_function('!document.querySelector("#sheet").classList.contains("open")');assert not errors,errors
   context.close()
  browser.close()
