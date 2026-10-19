@@ -17,22 +17,22 @@
   }
   function decorate(form,head,page,from,initial,onChange) {
     if(!form.className.split(/\s+/).includes('pixel-postcard'))form.className+=' pixel-postcard';
-    const stamp=el('span','postcard-stamp');stamp.setAttribute('aria-hidden','true');head.appendChild(stamp);
-    const picture=el('div','postcard-picture');picture.setAttribute('role','img');head.after(picture);
-    const signature=el('div','postcard-signature'),label=el('small'),name=el('span');label.textContent='WITH LOVE FROM';signature.append(label,name);page.after(signature);
+    // One small corner stamp carries the picture; there is no large illustration.
+    const stamp=el('span','postcard-stamp');stamp.setAttribute('role','img');head.appendChild(stamp);
+    const signature=el('div','postcard-signature'),who=el('div','postcard-from'),label=el('small'),name=el('span'),date=el('small','postcard-date');label.textContent='WITH LOVE FROM';who.append(label,name);signature.append(who,date);page.after(signature);
     const picker=el('fieldset','postcard-picker'),legend=el('legend');legend.textContent='A little picture';picker.appendChild(legend);
     let icon=normalizeIcon(initial);const buttons=[];
-    function update(value){icon=normalizeIcon(value);picture.innerHTML=art(icon);stamp.innerHTML=art(icon);picture.setAttribute('aria-label',ICONS.find(i=>i.id===icon).name+' pixel illustration');name.textContent=from.value||'Me';buttons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.icon===icon)));}
+    function update(value){icon=normalizeIcon(value);stamp.innerHTML=art(icon);stamp.setAttribute('aria-label',ICONS.find(i=>i.id===icon).name+' pixel illustration');name.textContent=from.value||'Me';buttons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.icon===icon)));}
     for(const item of ICONS){const b=el('button');b.type='button';b.dataset.icon=item.id;b.setAttribute('aria-label',item.name+' picture');b.innerHTML=art(item.id);b.onclick=()=>{update(item.id);onChange?.(item.id);};buttons.push(b);picker.appendChild(b);}
     from.addEventListener('input',()=>{name.textContent=from.value||'Me';});update(icon);
-    return {picker,set:update,get icon(){return icon;}};
+    return {picker,set:update,setDate:text=>{date.textContent=text||'';},get icon(){return icon;}};
   }
   function readCard(letter,clean) {
     const card=el('article','pixel-postcard postcard-read'),head=el('header','postcard-readhead'),to=el('small'),title=el('h3');
     to.textContent='TO: '+(letter.to||'You');title.textContent=letter.title||'A little letter';head.append(to,title);card.append(head);
     const page=el('div','mailwin-page'),body=el('div','roomtool-letter');
     if(letter.html)body.innerHTML=clean(letter.html);else body.textContent=letter.body||'';page.append(body);card.append(page);
-    const from=el('input');from.value=letter.from||'Me';decorate(card,head,page,from,letter.cardIcon);return card;
+    const from=el('input');from.value=letter.from||'Me';decorate(card,head,page,from,letter.cardIcon).setDate(letter.deliverOn||'');return card;
   }
   function create(options = {}) {
     const form = el('form', 'mailwin');

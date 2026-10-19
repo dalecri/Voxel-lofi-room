@@ -19,48 +19,77 @@
 #lettersView .letter-row input { flex:1 1 180px; width:100%; min-width:0; background:transparent; border:0; border-bottom:2px dotted var(--mw-ink); border-radius:0; padding:4px 2px; font:400 22px/1.2 var(--mw-font); color:var(--mw-ink); box-shadow:none; }
 @media (max-width:400px) { #letterStatus { max-width:60px; } .letter-chrome { gap:0; } #lettersView .letter-chrome button { padding:8px 6px; font-size:12px; } }
 
-/* A real writing surface above a powder-blue mechanical typewriter. Scoped so
-   the future mailbox keeps its own window chrome. The paper stays cream at night. */
-#lettersView { --type-blue:#9fc5d4; --type-edge:#5c889b; --type-dark:#263c43; --type-paper:#f5eddf; }
+/* Pixel note card on a violet desk, above a chunky black-and-white typewriter.
+   Stays paper white in day and night. Every decoration is CSS or inline pixels. */
+#lettersView { --card-ink:#1b1a1f; --card-paper:#fffefb; --card-red:#d6283a; --card-yellow:#f6d83c; --card-sticky:#fbf1a6; --card-desk:#7458d4; --card-grey:#8a8590; }
 #lettersView .letter-chrome { background:transparent; gap:8px; padding-bottom:12px; }
-#letterStatus { text-align:left; padding-left:4px; }
-#lettersView .letter-chrome button { border:0; border-radius:14px; background:var(--chip); }
-#letterScroll { flex:none; padding:10px 16px 0; max-height:38dvh; background:transparent; }
-#lettersView .mailwin { --mw-paper:var(--type-paper); --mw-ink:#484237; width:100%; max-width:560px; margin:0 auto; border:0; border-radius:28px 3px 0 0; padding:18px clamp(14px,4vw,32px) 28px; box-sizing:border-box; background:linear-gradient(105deg,#e4d8c7 0,transparent 7%,#fff7ed55 60%,transparent),var(--type-paper); box-shadow:-6px 0 18px #211a2020,inset 1px 0 #fff9; }
-#lettersView .mailwin-bar { height:24px; padding:0 0 8px; border:0; border-bottom:1px solid #867e6b80; background:transparent; }
-#lettersView .mailwin-bar > i, #lettersView .mailwin-typewriter { display:none; }
-#lettersView .mailwin-name { width:100%; justify-content:space-between; color:#6a6255; font:400 16px/1 'VT323',monospace; letter-spacing:.12em; text-transform:uppercase; }
-#lettersView .mailwin-name::after { content:'JUST YOURS'; font-size:13px; letter-spacing:.06em; }
-#lettersView .mailwin-head { padding:12px 0 10px; border-bottom:1px dotted #a49a87; }
-#lettersView .mailwin-row { grid-template-columns:64px minmax(0,1fr); min-height:30px; }
-#lettersView .mailwin-key { color:#817665; font-size:18px; }
-#lettersView .mailwin input.mailwin-val { font-size:19px; }
-#lettersView .mailwin input.mailwin-val:hover { background:#e8ddcd; }
-#lettersView .mailwin-page { display:block; }
-#lettersView .mailwin-scroll { display:none; }
-#lettersView .mailwin .mailwin-body { min-height:220px; padding:22px 0; font:400 23px/1.5 'VT323',monospace; background:transparent; }
-#lettersView .mailwin .mailwin-body:empty::before { color:#9a8d79; }
-.letter-machine { position:relative; isolation:isolate; width:100%; max-width:640px; margin:0 auto 12px; padding:32px 14px 14px; box-sizing:border-box; border:1px solid #729cad; border-radius:16px 16px 28px 28px; background:linear-gradient(100deg,#c3e1e9,#97becf 14%,#a9cddc 70%,#80aabd); box-shadow:inset 0 3px 2px #e5f6fa99,inset 0 -7px 0 #638c9b66,0 12px 20px #182f4020; }
-.letter-roller { position:absolute; top:0; left:10px; right:10px; height:29px; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(#253236,#677276 45%,#192429 52%,#303c41); border-radius:8px 8px 14px 14px; box-shadow:inset 0 2px 4px #0008; }
-.letter-roller span { position:absolute; left:8px; right:8px; height:3px; background:linear-gradient(#eee,#8a9599); box-shadow:0 1px 2px #0008; }
-.letter-roller i { z-index:1; width:15px; height:32px; border:1px solid var(--type-edge); border-radius:5px; background:repeating-linear-gradient(90deg,#94b8c7 0 2px,#709aac 2px 3px); }
-.letter-machine-brand { text-align:center; color:#477284; text-shadow:0 1px #def1f8; font:700 10px/1.4 Nunito,sans-serif; letter-spacing:.22em; margin:2px 0 10px; }
-#lettersView .letter-tools { display:flex; justify-content:center; align-items:center; gap:7px; flex-wrap:wrap; padding:0 0 12px; margin:0; position:relative; top:auto; background:transparent; border:0; }
-#lettersView .letter-tools span { width:1px; height:20px; background:#577c8b66; }
-#lettersView .letter-tools button { min-width:44px; min-height:44px; margin:0; padding:6px 12px; border:1px solid #6c94a5; border-radius:12px; background:linear-gradient(#c6e2ed,#a5cbdc); color:#243f4c; box-shadow:0 3px 0 #557e90,inset 0 1px #effaffaa; font:700 16px/1 Nunito,sans-serif; cursor:pointer; }
-#lettersView .letter-tools button[aria-pressed=true] { background:#f6e2ad; box-shadow:0 1px 0 #557e90; transform:translateY(2px); }
-#lettersView .letter-tools button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-.letter-keyboard { border-radius:12px 12px 6px 6px; background:#24383e; padding:8px 10px 7px; box-shadow:inset 0 3px 5px #0007; }
+#letterStatus { text-align:left; padding-left:4px; font-family:'VT323',monospace; font-size:16px; }
+#lettersView .letter-chrome button { border:2px solid var(--card-ink); border-radius:0; background:var(--card-paper); color:var(--card-ink); box-shadow:3px 3px 0 var(--card-ink); font:400 19px/1 'VT323',monospace; }
+#lettersView .letter-chrome button:hover, #lettersView .letter-chrome button:focus-visible { background:var(--card-yellow); }
+#letterScroll { flex:none; max-height:38dvh; padding:14px 14px 4px; border:3px solid var(--card-ink); background:radial-gradient(#ffffff22 1px,transparent 1.5px) 0 0/12px 12px,var(--card-desk); }
+#lettersView .letter-card { position:relative; max-width:560px; margin:0 auto; padding:26px 4px 34px; }
+/* Sticky note and label tab tucked behind the card's top edge. */
+.letter-sticky { position:absolute; z-index:0; top:2px; left:10px; width:min(46%,210px); height:84px; padding:4px 8px; box-sizing:border-box; transform:rotate(-3deg); background:var(--card-sticky); box-shadow:0 0 0 2px var(--card-ink),3px 3px 0 2px var(--card-ink); color:var(--card-ink); font:400 16px/1 'VT323',monospace; letter-spacing:.04em; white-space:nowrap; overflow:hidden; }
+.letter-sticky span { display:inline-block; margin-right:6px; padding:0 3px; border:2px dashed var(--card-ink); }
+.letter-tab { position:absolute; z-index:0; top:6px; right:44px; padding:2px 8px 14px; background:var(--card-paper); box-shadow:0 0 0 2px var(--card-ink); color:var(--card-ink); font:400 16px/1 'VT323',monospace; letter-spacing:.06em; }
+/* The card itself: folded top-right corner and a zigzag bottom, outlined with stepped shadows. */
+#lettersView .letter-card .mailwin.pixel-postcard { --mw-ink:var(--card-ink); --mw-paper:var(--card-paper); --post-ink:var(--card-ink); --post-pink:var(--card-red); position:relative; z-index:1; max-width:none; margin:0; padding:22px 20px 34px; border:0; border-radius:0; background:var(--card-paper); box-shadow:none; color:var(--card-ink);
+  --z:9px; -webkit-mask:linear-gradient(225deg,transparent 18px,#000 0) top/100% calc(100% - var(--z)) no-repeat,conic-gradient(from -45deg at bottom,#000 90deg,transparent 0) bottom/calc(2*var(--z)) var(--z) repeat-x; mask:linear-gradient(225deg,transparent 18px,#000 0) top/100% calc(100% - var(--z)) no-repeat,conic-gradient(from -45deg at bottom,#000 90deg,transparent 0) bottom/calc(2*var(--z)) var(--z) repeat-x; }
+#lettersView .letter-card { filter:drop-shadow(2px 0 0 #1b1a1f) drop-shadow(-2px 0 0 #1b1a1f) drop-shadow(0 2px 0 #1b1a1f) drop-shadow(0 -2px 0 #1b1a1f) drop-shadow(4px 4px 0 #1b1a1f55); }
+#lettersView .letter-card .pixel-postcard::before { content:''; position:absolute; top:0; right:0; width:26px; height:26px; background:linear-gradient(to bottom left,transparent calc(50% - 1px),var(--card-ink) calc(50% - 1px) calc(50% + 2px),#d8d4dc calc(50% + 2px)); }
+#lettersView .letter-card .pixel-postcard::after { display:none; }
+#lettersView .letter-card .pixel-postcard .mailwin-bar { display:none; }
+#lettersView .letter-card .pixel-postcard .mailwin-head { padding:0 58px 10px 0; border-bottom:3px dashed var(--card-ink); }
+#lettersView .letter-card .pixel-postcard .mailwin-row { grid-template-columns:52px minmax(0,1fr); min-height:30px; }
+#lettersView .letter-card .pixel-postcard .mailwin-key { color:var(--card-grey); font:400 17px/1 'VT323',monospace; letter-spacing:.08em; text-transform:uppercase; }
+#lettersView .letter-card .pixel-postcard input.mailwin-val { color:var(--card-ink); font:400 21px/1.15 'VT323',monospace; }
+#lettersView .letter-card .pixel-postcard input.mailwin-val:hover { background:#f1eef3; }
+#lettersView .letter-card .pixel-postcard .mailwin-row:last-of-type { grid-template-columns:minmax(0,1fr); margin:10px -58px 0 0; }
+#lettersView .letter-card .pixel-postcard .mailwin-row:last-of-type input.mailwin-val { color:var(--card-ink); font-size:30px; }
+#lettersView .letter-card .pixel-postcard .postcard-stamp { right:4px; top:6px; border:2px solid var(--card-ink); background:var(--card-paper); box-shadow:2px 2px 0 var(--card-ink); }
+/* Chunky pixel quote marks open the letter. */
+#lettersView .letter-card .pixel-postcard .mailwin-page::before { content:''; display:block; width:42px; height:24px; margin:16px 0 2px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 4' shape-rendering='crispEdges'%3E%3Cpath fill='%231b1a1f' d='M2 0h1v1H2zM1 1h1v1H1zM0 2h3v2H0zM6 0h1v1H6zM5 1h1v1H5zM4 2h3v2H4z'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat; }
+#lettersView .letter-card .pixel-postcard .mailwin-body { min-height:170px; padding:6px 0 18px; color:var(--card-ink); caret-color:var(--card-red); font:400 26px/1.25 'VT323',monospace; }
+#lettersView .letter-card .pixel-postcard .mailwin-body b, #lettersView .letter-card .pixel-postcard .mailwin-body strong { color:var(--card-red); }
+#lettersView .letter-card .pixel-postcard .mailwin-body ::selection, #lettersView .letter-card .pixel-postcard .mailwin-body::selection { background:var(--card-ink); color:var(--card-paper); }
+#lettersView .letter-card .pixel-postcard .mailwin-body:empty::before { color:#a39fa8; }
+#lettersView .letter-card .pixel-postcard .mailwin-body:focus { box-shadow:none; }
+#lettersView .letter-card .postcard-signature { display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; border-top:3px dashed var(--card-ink); padding:12px 0 6px; text-align:left; }
+#lettersView .letter-card .postcard-signature small { color:var(--card-grey); font:400 15px/1 'VT323',monospace; letter-spacing:.1em; }
+#lettersView .letter-card .postcard-signature span { margin-top:4px; color:var(--card-ink); font-size:24px; }
+#lettersView .letter-card .postcard-date { margin-left:auto; color:var(--card-ink); font-size:20px; letter-spacing:.04em; }
+#lettersView .letter-card .pixel-postcard .mailwin-foot { padding:10px 0 4px; }
+#lettersView .letter-card .postcard-picker legend { color:var(--card-grey); }
+#lettersView .letter-card #lettersView .letter-card .postcard-picker { gap:4px; }
+#lettersView .letter-card .postcard-picker button { border:2px solid var(--card-ink); border-radius:0; background:var(--card-paper); }
+#lettersView .letter-card .postcard-picker button[aria-pressed=true] { background:var(--card-yellow); box-shadow:2px 2px 0 var(--card-ink); }
+/* Yellow zigzag tag and a little morse strip hanging off the bottom. */
+.letter-tag { position:absolute; z-index:2; right:18px; bottom:8px; display:flex; gap:8px; align-items:center; padding:8px 14px; background:var(--card-yellow); --t:5px; -webkit-mask:conic-gradient(from 45deg at left,#000 90deg,transparent 0) left/var(--t) calc(2*var(--t)) repeat-y,conic-gradient(from -135deg at right,#000 90deg,transparent 0) right/var(--t) calc(2*var(--t)) repeat-y,linear-gradient(#000 0 0) center/calc(100% - 2*var(--t)) 100% no-repeat; mask:conic-gradient(from 45deg at left,#000 90deg,transparent 0) left/var(--t) calc(2*var(--t)) repeat-y,conic-gradient(from -135deg at right,#000 90deg,transparent 0) right/var(--t) calc(2*var(--t)) repeat-y,linear-gradient(#000 0 0) center/calc(100% - 2*var(--t)) 100% no-repeat; }
+.letter-tag svg { width:16px; height:14px; }
+.letter-morse { position:absolute; z-index:0; left:22px; bottom:12px; width:min(38%,170px); height:16px; background:repeating-linear-gradient(90deg,#1b1a1f 0 14px,transparent 14px 20px,#1b1a1f 20px 24px,transparent 24px 30px) center/calc(100% - 12px) 4px no-repeat,var(--card-paper); }
+/* The machine: black body, white keys, yellow send. */
+.letter-machine { position:relative; isolation:isolate; width:100%; max-width:640px; margin:10px auto 12px; padding:30px 12px 12px; box-sizing:border-box; border:3px solid #1b1a1f; border-radius:0; background:#2b2833; box-shadow:5px 5px 0 #1b1a1f66,inset 0 3px #4a4655; }
+.letter-roller { position:absolute; top:4px; left:10px; right:10px; height:18px; display:flex; align-items:center; justify-content:space-between; background:#111; border:2px solid #000; }
+.letter-roller span { position:absolute; left:16px; right:16px; height:4px; background:#fffefb; }
+.letter-roller i { z-index:1; width:12px; height:24px; border:2px solid #000; background:repeating-linear-gradient(#fffefb 0 3px,#8a8590 3px 5px); }
+.letter-machine-brand { text-align:center; color:#f6d83c; font:400 17px/1.2 'VT323',monospace; letter-spacing:.3em; margin:2px 0 10px; }
+#lettersView .letter-tools { display:flex; justify-content:center; align-items:center; gap:6px; flex-wrap:wrap; padding:0 0 12px; margin:0; position:relative; top:auto; background:transparent; border:0; }
+#lettersView .letter-tools span { width:2px; height:22px; background:#8a8590; }
+#lettersView .letter-tools button { min-width:44px; min-height:44px; margin:0; padding:4px 12px; border:2px solid #000; border-radius:0; background:#fffefb; color:#1b1a1f; box-shadow:0 4px 0 #000; font:400 24px/1 'VT323',monospace; cursor:pointer; }
+#lettersView .letter-tools button[aria-pressed=true] { background:#f6d83c; box-shadow:0 1px 0 #000; transform:translateY(3px); }
+#lettersView .letter-tools button:focus-visible { outline:3px solid #f6d83c; outline-offset:3px; }
+#lettersView #letterDate { font-size:19px; padding-inline:8px; }
+.letter-keyboard { background:#1b1a1f; padding:8px 10px 6px; border:2px solid #000; }
 .letter-keyboard div { display:flex; justify-content:center; gap:5px; margin:0 0 4px; }
-.letter-keyboard i { width:8%; height:9px; border-radius:4px; background:linear-gradient(#b8dce8,#7daabd); box-shadow:0 2px #547b8a,inset 0 1px #d9eef5; }
+.letter-keyboard i { width:8%; height:9px; background:#fffefb; box-shadow:0 2px #8a8590; }
 #lettersView .letter-machine .mailwin-actions { border:0; padding:12px 0 4px; gap:10px; justify-content:center; }
-#lettersView .letter-machine button.mailwin-btn { flex:1; min-height:44px; padding:10px 6px; border:1px solid #648b9c; border-radius:12px; background:#c4e0e9; color:#243f4c; box-shadow:0 3px 0 #557e90; font:700 14px/1.2 Nunito,sans-serif; letter-spacing:0; }
-#lettersView .letter-machine button.mailwin-send { background:#f4e6c9; border-color:#a49b84; }
-#lettersView .letter-machine button:active { transform:translateY(2px); box-shadow:0 1px 0 #557e90; }
-@media(min-width:700px) { #letterScroll { padding-inline:40px; } }
+#lettersView .letter-machine .mailwin-saved { color:#d8d4dc; font-family:'VT323',monospace; }
+#lettersView .letter-machine button.mailwin-btn { flex:1; min-height:44px; padding:8px 6px; border:2px solid #000; border-radius:0; background:#fffefb; color:#1b1a1f; box-shadow:0 4px 0 #000; font:400 22px/1.1 'VT323',monospace; letter-spacing:.04em; }
+#lettersView .letter-machine button.mailwin-send { background:#f6d83c; }
+#lettersView .letter-machine button:active { transform:translateY(3px); box-shadow:0 1px 0 #000; }
+@media(min-width:700px) { #letterScroll { padding-inline:32px; } }
+@media(max-width:380px) { #letterScroll { padding-inline:6px; } #lettersView .letter-card .pixel-postcard .mailwin-head { padding:54px 0 10px; } #lettersView .letter-card .pixel-postcard .mailwin-row:last-of-type { margin-right:0; } .letter-tab { right:34px; } }
 @media(max-height:480px) { #letterScroll { max-height:30dvh; } .letter-keyboard { display:none; } }
-#lettersView .letter-tools { gap:5px; }
-#lettersView #letterDate { font-size:14px; padding-inline:8px; }
 @media(max-height:480px) {
   #sheetBody:has(#lettersView) > h2 { margin:0; font-size:20px; line-height:44px; }
   #sheetBody:has(#lettersView) > .muted { display:none; }
@@ -68,10 +97,9 @@
   #lettersView .letter-chrome { padding-bottom:4px; }
   #lettersView .letter-chrome button { min-height:36px; padding-block:6px; }
   #letterScroll { max-height:16dvh; padding-top:0; }
-  .letter-machine { padding-top:28px; padding-bottom:8px; margin-bottom:0; }
+  .letter-machine { padding-top:26px; padding-bottom:8px; margin-bottom:0; }
   .letter-machine-brand { display:none; }
   #lettersView .letter-tools { padding-bottom:4px; }
   #lettersView .letter-machine .mailwin-actions { padding:4px 0; }
 }
-#lettersView .mailwin .mailwin-body:focus { outline:0; box-shadow:inset 2px 0 #b8a98d66; }
 .letter-sheet-content { clear:both; }

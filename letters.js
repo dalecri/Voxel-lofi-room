@@ -4,6 +4,10 @@
   const KEY = 'lr.letters';
   const escapeHTML = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const day = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  const cardDate = date => `${String(date.getMonth()+1).padStart(2,'0')}.${String(date.getDate()).padStart(2,'0')}.${date.getFullYear()}`;
+  // Three tiny pixel marks for the card's yellow tag. Decorative only.
+  const pixels = (rows,fill) => `<svg viewBox="0 0 ${rows[0].length} ${rows.length}" shape-rendering="crispEdges" focusable="false">`+rows.flatMap((r,y)=>[...r].flatMap((c,x)=>c==='X'?[`<rect x="${x}" y="${y}" width="1" height="1" fill="${fill}"/>`]:[])).join('')+'</svg>';
+  const TAG_ICONS = pixels(['.XX.XX.','XXXXXXX','XXXXXXX','.XXXXX.','..XXX..','...X...'],'#d6283a')+pixels(['...X...','..XXX..','XXXXXXX','.XXXXX.','.XX.XX.','X.....X'],'#1b1a1f')+pixels(['XXXXXXXX','XX....XX','X.X..X.X','X..XX..X','X......X','XXXXXXXX'],'#1b1a1f');
   const dateStamp = date => date.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   // Parse in an inert template, never a live document. Pasted images/styles cannot fetch.
   function sanitizeHTML(html) {
@@ -61,8 +65,8 @@
   function htmlFile(letter, clean = sanitizeHTML) {
     return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'">' +
-      `<title>${escapeHTML(letter.title)}</title><style>body{margin:0;padding:24px;background:#ede5d9;color:#344c38;font:18px/1.6 'Courier New',monospace}main{box-sizing:border-box;max-width:700px;margin:auto;padding:40px 7%;border:4px solid #393047;box-shadow:inset 0 0 0 4px #839576,inset 0 0 0 7px #fcf6ec,inset 0 0 0 9px #d58a9c;background:repeating-linear-gradient(0deg,#b99e7910 0 8px,transparent 8px 16px),repeating-linear-gradient(90deg,#b99e7910 0 8px,transparent 8px 16px),#fcf6ec;overflow-wrap:anywhere}header{font-size:14px;border-bottom:1px solid #a7b09b;padding-bottom:20px;white-space:pre-wrap}h1{font-size:25px;color:#c35d7b}.picture{display:grid;place-items:center;width:75%;aspect-ratio:1;margin:28px auto;border:4px solid #393047;box-shadow:5px 5px #789471;background:#fffcfa}.picture svg{width:64%;height:64%;image-rendering:pixelated}article{white-space:pre-wrap}p,article div{margin:0 0 .25em}footer{margin-top:30px;padding-top:16px;border-top:1px solid #a7b09b;text-align:right;font-size:13px;color:#71836b}@media print{body{padding:0}main{max-width:none}}</style></head><body><main>` +
-      `<header>${escapeHTML(letter.letterhead)}</header><h1>${escapeHTML(letter.title)}</h1><div class="picture">${Postcard.art(letter.cardIcon)}</div><article>${clean(letter.body)}</article><footer>A LITTLE LETTER, JUST YOURS.</footer></main></body></html>\n`;
+      `<title>${escapeHTML(letter.title)}</title><style>body{margin:0;padding:24px;background:#ede5d9;color:#344c38;font:18px/1.6 'Courier New',monospace}main{box-sizing:border-box;max-width:700px;margin:auto;padding:40px 7%;border:4px solid #393047;box-shadow:inset 0 0 0 4px #839576,inset 0 0 0 7px #fcf6ec,inset 0 0 0 9px #d58a9c;background:repeating-linear-gradient(0deg,#b99e7910 0 8px,transparent 8px 16px),repeating-linear-gradient(90deg,#b99e7910 0 8px,transparent 8px 16px),#fcf6ec;overflow-wrap:anywhere}header{font-size:14px;border-bottom:1px solid #a7b09b;padding-bottom:20px;white-space:pre-wrap}h1{font-size:25px;color:#c35d7b}.picture{float:right;display:grid;place-items:center;width:44px;height:48px;margin:0 0 8px 12px;border:3px dashed #393047;background:#fffcfa}.picture svg{width:30px;height:30px;image-rendering:pixelated}article{white-space:pre-wrap}p,article div{margin:0 0 .25em}footer{margin-top:30px;padding-top:16px;border-top:1px solid #a7b09b;text-align:right;font-size:13px;color:#71836b}@media print{body{padding:0}main{max-width:none}}</style></head><body><main>` +
+      `<div class="picture">${Postcard.art(letter.cardIcon)}</div><header>${escapeHTML(letter.letterhead)}</header><h1>${escapeHTML(letter.title)}</h1><article>${clean(letter.body)}</article><footer>A LITTLE LETTER, JUST YOURS.</footer></main></body></html>\n`;
   }
   async function saveFile({ html, filename, cap = root.Capacitor }) {
     if (cap?.isNativePlatform?.()) return cap.registerPlugin('LetterFiles').save({filename,html});
@@ -84,7 +88,12 @@
     const keys=document.createElement('div');keys.className='letter-keyboard';keys.setAttribute('aria-hidden','true');
     for(let row=0;row<3;row++){const line=document.createElement('div');for(let key=0;key<10-row;key++)line.appendChild(document.createElement('i'));keys.appendChild(line);}
     machine.append(keys,windowUi.actions);
-    view.querySelector('#letterScroll').appendChild(windowUi.form);
+    // A white note card: sticky note and label tab peek out behind it, a zigzag tag hangs below.
+    const card=document.createElement('div');card.className='letter-card';
+    card.innerHTML='<div class="letter-sticky" aria-hidden="true"><span>LOFI</span><span>LETTERS</span></div><div class="letter-tab" aria-hidden="true"></div>';
+    card.appendChild(windowUi.form);
+    card.insertAdjacentHTML('beforeend','<div class="letter-tag" aria-hidden="true">'+TAG_ICONS+'</div><div class="letter-morse" aria-hidden="true"></div>');
+    view.querySelector('#letterScroll').appendChild(card);
     view.querySelector('#letterScroll').after(machine);
     const $=s=>view.querySelector(s),body=windowUi.body,subject=windowUi.fields.Subject,from=windowUi.fields.From,to=windowUi.fields.To,scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
     let active=false,timer=null,lastRange=null,lastFocus=null,lastClack=-Infinity,lastBell=-Infinity,beforeLine=null,composing=false,compositionLine=null;
@@ -97,7 +106,9 @@
     }
     function schedule() {message('Saving…');clearTimeout(timer);timer=setTimeout(flush,250);}
     function load() {
-      const l=model.get();subject.value=l?.title || '';from.value=sender();windowUi.postcard.set(l?.cardIcon);body.innerHTML=sanitizeHTML(l?.body || '');
+      const l=model.get(),all=model.list(),n=l?all.length-all.findIndex(x=>x.id===l.id):0;
+      card.querySelector('.letter-tab').textContent='NO.'+String(n).padStart(4,'0');windowUi.postcard.setDate(l?cardDate(new Date(l.createdAt||Date.now())):'');
+      subject.value=l?.title || '';from.value=sender();windowUi.postcard.set(l?.cardIcon);body.innerHTML=sanitizeHTML(l?.body || '');
       body.contentEditable=l?'true':'false';subject.disabled=from.disabled=to.disabled=!l;
       $('#letterExport').disabled=!l;windowUi.buttons.Save.disabled=!l;windowUi.buttons['Send to future'].disabled=!l;
       view.querySelectorAll('.letter-tools button').forEach(b=>b.disabled=!l);
