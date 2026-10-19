@@ -369,3 +369,8 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-sky.has-task-focus .today-welcome h2 { flex:1; min-width:0; margin:0; font-size:clamp(20px,4.8vw,30px); }
 .space-today .today-sky.has-task-focus .today-welcome .today-condition { display:block; flex:0 1 auto; max-width:42%; min-width:0; margin:0; padding:5px 9px; border-radius:20px; background:var(--chip); color:var(--ink); font:600 12px/1.35 Nunito,sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .today-weather-details[hidden] { display:none; }
+
+/* Tea follows the top-right quick actions, including their narrow-screen wrap. */
+.timer-badge[data-timer=tea] { position:fixed; top:var(--tea-dock-top,84px); right:var(--tea-dock-right,16px); max-width:calc(100vw - 28px); box-sizing:border-box; }
+.timer-badges[data-keys=tea] { left:auto; bottom:auto; top:var(--tea-dock-top,84px); right:var(--tea-dock-right,16px); max-width:calc(100vw - 28px); align-items:flex-end; }
+.timer-badges[data-keys=tea] > [data-timer=tea] { position:static; }
