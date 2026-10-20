@@ -47,7 +47,7 @@ with sync_playwright() as p:
    for name in ['Today','Rooms','To-Do','Sound','Settings']:
     page.get_by_role('tab',name=name,exact=True).click()
     if name=='To-Do':
-     page.locator('#menu-todo .task-starters').evaluate('e=>e.open=false');assert body.evaluate('e=>getComputedStyle(e.querySelector(".task-notebook")).backgroundColor===getComputedStyle(e).backgroundColor');page.screenshot(path=f'/tmp/todo-themed-{phase}-{width}.png')
+     assert page.locator('#menu-todo .task-starters,.task-empty').count()==0;assert body.evaluate('e=>getComputedStyle(e.querySelector(".task-notebook")).backgroundColor===getComputedStyle(e).backgroundColor');page.screenshot(path=f'/tmp/todo-themed-{phase}-{width}.png')
     rect=body.bounding_box();nav_top=page.locator('.menu-nav').bounding_box()['y']
     if expected_height is None:expected_height=rect['height'];expected_top=nav_top
     assert abs(rect['height']-expected_height)<1,(name,rect['height'],expected_height);assert abs(nav_top-expected_top)<1,(name,nav_top,expected_top)

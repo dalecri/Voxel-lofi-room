@@ -111,3 +111,38 @@
 .task-notebook .today-task-check[aria-checked=true] .task-checkmark,.task-notebook .google-task-check[aria-checked=true] .task-checkmark { background:var(--accent); border-color:var(--accent); }
 .task-notebook .today-task.done .today-task-text,.task-notebook .google-task-row.completed .google-task-copy b,.task-notebook .today-task-remove,.task-notebook .task-journey-summary { color:var(--ink-dim); }
 .task-notebook .task-list-progress>span { background:var(--accent); }
+
+/* The list source switch belongs beside the page title, outside the notebook. */
+.todo-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:16px 0 12px; }
+.todo-heading h2 { margin:0; flex:none; }
+.todo-heading .task-tabs { display:flex; gap:3px; padding:3px; border-radius:10px; background:var(--chip); }
+.todo-heading .task-tab { min-height:44px; padding:6px 12px; border-radius:8px; font:600 16px Fredoka,sans-serif; color:var(--ink-dim); }
+.todo-heading .task-tab[aria-selected=true] { background:var(--panel-solid); color:var(--ink); box-shadow:0 1px 3px #0002; }
+.todo-heading .task-tab:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+/* Soft pulp cards and etched checks, scoped to the To-Do notebook. */
+.task-notebook { --pulp-bg:var(--panel-solid); --indent-dark:color-mix(in srgb,var(--ink) 12%,transparent); --indent-light:color-mix(in srgb,var(--panel-solid) 85%,white); }
+.task-notebook .today-task-list,.task-notebook .google-task-list { display:flex; flex-direction:column; gap:16px; }
+.task-notebook .today-task,.task-notebook .today-task.done,.task-notebook .google-task-row {
+  position:relative; overflow:hidden; padding:20px; border:0; border-radius:8px;
+  background:var(--pulp-bg); box-shadow:2px 2px 5px var(--indent-dark),-2px -2px 5px var(--indent-light);
+  grid-template-columns:40px minmax(0,1fr) 28px; gap:8px;
+  transition:transform .4s cubic-bezier(.16,1,.3,1),box-shadow .4s cubic-bezier(.16,1,.3,1);
+  animation:todo-card-in .6s ease-out both;
+}
+.task-notebook .google-task-row { grid-template-columns:40px minmax(0,1fr); }
+.task-notebook .today-task::before,.task-notebook .google-task-row::before { content:""; position:absolute; left:0; top:0; height:100%; width:4px; background:var(--accent); transform:scaleY(0); transition:transform .3s ease; pointer-events:none; }
+.task-notebook .today-task:focus-within::before,.task-notebook .google-task-row:focus-within::before { transform:scaleY(1); }
+.task-notebook .task-checkmark { position:relative; width:20px; height:20px; border:0; border-radius:4px; background:var(--pulp-bg); box-shadow:inset 2px 2px 4px var(--indent-dark),inset -1px -1px 2px var(--indent-light); transition:background .3s ease; }
+.task-notebook .today-task-check[aria-checked=true] .task-checkmark,.task-notebook .google-task-check[aria-checked=true] .task-checkmark { background:var(--accent); box-shadow:none; }
+.task-notebook .task-checkmark svg { display:none; }
+.task-notebook [aria-checked=true] .task-checkmark::after { content:""; position:absolute; top:50%; left:50%; width:6px; height:6px; border-radius:50%; background:white; transform:translate(-50%,-50%); box-shadow:0 0 10px #ffffffcc; }
+.task-notebook .today-task-text,.task-notebook .google-task-copy b { font:400 .95rem/1.45 ui-monospace,'Courier New',monospace; transition:opacity .3s ease,transform .3s ease; }
+.task-notebook .today-task.done .today-task-text,.task-notebook .google-task-row.completed .google-task-copy b { text-decoration:line-through; opacity:.4; transform:scale(.98); }
+@keyframes todo-card-in { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@media(hover:hover) {
+  .task-notebook .today-task:hover,.task-notebook .google-task-row:hover { transform:translateX(4px); box-shadow:4px 4px 10px var(--indent-dark),-2px -2px 5px var(--indent-light); }
+  .task-notebook .today-task:hover::before,.task-notebook .google-task-row:hover::before { transform:scaleY(1); }
+}
+@media(max-width:360px) { .task-notebook .today-task,.task-notebook .google-task-row { padding:14px 10px; gap:5px; } .todo-heading { gap:8px; } }
+@media(prefers-reduced-motion:reduce) { .task-notebook .today-task,.task-notebook .google-task-row,.task-notebook .task-checkmark,.task-notebook .today-task-text,.task-notebook .google-task-copy b,.task-notebook .today-task::before,.task-notebook .google-task-row::before { animation:none; transition:none; } }
