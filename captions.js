@@ -90,6 +90,7 @@
     add('p','studio-foot','Three fresh ideas each day.');
   }
   // A single readable clipping on Today, backed by the same three daily picks.
+  // Today shows the last saved export; only ↻ or the Caption studio fetch a fresh one.
   function renderDaily(host,model) {
     const s=model.state,old=Number(host.dataset.clip)||0;
     host.replaceChildren();host.hidden=!s.enabled||host.closest('.today-feature')?.dataset.active==='french';if(!s.enabled){const pane=host.closest('.today-feature-pane');if(pane)pane.hidden=true;host.closest('.today-feature')?.classList.add('french-only');return;}
@@ -97,7 +98,7 @@
     const add=(tag,cls,text,parent=host)=>{const n=doc.createElement(tag);n.className=cls;n.textContent=text;parent.appendChild(n);return n;};
     const head=add('div','today-caption-heading','');add('h3','','TwoStoryTails caption',head);
     const refresh=add('button','today-caption-refresh','↻',head);refresh.type='button';refresh.setAttribute('aria-label','Refresh captions');refresh.disabled=s.loading;refresh.onclick=()=>model.refresh();
-    if(!s.rows.length){add('p','today-caption-empty',s.loading?'Bringing a little inspiration…':s.failed?'The caption desk is resting. Try refreshing later.':'No unpublished captions today.');return;}
+    if(!s.rows.length){add('p','today-caption-empty',s.loading?'Bringing a little inspiration…':s.failed?'The caption desk is resting. Try refreshing later.':s.data?'No unpublished captions today.':'Tap ↻ to bring in today’s captions.');return;}
     const index=old%s.rows.length;host.dataset.clip=String(index);const clip=s.rows[index];
     const text=add('p','today-caption-text',copyPayload(clip));text.setAttribute('aria-live','polite');
     // Keep the idea available verbatim when the generated caption is shown.
