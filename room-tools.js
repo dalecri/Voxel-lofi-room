@@ -88,6 +88,17 @@
   }
   // Presentation order only. The model's newest-first list and lastIdea are untouched.
   function ideaCards(ideas,frontId){const index=Math.max(0,ideas.findIndex(i=>i.id===frontId)),top=ideas[index] || null;return {top,count:ideas.length,index, next:ideas.length?ideas[(index+1)%ideas.length]:null,behind:Array.from({length:Math.min(3,Math.max(0,ideas.length-1))},(_,i)=>ideas[(index+i+1)%ideas.length])};}
+  // A seeded palette gives each saved spark its own soft backdrop without storing colors.
+  function ideaBackground(idea){
+    let seed=2166136261;for(const char of String(idea?.id ?? 'empty'))seed=Math.imul(seed^char.charCodeAt(0),16777619)>>>0;
+    const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    const hues=[24,340,265,160,205,45],layers=[];
+    for(let i=0,count=2+Math.floor(random()*2);i<count;i++){
+      const hue=hues.splice(Math.floor(random()*hues.length),1)[0],x=Math.round(10+random()*80),y=Math.round(10+random()*80),spread=Math.round(65+random()*25);
+      layers.push(`radial-gradient(ellipse at ${x}% ${y}%, color-mix(in srgb, hsl(${hue} 65% 66%) 26%, var(--panel-solid)) 0%, transparent ${spread}%)`);
+    }
+    return layers.join(',');
+  }
   function ideaAdded(idea){const date=new Date(idea?.createdAt);if(!Number.isFinite(date.getTime()))return 'Kept in your jar';const parts=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long'}).formatToParts(date);return `Added ${parts.find(p=>p.type==='day').value} ${parts.find(p=>p.type==='month').value}`;}
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
   function createView({model,sheet,renderer,room,editing,hidden,letters,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
@@ -184,10 +195,10 @@
       const reveal=()=>{form.hidden=false;drop.setAttribute('aria-expanded','true');input.focus();};
       function draw(animation=''){
         const cards=ideaCards(model.state.ideas,frontId);frontId=cards.top?.id || null;stack.replaceChildren();count.textContent=` · ${cards.count} spark${cards.count===1?'':'s'}`;shake.disabled=!cards.count;position.textContent=cards.count?`${cards.index+1} of ${cards.count} spark${cards.count===1?'':'s'} · Tap the card to browse`:'A little room for your next idea.';
-        for(let i=cards.behind.length-1;i>=0;i--){const back=document.createElement('div');back.className='idea-back idea-back-'+i;back.setAttribute('aria-hidden','true');text(back,'A LITTLE SPARK','idea-card-label');text(back,cards.behind[i].text,'idea-back-text');stack.appendChild(back);}
+        for(let i=cards.behind.length-1;i>=0;i--){const back=document.createElement('div');back.className='idea-back idea-back-'+i;back.setAttribute('aria-hidden','true');back.style.backgroundImage=ideaBackground(cards.behind[i]);text(back,'A LITTLE SPARK','idea-card-label');text(back,cards.behind[i].text,'idea-back-text');stack.appendChild(back);}
         const front=document.createElement('article');front.className='idea-front '+animation;stack.appendChild(front);
         if(!cards.top){const invite=button(front,'The jar is empty. Drop in your first spark.',reveal,'idea-cycle idea-invite');invite.setAttribute('aria-label','The jar is empty. Drop in your first spark.');return;}
-        front.dataset.idea=cards.top.id;
+        front.dataset.idea=cards.top.id;front.style.backgroundImage=ideaBackground(cards.top);
         const cycle=button(front,'',()=>{frontId=ideaCards(model.state.ideas,frontId).next.id;reason='browse';draw('is-cycled');stack.querySelector('.idea-cycle')?.focus({preventScroll:true});},'idea-cycle');cycle.setAttribute('aria-label','Next idea');cycle.setAttribute('aria-describedby','ideaCardText');
         const label=document.createElement('span');label.className='idea-card-label';label.textContent=reason==='shaken'?'LAST SHAKEN':cards.top.id===model.state.ideas[0]?.id?'LATEST DROP':'SAVED SPARK';
         const body=document.createElement('span');body.className='idea-card-text';body.id='ideaCardText';body.textContent=cards.top.text;

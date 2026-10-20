@@ -144,3 +144,9 @@ button.mailwin-small { padding:7px 10px 6px; font-size:18px; box-shadow:2px 2px 
 .tea-presets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; max-width:360px; margin-inline:auto; }
 
 @media(max-height:600px) and (min-width:540px) { .tea-dial { width:min(100%,210px,50dvh); } }
+
+/* Soft, per-spark color clouds. Broad gradient falloff supplies blur without a GPU filter.
+   The solid theme base remains a fallback; text and controls stay crisp above the color. */
+.idea-front,.idea-back{background-color:var(--panel-solid)}
+.roomtool .idea-cycle{background:transparent}
+.idea-front .idea-card-label,.idea-back .idea-card-label{color:var(--ink-dim)}

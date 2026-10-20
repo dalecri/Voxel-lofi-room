@@ -29,6 +29,15 @@ with sync_playwright() as p:
   page.get_by_label('A little idea',exact=True).fill(text);page.get_by_role('button',name='Drop in jar',exact=True).click();assert card.inner_text()==text.strip();assert front.evaluate('e=>e.classList.contains("is-dropped")');assert page.locator('.idea-card-label').last.inner_text()=='LATEST DROP';assert not form.is_visible()
  for text in texts:add(text)
  assert page.evaluate('ideaEffects.plop')==5;assert '5 sparks' in body.locator('h2').inner_text();assert page.locator('.idea-back').count()==3;assert page.locator('.idea-card-date').inner_text().startswith('Added ');assert page.evaluate('window.ideaInjected') is None
+ # Each card keeps its own palette when cycled, moved to the back, or reloaded.
+ palettes={}
+ for _ in texts:
+  idea_id=front.get_attribute('data-idea');palettes[idea_id]=front.evaluate('e=>e.style.backgroundImage')
+  assert 'radial-gradient' in palettes[idea_id] and 'color-mix' in palettes[idea_id]
+  assert page.locator('.idea-cycle').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgba(0, 0, 0, 0)'
+  page.get_by_role('button',name='Next idea',exact=True).click()
+ assert len(set(palettes.values()))==len(texts)
+ assert front.evaluate('e=>e.style.backgroundImage')==palettes[front.get_attribute('data-idea')]
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
@@ -39,6 +48,7 @@ with sync_playwright() as p:
  next_id=page.evaluate('LRRoomTools.ideaCards(__lr.roomTools.state.ideas,__lr.roomTools.state.lastIdea).next.id');page.get_by_role('button',name='Remove idea',exact=True).click();assert front.get_attribute('data-idea')==next_id;assert page.evaluate('__lr.roomTools.state.ideas.length')==4
  raw=page.evaluate('async()=>JSON.stringify(await __lr.readCode(await __lr.roomCode()))');assert 'PRIVATE_IDEA_FULL_TEXT' not in raw;assert 'lastIdea' not in raw
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');ready();page.evaluate("__lr.roomToolsUI.open('ideas')");assert page.evaluate('__lr.roomTools.state.ideas.length')==4;assert front.get_attribute('data-idea')==page.evaluate('__lr.roomTools.state.ideas[0].id')
+ assert front.evaluate('e=>e.style.backgroundImage')==palettes[front.get_attribute('data-idea')]
  page.emulate_media(reduced_motion='reduce');shake.click();assert front.evaluate('e=>getComputedStyle(e).animationName')=='none'
  while page.evaluate('__lr.roomTools.state.ideas.length'):page.get_by_role('button',name='Remove idea',exact=True).click()
  assert shake.is_disabled();assert '0 sparks' in body.locator('h2').inner_text();assert page.get_by_role('button',name='The jar is empty. Drop in your first spark.',exact=True).is_visible();assert not errors,errors
