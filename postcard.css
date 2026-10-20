@@ -143,3 +143,69 @@
 #sheetBody .compact-date input[type=date]::-webkit-calendar-picker-indicator { position:absolute; inset:0; width:100%; height:100%; margin:0; padding:0; cursor:pointer; }
 #sheetBody .compact-date-target:has(input:focus-visible) { outline:2px solid var(--accent); outline-offset:2px; }
 #sheetBody .calendar-date-label { display:flex; align-items:center; gap:12px; }
+/* Letters to future you, lavender edition: a floating card in Plus Jakarta Sans. Same palette day and night. */
+#sheetBody:has(.future-mail) { --fm-bg:#d4bdfb; --fm-surface:#c4aaf6; --fm-card:#bca0ef; --fm-light:#dccafd; --fm-edge:#a98ae6; --fm-ink:#22103d; --fm-muted:#6a4fa3; --fm-dark:#22103c; --fm-on-dark:#d8c4fd; --fm-font:'Plus Jakarta Sans',Nunito,sans-serif;
+  left:12px; right:12px; bottom:calc(var(--sab,0px) + 12px); max-width:560px; height:min(88dvh,800px); max-height:none; margin:0 auto; padding:22px 22px 20px; border-radius:40px; background:var(--fm-bg); color:var(--fm-ink); font-family:var(--fm-font); }
+#sheetBody:has(.future-mail) > .grab { display:none; }
+#sheetBody .future-mail-heading { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:10px; margin:0 0 14px; }
+#sheetBody:has(.future-mail) .future-mail-heading h2 { grid-column:2; grid-row:1; margin:0; text-align:center; color:var(--fm-ink); font:800 clamp(18px,4.8vw,23px)/48px var(--fm-font); letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#sheetBody .future-mail-heading > .control-back { grid-column:1; grid-row:1; }
+#sheetBody .future-mail-heading > .future-mail-inbox { grid-column:3; grid-row:1; margin-right:58px; position:relative; }
+#sheetBody .future-mail-heading > .sheet-close { grid-column:3; grid-row:1; justify-self:end; position:static; float:none; margin:0; }
+#sheetBody:has(.future-mail) .future-mail-heading .sheet-icon { width:48px; height:48px; min-height:48px; padding:0; display:grid; place-items:center; border:1.5px solid var(--fm-edge); border-radius:16px; background:var(--fm-surface); color:var(--fm-ink); box-shadow:none; }
+.future-mail-badge { position:absolute; top:-8px; right:-8px; min-width:24px; height:24px; padding:0 6px; box-sizing:border-box; display:grid; place-items:center; border-radius:999px; background:var(--fm-dark); color:var(--fm-on-dark); font:800 12px/1 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .mailwin.pixel-postcard { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; color:var(--fm-ink); font-family:var(--fm-font); }
+/* Status row: time capsule note and the envelopes pill. */
+#sheetBody:has(.future-mail) .future-mail-toolbar { min-height:44px; margin:0 0 14px; }
+#sheetBody:has(.future-mail) .future-mail .mailwin-saved { display:flex; align-items:center; gap:8px; color:var(--fm-muted); font:700 14px/1.3 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .mailwin-saved::before { content:''; flex:none; width:9px; height:9px; border-radius:50%; background:var(--fm-dark); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-toolbar button.future-mail-envelopes { display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:4px 16px 4px 5px; border:1.5px solid var(--fm-edge); border-radius:999px; background:var(--fm-surface); color:var(--fm-ink); font:800 14px/1 var(--fm-font); }
+.future-mail-count { display:grid; place-items:center; min-width:30px; height:30px; padding:0 6px; box-sizing:border-box; border-radius:999px; background:var(--fm-dark); color:var(--fm-on-dark); font:800 12px/1 var(--fm-font); }
+/* The note card: everything from the title to the quick presets. */
+#sheetBody:has(.future-mail) .future-mail .mailwin.pixel-postcard { position:relative; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-subject,#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-meta,#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .mailwin-page,#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-quick { background:var(--fm-card); border-left:2px solid var(--fm-edge); border-right:2px solid var(--fm-edge); padding-left:22px; padding-right:22px; box-sizing:border-box; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-subject { min-height:0; padding-top:22px; padding-right:100px; border-top:2px solid var(--fm-edge); border-radius:32px 32px 0 0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard .future-mail-subject input.mailwin-val { padding:0; color:var(--fm-ink); font:800 clamp(22px,6vw,28px)/1.2 var(--fm-font); letter-spacing:-.03em; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard .future-mail-subject input.mailwin-val:focus-visible { outline:none; box-shadow:inset 0 -2px 0 var(--fm-edge); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-subject .postcard-stamp { top:18px; right:20px; width:66px; height:66px; padding:12px; border:2px solid var(--fm-edge); border-radius:20px; background:var(--fm-light); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-subject .postcard-stamp::after { content:'✦'; position:absolute; right:-8px; bottom:-8px; width:26px; height:26px; display:grid; place-items:center; border-radius:50%; background:var(--fm-dark); color:var(--fm-on-dark); font-size:12px; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-meta { display:flex; align-items:center; gap:16px; padding-top:4px; padding-right:100px; }
+#sheetBody:has(.future-mail) .future-mail-meta .future-mail-details { flex:none; padding:0; border:0; }
+#sheetBody:has(.future-mail) .future-mail-details summary { min-height:36px; padding-left:12px; color:var(--fm-muted); font:700 14px/1.3 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail-details summary::after { content:''; width:7px; height:7px; margin:-4px 0 0 4px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); }
+#sheetBody:has(.future-mail) .future-mail-details[open] summary::after { transform:rotate(-135deg); margin-top:4px; }
+.future-mail-stampname { color:var(--fm-ink); font:600 13.5px/1.2 var(--fm-font); white-space:nowrap; }
+.future-mail-stampname b { font-weight:800; }
+#sheetBody:has(.future-mail) .future-mail-options { border:1.5px solid var(--fm-edge); border-radius:20px; background:var(--fm-light); color:var(--fm-ink); }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .mailwin-page { padding-top:14px; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .mailwin-page::before { content:''; position:absolute; left:22px; right:22px; margin-top:-14px; height:2px; background:var(--fm-edge); }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .mailwin-page { position:relative; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard textarea.mailwin-body { padding:4px 0 12px; border:0; background:transparent; color:var(--fm-ink); font:500 17px/1.55 var(--fm-font); resize:none; box-shadow:none; }
+#sheetBody:has(.future-mail) .future-mail textarea.mailwin-body::placeholder { color:var(--fm-muted); }
+#sheetBody:has(.future-mail) .future-mail textarea.mailwin-body:focus { outline:none; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-quick { display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; padding-top:10px; padding-bottom:14px; border-bottom:2px solid var(--fm-edge); border-radius:0 0 32px 32px; margin-bottom:14px; }
+.future-mail-quick::before { content:''; flex-basis:100%; height:1.5px; margin:0 0 6px; background:#ffffffaa; }
+.future-mail-quick > span { color:var(--fm-muted); font:800 12px/1 var(--fm-font); letter-spacing:.05em; text-transform:uppercase; }
+#sheetBody:has(.future-mail) .future-mail button.future-mail-preset { min-height:40px; margin:0; padding:0 4px; border:0; background:transparent; color:var(--fm-ink); box-shadow:none; font:800 13.5px/1 var(--fm-font); cursor:pointer; }
+/* Deliver-on pill and the two actions. */
+#sheetBody:has(.future-mail) .future-mail-dock { position:relative; }
+#sheetBody:has(.future-mail) .future-mail .mailwin-foot { position:relative; }
+#sheetBody:has(.future-mail) .future-mail .mailwin-due { position:relative; display:flex; align-items:center; gap:14px; min-height:60px; margin:0 0 14px; padding:0 8px 0 22px; border:1.5px solid var(--fm-edge); border-radius:999px; background:var(--fm-surface); color:var(--fm-muted); font:800 13px/1 var(--fm-font); letter-spacing:.05em; text-transform:uppercase; box-sizing:border-box; }
+#sheetBody:has(.future-mail) .future-mail .mailwin-due:focus-within { outline:3px solid var(--fm-dark); outline-offset:3px; }
+#sheetBody:has(.future-mail) .future-mail .mailwin-actions { gap:14px; padding:0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard button.mailwin-btn { min-height:58px; padding:0 22px; border:1.5px solid var(--fm-edge); border-radius:999px; background:var(--fm-surface); color:var(--fm-ink); box-shadow:none; font:800 17px/1 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard button.mailwin-send { display:inline-flex; align-items:center; justify-content:center; gap:10px; border-color:var(--fm-dark); background:var(--fm-dark); color:var(--fm-on-dark); box-shadow:0 6px 14px #1b0a3a33; }
+#sheetBody:has(.future-mail) .future-mail .mailwin-saved:empty::before { display:none; }
+#sheetBody:has(.future-mail) .future-mail :is(button,summary):focus-visible { outline:3px solid var(--fm-dark); outline-offset:3px; }
+@media(max-width:420px) { #sheetBody:has(.future-mail) { left:8px; right:8px; padding:18px 16px 16px; border-radius:34px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > :is(.future-mail-subject,.future-mail-meta,.mailwin-page,.future-mail-quick) { padding-left:18px; padding-right:18px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-subject { padding-right:96px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-meta { padding-right:18px; flex-wrap:wrap; gap:4px 14px; } }
+#sheetBody:has(.future-mail) .future-mail .mailwin-due .compact-date { flex:1; justify-content:space-between; }
+#sheetBody:has(.future-mail) .future-mail .compact-date-value { color:var(--fm-ink); font:800 19px/1 var(--fm-font); letter-spacing:-.01em; text-transform:none; }
+#sheetBody:has(.future-mail) .future-mail .compact-date-target { border-radius:50%; background:var(--fm-light); box-shadow:none; color:var(--fm-ink); }
+#sheetBody:has(.future-mail) .future-mail .mailwin-due:focus-within { outline:none; }
+#sheetBody:has(.future-mail) .future-mail .compact-date-target:has(input:focus-visible) { outline:3px solid var(--fm-dark); outline-offset:3px; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-quick { flex-wrap:nowrap; gap:2px; }
+.future-mail-quick::before { display:none; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-quick { box-shadow:inset 0 1.5px 0 #ffffffaa; }
+#sheetBody:has(.future-mail) .future-mail button.future-mail-preset { font-size:12.5px; white-space:nowrap; min-width:0; }
+.future-mail-quick > span { font-size:11px; white-space:nowrap; }
+@media(max-width:420px) { #sheetBody .future-mail-heading { grid-template-columns:44px minmax(0,1fr) auto; gap:8px; } #sheetBody:has(.future-mail) .future-mail-heading .sheet-icon { width:44px; height:44px; min-height:44px; } #sheetBody .future-mail-heading > .future-mail-inbox { margin-right:52px; } #sheetBody:has(.future-mail) .future-mail-heading h2 { font-size:clamp(15px,4.3vw,20px); } }

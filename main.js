@@ -29,7 +29,7 @@ function startLofiRooms() {
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
   const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}),onTallyGoal:t=>{remember('pushups',{date:t.date,id:t.date});try{Sound.init();if(Sound.on)Sound.chime();}catch(e){/* quiet reps still count */}if(companion)companion.hop();} });
-  const letters = LRLetters.createView({ store,sheet:codeSheet,dismiss:closeSheets,onClose:()=>$('#bHome').focus({preventScroll:true}),onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); } });
+  const letters = LRLetters.createView({ store,sheet:codeSheet,dismiss:closeSheets,onClose:()=>$('#bHome').focus({preventScroll:true}),onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); }, mailbox:{count:()=>roomTools.state.mail.filter(l=>!l.read).length,open:()=>roomToolsUI.open('mailbox')} });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -2624,7 +2624,7 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     const todoTab = sections['To-Do'];
     const todoHeading=h('div','todo-heading','',todoTab);h('h2','','To-Do',todoHeading);
-    todayUI.mount(target,{openDay:date=>calendar.openDay(date),captions:host=>{LRCaptions.renderDaily(host,captionDesk);captionDesk.refresh();},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
+    todayUI.mount(target,{openDay:date=>calendar.openDay(date),captions:host=>{LRCaptions.renderDaily(host,captionDesk);},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
     h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);

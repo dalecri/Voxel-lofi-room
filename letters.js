@@ -2,6 +2,9 @@
 (function (root) {
   const Postcard=typeof module!=='undefined'&&module.exports?require('./mail-window.js'):root.LRMailWindow;
   const KEY = 'lr.letters';
+  // When Send to future should deliver, chosen on the letter itself.
+  const DELIVER = {tomorrow:['Tomorrow',d=>d.setDate(d.getDate()+1)],week:['In 1 week',d=>d.setDate(d.getDate()+7)],month:['In 1 month',d=>d.setMonth(d.getMonth()+1)],year:['In 1 year',d=>d.setFullYear(d.getFullYear()+1)]};
+  const deliverDate = (key,from=new Date()) => {const d=new Date(from.getFullYear(),from.getMonth(),from.getDate(),12);(DELIVER[key]||DELIVER.month)[1](d);return day(d);};
   const escapeHTML = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const day = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   const cardDate = date => `${String(date.getMonth()+1).padStart(2,'0')}.${String(date.getDate()).padStart(2,'0')}.${date.getFullYear()}`;
@@ -34,7 +37,7 @@
     const saved = store.get(KEY,null);
     const state = { v:1, next:Number.isSafeInteger(saved?.next) && saved.next>0 ? saved.next : 1,
       current:typeof saved?.current === 'string' ? saved.current : null,
-      letters:Array.isArray(saved?.letters) ? saved.letters.filter(l => l && typeof l.id==='string').map(l => ({id:l.id,title:String(l.title || 'Untitled letter'),letterhead:String(l.letterhead || ''),cardIcon:Postcard.normalizeIcon(l.cardIcon),body:String(l.body || ''),createdAt:Number(l.createdAt)||0,updatedAt:Number(l.updatedAt)||0})) : [] };
+      letters:Array.isArray(saved?.letters) ? saved.letters.filter(l => l && typeof l.id==='string').map(l => ({id:l.id,title:String(l.title || 'Untitled letter'),letterhead:String(l.letterhead || ''),cardIcon:Postcard.normalizeIcon(l.cardIcon),deliverIn:DELIVER[l.deliverIn]?l.deliverIn:'month',body:String(l.body || ''),createdAt:Number(l.createdAt)||0,updatedAt:Number(l.updatedAt)||0})) : [] };
     const get = (id = state.current) => state.letters.find(l => l.id === id);
     if (!get()) state.current = state.letters[0]?.id || null;
     function persist() {
@@ -44,14 +47,15 @@
     }
     function add(roomName) {
       const date=now(),id=`letter-${date.getTime().toString(36)}-${state.next++}`;
-      state.letters.unshift({id,title:'Untitled letter',letterhead:`${roomName} · ${dateStamp(date)}`,cardIcon:'tulips',body:'',createdAt:date.getTime(),updatedAt:date.getTime()});
+      state.letters.unshift({id,title:'Untitled letter',letterhead:`${roomName} · ${dateStamp(date)}`,cardIcon:'tulips',deliverIn:'month',body:'',createdAt:date.getTime(),updatedAt:date.getTime()});
       state.current=id;persist();return {...get()};
     }
-    function update({letterhead,body,title,cardIcon}) {
+    function update({letterhead,body,title,cardIcon,deliverIn}) {
       const letter=get();if(!letter)return;
       const old=letter.body;letter.letterhead=String(letterhead);letter.body=clean(body);
       if(title!==undefined)letter.title=String(title).trim()||'Untitled letter';
       if(cardIcon!==undefined)letter.cardIcon=Postcard.normalizeIcon(cardIcon);
+      if(deliverIn!==undefined&&DELIVER[deliverIn])letter.deliverIn=deliverIn;
       letter.updatedAt=now().getTime();persist();if(letter.body!==old&&letter.body.replace(/<[^>]*>/g,'').trim())onSaved({...letter});
     }
     function select(id) {if(!get(id))return false;state.current=id;persist();return true;}
@@ -71,10 +75,10 @@
     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);return {saved:true};
   }
-  function createView({store,sheet,dismiss,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{},onClose=()=>{},sender=()=>'',rememberSender=()=>{},onSendToFuture=()=>{}}) {
+  function createView({store,sheet,dismiss,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{},onClose=()=>{},sender=()=>'',rememberSender=()=>{},onSendToFuture=()=>{},mailbox={count:()=>0,open:()=>{}}}) {
     const model=create({store,onSaved}),view=document.createElement('section');view.id='lettersView';view.hidden=true;
     view.setAttribute('aria-label','Write a letter');
-    view.innerHTML=`<div class="letter-chrome"><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton"><img src="assets/mailbox-access.png" class="mail-access-icon" alt="">Letters</button><button type="button" id="letterExport">Save as file</button></div>
+    view.innerHTML=`<div class="letter-chrome"><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton"><span class="letter-pill-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></span>Letters</button><button type="button" id="letterExport">Save as file</button></div>
       <div id="letterScroll" class="letter-stage"></div>
       <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" class="mailwin-btn mailwin-small" id="letterListClose">Back to the letter</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" class="mailwin-btn" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
     const windowUi=root.LRMailWindow.create({postcard:true,onIconChange:()=>schedule(),title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
@@ -91,6 +95,15 @@
     const head=windowUi.form.querySelector('.mailwin-head'),details=document.createElement('details');details.className='letter-details';
     const summary=document.createElement('summary');summary.textContent='Letter details';
     head.before(subjectRow,details);details.append(summary,head,windowUi.form.querySelector('.postcard-signature'),windowUi.foot);
+    const meta=document.createElement('div');meta.className='letter-meta';details.before(meta);meta.appendChild(details);
+    const deliverButton=document.createElement('button');deliverButton.type='button';deliverButton.className='letter-deliver';meta.appendChild(deliverButton);
+    const post=document.createElement('div');post.className='letter-post';post.setAttribute('aria-hidden','true');post.innerHTML='<span>POST</span>';card.prepend(post);
+    const foot=document.createElement('div');foot.className='letter-foot';const words=document.createElement('span'),stamp=document.createElement('span');words.className='letter-words';stamp.className='letter-stampdate';foot.append(words,stamp);windowUi.form.querySelector('.mailwin-page').after(foot);
+    const countWords=()=>{const n=(body.textContent||'').trim().split(/\s+/).filter(Boolean).length;words.textContent=`${n} word${n===1?'':'s'}`;};
+    function paintDeliver(){const key=model.get()?.deliverIn||'month';deliverButton.innerHTML='';const b=document.createElement('b');b.textContent='Deliver:';deliverButton.append(b,' '+DELIVER[key][0]);deliverButton.setAttribute('aria-label',`Deliver ${DELIVER[key][0].toLowerCase()}. Change delivery time`);}
+    deliverButton.onclick=()=>{const l=model.get();if(!l)return;const keys=Object.keys(DELIVER),next=keys[(keys.indexOf(l.deliverIn||'month')+1)%keys.length];safe(()=>{model.update({letterhead:l.letterhead,body:body.innerHTML,title:subject.value,deliverIn:next});message('Saved');});paintDeliver();};
+    const dateButton=windowUi.toolbar.querySelector('#letterDate');if(dateButton)dateButton.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Date stamp</span>';
+    const sendButton=windowUi.buttons['Send to future'];sendButton.innerHTML='<span>Send to future</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
     const exportButton=$('#letterExport');exportButton.setAttribute('aria-label','Save as file');exportButton.title='Save as file';
     exportButton.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/></svg>';
     let active=false,timer=null,lastRange=null,lastFocus=null,lastClack=-Infinity,lastBell=-Infinity,beforeLine=null,composing=false,compositionLine=null;
@@ -105,7 +118,9 @@
     function load() {
       const l=model.get();
       windowUi.postcard.setDate(l?cardDate(new Date(l.createdAt||Date.now())):'');
+      stamp.textContent=l?new Date(l.createdAt||Date.now()).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase():'';
       subject.value=l?.title || '';from.value=sender();windowUi.postcard.set(l?.cardIcon);body.innerHTML=sanitizeHTML(l?.body || '');
+      countWords();paintDeliver();deliverButton.disabled=!l;
       body.contentEditable=l?'true':'false';subject.disabled=from.disabled=to.disabled=!l;
       $('#letterExport').disabled=!l;windowUi.buttons.Save.disabled=!l;windowUi.buttons['Send to future'].disabled=!l;
       view.querySelectorAll('.letter-tools button').forEach(b=>b.disabled=!l);
@@ -167,6 +182,11 @@
         if(closeButton&&title){
           const header=document.createElement('div');header.className='letter-heading';header.dataset.controlHeader='true';title.before(header);header.append(title,closeButton);
           closeButton.id='letterClose';closeButton.onclick=()=>{if(!list.hidden){list.hidden=true;body.focus();}else close();};
+          if(!header.querySelector('.control-back')){const back=document.createElement('button');back.type='button';back.className='chipbtn sheet-icon control-back letter-back';back.setAttribute('aria-label','Back');back.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>';back.onclick=()=>{if(!list.hidden){list.hidden=true;body.focus();}else close();};header.prepend(back);}
+          const mail=document.createElement('button');mail.type='button';mail.className='chipbtn sheet-icon letter-mailbox';mail.id='letterMailbox';const n=Math.max(0,Number(mailbox.count())||0);
+          mail.setAttribute('aria-label',n?`Future mailbox, ${n} letter${n===1?'':'s'} waiting`:'Future mailbox');
+          mail.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>'+(n?`<span class="letter-badge" aria-hidden="true">${n>9?'9+':n}</span>`:'');
+          mail.onclick=()=>{close(false);mailbox.open();};closeButton.before(mail);
         }
       });
       active=true;view.hidden=false;list.hidden=true;details.open=false;
@@ -180,7 +200,7 @@
     windowUi.buttons['Send to future'].onclick=()=>{
       flush();const snap=model.get();
       if(!snap || !snap.body.replace(/<[^>]*>/g,'').trim()){message('Write a little first.');return;}
-      onSendToFuture({title:snap.title,body:snap.body,letterhead:snap.letterhead,cardIcon:snap.cardIcon,from:from.value,to:to.value.trim()||'Me'});
+      onSendToFuture({title:snap.title,body:snap.body,letterhead:snap.letterhead,cardIcon:snap.cardIcon,from:from.value,to:to.value.trim()||'Me',deliverOn:deliverDate(snap.deliverIn)});
     };
     from.addEventListener('change',()=>safe(()=>rememberSender(from.value)));
     subject.addEventListener('input',schedule);
@@ -198,6 +218,7 @@
     body.addEventListener('beforeinput',e=>{
       beforeLine=caretLine();if(/^(insertText|insertCompositionText|deleteCompositionText|insertParagraph|insertLineBreak|deleteContentBackward|deleteContentForward)$/.test(e.inputType))clack();
     });
+    body.addEventListener('input',countWords);
     body.addEventListener('input',e=>{
       schedule();remember();const after=caretLine(),t=performance.now();
       if(!composing && /^(insertText|insertParagraph|insertLineBreak)$/.test(e.inputType) && beforeLine!==null && after!==null && after>beforeLine+8 && t-lastBell>200){sound.typeBell();lastBell=t;}
@@ -226,6 +247,6 @@
     document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();});window.addEventListener('pagehide',flush);
     return {open,close,flush,model,view,get active(){return active;}};
   }
-  const api={KEY,day,dateStamp,escapeHTML,sanitizeHTML,create,htmlFile,saveFile,createView};
+  const api={KEY,DELIVER,deliverDate,day,dateStamp,escapeHTML,sanitizeHTML,create,htmlFile,saveFile,createView};
   if(typeof module!=='undefined' && module.exports)module.exports=api;else root.LRLetters=api;
 })(typeof window!=='undefined'?window:globalThis);

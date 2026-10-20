@@ -150,6 +150,7 @@
     function applyTypewriter(ui,snapshot){
       ui.body.value=plainLetter(snapshot.body);ui.body.readOnly=true;ui.fields.Subject.value=snapshot.title;
       if(snapshot.from)ui.fields.From.value=snapshot.from;if(snapshot.to)ui.fields.To.value=snapshot.to;ui.postcard.set(snapshot.cardIcon);
+      if(snapshot.deliverOn&&ui.due&&(!ui.due.min||snapshot.deliverOn>=ui.due.min))ui.due.value=snapshot.deliverOn;
       if(!ui.foot.querySelector('.mailwin-hint'))text(ui.foot,'Typewriter formatting will travel inside this envelope.','mailwin-hint');
       return snapshot;
     }
@@ -161,16 +162,27 @@
         const c=model.compose(),tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
         const ui=LRMailWindow.create({postcard:true,cardIcon:sealed?.cardIcon||c.cardIcon,title:'Email',icon:'envelope',label:'Compose a letter to future you',from:sealed?.from||c.from,to:sealed?.to||c.to,subject:sealed?.title||c.subject,body:sealed?'':c.body,placeholder:'Hey future me!',richText:false,deliverOn:{value:c.deliverOn,min:day(tomorrow)},status:c.draft&&!sealed?'Draft restored':'',buttons:[{label:'Save draft'},{label:'Send',className:'mailwin-send'}]});
         root.appendChild(ui.form);
+        mailHeading(root,mailboxEnvelopes);
         const {form:win,body,due,saved}=ui,from=ui.fields.From,to=ui.fields.To,title=ui.fields.Subject;
         body.rows=4;
         const snapshot=sealed?applyTypewriter(ui,sealed):null;
         const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,cardIcon:ui.postcard.icon,deliverOn:due.value});
         const toolbar=document.createElement('div');toolbar.className='future-mail-toolbar';toolbar.appendChild(saved);
-        const envelopes=button(toolbar,`Your envelopes · ${model.state.mail.length}`,()=>{model.saveDraft(state());model.setFrom(from.value);mailboxEnvelopes();});envelopes.setAttribute('aria-label','Your envelopes');
+        if(!saved.textContent)saved.textContent='Time capsule note';
+        const envelopes=button(toolbar,'',()=>{model.saveDraft(state());model.setFrom(from.value);mailboxEnvelopes();});envelopes.setAttribute('aria-label','Your envelopes');envelopes.className='chipbtn future-mail-envelopes';
+        const envCount=document.createElement('span');envCount.className='future-mail-count';envCount.setAttribute('aria-hidden','true');envCount.textContent=String(model.state.mail.length);envelopes.append(envCount,document.createTextNode('Your envelopes'));
         const subject=title.closest('label');subject.classList.add('future-mail-subject');subject.appendChild(win.querySelector('.postcard-stamp'));
         const details=document.createElement('details');details.className='future-mail-details';const summary=document.createElement('summary');summary.textContent='Letter details';const options=document.createElement('div');options.className='future-mail-options';options.append(win.querySelector('.mailwin-head'),ui.postcard.picker);details.append(summary,options);
+        const stampName=document.createElement('span');stampName.className='future-mail-stampname';const paintStamp=()=>{const icon=LRMailWindow.ICONS.find(i=>i.id===ui.postcard.icon);stampName.innerHTML='';const b=document.createElement('b');b.textContent='Stamp:';stampName.append(b,' '+(icon?.name||'Tulips'));};paintStamp();
+        ui.postcard.picker.addEventListener('click',()=>requestAnimationFrame(paintStamp));
         button(options,'Done',()=>{details.open=false;summary.focus();},'chipbtn future-mail-options-close');
-        win.prepend(toolbar,subject,details);
+        const meta=document.createElement('div');meta.className='future-mail-meta';meta.append(details,stampName);
+        win.prepend(toolbar,subject,meta);
+        // Quick delivery presets, a friendly date pill over the native picker, and the dock.
+        const quick=document.createElement('div');quick.className='future-mail-quick';const ql=document.createElement('span');ql.textContent='Quick set:';quick.appendChild(ql);
+        for(const [label,step] of [['+1 Week',d=>d.setDate(d.getDate()+7)],['+1 Month',d=>d.setMonth(d.getMonth()+1)],['+6 Months',d=>d.setMonth(d.getMonth()+6)],['+1 Year',d=>d.setFullYear(d.getFullYear()+1)]]){const b=button(quick,label,()=>{const d=new Date();d.setHours(12,0,0,0);step(d);due.value=day(d);due.dispatchEvent(new Event('input',{bubbles:true}));},'future-mail-preset');b.setAttribute('aria-label','Deliver '+label.replace('+','in ').toLowerCase());}
+        win.querySelector('.mailwin-page').after(quick);
+        const sendBtn=ui.buttons.Send;sendBtn.innerHTML='<span>Send</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
         const dock=document.createElement('div');dock.className='future-mail-dock';dock.append(ui.foot,ui.actions);win.appendChild(dock);
         // Invalid hidden address fields must be visible when native validation focuses them.
         win.addEventListener('invalid',e=>{if(details.contains(e.target))details.open=true;},true);
@@ -178,6 +190,15 @@
         ui.buttons['Save draft'].onclick=()=>run(()=>{model.saveDraft(state());model.setFrom(from.value);const t=new Date();saved.textContent=`Draft saved ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;});
         ui.buttons.Send.onclick=()=>run(()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value,cardIcon:ui.postcard.icon});sound.rustle();mailboxEnvelopes();});
       });
+    }
+    // The mailbox header: back, title, an envelope button with the unread count, and close.
+    function mailHeading(root,onEnvelopes){
+      const body=root.closest('#sheetBody'),title=body?.querySelector(':scope > h2'),closeButton=body?.querySelector('.sheet-close');if(!title||!closeButton)return;
+      const header=document.createElement('div');header.className='app-sheet-heading future-mail-heading';header.dataset.controlHeader='true';title.before(header);header.append(title,closeButton);
+      const svg=p=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+      const back=document.createElement('button');back.type='button';back.className='chipbtn sheet-icon control-back future-mail-back';back.setAttribute('aria-label','Back');back.innerHTML=svg('<path d="M19 12H5m6-6-6 6 6 6"/>');back.onclick=()=>closeButton.click();header.prepend(back);
+      const waiting=model.state.mail.filter(l=>l.status==='arrived'&&!l.read).length,env=document.createElement('button');env.type='button';env.className='chipbtn sheet-icon future-mail-inbox';env.id='mailInbox';
+      env.setAttribute('aria-label',`Your envelopes, ${waiting} unread`);env.innerHTML=svg('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>')+`<span class="future-mail-badge" aria-hidden="true">${waiting>9?'9+':waiting}</span>`;env.onclick=onEnvelopes;closeButton.before(env);
     }
     function mailboxEnvelopes(){
       model.poll(false);shell('Your envelopes','Letters stay sealed until their delivery date.',root=>{
