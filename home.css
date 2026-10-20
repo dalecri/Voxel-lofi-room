@@ -439,12 +439,21 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-forecast-low { color:var(--ink-dim); }
 @media(max-width:360px) { .space-today .today-forecast-card { gap:6px; padding:6px; border-radius:22px; } .today-forecast-current { padding:14px 10px; } .today-forecast-condition { gap:5px; font-size:12px; } .today-forecast-list { padding:10px 7px; } .today-forecast-list li { font-size:12px; gap:3px; } }
 
-/* Contextual return to the Control Centre, alongside the existing close action. */
+/* Every app opened from Control Centre has the same Back-left / Close-right row. */
 .control-back { display:grid; place-items:center; flex:none; width:44px; height:44px; min-width:44px; padding:0; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); }
 .control-back:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-.control-return-actions { display:flex; align-items:center; gap:6px; float:right; margin:0 0 8px 10px; }
-.control-return-actions .sheet-close { float:none; margin:0; }
-.control-back-overlay { position:absolute; left:20px; top:max(16px,env(safe-area-inset-top)); }
-.menu-actions .control-back { border:0; background:transparent; }
-.tea-top:has(.control-back) { grid-template-columns:auto auto minmax(0,1fr) 44px; gap:6px; }
-.letter-chrome .control-back { margin-right:6px; }
+.control-return-actions { display:flex; flex:none; align-items:center; justify-content:space-between; gap:12px; width:100%; box-sizing:border-box; margin:0 0 12px; clear:both; }
+.control-return-actions > :is(.sheet-close,.french-close,.library-close) { position:static; float:none; margin:0; }
+.control-return-overlay { position:absolute; left:20px; right:20px; top:max(16px,env(safe-area-inset-top)); width:auto; z-index:5; }
+.barnaby-chrome.has-control-return,.cozy-pop-head.has-control-return { flex-wrap:wrap; }
+.barnaby-chrome > .control-return-actions,.cozy-pop-head > .control-return-actions { flex-basis:100%; }
+#sheetBody.has-control-return .tea-top { grid-template-columns:1fr auto; }
+#sheetBody.has-control-return .french-chrome { padding-top:0; }
+#sheetBody.has-control-return:has(#lettersView) > .control-return-actions { position:static; margin:0 0 8px; }
+#sheetBody.has-control-return:has(#lettersView) > h2 { padding-right:0; }
+#sheetBody.has-control-return:has(> .menu-nav) > .control-return-actions { position:sticky; top:-16px; z-index:5; padding:8px 0; background:var(--panel-solid); }
+#sheetBody.has-control-return:has(> .menu-nav) > .menu-nav { top:44px; }
+
+.control-return-actions > .french-close { display:grid; place-items:center; flex:none; width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); font-size:28px; }
+
+@media(max-height:480px) { #sheetBody.has-control-return:has(#lettersView) > h2 { display:none; } }

@@ -19,7 +19,13 @@ with sync_playwright() as p:
  home=page.locator('#homeView');body=page.locator('#sheetBody');back=page.get_by_role('button',name='Back to Control Centre',exact=True)
  def open_home():page.click('#bHome');home.wait_for()
  def launch(app):
-  home.locator('.home-search').fill('');home.locator('[data-app='+app+']').click();back.wait_for()
+  home.locator('.home-search').fill('');home.locator('[data-app='+app+']').click();back.wait_for();assert_header()
+ def assert_header():
+  row=page.locator('.control-return-actions');assert row.count()==1
+  b=back.bounding_box();x=row.locator(':scope > :last-child').bounding_box();r=row.bounding_box()
+  assert abs(b['y']-x['y'])<=1 and b['x']<x['x'],(b,x)
+  assert abs(b['x']-r['x'])<=1 and abs(x['x']+x['width']-r['x']-r['width'])<=1
+  if body.locator(':scope > .menu-nav').count():assert row.bounding_box()['y']+row.bounding_box()['height']<=body.locator(':scope > .menu-nav').bounding_box()['y']+1
  def returned(app,query=''):
   back.click();home.wait_for();assert page.evaluate('__lr.home.active');assert home.locator('.home-search').input_value()==query;assert home.locator('[data-app='+app+']').evaluate('e=>e===document.activeElement');assert back.count()==0
  open_home();home.locator('.home-search').fill('French');home.locator('[data-app=french]').click();back.wait_for();assert page.evaluate('__lr.french.active');returned('french','French')
@@ -28,6 +34,9 @@ with sync_playwright() as p:
  # Sheet rebuilds and nested views keep the contextual button.
  launch('groceries');page.get_by_role('textbox',name='Add groceries',exact=True).fill('RETURN_MENU_MILK');page.get_by_role('button',name='Add to list',exact=True).click();back.wait_for();returned('groceries')
  launch('typewriter');page.locator('#letterBody').fill('RETURN_MENU_DRAFT');returned('typewriter');assert page.evaluate('__lr.letters.model.get().body.includes("RETURN_MENU_DRAFT")')
+ launch('french');page.evaluate('__lr.calendar.openDay("2026-10-20")');back.wait_for();page.evaluate('__lr.french.open()');back.wait_for();assert_header();assert page.get_by_role('button',name='Close French corner',exact=True).is_visible();returned('french')
+ launch('french');back.focus();page.keyboard.press('Tab');assert page.get_by_role('button',name='Close French corner',exact=True).evaluate('e=>e===document.activeElement');page.keyboard.press('Shift+Tab');assert back.evaluate('e=>e===document.activeElement');returned('french')
+ launch('typewriter');page.get_by_role('button',name='Letters',exact=True).click();back.focus();page.keyboard.press('Tab');assert page.locator('#letterClose').evaluate('e=>e===document.activeElement');returned('typewriter')
  launch('library');page.get_by_role('button',name='Open folder',exact=True).click();back.wait_for();returned('library')
  # Close/Escape keep their room destination; subsequent furniture tools get no Back.
  launch('french');page.get_by_role('button',name='Close French corner',exact=True).click();page.wait_for_function('!__lr.french.active && !document.querySelector(".control-back")');page.evaluate('__lr.french.open()');assert back.count()==0;page.keyboard.press('Escape');open_home()
@@ -41,8 +50,9 @@ with sync_playwright() as p:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':900})
-   for app in ['tea','french','sound','library']:
+   for app in ['tea','french','sound','library','typewriter']:
     launch(app);assert back.bounding_box()['width']>=44;assert back.bounding_box()['height']>=44;assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/control-back-{app}-{phase}-{width}.png');returned(app)
+ page.set_viewport_size({'width':390,'height':400});launch('typewriter');assert page.locator('#letterScroll').bounding_box()['height']>=40;assert page.locator('#letterSend').bounding_box()['y']+page.locator('#letterSend').bounding_box()['height']<=400;returned('typewriter');page.set_viewport_size({'width':1280,'height':900})
  # Every built-in Control Centre app supplies the same return path.
  for app in home.locator('[data-app]').evaluate_all('es=>es.map(e=>e.dataset.app).filter(id=>!id.startsWith("portal:"))'):
   launch(app);returned(app)

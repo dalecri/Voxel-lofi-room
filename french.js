@@ -467,8 +467,9 @@
       if (!active) return;
       if(event.key==='Escape'){event.preventDefault();close();event.stopImmediatePropagation();}
       else if(event.key==='Tab'){
-        const nodes=[...overlay.querySelectorAll('button,input')].filter(n=>!n.disabled&&n.getClientRects().length),first=nodes[0],last=nodes.at(-1);
-        if(first&&(!overlay.contains(doc.activeElement)||event.shiftKey&&doc.activeElement===first||!event.shiftKey&&doc.activeElement===last)){event.preventDefault();(event.shiftKey?last:first).focus();}
+        const scope=overlay.closest('#sheetBody')||overlay;
+        const nodes=[...scope.querySelectorAll('button,input')].filter(n=>!n.disabled&&n.getClientRects().length),first=nodes[0],last=nodes.at(-1);
+        if(first&&(!scope.contains(doc.activeElement)||event.shiftKey&&doc.activeElement===first||!event.shiftKey&&doc.activeElement===last)){event.preventDefault();(event.shiftKey?last:first).focus();}
       }
     }, true);
     return { open, close, mountToday, refresh: paint, overlay, get active() { return active; }, get model() { return model; } };

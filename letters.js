@@ -202,9 +202,9 @@
     window.addEventListener('keydown',e=>{
       if(!active)return;
       if(e.key==='Tab'){
-        const scope=list.hidden?(view.closest('#sheetBody')||view):list,items=[...scope.querySelectorAll('button:not(:disabled),input,[contenteditable="true"],[contenteditable="plaintext-only"]')].filter(n=>n.getClientRects().length);
+        const scope=list.hidden?(view.closest('#sheetBody')||view):list,header=list.hidden?[]:[...(view.closest('#sheetBody')?.querySelectorAll('.control-return-actions button')||[])],items=[...header,...scope.querySelectorAll('button:not(:disabled),input,[contenteditable="true"],[contenteditable="plaintext-only"]')].filter(n=>n.getClientRects().length);
         const first=items[0],last=items[items.length-1];
-        if(items.length && (e.shiftKey && (document.activeElement===first || !scope.contains(document.activeElement)) || !e.shiftKey && (document.activeElement===last || !scope.contains(document.activeElement)))){e.preventDefault();(e.shiftKey?last:first).focus();}
+        if(items.length && (e.shiftKey && (document.activeElement===first || !items.includes(document.activeElement)) || !e.shiftKey && (document.activeElement===last || !items.includes(document.activeElement)))){e.preventDefault();(e.shiftKey?last:first).focus();}
       }
       if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();if(!list.hidden){list.hidden=true;body.focus();}else close();return;}
       if(list.hidden && (e.ctrlKey || e.metaKey) && !e.altKey && ['b','i','u'].includes(e.key.toLowerCase())){e.preventDefault();e.stopImmediatePropagation();format({b:'bold',i:'italic',u:'underline'}[e.key.toLowerCase()]);}
