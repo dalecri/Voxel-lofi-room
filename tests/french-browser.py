@@ -38,6 +38,16 @@ with sync_playwright() as p:
  assert page.get_by_role('button',name='Start studying',exact=True).is_disabled()
  page.get_by_label('First words, 15 cards',exact=True).check()
  page.get_by_role('button',name='Start studying',exact=True).click()
+ assert page.get_by_role('button',name='Skip',exact=True).count()==0
+ for name in ['Still learning','Mark as learned']:
+  control=page.locator('#frenchView').get_by_role('button',name=name,exact=True)
+  assert control.is_visible() and control.locator('svg').count()==1
+  assert control.evaluate('e=>e.getBoundingClientRect().width===44&&e.getBoundingClientRect().height===44')
+ # Both controls work immediately, without requiring a flip first.
+ for name,status in [('Still learning','learning'),('Mark as learned','known')]:
+  word_id=page.evaluate('__lr.french.model.view().card.id')
+  page.locator('#frenchView').get_by_role('button',name=name,exact=True).click()
+  assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)==status
  graded=[]
  for i in range(5):
   word=page.locator('.french-word').inner_text()
@@ -50,7 +60,7 @@ with sync_playwright() as p:
   assert page.locator('.french-translation').text_content()==back['exEn']
   assert page.locator('.french-say').text_content()==back['say']
   assert page.locator('.french-ipa').text_content()==back['ipa']
-  name='Still learning' if i%2 else 'Knew it'
+  name='Still learning' if i%2 else 'Mark as learned'
   page.get_by_role('button',name=name,exact=True).click()
   graded.append({'word':word,'status':'learning' if i%2 else 'known'})
  saved=page.evaluate('JSON.parse(localStorage.getItem("lr.french.progress"))')

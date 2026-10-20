@@ -276,10 +276,13 @@
     cardBtn.appendChild(flip);
     stage.appendChild(cardBtn);
     const actions = el('div', 'french-actions');
-    const skipBtn = el('button', 'french-btn french-skip', 'Skip');
-    const learnBtn = el('button', 'french-btn french-learn', 'Still learning');
-    const knewBtn = el('button', 'french-btn french-knew', 'Knew it');
-    [skipBtn, learnBtn, knewBtn].forEach(btn => { btn.type = 'button'; actions.appendChild(btn); });
+    const learnBtn = el('button', 'french-btn french-learn');
+    const knewBtn = el('button', 'french-btn french-knew');
+    for(const [btn,label,path] of [[learnBtn,'Still learning','m6 6 12 12M18 6 6 18'],[knewBtn,'Mark as learned','m5 12 4 4L19 6']]){
+      btn.type='button';btn.setAttribute('aria-label',label);btn.title=label;
+      btn.innerHTML=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+      actions.appendChild(btn);
+    }
     study.append(palWrap, stage, actions);
     const done = el('section', 'french-done');
     const donePalWrap = el('div', 'french-pal-wrap');
@@ -366,7 +369,6 @@
       backIpa.hidden = !shown?.ipa;
       backIpa.textContent = shown?.ipa || '';
       cardBtn.setAttribute('aria-label', state.flipped ? `${state.card.fr}, showing English` : `Flip ${state.card?.fr || 'card'}`);
-      learnBtn.hidden = knewBtn.hidden = !state.flipped;
     }
     function paint(reaction) {
       overlay.classList.toggle('is-reduced', !!reduced() || root.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
@@ -393,7 +395,11 @@
     function grade(action) {
       const before = model.view();
       let state;
-      try { state = model.act(action); }
+      try {
+        // Like Today's quick review, familiar words can be graded without an extra flip.
+        if((action==='known'||action==='learning')&&!before.flipped){model.act('flip');before.flipped=true;}
+        state = model.act(action);
+      }
       catch (e) { progress.textContent = e.message; return; }
       if (action === 'known' && before.flipped) { try { onCorrect(); } catch (e) { /* the card still moves on */ } paint('happy'); }
       else paint();
@@ -454,7 +460,6 @@
     startBtn.onclick = () => { if (startBtn.disabled) return; try { model.start(checkedDecks()); choosingDecks=false; } catch (e) { progress.textContent = e.message; return; } paint(); cardBtn.focus(); };
     chooseDecks.onclick=()=>{model.close();choosingDecks=true;paint();deckList.querySelector('input')?.focus();};
     cardBtn.onclick = () => { if (!model.view().flipped) grade('flip'); };
-    skipBtn.onclick = () => grade('skip');
     learnBtn.onclick = () => grade('learning');
     knewBtn.onclick = () => grade('known');
     againBtn.onclick = () => { try { model.start(); } catch (e) { progress.textContent = e.message; return; } paint(); cardBtn.focus(); };

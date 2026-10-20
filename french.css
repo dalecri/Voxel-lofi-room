@@ -66,14 +66,14 @@
 .french-translation { color: rgba(74, 53, 48, .75); }
 .french-say { font-weight: 800; letter-spacing: .02em; }
 .french-ipa { font-size: 12px; }
-.french-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.french-actions { display:flex; justify-content:center; gap:10px; margin-top:14px; }
 #frenchView button.french-btn {
   flex: 1 1 120px; min-height: 46px; padding: 10px 12px; text-align: center;
   border: 1px solid var(--line); border-radius: 14px; background: var(--chip); color: var(--ink);
   font: 800 15px var(--font);
 }
 #frenchView button.french-btn:disabled { opacity: .45; }
-#frenchView button.french-knew { background: var(--accent); border-color: transparent; color: #fffaf3; }
+#frenchView .french-actions button.french-btn { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; min-height:44px; padding:0; border-radius:50%; }
 #frenchView button.french-start, #frenchView button.french-again { width: 100%; flex-basis: 100%; }
 .french-done { text-align: center; padding-top: 12px; }
 .french-done-title { margin: 8px 0 8px; font-family: var(--display); font-weight: 600; font-size: 28px; }
@@ -97,7 +97,6 @@ button.french-today small { font-size: 14px; font-weight: 700; color: var(--ink-
 }
 @media (max-width: 380px) {
   .french-word, .french-meaning { font-size: 28px; }
-  .french-actions { flex-direction: column; }
   #frenchView button.french-btn { flex-basis: auto; }
 }
 
