@@ -145,7 +145,7 @@
 #sheetBody .calendar-date-label { display:flex; align-items:center; gap:12px; }
 /* Letters to future you, lavender edition: a floating card in Plus Jakarta Sans. Same palette day and night. */
 #sheetBody:has(.future-mail) { --fm-bg:#d4bdfb; --fm-surface:#c4aaf6; --fm-card:#bca0ef; --fm-light:#dccafd; --fm-edge:#a98ae6; --fm-ink:#22103d; --fm-muted:#6a4fa3; --fm-dark:#22103c; --fm-on-dark:#d8c4fd; --fm-font:'Plus Jakarta Sans',Nunito,sans-serif;
-  left:12px; right:12px; bottom:calc(var(--sab,0px) + 12px); max-width:560px; height:min(88dvh,800px); max-height:none; margin:0 auto; padding:22px 22px 20px; border-radius:40px; background:var(--fm-bg); color:var(--fm-ink); font-family:var(--fm-font); }
+  left:0; right:0; bottom:0; max-width:560px; height:min(88dvh,800px); max-height:none; margin:0 auto; padding:22px 22px calc(var(--sab,0px) + 20px); border-radius:36px 36px 0 0; background:var(--fm-bg); color:var(--fm-ink); font-family:var(--fm-font); }
 #sheetBody:has(.future-mail) > .grab { display:none; }
 #sheetBody .future-mail-heading { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:10px; margin:0 0 14px; }
 #sheetBody:has(.future-mail) .future-mail-heading h2 { grid-column:2; grid-row:1; margin:0; text-align:center; color:var(--fm-ink); font:800 clamp(18px,4.8vw,23px)/48px var(--fm-font); letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -197,7 +197,7 @@
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard button.mailwin-send { display:inline-flex; align-items:center; justify-content:center; gap:10px; border-color:var(--fm-dark); background:var(--fm-dark); color:var(--fm-on-dark); box-shadow:0 6px 14px #1b0a3a33; }
 #sheetBody:has(.future-mail) .future-mail .mailwin-saved:empty::before { display:none; }
 #sheetBody:has(.future-mail) .future-mail :is(button,summary):focus-visible { outline:3px solid var(--fm-dark); outline-offset:3px; }
-@media(max-width:420px) { #sheetBody:has(.future-mail) { left:8px; right:8px; padding:18px 16px 16px; border-radius:34px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > :is(.future-mail-subject,.future-mail-meta,.mailwin-page,.future-mail-quick) { padding-left:18px; padding-right:18px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-subject { padding-right:96px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-meta { padding-right:18px; flex-wrap:wrap; gap:4px 14px; } }
+@media(max-width:420px) { #sheetBody:has(.future-mail) { padding:18px 16px calc(var(--sab,0px) + 16px); border-radius:32px 32px 0 0; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > :is(.future-mail-subject,.future-mail-meta,.mailwin-page,.future-mail-quick) { padding-left:18px; padding-right:18px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-subject { padding-right:96px; } #sheetBody:has(.future-mail) .future-mail .pixel-postcard > .future-mail-meta { padding-right:18px; flex-wrap:wrap; gap:4px 14px; } }
 #sheetBody:has(.future-mail) .future-mail .mailwin-due .compact-date { flex:1; justify-content:space-between; }
 #sheetBody:has(.future-mail) .future-mail .compact-date-value { color:var(--fm-ink); font:800 19px/1 var(--fm-font); letter-spacing:-.01em; text-transform:none; }
 #sheetBody:has(.future-mail) .future-mail .compact-date-target { border-radius:50%; background:var(--fm-light); box-shadow:none; color:var(--fm-ink); }
@@ -209,3 +209,5 @@
 #sheetBody:has(.future-mail) .future-mail button.future-mail-preset { font-size:12.5px; white-space:nowrap; min-width:0; }
 .future-mail-quick > span { font-size:11px; white-space:nowrap; }
 @media(max-width:420px) { #sheetBody .future-mail-heading { grid-template-columns:44px minmax(0,1fr) auto; gap:8px; } #sheetBody:has(.future-mail) .future-mail-heading .sheet-icon { width:44px; height:44px; min-height:44px; } #sheetBody .future-mail-heading > .future-mail-inbox { margin-right:52px; } #sheetBody:has(.future-mail) .future-mail-heading h2 { font-size:clamp(15px,4.3vw,20px); } }
+/* Anchored to the bottom edge like Control Center; it still slides up. */
+#sheetBody:has(.future-mail) { left:0; right:0; bottom:0; }
