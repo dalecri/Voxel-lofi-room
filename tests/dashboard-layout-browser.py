@@ -60,7 +60,8 @@ with sync_playwright() as p:
     assert body.evaluate('e=>e.scrollTop')==scroll
     r=body.bounding_box();n=page.locator('.menu-nav').bounding_box()
     header_images.append(Image.open(BytesIO(page.screenshot(clip={'x':r['x']+1,'y':r['y']+1,'width':r['width']-14,'height':n['y']+n['height']+5-r['y']}))).convert('RGB'))
-   assert ImageChops.difference(*header_images).getbbox() is None,(phase,width,'content leaked into nav header')
+   # Ignore sub-visible blur noise (a few levels out of 255); leaked red/cyan stripes differ by far more.
+   assert ImageChops.difference(*header_images).point(lambda v:255 if v>12 else 0).getbbox() is None,(phase,width,'content leaked into nav header')
    page.locator('#nav-scroll-probe').evaluate('e=>e.remove()')
    body.evaluate('e=>e.scrollTop=0');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/dashboard-layout-{phase}-{width}.png');nav=page.locator('.menu-nav');assert nav.locator('.menu-actions').bounding_box()['x']>=tabs.bounding_box()['x']+tabs.bounding_box()['width']-1;assert nav.evaluate('e=>e.scrollWidth<=e.clientWidth');assert nav.evaluate('e=>getComputedStyle(e).backdropFilter.includes("blur(18px)")');assert nav.evaluate('e=>{const s=getComputedStyle(e);return s.borderTopWidth==="1px"&&s.backgroundImage.includes("linear-gradient")&&s.boxShadow.includes("inset")}');assert tabs.evaluate('e=>e.scrollWidth<=e.clientWidth+1')
  page.get_by_role('tab',name='Today',exact=True).click();body.evaluate('e=>e.scrollTop=260');page.screenshot(path='/tmp/dashboard-nav-glass-scrolled.png');assert page.locator('.menu-nav').evaluate('e=>getComputedStyle(e).position')=='sticky'

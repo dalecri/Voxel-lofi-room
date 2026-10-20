@@ -22,12 +22,14 @@ with sync_playwright() as p:
   home.locator('.home-search').fill('');home.locator('[data-app='+app+']').click();back.wait_for();assert_header()
  def assert_header():
   row=page.locator('.control-return-actions,[data-control-header].has-control-return');assert row.count()==1
-  b=back.bounding_box();x=row.locator('.sheet-close,.french-close,.library-close,.barnaby-close,.cozy-pop-close,#shopClose,#crownClose,#photoClose').first.bounding_box();r=row.bounding_box()
+  # One layout snapshot: a sheet whose content settles (e.g. captions loading) shifts every box together.
+  box=page.evaluate("""()=>{const row=document.querySelector('.control-return-actions,[data-control-header].has-control-return'),r=e=>{if(!e)return null;const b=e.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height}};
+   const nav=document.querySelector('#sheetBody > .menu-nav');return {b:r(document.querySelector('button[aria-label="Back to Control Centre"]')),x:r(row.querySelector('.sheet-close,.french-close,.library-close,.barnaby-close,.cozy-pop-close,#shopClose,#crownClose,#photoClose')),r:r(row),t:r(row.querySelector('h2')),nav:r(nav)}}""")
+  b,x,r,t=box['b'],box['x'],box['r'],box['t']
   assert abs(b['y']-x['y'])<=1 and b['x']<x['x'],(b,x)
   assert abs(b['x']-r['x'])<=1 and abs(x['x']+x['width']-r['x']-r['width'])<=1
-  if row.locator('h2').count():
-   t=row.locator('h2').bounding_box();assert abs(t['x']+t['width']/2-r['x']-r['width']/2)<=1;assert abs(t['y']+t['height']/2-b['y']-b['height']/2)<=1
-  if body.locator(':scope > .menu-nav').count():assert row.bounding_box()['y']+row.bounding_box()['height']<=body.locator(':scope > .menu-nav').bounding_box()['y']+1
+  if t:assert abs(t['x']+t['width']/2-r['x']-r['width']/2)<=1;assert abs(t['y']+t['height']/2-b['y']-b['height']/2)<=1
+  if box['nav']:assert r['y']+r['height']<=box['nav']['y']+1
  def returned(app,query=''):
   back.click();home.wait_for();assert page.evaluate('__lr.home.active');assert home.locator('.home-search').input_value()==query;assert home.locator('[data-app='+app+']').evaluate('e=>e===document.activeElement');assert back.count()==0
  open_home();page.wait_for_function('[...document.querySelectorAll("[data-app=mailbox] .mail-access-icon,[data-app=letters] .mail-access-icon")].length===2 && [...document.querySelectorAll("[data-app=mailbox] .mail-access-icon,[data-app=letters] .mail-access-icon")].every(i=>i.complete&&i.naturalWidth>0)');home.locator('.home-search').fill('French');home.locator('[data-app=french]').click();back.wait_for();assert page.evaluate('__lr.french.active');returned('french','French')
