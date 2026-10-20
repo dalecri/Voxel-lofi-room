@@ -62,26 +62,43 @@
     function clapButton(type,label){const b=el('button','press-clap');b.type='button';const paint=()=>{b.textContent=`👏 ${press.claps(type)||''}`.trim();b.setAttribute('aria-pressed',String(press.clapped('brief',type)));};b.setAttribute('aria-label',`Clap for ${label.toLowerCase()} stories`);paint();b.onclick=()=>{try{press.clap('brief',type);paint();}catch(e){notice(e.message);}};return b;}
     const longDate=d=>new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
     const shortDate=d=>new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-    function open(key){try{model.ensure();const current=model.open(key);if(!current)return;onRead();try{sound.flip();}catch(e){/* optional paper rustle */}sheet('Daily Brief','Your morning paper, kept on this device. Nothing leaves your room.',h=>{
-      const root=h('div','drift-reader');
-      function section(value){const type=value.type||'behind',label=LABEL[type]||'',cls='drift-section'+(type==='saga'?' drift-column':'')+(value.lead?' brief-lead':'')+(type==='forecast'?' brief-today':'')+(press&&type!=='closing'&&!value.lead&&press.isShrunk(type)?' is-shrunk':'');
-        const block=el('section',cls);block.dataset.type=type;if(label&&type!=='closing'&&type!=='forecast')block.appendChild(el('p','press-kicker',label));
-        block.appendChild(el(value.lead?'h3':'h3','',value.title));if(value.body)block.appendChild(el('p',type==='forecast'?'brief-today-line':'',value.body));
-        if(Array.isArray(value.items)&&value.items.length){const list=el('ul','brief-items');for(const it of value.items){const li=el('li');li.append(el('b','',it.label),document.createTextNode(' '+it.value));list.appendChild(li);}block.appendChild(list);}
-        if(value.sceneId){const scene=scenes().find(s=>s.id===value.sceneId);if(scene){const b=el('button','drift-memory','Open this scene'),src=scene.decor&&thumb({...scene.decor,id:scene.id});b.type='button';if(src){const img=document.createElement('img');img.src=src;img.alt='';b.prepend(img);}b.onclick=()=>openScene(scene);block.appendChild(b);}}
-        if(press&&label&&type!=='closing')block.appendChild(clapButton(type,label));return block;}
-      function paint(value){root.replaceChildren();const paper=el('article','drift-paper'+(value.slim?' is-slim':''));paper.setAttribute('aria-label','Daily Brief');
-        paper.append(el('p','drift-eyebrow',value.brief?'DELIVERED TO YOUR DOOR THIS MORNING':'FROM THE WEEKLY ARCHIVE'),el('h2','drift-masthead','Daily Brief'),
-          el('p','drift-edition',value.brief?`${longDate(value.date)} · No. ${value.no}${value.sunday?' · Sunday edition':''}`:`${value.week} · The week of ${value.from} to ${value.through}`));
+    const md=d=>new Date(d+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const svg=(path,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+    const MASCOT='<svg viewBox="0 0 48 32" width="44" height="30" aria-hidden="true"><circle cx="14" cy="13" r="10" fill="currentColor"/><circle cx="34" cy="13" r="10" fill="currentColor"/><path d="M19 26q5 4 10 0" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+    function chipLabel(saved,today){if(!saved.brief)return saved.week;const yesterday=day(new Date(new Date(today+'T12:00').getTime()-DAY));return saved.date===today?`Today • ${md(saved.date)}`:saved.date===yesterday?`Yesterday • ${md(saved.date)}`:md(saved.date);}
+    function open(key){try{model.ensure();const current=model.open(key);if(!current)return;onRead();try{sound.flip();}catch(e){/* optional paper rustle */}sheet('Daily brief','Your morning paper, kept on this device. Nothing leaves your room.',h=>{
+      const root=h('div','drift-reader'),host=root.closest('#sheetBody'),title=host?.querySelector(':scope > h2'),closeButton=host?.querySelector('.sheet-close'),note=host?.querySelector(':scope > .muted');
+      let showAll=false;
+      if(note){note.classList.add('brief-note');note.innerHTML=svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',16);note.append(el('span','','Your morning paper, kept on this device. Nothing leaves your room.'));}
+      if(title&&closeButton){const header=el('div','brief-heading');header.dataset.controlHeader='true';title.before(header);header.append(title,closeButton);
+        if(!header.querySelector('.control-back')){const back=el('button','chipbtn sheet-icon control-back brief-back');back.type='button';back.setAttribute('aria-label','Back');back.innerHTML=svg('<path d="M19 12H5m6-6-6 6 6 6"/>');back.onclick=()=>closeButton.click();header.prepend(back);}
+        const papers=el('button','chipbtn sheet-icon brief-papers');papers.type='button';papers.id='briefPapers';const n=model.issues.length;papers.setAttribute('aria-label',`Past briefs, ${n} saved`);
+        papers.innerHTML=svg('<rect x="3" y="4" width="15" height="16" rx="2"/><path d="M18 8h2a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H6M7 8h7M7 12h7M7 16h4"/>')+(n?`<span class="brief-badge" aria-hidden="true">${n>9?'9+':n}</span>`:'');
+        papers.onclick=()=>{showAll=true;paint(root.__value);root.querySelector('.brief-past')?.scrollIntoView({block:'nearest',behavior:'smooth'});};closeButton.before(papers);}
+      function section(value){const type=value.type||'behind',label=LABEL[type]||'',cls='drift-section brief-card'+(type==='saga'?' drift-column':'')+(value.lead?' brief-lead':'')+(type==='forecast'?' brief-today':'')+(press&&type!=='closing'&&!value.lead&&press.isShrunk(type)?' is-shrunk':'');
+        const block=el('section',cls);block.dataset.type=type;
+        if(label&&type!=='closing'){const k=el('div','brief-kicker');k.appendChild(el('p','press-kicker',label));if(type==='forecast'){const icon=el('span','brief-kicker-icon','🏠');icon.setAttribute('aria-hidden','true');k.appendChild(icon);}block.appendChild(k);}
+        if(type!=='forecast')block.appendChild(el('h3','',value.title));if(value.body)block.appendChild(el('p',type==='forecast'?'brief-today-line':'brief-body',value.body));
+        const foot=el('div','brief-card-foot');
+        if(Array.isArray(value.items)&&value.items.length){const list=el('ul','brief-items');for(const it of value.items){const li=el('li');li.append(el('b','',it.label),el('span','',it.value));list.appendChild(li);}foot.appendChild(list);}
+        if(value.sceneId){const scene=scenes().find(s=>s.id===value.sceneId);if(scene){const b=el('button','drift-memory','Open this scene'),src=scene.decor&&thumb({...scene.decor,id:scene.id});b.type='button';if(src){const img=document.createElement('img');img.src=src;img.alt='';b.prepend(img);}b.onclick=()=>openScene(scene);foot.appendChild(b);}}
+        if(press&&label&&type!=='closing')foot.appendChild(clapButton(type,label));if(foot.children.length)block.appendChild(foot);return block;}
+      function paint(value){root.__value=value;root.replaceChildren();const paper=el('article','drift-paper brief-paper'+(value.slim?' is-slim':''));paper.setAttribute('aria-label','Daily Brief');
+        const top=el('div','brief-top'),eyebrow=el('p','drift-eyebrow',value.brief?'Delivered to your door':'From the weekly archive');top.appendChild(eyebrow);if(value.brief)top.appendChild(el('span','brief-no',`No. ${value.no}`));
+        const titleRow=el('div','brief-title-row'),titles=el('div','brief-titles');titles.append(el('h2','drift-masthead','Daily Brief'),el('p','drift-edition',value.brief?`${longDate(value.date)}${value.sunday?' · Sunday edition':''}`:`${value.week} · The week of ${value.from} to ${value.through}`));
+        const mascot=el('span','brief-mascot');mascot.innerHTML=MASCOT;titleRow.append(titles,mascot);paper.append(top,titleRow);
         const daily=new Set(['streak','first','record','drought','diary','forecast']),front=value.sections.filter(s=>value.brief&&daily.has(s.type)),columns=value.sections.filter(s=>s.type==='saga'),rest=value.sections.filter(s=>!front.includes(s)&&s.type!=='saga');
-        if(value.slim)paper.appendChild(el('p','brief-slim','A quiet night in the house. A slim brief today.'));
-        if(front.length){const top=el('div','brief-front');const lead=front.find(s=>s.lead),today=front.find(s=>s.type==='forecast');if(lead)top.appendChild(section(lead));if(today)top.appendChild(section(today));paper.appendChild(top);
-          const others=front.filter(s=>s!==lead&&s!==today);if(others.length){const cols=el('div','drift-columns');for(const s of others)cols.appendChild(section(s));paper.appendChild(cols);}}
+        if(value.slim)paper.appendChild(el('p','brief-slim','“A quiet night in the house. A slim brief today.”'));
+        const lead=front.find(s=>s.lead),today=front.find(s=>s.type==='forecast');if(lead)paper.appendChild(section(lead));if(today)paper.appendChild(section(today));
+        const others=front.filter(s=>s!==lead&&s!==today);if(others.length){const cols=el('div','drift-columns');for(const s of others)cols.appendChild(section(s));paper.appendChild(cols);}
         if(columns.length){const desk=el('section','drift-pets');desk.append(el('h3','drift-desk','The pet columns'));const grid=el('div','drift-pet-grid');for(const c of columns)grid.appendChild(section(c));desk.appendChild(grid);paper.appendChild(desk);}
         if(rest.length){if(value.sunday)paper.appendChild(el('h3','brief-weekly','The week, folded'));const cols=el('div','drift-columns');for(const s of rest)cols.appendChild(section(s));paper.appendChild(cols);}
         root.appendChild(paper);
         if(press&&keyOf(value)===keyOf(model.latest||{}))try{press.seen('brief',keyOf(value),value.sections.map(s=>s.type).filter(t=>t&&t!=='closing'));}catch(e){/* preferences are optional */}
-        const past=el('section','drift-archive');past.append(el('h3','','Past briefs'));for(const saved of model.issues.slice(0,14)){const label=saved.brief?shortDate(saved.date):saved.week,b=el('button','chipbtn',label+(keyOf(saved)===keyOf(value)?' · reading':''));b.type='button';b.setAttribute('aria-pressed',String(keyOf(saved)===keyOf(value)));b.onclick=()=>{try{const next=model.open(keyOf(saved));onRead();paint(next);}catch(e){notice(e.message);}};past.appendChild(b);}root.appendChild(past);}
+        const past=el('section','brief-past'),pastHead=el('div','brief-past-head'),viewAll=el('button','brief-viewall',showAll?'Show less':'View all →');viewAll.type='button';viewAll.setAttribute('aria-expanded',String(showAll));viewAll.onclick=()=>{showAll=!showAll;paint(value);};
+        pastHead.append(el('h3','','Past briefs'),viewAll);const chips=el('div','drift-archive'+(showAll?' is-all':''));const today2=day(new Date());
+        for(const saved of model.issues.slice(0,showAll?60:14)){const on=keyOf(saved)===keyOf(value),b=el('button','brief-chip',chipLabel(saved,today2));b.type='button';if(on&&saved.brief)b.appendChild(el('small','',`No. ${saved.no}`));b.setAttribute('aria-pressed',String(on));b.onclick=()=>{try{const next=model.open(keyOf(saved));onRead();paint(next);}catch(e){notice(e.message);}};chips.appendChild(b);}
+        past.append(pastHead,chips);root.appendChild(past);}
       paint(current);
     });}catch(e){notice(e.message);}}
     return {open};

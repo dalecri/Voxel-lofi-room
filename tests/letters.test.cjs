@@ -15,7 +15,7 @@ test('a subject title saves on the letter and the letter store stays letters-onl
  f.model.update({letterhead:a.letterhead,body:'<b>hi</b>',title:'  For later  '});
  const saved=f.reload().get();
  assert.equal(saved.title,'For later');
- assert.deepEqual(Object.keys(saved).sort(),['body','cardIcon','createdAt','id','letterhead','title','updatedAt']);
+ assert.deepEqual(Object.keys(saved).sort(),['body','cardIcon','createdAt','deliverIn','id','letterhead','title','updatedAt']);
  f.model.update({letterhead:saved.letterhead,body:saved.body});
  assert.equal(f.model.get().title,'For later');
  f.model.update({letterhead:saved.letterhead,body:'x',title:'   '});
@@ -50,4 +50,12 @@ test('writing gain stays quiet through ducking, restores on close, and typing ef
  s.setWriting(true);assert.equal(calls.at(-1)[0],.32);s.duck();assert.equal(calls.at(-1)[0],.32);assert.ok(s.music);
  s.setWriting(false);assert.equal(calls.at(-1)[0],.9);s.music=false;s.setWriting(true);assert.equal(calls.at(-1)[0],0);
  s.on=false;s.tone=()=>assert.fail('muted typing tone');s.soft=()=>assert.fail('muted carriage noise');s.clack(1,false);s.typeBell();s.carriageReturn();
+});
+
+test('each letter keeps its delivery choice and Send to future gets a real local date',()=>{
+ const f=fixture(),a=f.model.add('Room');assert.equal(f.model.get().deliverIn,'month');
+ f.model.update({letterhead:a.letterhead,body:'x',deliverIn:'week'});assert.equal(f.reload().get().deliverIn,'week');
+ f.model.update({letterhead:a.letterhead,body:'x',deliverIn:'<bad>'});assert.equal(f.model.get().deliverIn,'week');
+ const L=require('../letters.js'),from=new Date(2026,0,31,9);
+ assert.deepEqual(['tomorrow','week','month','year'].map(k=>L.deliverDate(k,from)),['2026-02-01','2026-02-07','2026-03-03','2027-01-31']);
 });

@@ -47,7 +47,7 @@
     }
     function add(roomName) {
       const date=now(),id=`letter-${date.getTime().toString(36)}-${state.next++}`;
-      state.letters.unshift({id,title:'Untitled letter',letterhead:`${roomName} · ${dateStamp(date)}`,cardIcon:'tulips',body:'',createdAt:date.getTime(),updatedAt:date.getTime()});
+      state.letters.unshift({id,title:'Untitled letter',letterhead:`${roomName} · ${dateStamp(date)}`,cardIcon:'tulips',deliverIn:'month',body:'',createdAt:date.getTime(),updatedAt:date.getTime()});
       state.current=id;persist();return {...get()};
     }
     function update({letterhead,body,title,cardIcon,deliverIn}) {
