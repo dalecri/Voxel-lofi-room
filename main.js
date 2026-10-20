@@ -299,16 +299,52 @@ function startLofiRooms() {
   $('#bEditAppShortcut').onclick=appShortcutSheet;
   updateAppShortcut();
   window.addEventListener('storage',e=>{if(!e.key || [APP_SHORTCUT_KEY,'lr.portals'].includes(e.key))updateAppShortcut();});
+  // Return navigation exists only for the lifetime of an app launched from Home.
+  let controlReturn=null;
+  function clearControlReturn(){if(!controlReturn)return;controlReturn.observer.disconnect();clearTimeout(controlReturn.timeout);controlReturn.button.remove();controlReturn=null;}
+  function controlReturnTarget(){
+    if($('#homeView'))return null;
+    if(library.active)return {host:library.view,overlay:true};
+    if(letters.active)return {host:letters.view.querySelector('#letterList:not([hidden]) .letter-list-top') || letters.view.querySelector('.letter-chrome')};
+    if(barnaby.active)return {host:document.querySelector('.barnaby-chrome')};
+    if($('#photo').classList.contains('open'))return {host:$('#photo .row2')};
+    if(cozyOpen())return {host:cozyPop.querySelector('.cozy-pop-head')};
+    if(!$('#sheet').classList.contains('open'))return null;
+    const body=$('#sheetBody'),close=body.querySelector('.french-close,.sheet-close,#shopClose,#crownClose');
+    if(!close)return null;
+    return {host:close.parentElement,close,floating:close.parentElement===body};
+  }
+  function beginControlReturn(run,restore){
+    clearControlReturn();
+    const button=document.createElement('button');button.type='button';button.className='control-back';button.setAttribute('aria-label','Back to Control Centre');button.title='Back to Control Centre';button.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg>';
+    const state={button,entered:false,observer:null,timeout:null};
+    const sync=()=>{
+      if(controlReturn!==state)return;
+      const target=controlReturnTarget();
+      if(!target?.host){if(state.entered)clearControlReturn();return;}
+      state.entered=true;clearTimeout(state.timeout);
+      if(button.parentElement===target.host)return;
+      button.classList.toggle('control-back-overlay',!!target.overlay);
+      if(target.floating){const row=document.createElement('div');row.className='control-return-actions';target.host.insertBefore(row,target.close);row.append(button,target.close);}
+      else target.host.insertBefore(button,target.close || target.host.firstChild);
+    };
+    button.onclick=()=>{clearControlReturn();closeCozyMoments(false);restore();};
+    state.observer=new MutationObserver(sync);controlReturn=state;state.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','aria-hidden']});
+    // Camera snapshots arrive asynchronously; wait for their existing preview.
+    state.timeout=setTimeout(()=>{if(controlReturn===state&&!state.entered)clearControlReturn();},15000);
+    try{run();sync();}catch(e){clearControlReturn();throw e;}
+  }
   const home = LRHome.createView({
     sheet:codeSheet,dismiss:closeSheets,
     apps:controlApps,
     previewKey:()=>JSON.stringify([meta.current,room.items.map(i=>[i.t,i.c])]),
     preview:p=>{const f=LRLauncher.furniture(p,room.items,CAT);return f?{...f,src:thumbOf(f.id,f.variant)}:null;},
 
-    beforeOpen:()=>{frenchUI?.close();library.close();letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
+    beforeOpen:()=>{clearControlReturn();frenchUI?.close();library.close();letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
     onClose:()=>$('#bHome').focus(),
     actions:{
       launch:launchTool,
+      depart:beginControlReturn,
       chooseShortcut:appShortcutSheet,
       addPortal:()=>dashboard.addPortal(),
       navigate:navigateSpace,

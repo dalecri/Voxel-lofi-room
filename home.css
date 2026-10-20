@@ -438,3 +438,13 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-forecast-low,.today-forecast-high { text-align:right; font-variant-numeric:tabular-nums; }
 .today-forecast-low { color:var(--ink-dim); }
 @media(max-width:360px) { .space-today .today-forecast-card { gap:6px; padding:6px; border-radius:22px; } .today-forecast-current { padding:14px 10px; } .today-forecast-condition { gap:5px; font-size:12px; } .today-forecast-list { padding:10px 7px; } .today-forecast-list li { font-size:12px; gap:3px; } }
+
+/* Contextual return to the Control Centre, alongside the existing close action. */
+.control-back { display:grid; place-items:center; flex:none; width:44px; height:44px; min-width:44px; padding:0; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); }
+.control-back:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.control-return-actions { display:flex; align-items:center; gap:6px; float:right; margin:0 0 8px 10px; }
+.control-return-actions .sheet-close { float:none; margin:0; }
+.control-back-overlay { position:absolute; left:20px; top:max(16px,env(safe-area-inset-top)); }
+.menu-actions .control-back { border:0; background:transparent; }
+.tea-top:has(.control-back) { grid-template-columns:auto auto minmax(0,1fr) 44px; gap:6px; }
+.letter-chrome .control-back { margin-right:6px; }

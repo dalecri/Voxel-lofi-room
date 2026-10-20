@@ -378,6 +378,8 @@ Verify with `node --test tests/*.test.cjs`, `npm run build`, and `python3 tests/
 
 The toolbox toolbar button and the phone launcher's **Control Centre** tile open the shared bottom sheet with a directory of tools and apps. Rooms and To-Do stay in the menu. Settings is available through the Open Settings row, outside the app grid. Weather, Little things and daily information stay in Your Space.
 
+Apps opened from Control Centre have a **Back to Control Centre** arrow alongside their existing close action. Back restores the app search, scroll position and launching control; X and Escape still close to the room. External links leave Control Centre open in the original tab.
+
 A private, configurable **app shortcut** sits above the paw toolbar button, opening your chosen room tool in one tap.
 
 The grid is derived from `launcher.js`, live portal definitions and private custom links. Tools delegate to their existing sheets and models, so letters, groceries, ideas, tea and sketching work before their furniture is placed. Settings keeps music, sound, weather, motion, glow, dream and clock controls.
