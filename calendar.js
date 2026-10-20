@@ -159,7 +159,7 @@
     if(google.connected&&lists.length>1){const l=el('label','google-task-picker','Task list'),select=el('select');select.setAttribute('aria-label','Google task list');for(const e of [{id:'@default',title:'Default list'},...lists]){const option=el('option','',e.title);option.value=e.id;select.appendChild(option);}select.value=google.selectedList;select.onchange=()=>google.selectList(select.value);l.appendChild(select);row.appendChild(l);}
     note.textContent=!google.configured?'Google is optional. An OAuth client ID has not been configured. Everything local is ready.':google.reconnect?'Google needs a fresh connection. Tap Reconnect to try again. Your local lists and calendar are still here.':google.taskEditingRequested?'Task check-offs and new groceries sync to Google Tasks. Calendar stays read-only.':'Optional and read-only. Calendar and Tasks are read; nothing is written to Google.';
   }
-  function createTasksView({google,now=Date.now,holdMs=2500,undoMs=15000}){
+  function createTasksView({google,now=Date.now,holdMs=2500,undoMs=15000,todayUndoMs=3000}){
     const mounts=new Set(),changes=new Map();let error='',nextRefresh=0;
     const el=(tag,cls,text)=>{const n=root.document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const key=(list,id)=>JSON.stringify([list,id]);
@@ -171,7 +171,8 @@
         await google.setTaskCompleted(listId,task.id,done);
         if(changes.get(k)!==entry||!google.connected)return;
         if(!done){changes.delete(k);repaint();return;}
-        entry.busy=false;entry.hideAt=now()+holdMs;entry.until=now()+undoMs;
+        entry.busy=false;entry.hideAt=now()+holdMs;entry.until=now()+undoMs;entry.todayUntil=now()+Math.min(todayUndoMs,undoMs);
+        entry.todayUndoTimer=setTimeout(()=>{entry.todayUndoExpired=true;repaint();},Math.min(todayUndoMs,undoMs));
         entry.hideTimer=setTimeout(repaint,holdMs);
         entry.undoTimer=setTimeout(()=>{if(changes.get(k)===entry){changes.delete(k);repaint();}},undoMs);repaint();
       }catch(e){if(changes.get(k)!==entry)return;changes.delete(k);if(previous&&!done){changes.set(k,previous);}error=e.message||'Could not save your check-off. Try again.';repaint();}
@@ -209,7 +210,7 @@
         }
         if(!list.children.length)section.appendChild(el('p','muted small google-task-empty',group.id==='today'?'Nothing scheduled for today.':'Nothing scheduled for tomorrow.'));
       }
-      for(const state of changes.values())if(state.listId===listId&&state.done&&!state.busy&&now()<state.until){const feedback=el('div','google-task-feedback'),label=el('span','',state.task.title+' · completed'),undo=el('button','chipbtn','Undo');undo.type='button';undo.setAttribute('aria-label','Undo '+state.task.title);undo.dataset.taskAction='undo:'+state.task.id;undo.onclick=()=>change(state.task,listId,false);feedback.append(label,undo);host.appendChild(feedback);}
+      for(const state of changes.values())if(state.listId===listId&&state.done&&!state.busy&&now()<state.until&&(!(entry.scheduled||entry.todayOnly)||!state.todayUndoExpired&&now()<state.todayUntil)){const feedback=el('div','google-task-feedback'),label=el('span','',state.task.title+' · completed'),undo=el('button','chipbtn','Undo');undo.type='button';undo.setAttribute('aria-label','Undo '+state.task.title);undo.dataset.taskAction='undo:'+state.task.id;undo.onclick=()=>change(state.task,listId,false);feedback.append(label,undo);host.appendChild(feedback);}
       if(allTasks)host.appendChild(allTasks);
       if(focus){const candidates=[...host.querySelectorAll('[data-task-action]')];(candidates.find(b=>b.dataset.taskAction===focus)||candidates.find(b=>b.dataset.taskAction==='undo:'+focus.slice(focus.indexOf(':')+1))||candidates.find(b=>b.dataset.taskAction==='check:'+focus.slice(focus.indexOf(':')+1)))?.focus({preventScroll:true});}
     }
@@ -221,7 +222,7 @@
         if(entry.host.isConnected&&entry.version===version)paint(entry);
       })();
     }
-    google.subscribe(()=>{if(!google.connected){for(const c of changes.values()){clearTimeout(c.hideTimer);clearTimeout(c.undoTimer);}changes.clear();error='';}for(const entry of mounts)update(entry);});
+    google.subscribe(()=>{if(!google.connected){for(const c of changes.values()){clearTimeout(c.hideTimer);clearTimeout(c.undoTimer);clearTimeout(c.todayUndoTimer);}changes.clear();error='';}for(const entry of mounts)update(entry);});
     return {tick(time){if(time<nextRefresh)return;nextRefresh=time+60000;for(const entry of mounts)if(entry.host.isConnected&&!entry.host.closest('[hidden]')&&entry.host.closest('.sheet.open'))update(entry);},mount(parent,before,options={}){for(const entry of mounts)if(!entry.host.isConnected)mounts.delete(entry);const host=el('section','google-tasks');parent.insertBefore(host,before || null);const entry={host,version:0,...options};mounts.add(entry);update(entry);return host;},refresh(){for(const entry of mounts)update(entry);}};
   }
   function createView({model,google,sheet,atlas,meta,scenes,seasons=[],thumb,openScene,now=()=>new Date()}){
