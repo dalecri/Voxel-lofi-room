@@ -101,3 +101,13 @@
 .task-google-page .google-task-check:focus-visible { outline:2px solid var(--note-ink); outline-offset:2px; }
 .task-google-page .google-task-day-heading h4 { font:700 15px/1.35 Nunito,sans-serif; }
 .task-google-page .google-task-days { gap:14px; }
+/* To-Do follows the dashboard palette; groceries keep their paper stationery. */
+.task-notebook { --note-paper:var(--panel-solid); --note-ink:var(--ink); --note-muted:var(--ink-dim); --note-rule:var(--line); border-color:var(--line); background:var(--panel-solid); box-shadow:none; }
+.task-notebook .task-tabs { background:var(--chip); }
+.task-notebook .task-tab[aria-selected=true] { background:var(--panel-solid); color:var(--ink); }
+.task-notebook .task-starters,.task-notebook .task-starter,.task-notebook .task-add-starters,.task-notebook .today-icon-picker button { background:var(--chip); color:var(--ink); border-color:var(--line); }
+.task-notebook .today-task-form input,.task-notebook .today-task-form .primary,.task-notebook select,.task-notebook .task-google-page select,.task-notebook .task-google-page .chipbtn { background:var(--chip); color:var(--ink); border-color:var(--line); }
+.task-notebook .task-checkmark { background:var(--panel-solid); border-color:var(--ink-dim); color:var(--panel-solid); }
+.task-notebook .today-task-check[aria-checked=true] .task-checkmark,.task-notebook .google-task-check[aria-checked=true] .task-checkmark { background:var(--accent); border-color:var(--accent); }
+.task-notebook .today-task.done .today-task-text,.task-notebook .google-task-row.completed .google-task-copy b,.task-notebook .today-task-remove,.task-notebook .task-journey-summary { color:var(--ink-dim); }
+.task-notebook .task-list-progress>span { background:var(--accent); }

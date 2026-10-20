@@ -2621,50 +2621,40 @@ function startLofiRooms() {
       r.setAttribute('role','switch'); r.setAttribute('aria-pressed',String(!!on)); r.setAttribute('aria-checked',String(!!on));
       r.onclick = () => { fn(); renderMenu(); };
     };
-    const sl = h('div', 'stations');
+    const sl=h('section','radio-library');sl.setAttribute('aria-label','My Radio');
     const icons=['📻','🌙','☕','🌧','🌿','🎷','🎹','🌊','🌸','✨','🎧','🔥'];
-    const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="currentColor">'+(kind==='pause'?'<path d="M7 5h4v14H7zM15 5h4v14h-4z"/>':kind==='stop'?'<rect x="6" y="6" width="12" height="12" rx="2"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';
+    const radioGlyph=kind=>'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor">'+(kind==='pause'?'<path d="M7 5h4v14H7zM15 5h4v14h-4z"/>':kind==='previous'?'<path d="M6 5h2v14H6zM18 5v14L8 12z"/>':kind==='next'?'<path d="M16 5h2v14h-2zM6 5l10 7-10 7z"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg>';
+    let radioActions;
     {
-      const list=stationList(),wanted=meta.music?meta.station:meta.lastStation;
-      const index=Number.isInteger(wanted)&&wanted>=0&&wanted<list.length?wanted:0,st=list[index];
-      const updateRadio=(fn,focus)=>{const top=body.scrollTop;fn();renderMenu();body.scrollTop=top;if(focus)body.querySelector(focus)?.focus({preventScroll:true});};
-      const i=index-1,r=document.createElement('article'),playing=meta.music&&meta.station===index;r.className='station-card'+(playing?' playing':'');
-      const face=document.createElement('span');face.className='station-dial';face.textContent=icons.includes(st.gen?meta.lofiIcon:st.icon)?(st.gen?meta.lofiIcon:st.icon):'📻';face.setAttribute('aria-hidden','true');
-      const copy=document.createElement('button');copy.type='button';copy.className='station-copy';const name=document.createElement('b');name.textContent=st.name;
-      const band=document.createElement('span');band.className='muted small';band.textContent=st.gen?'OFFLINE · LOFI BAND':'SAVED · LIVE STREAM';
-      const channel=document.createElement('span');channel.className='station-channel';channel.innerHTML='<small>STATION</small><strong>'+String(index+1).padStart(2,'0')+'</strong>';
-      const status=document.createElement('span');status.className='station-status';status.textContent=playing?'On air':'Ready when you are';status.setAttribute('role','status');
-      const screenTop=document.createElement('span');screenTop.className='station-screen-top';screenTop.append(status);
-      const wave=document.createElement('span');wave.className='station-waveform';wave.setAttribute('aria-hidden','true');
-      const bars=Array.from({length:60},(_,n)=>{const x=8+n*5.8,h=6+Math.abs(Math.sin(n*1.9))*18+Math.abs(Math.sin(n*.43))*36;return `<path d="M${x.toFixed(1)} ${(70-h/2).toFixed(1)}V${(70+h/2).toFixed(1)}"/>`;}).join('');wave.innerHTML=`<svg viewBox="0 0 360 140" fill="none" stroke="currentColor" stroke-width="1.7">${bars}</svg>`;
-      const stationName=document.createElement('span');stationName.className='station-screen-name';stationName.append(face,name,channel);copy.append(screenTop,wave,stationName,band);
-      const iconPicker=document.createElement('div');iconPicker.className='station-icon-picker';iconPicker.hidden=true;iconPicker.setAttribute('role','group');iconPicker.setAttribute('aria-label','Choose icon for '+st.name);
-      copy.tabIndex=0;copy.setAttribute('role','button');copy.setAttribute('aria-label','Edit icon for '+st.name);copy.setAttribute('aria-expanded','false');
-      copy.onclick=()=>{iconPicker.hidden=!iconPicker.hidden;copy.setAttribute('aria-expanded',String(!iconPicker.hidden));};
-      for(const icon of icons){const option=document.createElement('button');option.type='button';option.textContent=icon;option.setAttribute('aria-label','Use '+icon+' for '+st.name);option.setAttribute('aria-pressed',String(face.textContent===icon));option.onclick=()=>updateRadio(()=>{if(st.gen)meta.lofiIcon=icon;else meta.stations[i].icon=icon;saveMeta();},'.station-copy');iconPicker.appendChild(option);}
-
-      const grille=document.createElement('div');grille.className='station-grille';grille.setAttribute('aria-hidden','true');grille.textContent='LOFI ROOMS';
-      const row=document.createElement('div');row.className='station-controls';
-      const step=(delta,label)=>{const b=document.createElement('button');b.className='station-step '+(delta<0?'station-prev':'station-next');b.disabled=list.length<2;b.innerHTML=radioGlyph(delta<0?'previous':'next');b.setAttribute('aria-label',label+' station from '+st.name);b.onclick=()=>updateRadio(()=>playStation((index+delta+list.length)%list.length),delta<0?'.station-prev':'.station-next');return b;};
-      const play=document.createElement('button');play.type='button';play.className='station-play';play.innerHTML=radioGlyph('play');play.setAttribute('aria-label','Play '+st.name);play.setAttribute('aria-pressed',String(!!playing));play.onclick=()=>{if(!playing)updateRadio(()=>playStation(index),'.station-play');};
-      const stop=document.createElement('button');stop.type='button';stop.className='station-stop';stop.innerHTML='<span aria-hidden="true"></span>';stop.setAttribute('aria-label','Stop '+st.name);stop.title='Stop radio';stop.disabled=!meta.music;stop.onclick=()=>updateRadio(()=>playStation(-1),'.station-play');
-      const pause=document.createElement('button');pause.type='button';pause.className='station-pause';pause.innerHTML=radioGlyph('pause');pause.setAttribute('aria-label','Pause '+st.name);pause.disabled=!playing;pause.onclick=()=>updateRadio(()=>playStation(-1),'.station-play');row.append(stop,play,step(-1,'Previous'),step(1,'Next'),pause);
-      const base=document.createElement('div');base.className='station-base';base.innerHTML='<span class="station-vents" aria-hidden="true"><i></i><i></i></span><span class="station-power" aria-hidden="true"><i></i></span>';
-      let remove=null;
-      if(!st.gen){
-        const del=document.createElement('button');remove=del;del.type='button';del.className='station-remove';del.setAttribute('aria-label','Remove');del.title='Remove '+st.name;del.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>';del.onclick=()=>{
-          if(meta.station===index)playStation(-1,true);else if(meta.station>index)meta.station--;
-          if(meta.lastStation===index)meta.lastStation=0;else if(meta.lastStation>index)meta.lastStation--;
-          meta.stations.splice(i,1);saveMeta();renderMenu();
-        };
+      const list=stationList(),wanted=meta.music?meta.station:meta.lastStation,index=Number.isInteger(wanted)&&wanted>=0&&wanted<list.length?wanted:0,st=list[index],playing=!!meta.music;
+      const el=(tag,cls,text,parent=sl)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;parent.appendChild(n);return n;};
+      const updateRadio=(fn,focus)=>{const top=body.scrollTop,q=sl.querySelector('.radio-library-search')?.value || '';fn();renderMenu();body.scrollTop=top;const search=body.querySelector('.radio-library-search');if(search){search.value=q;search.dispatchEvent(new Event('input'));}if(focus)body.querySelector(focus)?.focus({preventScroll:true});};
+      const hero=el('div','radio-library-hero'),cover=el('div','radio-library-cover','📻',hero);cover.setAttribute('aria-hidden','true');const titles=el('div','radio-library-titles',undefined,hero);el('small','', 'YOUR COLLECTION',titles);el('h2','','My Radio',titles);el('p','muted',`${list.length} station${list.length===1?'':'s'} · offline & saved`,titles);
+      radioActions=el('div','radio-library-toolbar');
+      const control=(cls,label,glyph,fn)=>{const button=el('button',cls,undefined,radioActions);button.type='button';button.setAttribute('aria-label',label);button.innerHTML=radioGlyph(glyph);button.onclick=()=>updateRadio(fn,'.'+cls);return button;};
+      control('radio-library-play',playing?'Pause radio':'Play radio',playing?'pause':'play',()=>playStation(playing?-1:index));
+      control('radio-library-prev','Previous station','previous',()=>playStation((index-1+list.length)%list.length)).disabled=list.length<2;
+      control('radio-library-next','Next station','next',()=>playStation((index+1)%list.length)).disabled=list.length<2;
+      const now=el('p','radio-library-now',playing?'On air · '+st.name:'Ready when you are');now.setAttribute('role','status');
+      const search=el('input','radio-library-search');search.type='search';search.placeholder='Find a station';search.setAttribute('aria-label','Find a station');
+      const rows=el('ol','radio-library-list'),empty=el('p','muted radio-library-empty','No stations match. Try another name.');empty.hidden=true;
+      for(const [n,station] of list.entries()){
+        const row=el('li','radio-library-row'+(playing&&n===index?' is-playing':''),undefined,rows);row.dataset.station=n;
+        const icon=icons.includes(station.gen?meta.lofiIcon:station.icon)?(station.gen?meta.lofiIcon:station.icon):'📻';
+        const edit=el('button','radio-library-icon',icon,row);edit.type='button';edit.title='Change station icon';edit.setAttribute('aria-label','Edit icon for '+station.name);edit.setAttribute('aria-expanded','false');
+        const choose=el('button','radio-library-station',undefined,row);choose.type='button';choose.setAttribute('aria-label','Play '+station.name);if(playing&&n===index)choose.setAttribute('aria-current','true');el('b','',station.name,choose);el('small','',station.gen?'Offline · lofi band':'Saved · live stream',choose);choose.onclick=()=>updateRadio(()=>playStation(n),'[data-station="'+n+'"] .radio-library-station');
+        const status=el('span','radio-library-channel',playing&&n===index?'On air':String(n+1).padStart(2,'0'),row);status.setAttribute('aria-hidden','true');
+        const picker=el('div','radio-library-icon-picker',undefined,row);picker.hidden=true;picker.setAttribute('role','group');picker.setAttribute('aria-label','Choose icon for '+station.name);edit.onclick=()=>{picker.hidden=!picker.hidden;edit.setAttribute('aria-expanded',String(!picker.hidden));};
+        for(const symbol of icons){const option=el('button','',symbol,picker);option.type='button';option.setAttribute('aria-label','Use '+symbol+' for '+station.name);option.setAttribute('aria-pressed',String(icon===symbol));option.onclick=()=>updateRadio(()=>{if(station.gen)meta.lofiIcon=symbol;else meta.stations[n-1].icon=symbol;saveMeta();},'[data-station="'+n+'"] .radio-library-icon');}
+        if(!station.gen){const remove=el('button','radio-library-remove','×',row);remove.type='button';remove.setAttribute('aria-label','Remove '+station.name);remove.onclick=()=>updateRadio(()=>{if(meta.station===n)playStation(-1,true);else if(meta.station>n)meta.station--;if(meta.lastStation===n)meta.lastStation=0;else if(meta.lastStation>n)meta.lastStation--;meta.stations.splice(n-1,1);saveMeta();},'.radio-library-play');}
       }
-      r.append(copy,iconPicker,grille,row,base);if(remove)base.appendChild(remove);sl.appendChild(r);
+      search.oninput=()=>{const q=search.value.trim().toLocaleLowerCase();let shown=0;for(const row of rows.children){row.hidden=!list[Number(row.dataset.station)].name.toLocaleLowerCase().includes(q);if(!row.hidden)shown++;}empty.hidden=!!shown;};
     }
-    const utilities=h('nav','radio-utilities');utilities.setAttribute('aria-label','Radio tools');target.insertBefore(utilities,sl);const stationDisclosure=h('div','station-add-disclosure'),stationToggle=document.createElement('button');
+    const utilities=h('nav','radio-utilities');utilities.setAttribute('aria-label','Radio tools');radioActions.appendChild(utilities);const stationDisclosure=h('div','station-add-disclosure'),stationToggle=document.createElement('button');
     stationToggle.type='button';stationToggle.className='station-add-toggle';stationToggle.setAttribute('aria-expanded','false');stationToggle.setAttribute('aria-controls','station-add-form');
     stationToggle.setAttribute('aria-label','Add station');stationToggle.title='Add station';stationToggle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
     utilities.appendChild(stationToggle);
-    const add=document.createElement('form');add.id='station-add-form';add.className='addstation';add.hidden=true;add.noValidate=true;add.setAttribute('aria-label','Add a station');stationDisclosure.appendChild(add);
+    const add=document.createElement('form');add.id='station-add-form';add.className='addstation';add.hidden=true;add.noValidate=true;add.setAttribute('aria-label','Add a station');stationDisclosure.appendChild(add);sl.insertBefore(stationDisclosure,sl.querySelector('.radio-library-now'));
     stationToggle.onclick=()=>{const expanded=stationToggle.getAttribute('aria-expanded')!=='true';stationToggle.setAttribute('aria-expanded',String(expanded));add.hidden=!expanded;browse.hidden=true;browseToggle.setAttribute('aria-expanded','false');};
     add.innerHTML='<label class="station-field" for="stName">Station name<input id="stName" placeholder="Night jazz" maxlength="40" autocomplete="off"></label><label class="station-field" for="stUrl">Stream link<input id="stUrl" type="url" placeholder="https://…" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="none"></label><button type="submit" class="chipbtn primary" id="stAdd">Save station</button>';
     add.onsubmit = e => {e.preventDefault();
@@ -2674,7 +2664,7 @@ function startLofiRooms() {
       (meta.stations || (meta.stations = [])).push({ name, url, icon:icons[Math.floor(Math.random()*icons.length)] }); saveMeta(); Sound.chime();
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Use the arrows to tune in.</span>`, 2000, true); renderMenu(); document.querySelector('#menu-sound .station-add-toggle')?.focus({preventScroll:true});
     };
-    const browse=h('section','station-browser');browse.id='station-browser';browse.hidden=true;
+    const browse=h('section','station-browser');browse.id='station-browser';browse.hidden=true;sl.insertBefore(browse,sl.querySelector('.radio-library-now'));
     const browseToggle=document.createElement('button');browseToggle.type='button';browseToggle.className='station-browse-toggle';browseToggle.title='Browse stations';browseToggle.setAttribute('aria-label','Browse stations');browseToggle.setAttribute('aria-controls',browse.id);browseToggle.setAttribute('aria-expanded','false');browseToggle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>';utilities.appendChild(browseToggle);
     browseToggle.onclick=()=>{const expanded=browseToggle.getAttribute('aria-expanded')!=='true';browse.hidden=!expanded;browseToggle.setAttribute('aria-expanded',String(expanded));add.hidden=true;stationToggle.setAttribute('aria-expanded','false');};
     atlasUI.mountRadio(browse);
