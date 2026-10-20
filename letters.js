@@ -5,9 +5,6 @@
   const escapeHTML = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const day = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   const cardDate = date => `${String(date.getMonth()+1).padStart(2,'0')}.${String(date.getDate()).padStart(2,'0')}.${date.getFullYear()}`;
-  // Three tiny pixel marks for the card's yellow tag. Decorative only.
-  const pixels = (rows,fill) => `<svg viewBox="0 0 ${rows[0].length} ${rows.length}" shape-rendering="crispEdges" focusable="false">`+rows.flatMap((r,y)=>[...r].flatMap((c,x)=>c==='X'?[`<rect x="${x}" y="${y}" width="1" height="1" fill="${fill}"/>`]:[])).join('')+'</svg>';
-  const TAG_ICONS = pixels(['.XX.XX.','XXXXXXX','XXXXXXX','.XXXXX.','..XXX..','...X...'],'#d6283a')+pixels(['...X...','..XXX..','XXXXXXX','.XXXXX.','.XX.XX.','X.....X'],'#1b1a1f')+pixels(['XXXXXXXX','XX....XX','X.X..X.X','X..XX..X','X......X','XXXXXXXX'],'#1b1a1f');
   const dateStamp = date => date.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   // Parse in an inert template, never a live document. Pasted images/styles cannot fetch.
   function sanitizeHTML(html) {
@@ -81,18 +78,12 @@
       <div id="letterScroll" class="letter-stage"></div>
       <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" class="mailwin-btn mailwin-small" id="letterListClose">Back to the letter</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" class="mailwin-btn" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
     const windowUi=root.LRMailWindow.create({postcard:true,onIconChange:()=>schedule(),title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
-    // Feed the shared postcard stationery through the existing typewriter controls.
+    // Keep editing controls outside the scrolling paper, inside the shared sheet.
     const machine=document.createElement('div');machine.className='letter-machine';
-    machine.innerHTML='<div class="letter-roller" aria-hidden="true"><i></i><span></span><i></i></div><div class="letter-machine-brand" aria-hidden="true">LOFI LETTERS</div>';
-    machine.appendChild(windowUi.toolbar);
-    const keys=document.createElement('div');keys.className='letter-keyboard';keys.setAttribute('aria-hidden','true');
-    for(let row=0;row<3;row++){const line=document.createElement('div');for(let key=0;key<10-row;key++)line.appendChild(document.createElement('i'));keys.appendChild(line);}
-    machine.append(keys,windowUi.actions);
-    // A white note card: sticky note and label tab peek out behind it, a zigzag tag hangs below.
+    machine.append(windowUi.toolbar,windowUi.actions);
     const card=document.createElement('div');card.className='letter-card';
-    card.innerHTML='<div class="letter-sticky" aria-hidden="true"><span>LOFI</span><span>LETTERS</span></div><div class="letter-tab" aria-hidden="true"></div>';
+    card.innerHTML='<div class="letter-tab" aria-hidden="true"></div>';
     card.appendChild(windowUi.form);
-    card.insertAdjacentHTML('beforeend','<div class="letter-tag" aria-hidden="true">'+TAG_ICONS+'</div><div class="letter-morse" aria-hidden="true"></div>');
     view.querySelector('#letterScroll').appendChild(card);
     view.querySelector('#letterScroll').after(machine);
     const $=s=>view.querySelector(s),body=windowUi.body,subject=windowUi.fields.Subject,from=windowUi.fields.From,to=windowUi.fields.To,scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');

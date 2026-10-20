@@ -13,6 +13,7 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(viewport={'width':390,'height':844},accept_downloads=True)
  context.add_init_script("const RealDate=Date;window.Date=class extends RealDate{constructor(...a){super(...(a.length?a:['2026-10-15T14:00:00']))}static now(){return new RealDate('2026-10-15T14:00:00').getTime()}};localStorage.setItem('lr.intro','true')")
+ context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[];outbound=[]
  page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:outbound.append(r.url) if not r.url.startswith(('http://127.0.0.1:','blob:','data:')) else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.letters')
@@ -25,7 +26,7 @@ with sync_playwright() as p:
  assert page.evaluate('__lr.letters.active && __lr.Sound.writing')
  assert page.evaluate('__sounds.returns')==1 and page.evaluate('__sounds.clacks[0]')==[1,False]
  win=page.locator('#lettersView .mailwin');assert win.locator('.mailwin-typewriter').count()==1;assert 'Typewriter' in win.locator('.mailwin-name').text_content()
- assert page.locator('.letter-machine .letter-roller').count()==1;assert page.locator('.letter-keyboard').get_attribute('aria-hidden')=='true';assert page.locator('.letter-machine .letter-tools').count()==1;assert page.locator('.letter-machine #letterSave').count()==1
+ assert page.locator('.letter-machine .letter-roller,.letter-keyboard,.letter-sticky,.letter-tag').count()==0;assert page.locator('.letter-machine .letter-tools').count()==1;assert page.locator('.letter-machine #letterSave').count()==1
  assert page.locator('#letterKeyboard').count()==0;assert page.locator('#lettersView').evaluate('e=>e.closest("#sheetBody")!==null && getComputedStyle(e).position==="relative"');assert page.locator('#sheetBody > .grab').count()==1;assert page.locator('#letterClose svg').count()==1
  assert page.locator('#lettersView').get_by_label('From',exact=True).input_value()=='crisdalessio@gmail.com'
  assert page.locator('#lettersView').get_by_label('To',exact=True).input_value()=='Me'
@@ -56,7 +57,7 @@ with sync_playwright() as p:
  body=page.locator('#letterBody');assert 'RELOAD_TAIL' in body.inner_text();assert subject.input_value()=='PRIVATE_LETTERHEAD'
  assert 'Letter Room' in page.evaluate('__lr.letters.model.get().letterhead')
  assert body.locator('b,strong').filter(has_text='bold words').count()>=1
- print('PASS: real typewriter tap, pixel window, subject title, B/I/U, cursor date, throttled clacks, actual-wrap bell, music and immediate-reload autosave',flush=True)
+ print('PASS: real typewriter tap, themed writing sheet, subject title, B/I/U, cursor date, throttled clacks, actual-wrap bell, music and immediate-reload autosave',flush=True)
  # Paste only the three supported styles. No scripts, remote images, links or event handlers survive.
  page.evaluate('''() => {const b=document.querySelector('#letterBody');b.focus();document.execCommand('selectAll');const d=new DataTransfer();d.setData('text/html','<p>PRIVATE_LETTER_BODY <strong>Bonjour</strong> <span style="font-style:italic;text-decoration:underline">café</span><img src="https://example.com/LETTER_LEAK" onerror="window.__unsafe=1"><script>window.__unsafe=2</script><a href="javascript:alert(1)">safe text</a></p>');d.setData('text/plain','PRIVATE_LETTER_BODY Bonjour café safe text');b.dispatchEvent(new ClipboardEvent('paste',{clipboardData:d,bubbles:true,cancelable:true}));}''')
  assert page.evaluate('!window.__unsafe')
@@ -85,7 +86,7 @@ with sync_playwright() as p:
  print('PASS: sanitized rich paste; readable standalone HTML download with intact formatting/UTF-8; Android file-picker bridge receives identical HTML',flush=True)
  # Letters list rename/open/delete is separate from room names and room undo.
  page.get_by_role('button',name='Letters',exact=True).click();assert page.locator('#letterList .letter-stack').count()==1
- assert page.evaluate('''() => {const stack=getComputedStyle(document.querySelector('.letter-stack')),input=getComputedStyle(document.querySelector('.letter-row input'));return stack.borderTopWidth==='2px' && /vt323|monospace|courier/i.test(input.fontFamily)}''')
+ assert page.evaluate('''() => {const stack=getComputedStyle(document.querySelector('.letter-stack')),input=getComputedStyle(document.querySelector('.letter-row input'));return stack.borderTopWidth==='1px' && stack.borderRadius==='24px' && /Nunito/i.test(input.fontFamily)}''')
  rename=page.locator('.letter-row input').first;rename.fill('PRIVATE_LETTER_TITLE');rename.press('Tab')
  page.get_by_role('button',name='New letter',exact=True).click();body.fill('SECOND_PRIVATE_DRAFT');page.get_by_role('button',name='Letters',exact=True).click()
  page.get_by_role('button',name='Open PRIVATE_LETTER_TITLE',exact=True).click();assert 'Bonjour' in body.inner_text()
@@ -95,11 +96,12 @@ with sync_playwright() as p:
  for width,height in [(320,844),(390,400),(1280,844)]:
   page.set_viewport_size({'width':width,'height':height});body.click();page.keyboard.press('Control+End')
   bounds=page.locator('.letter-tools').bounding_box();assert bounds['y']>=0 and bounds['y']+bounds['height']<=height
-  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();const machine=document.querySelector('.letter-machine').getBoundingClientRect();return scroll.height>=(innerHeight>500?240:60) && sheet.top===0 && Math.abs(sheet.height-innerHeight)<2 && machine.bottom<=innerHeight+1 && scroll.bottom<=machine.top+1}''')
+  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();const machine=document.querySelector('.letter-machine').getBoundingClientRect();return scroll.height>=(innerHeight>500?180:40) && sheet.top>0 && Math.abs(sheet.height-innerHeight*.84)<2 && machine.bottom<=innerHeight+1 && scroll.bottom<=machine.top+1}''')
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   for phase in ['day','night']:
-   page.evaluate('phase=>__lr.view.setPhase(phase,true)',phase)
-   assert page.locator('#lettersView .mailwin').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(255, 254, 251)' and page.locator('#lettersView .letter-card .letter-tag').count()==1
+   page.evaluate('phase=>{__lr.setPhase(phase,true);__lr.view.setPhase(phase,true)}',phase)
+   assert page.locator('#lettersView .mailwin').evaluate('e=>getComputedStyle(e).borderRadius')=='24px'
+   assert body.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.querySelector("#lettersView")).color && /Nunito/.test(getComputedStyle(e).fontFamily)')
    assert page.locator('.letter-tools button').first.evaluate('e=>e.getBoundingClientRect().height>=44')
    page.screenshot(path=f'/tmp/paper-typewriter-{phase}-{width}-{height}.png')
  page.keyboard.press('Escape');assert page.evaluate('!__lr.letters.active && !__lr.Sound.writing')
