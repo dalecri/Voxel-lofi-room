@@ -1,5 +1,7 @@
 """Build www first. Native menu/search/sky composition and persistence."""
 import functools
+from io import BytesIO
+from PIL import Image, ImageChops
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 from threading import Thread
@@ -49,6 +51,17 @@ with sync_playwright() as p:
     rect=body.bounding_box();nav_top=page.locator('.menu-nav').bounding_box()['y']
     if expected_height is None:expected_height=rect['height'];expected_top=nav_top
     assert abs(rect['height']-expected_height)<1,(name,rect['height'],expected_height);assert abs(nav_top-expected_top)<1,(name,nav_top,expected_top)
+   # The entire sticky header (including gutters) must stay unchanged as
+   # contrasting content scrolls beneath it, rather than leaking past the glass.
+   page.locator('#menu-settings').evaluate('e=>{const probe=document.createElement("div");probe.id="nav-scroll-probe";probe.style.cssText="height:1600px;background:repeating-linear-gradient(red 0 80px,cyan 80px 160px);color:black;font-size:32px";probe.textContent="Scrolling content must stay below navigation";e.prepend(probe)}')
+   header_images=[]
+   for scroll in [100,260]:
+    body.evaluate('(e,y)=>e.scrollTop=y',scroll)
+    assert body.evaluate('e=>e.scrollTop')==scroll
+    r=body.bounding_box();n=page.locator('.menu-nav').bounding_box()
+    header_images.append(Image.open(BytesIO(page.screenshot(clip={'x':r['x']+1,'y':r['y']+1,'width':r['width']-14,'height':n['y']+n['height']+5-r['y']}))).convert('RGB'))
+   assert ImageChops.difference(*header_images).getbbox() is None,(phase,width,'content leaked into nav header')
+   page.locator('#nav-scroll-probe').evaluate('e=>e.remove()')
    body.evaluate('e=>e.scrollTop=0');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/dashboard-layout-{phase}-{width}.png');nav=page.locator('.menu-nav');assert nav.locator('.menu-actions').bounding_box()['x']>=tabs.bounding_box()['x']+tabs.bounding_box()['width']-1;assert nav.evaluate('e=>e.scrollWidth<=e.clientWidth');assert nav.evaluate('e=>getComputedStyle(e).backdropFilter.includes("blur(18px)")');assert nav.evaluate('e=>{const s=getComputedStyle(e);return s.borderTopWidth==="1px"&&s.backgroundImage.includes("linear-gradient")&&s.boxShadow.includes("inset")}');assert tabs.evaluate('e=>e.scrollWidth<=e.clientWidth+1')
  page.get_by_role('tab',name='Today',exact=True).click();body.evaluate('e=>e.scrollTop=260');page.screenshot(path='/tmp/dashboard-nav-glass-scrolled.png');assert page.locator('.menu-nav').evaluate('e=>getComputedStyle(e).position')=='sticky'
  page.set_viewport_size({'width':320,'height':900});page.get_by_role('tab',name='Settings',exact=True).click();page.wait_for_function('(()=>{const t=document.querySelector(".menu-tabs [aria-selected=true]").getBoundingClientRect(),b=document.querySelector(".menu-tabs").getBoundingClientRect();return t.left>=b.left-1&&t.right<=b.right+1})()');page.get_by_role('tab',name='Today',exact=True).click()
