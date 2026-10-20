@@ -36,7 +36,7 @@ with sync_playwright() as p:
  subject=page.locator('#lettersView').get_by_label('Subject',exact=True);body=page.locator('#letterBody')
  assert 'Letter Room' in page.evaluate('__lr.letters.model.get().letterhead')
  assert 'crisdalessio@gmail.com' not in page.evaluate('localStorage.getItem("lr.letters")')
- subject.focus();page.keyboard.press('Tab');assert page.locator('.letter-details summary').evaluate('e=>e===document.activeElement');page.keyboard.press('Tab');assert body.evaluate('e=>e===document.activeElement')
+ subject.focus();page.keyboard.press('Tab');assert page.locator('.letter-details summary').evaluate('e=>e===document.activeElement');page.keyboard.press('Tab');assert page.locator('.letter-deliver').evaluate('e=>e===document.activeElement');page.keyboard.press('Tab');assert body.evaluate('e=>e===document.activeElement')
  subject.fill('PRIVATE_LETTERHEAD');body.click();page.keyboard.type('PRIVATE_LETTER_BODY Dear friend, ',delay=12)
  for label,text in [('Bold','bold words'),('Italic','italic words'),('Underline','underlined words')]:
   page.get_by_role('button',name=label,exact=True).click();page.keyboard.type(text,delay=12);page.get_by_role('button',name=label,exact=True).click();page.keyboard.type(' ')
@@ -90,7 +90,7 @@ with sync_playwright() as p:
  print('PASS: sanitized rich paste; readable standalone HTML download with intact formatting/UTF-8; Android file-picker bridge receives identical HTML',flush=True)
  # Letters list rename/open/delete is separate from room names and room undo.
  page.get_by_role('button',name='Letters',exact=True).click();assert page.locator('#letterList .letter-stack').count()==1
- assert page.evaluate('''() => {const stack=getComputedStyle(document.querySelector('.letter-stack')),input=getComputedStyle(document.querySelector('.letter-row input'));return stack.borderTopWidth==='1px' && stack.borderRadius==='24px' && /Nunito/i.test(input.fontFamily)}''')
+ assert page.evaluate('''() => {const stack=getComputedStyle(document.querySelector('.letter-stack')),input=getComputedStyle(document.querySelector('.letter-row input'));return stack.borderTopWidth==='2px' && stack.borderRadius==='30px' && /Plus Jakarta Sans/i.test(input.fontFamily)}''')
  rename=page.locator('.letter-row input').first;rename.fill('PRIVATE_LETTER_TITLE');rename.press('Tab')
  page.get_by_role('button',name='New letter',exact=True).click();body.fill('SECOND_PRIVATE_DRAFT');page.get_by_role('button',name='Letters',exact=True).click()
  page.get_by_role('button',name='Open PRIVATE_LETTER_TITLE',exact=True).click();assert 'Bonjour' in body.inner_text()
@@ -100,12 +100,12 @@ with sync_playwright() as p:
  for width,height in [(320,844),(390,400),(1280,844)]:
   page.set_viewport_size({'width':width,'height':height});body.click();page.keyboard.press('Control+End')
   bounds=page.locator('.letter-tools').bounding_box();assert bounds['y']>=0 and bounds['y']+bounds['height']<=height
-  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();const machine=document.querySelector('.letter-machine').getBoundingClientRect();return scroll.height>=(innerHeight>500?180:40) && sheet.top>0 && Math.abs(sheet.height-innerHeight*.84)<2 && machine.bottom<=innerHeight+1 && scroll.bottom<=machine.top+1}''')
+  assert page.evaluate('''() => {const scroll=document.querySelector('#letterScroll').getBoundingClientRect(),sheet=document.querySelector('#sheetBody').getBoundingClientRect();const machine=document.querySelector('.letter-machine').getBoundingClientRect();return scroll.height>=(innerHeight>500?180:40) && sheet.top>0 && Math.abs(sheet.height-(innerHeight>620?Math.min(innerHeight*.88,800):innerHeight-24))<2 && machine.bottom<=innerHeight+1 && scroll.bottom<=machine.top+1}''')
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   for phase in ['day','night']:
    page.evaluate('phase=>{__lr.setPhase(phase,true);__lr.view.setPhase(phase,true)}',phase)
-   assert page.locator('#lettersView .mailwin').evaluate('e=>getComputedStyle(e).borderRadius')=='24px'
-   assert body.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.querySelector("#lettersView")).color && /Nunito/.test(getComputedStyle(e).fontFamily)')
+   assert page.locator('#lettersView .mailwin').evaluate('e=>getComputedStyle(e).borderRadius')=='30px'
+   assert body.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.querySelector("#lettersView")).color && /Plus Jakarta Sans/.test(getComputedStyle(e).fontFamily)')
    assert page.locator('.letter-tools button').first.evaluate('e=>e.getBoundingClientRect().height>=44')
    page.screenshot(path=f'/tmp/paper-typewriter-{phase}-{width}-{height}.png')
  page.keyboard.press('Escape');assert page.evaluate('!__lr.letters.active && !__lr.Sound.writing')

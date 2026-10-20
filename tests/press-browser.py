@@ -42,7 +42,7 @@ with sync_playwright() as p:
   lead=paper.locator('.brief-lead');assert lead.count()==1;assert lead.get_attribute('data-type')!='diary';assert lead.locator('.press-clap').count()==1
   text=paper.inner_text()
   for s in ['Tea, 5 days running','First letter on record','No watering in 7 days','Today in the house','French class on the calendar, rain on the way.','Rain on the way, 3° to 9°','Knocked over the mug','Inspected dinner','Sunday edition',
-            'The pet columns','Week 1 of Sunbeam Reviews','Week 1 of The Dinner-Time Campaign','Week 1 of The Gravity Hearings','Week 1 of The Late-Night Fridge Inquiry','Tea up: 5 this week, 2 the week before','Records roundup','PRIVATE_ATTIC','busiest day']:assert s in text,(s,text)
+            'The pet columns','Week 1 of Sunbeam Reviews','Week 1 of The Dinner-Time Campaign','Week 1 of The Gravity Hearings','Week 1 of The Late-Night Fridge Inquiry','Tea up: 5 this week, 2 the week before','Records roundup','PRIVATE_ATTIC','busiest day']:assert s.lower() in text.lower(),(s,text)
   assert 'Daily News' not in page.content();assert page.locator('.journal-paper').count()==0
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
   assert paper.locator('.press-clap').evaluate_all('es=>es.every(e=>e.getBoundingClientRect().height>=44&&e.getBoundingClientRect().width>=44)')

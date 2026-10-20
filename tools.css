@@ -61,11 +61,11 @@
 @media(min-width:760px) { .library-view { max-width:920px; } }
 @media(prefers-reduced-motion:reduce) { .library-view { transition:none; } }
 /* Centered titles: both header sides reserve room for two buttons. */
-#sheetBody .letter-heading,#sheetBody .brief-heading,#sheetBody .future-mail-heading { grid-template-columns:106px minmax(0,1fr) 106px; }
+#sheetBody:has(#lettersView) .letter-heading,#sheetBody:has(.drift-reader) .brief-heading,#sheetBody:has(.future-mail) .future-mail-heading { grid-template-columns:106px minmax(0,1fr) 106px; }
 #sheetBody :is(.letter-heading,.brief-heading,.future-mail-heading) > .control-back { justify-self:start; }
 #sheetBody :is(.letter-heading,.brief-heading,.future-mail-heading) > :is(.letter-mailbox,.brief-papers,.future-mail-inbox) { justify-self:end; }
 #sheetBody[data-tool] :is(.control-back,.sheet-close,.french-close,#shopClose,#crownClose):is(.app-sheet-heading *,.control-return-actions *) { width:48px; height:48px; min-height:48px; padding:0; display:grid; place-items:center; border:1.5px solid var(--ps-edge); border-radius:16px; background:var(--ps-surface); color:var(--ps-ink); box-shadow:none; }
-@media(max-width:420px) { #sheetBody .future-mail-heading { grid-template-columns:96px minmax(0,1fr) 96px; gap:8px; } #sheetBody[data-tool] :is(.control-back,.sheet-close,.french-close,#shopClose,#crownClose):is(.app-sheet-heading *,.control-return-actions *) { width:44px; height:44px; min-height:44px; } }
+@media(max-width:420px) { #sheetBody:has(.future-mail) .future-mail-heading { grid-template-columns:96px minmax(0,1fr) 96px; gap:8px; } #sheetBody[data-tool] :is(.control-back,.sheet-close,.french-close,#shopClose,#crownClose):is(.app-sheet-heading *,.control-return-actions *) { width:44px; height:44px; min-height:44px; } }
 /* Settings → Tool colors: one calm light or dark palette across every restyled tool
    (the mood tracker keeps its own look). Pastel is the default. */
 body[data-tool-theme=light] { --mono-bg:#f7f6f3; --mono-surface:#ecebe6; --mono-light:#ffffff; --mono-edge:#d8d6cf; --mono-ink:#1f1e1c; --mono-muted:#6b6862; --mono-dark:#1f1e1c; --mono-on-dark:#f7f6f3; }
@@ -80,3 +80,9 @@ body:is([data-tool-theme=light],[data-tool-theme=dark]) :is(.letter-post,.letter
 .settings-tool-theme-label { flex:1 0 100%; color:var(--ink); font:800 14px/1.3 var(--display); }
 .settings-tool-theme .chipbtn { flex:1; margin:0; min-height:44px; }
 .settings-tool-theme .chipbtn[aria-checked=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
+/* Control Centre back button matches each pastel sheet's own header buttons. */
+#sheetBody:has(#lettersView) .letter-heading > .control-back { width:48px; height:48px; min-height:48px; padding:0; display:grid; place-items:center; border:1.5px solid var(--tw-edge); border-radius:16px; background:var(--tw-surface); color:var(--tw-ink); box-shadow:none; }
+#sheetBody:has(.drift-reader) .brief-heading > .control-back { width:48px; height:48px; min-height:48px; padding:0; display:grid; place-items:center; border:1.5px solid var(--db-edge); border-radius:16px; background:var(--db-surface); color:var(--db-ink); box-shadow:none; }
+#sheetBody:has(.future-mail) .future-mail-heading > .control-back { width:48px; height:48px; min-height:48px; padding:0; display:grid; place-items:center; border:1.5px solid var(--fm-edge); border-radius:16px; background:var(--fm-surface); color:var(--fm-ink); box-shadow:none; }
+@media(max-width:420px) { #sheetBody:has(.future-mail) .future-mail-heading > .control-back { width:44px; height:44px; min-height:44px; } }
+#sheetBody:has(#lettersView,.drift-reader,.future-mail) .has-control-return > :is(.letter-back,.brief-back,.future-mail-back) { display:none; }

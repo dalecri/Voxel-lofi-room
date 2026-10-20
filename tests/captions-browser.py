@@ -50,7 +50,7 @@ with sync_playwright() as p:
   page.locator('.caption-studio').screenshot(path=f'/tmp/caption-studio-{width}.png');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
   for phase in ['day','night']:
    page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
-   assert desk.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.getElementById("sheetBody")).color');assert desk.locator('h4').evaluate('e=>getComputedStyle(e).fontFamily.includes("Fredoka")');assert desk.locator('.caption-desc').first.evaluate('e=>getComputedStyle(e).fontFamily.includes("Nunito")');assert desk.locator('.caption-clip').first.evaluate('e=>getComputedStyle(e).borderRadius')=='24px';assert desk.get_by_role('button',name='Refresh captions',exact=True).bounding_box()['width']>=44
+   assert desk.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.getElementById("sheetBody")).color');assert desk.locator('h4').evaluate('e=>getComputedStyle(e).fontFamily.includes("Plus Jakarta Sans")');assert desk.locator('.caption-desc').first.evaluate('e=>getComputedStyle(e).fontFamily.includes("Nunito")');assert desk.locator('.caption-clip').first.evaluate('e=>getComputedStyle(e).borderRadius')=='24px';assert desk.get_by_role('button',name='Refresh captions',exact=True).bounding_box()['width']>=44
    assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.locator('#sheetBody').bounding_box()['width']<=560;page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');page.screenshot(path=f'/tmp/caption-dashboard-{phase}-{width}.png')
 
   page.keyboard.press('Escape');assert not errors,errors;context.close()
