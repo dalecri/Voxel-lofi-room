@@ -37,6 +37,11 @@ with sync_playwright() as p:
  page.keyboard.press('Escape');page.evaluate("sessionStorage.setItem('teaClock',String(__clock))");page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.roomTools.remaining')==59000
  page.evaluate('window.__clock+=60000;window.teaChimes=0;const original=__lr.Sound.ritualChime.bind(__lr.Sound);__lr.Sound.ritualChime=()=>{teaChimes++;original()};__lr.roomToolsUI.tick(true);__lr.roomToolsUI.tick(true)');assert page.evaluate('teaChimes')==1
  page.evaluate("__lr.roomToolsUI.open('tea')");assert focus.get_attribute('data-tea-state')=='ready';assert float(arc.get_attribute('data-progress'))==1;assert mascot.get_attribute('data-state')=='happy';assert mascot.locator('img').get_attribute('src')!=image;assert page.locator('.tea-note').inner_text()=='Your tea is ready.';assert page.get_by_role('button',name='Enjoy the tea',exact=True).is_visible()
+ for width,height in [(320,568),(390,700),(390,844),(1280,900),(844,390)]:
+  page.set_viewport_size({'width':width,'height':height});body.evaluate('e=>e.scrollTop=0')
+  controls=page.locator('.tea-top > *').evaluate_all('es=>es.map(e=>{const r=e.getBoundingClientRect();return {y:r.y+r.height/2,left:r.left,right:r.right}})');assert len(controls)==3;assert max(r['y'] for r in controls)-min(r['y'] for r in controls)<1
+  assert all(controls[i]['right']<=controls[i+1]['left'] for i in range(2));assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');assert body.evaluate('e=>e.scrollHeight<=e.clientHeight+1'),(width,height,body.evaluate('e=>[e.scrollHeight,e.clientHeight,getComputedStyle(e).paddingBottom]'),focus.locator(':scope > *').evaluate_all('es=>es.map(e=>[e.className,e.getBoundingClientRect().height,getComputedStyle(e).margin])'))
+  page.screenshot(path=f'/tmp/tea-compact-{width}-{height}.png')
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:

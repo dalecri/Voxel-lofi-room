@@ -2,3 +2,15 @@
 
 body:has(#sheet.open .focus-garden) .timer-badges{display:none}
 .focus-garden .tea-presets{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:12px 0}.focus-garden .tea-pill{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:11px 16px;min-height:44px;font:800 14px var(--font);text-align:center}.focus-garden .tea-pill[aria-pressed=true]{border-color:#97a974;background:#9db17a33}.focus-garden .tea-pill:disabled{opacity:.55}.focus-garden .tea-start{display:block;min-height:58px;padding:14px 22px;border-radius:999px;background:var(--accent);color:#fff;font:500 23px var(--display);text-align:center}.focus-garden button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* The same compact dial and amber progress treatment as the tea sheet. */
+.focus-garden .garden-dial { width:min(300px,100%,32dvh); margin:10px auto 12px; }
+.garden-dial .tea-dial-track,.garden-dial .tea-dial-progress { stroke-width:7; }
+.garden-dial .tea-dial-progress { stroke:#c39039; }
+.garden-dial-content { inset:22px; }
+.garden-seedling { width:54px; height:54px; }
+.garden-seedling[hidden],.garden-standalone-note[hidden] { display:none; }
+.garden-clock { font-size:30px; }
+.focus-garden .tea-start { min-height:48px; margin:12px 0 6px; font-size:20px; }
+.garden-standalone-note { margin:8px 0 0; font-size:12px; line-height:1.45; color:var(--ink-dim); }
+.garden-status:empty { display:none; }

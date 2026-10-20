@@ -85,7 +85,7 @@
       beforeOpen();appSearch.value='';launchApps();
       // codeSheet calls home.close(false). Mark active only after it has built
       // this sheet, so opening ourselves cannot recursively dismiss ourselves.
-      sheet('Control Centre','Your tools and apps.',h=>{h('div','home-sheet-content').appendChild(view);const body=view.closest('#sheetBody'),close=body?.querySelector(':scope > .sheet-close');if(close){const tools=el('div','home-sheet-actions');tools.append(settings);if(shortcut)tools.appendChild(shortcut);tools.appendChild(close);body.insertBefore(tools,body.querySelector(':scope > h2'));}});
+      sheet('Control Centre','Your tools and apps.',h=>{h('div','home-sheet-content').appendChild(view);const body=view.closest('#sheetBody'),close=body?.querySelector(':scope > .sheet-close');if(close){const tools=el('div','home-sheet-actions'),titles=el('div','home-sheet-title'),title=body.querySelector(':scope > h2'),sub=body.querySelector(':scope > p.muted');if(title)titles.appendChild(title);if(sub)titles.appendChild(sub);tools.append(titles,close);body.insertBefore(tools,body.querySelector(':scope > .home-sheet-content'));controls.appendChild(settings);if(shortcut)controls.appendChild(shortcut);}});
       active=true;
       const body=view.closest('#sheetBody');if(body)body.scrollTop=0;
       body?.querySelector('.sheet-close')?.focus({preventScroll:true});

@@ -201,7 +201,7 @@
       const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);return n;};
       const top=document.createElement('div');top.className='tea-top';root.appendChild(top);
       const tune=button(top,'♫ Tune in',()=>{toggleMusic();updateClock();},'tea-pill');tune.dataset.teaMusic='true';
-      const preset=text(top,'','tea-pill tea-current');preset.dataset.teaPreset='true';if(heading){heading.classList.add('tea-heading');root.appendChild(heading);}
+      const preset=text(top,'','tea-pill tea-current');preset.dataset.teaPreset='true';const close=root.parentElement.querySelector(':scope > .sheet-close');if(close)top.appendChild(close);if(heading){heading.classList.add('tea-heading');root.appendChild(heading);}
       const dial=document.createElement('div');dial.className='tea-dial';root.appendChild(dial);
       const ring=svg('svg',{viewBox:'0 0 320 320','aria-hidden':'true'}),radius=110,circumference=2*Math.PI*radius;
       ring.appendChild(svg('circle',{cx:160,cy:160,r:radius,class:'tea-dial-track'}));

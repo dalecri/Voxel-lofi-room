@@ -115,3 +115,32 @@ button.mailwin-small { padding:7px 10px 6px; font-size:18px; box-shadow:2px 2px 
 @media (prefers-reduced-motion:reduce){ button.mailwin-btn { transition:none; } }
 
 .pushup-tally{max-width:420px;margin:auto;text-align:center}.pushup-tally .tally-habit{margin:8px 0 22px}.roomtool .tally-clicker{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;min-height:230px;gap:8px;margin:0;padding:24px;border:3px solid var(--line);border-radius:32px;background:var(--chip);color:var(--ink);box-shadow:0 7px 0 var(--line);touch-action:manipulation;transition:transform .08s,box-shadow .08s}.tally-clicker:active{transform:translateY(5px);box-shadow:0 2px 0 var(--line)}.tally-count{font:500 clamp(72px,18vw,104px) Fredoka,sans-serif;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere;max-width:100%}.tally-plus{font:600 24px Fredoka,sans-serif;color:var(--accent)}.pushup-tally .tally-progress{font:500 23px Fredoka,sans-serif;margin:24px 0 12px}.pushup-tally .tally-bar{display:block;width:100%;height:8px;accent-color:var(--accent);margin-bottom:18px}.pushup-tally .tally-undo{min-height:44px}.tally-clicker:focus-visible{outline:3px solid var(--accent);outline-offset:5px}@media(prefers-reduced-motion:reduce){.roomtool .tally-clicker{transition:none}}.reduce-motion .tally-clicker{transition:none}
+
+/* Tea's badges and Close share one row; the dial follows available height. */
+.tea-focus { padding-top:0; padding-bottom:0; }
+.tea-top { display:grid; grid-template-columns:auto minmax(0,1fr) 44px; gap:8px; align-items:center; }
+.tea-top .tea-current { justify-self:end; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.roomtool .tea-top .tea-pill { padding:8px 11px; font-size:12px; }
+#sheetBody .tea-top .sheet-close { float:none; margin:0; }
+.tea-focus .tea-heading { font-size:30px; line-height:1.1; margin:10px 0 6px; }
+.tea-dial { width:min(100%,300px,35dvh); margin-bottom:8px; }
+.tea-presets { gap:6px; }
+.roomtool .tea-presets .tea-pill { font-size:11px; padding:8px; }
+.tea-note { font-size:13px; line-height:1.4; margin:8px 0; }
+.tea-actions { grid-template-columns:minmax(0,1fr) 64px; max-width:340px; }
+.tea-actions .tea-mascot,.tea-actions .tea-mascot img { width:64px; height:64px; }
+.roomtool .tea-start { min-height:48px; padding:10px 16px; font-size:16px; }
+.tea-footnote { font-size:11px; line-height:1.35; margin:6px 0 0; }
+@media(max-height:600px) and (min-width:540px) {
+  .tea-focus { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:14px; }
+  .tea-top,.tea-focus .tea-heading { grid-column:1/-1; }
+  .tea-dial { grid-column:1; grid-row:3/7; width:min(100%,210px,54dvh); align-self:center; margin:0 auto; }
+  .tea-presets,.tea-note,.tea-actions,.tea-footnote { grid-column:2; }
+  .tea-presets { align-self:end; }
+}
+.sheet #sheetBody:has(.tea-focus) { padding-bottom:calc(var(--sab) + 12px); }
+.tea-focus .tea-heading { font-size:28px; margin:6px 0 4px; }
+.tea-dial { width:min(100%,300px,32dvh); }
+.tea-presets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; max-width:360px; margin-inline:auto; }
+
+@media(max-height:600px) and (min-width:540px) { .tea-dial { width:min(100%,210px,50dvh); } }

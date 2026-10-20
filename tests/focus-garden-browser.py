@@ -13,7 +13,7 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(reduced_motion='reduce',viewport={'width':390,'height':844})
  context.add_init_script('''if(!sessionStorage.houseFixture){sessionStorage.houseFixture='true';const a={v:1,name:'Bedroom',n:10,wall:{style:'paint',color:0},floor:{style:'oak'},items:[]},b={...a,name:'Living room'};for(const [k,v] of Object.entries({'lr.intro':true,'lr.mode':'explore','lr.rooms':[{id:101,name:a.name,n:0},{id:102,name:b.name,n:0}],'lr.room.101':a,'lr.room.102':b,'lr.draft':{id:102,base:'',data:{...b,name:'Living draft restored'}},'lr.mainBedroom':101,'lr.meta':{current:102,visitors:false,realtime:false,dreamy:false,phase:'day',stations:[{name:'Old station',url:'https://example.com/old.mp3'}]}}))localStorage.setItem(k,JSON.stringify(v));}''')
- context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
+ context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(15000)
  def ready():page.wait_for_function('!!window.__lr?.dashboard');page.evaluate('__lr.renderLoop.stop()')
  def menu(tab):
@@ -43,6 +43,9 @@ with sync_playwright() as p:
  for width in [390,1280]:
   page.set_viewport_size({'width':width,'height':844});assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/focus-garden-{width}.png')
  page.keyboard.press('Escape');page.evaluate('__lr.view.frame(1,__lr.view.t+1);__lr.view.draw()');page.screenshot(path='/tmp/focus-garden-room.png');raw=page.evaluate('async()=>JSON.stringify(await __lr.readCode(await __lr.roomCode()))');assert 'focusgarden' in raw;assert 'totalBlooms' not in raw;assert 'sessions' not in raw;assert 'minutes' not in raw
+ # No furniture is required: use the same persistent ritual deadline, without plants or bloom rewards.
+ page.evaluate('__lr.gardenUI.open(null)');assert page.locator('.garden-standalone-note').is_visible();page.get_by_role('button',name='15 min',exact=True).click();page.get_by_role('button',name='Start',exact=True).click();assert page.evaluate('__lr.focusGarden.active.standalone');assert page.evaluate('__lr.focusGarden.active.plant') is None;standalone_end=page.evaluate('__lr.focusGarden.active.end');plants=page.evaluate('__lr.room.items.length');advance(60000);assert page.locator('.garden-clock').inner_text()=='14:00';page.keyboard.press('Escape');page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.focusGarden.active.end')==standalone_end;page.evaluate('__lr.gardenUI.open(null)');advance(840000);assert page.locator('.garden-clock').inner_text()=='Complete';assert page.evaluate('__lr.focusGarden.state.totalBlooms')==4;assert page.evaluate('__lr.room.items.length')==plants;page.get_by_role('button',name='Start again',exact=True).click();page.get_by_role('button',name='End session',exact=True).click();assert page.evaluate('__lr.focusGarden.active') is None
+ page.screenshot(path='/tmp/focus-without-furniture.png')
  assert not errors,errors;print('PASS Focus Garden quarters, staged voxel plant, reload/deadline, Today shortcut, one completion/chime/calendar event, label, warm pocketing, fourth-session cherry, mobile/desktop and privacy',flush=True)
  browser.close()
 server.shutdown()

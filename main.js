@@ -1908,17 +1908,17 @@ function startLofiRooms() {
     if (completed) { Sound.ritualChime(); toast('<span>Ten quiet minutes. Welcome back to your room.</span>', 3200); }
   }
   const gardenPortraits=new Map();
-  const gardenUI=LRFocusGarden.createView({model:focusGarden,sheet:codeSheet,roomId:()=>meta.current,
+  const gardenUI=LRFocusGarden.createView({model:focusGarden,sheet:codeSheet,roomId:()=>meta.current,canPlant:bed=>room.get(bed)?.t==='focusgarden',
     preview:(stage,c)=>{const key=stage+':'+c;if(!gardenPortraits.has(key))gardenPortraits.set(key,view.thumb({t:'focusbloom',c,on:false},undefined,o=>{for(let n=1;n<=4;n++)o.userData.parts['growth'+n].visible=n<=stage;}));return gardenPortraits.get(key);},
     start:(bed,minutes)=>{
       updateFocusGarden(true);
       const active=focusGarden.active;if(active)return;
-      const target=room.get(bed);if(!target||target.t!=='focusgarden')throw Error('Place a Focus Garden in this room to plant a seed.');
-      focusGarden.start(meta.current,bed,minutes);focusGarden.settle(room,meta.current,LR);
-      if(!focusGarden.active.plant){focusGarden.pocket();throw Error('Make a little space around the bed for a seed.');}
+      const target=room.get(bed),id=target?.t==='focusgarden'?bed:null;
+      const session=focusGarden.start(meta.current,id,minutes);focusGarden.settle(room,meta.current,LR);
+      if(!focusGarden.active.plant)focusGarden.withoutPlant(session.id);
       changed();if(care)care.tick(0);save();Sound.tick2();todayUI.refresh();
     },
-    end:()=>{updateFocusGarden(true);const ended=focusGarden.pocket();if(!ended)return;focusGarden.settle(room,meta.current,LR);changed();if(care)care.tick(0);save();todayUI.refresh();toast('<span>Tucked back into your pocket for later</span>',3200,true);companion?.say('Good stretch. The seed will wait.');},
+    end:()=>{updateFocusGarden(true);const ended=focusGarden.pocket();if(!ended)return;focusGarden.settle(room,meta.current,LR);changed();if(care)care.tick(0);save();todayUI.refresh();toast('<span>'+(ended.standalone?'A little pause. Your time still counts.':'Tucked back into your pocket for later')+'</span>',3200,true);companion?.say(ended.standalone?'Good stretch. Take your time.':'Good stretch. The seed will wait.');},
   });
   let gardenNext=0,gardenVisual=null;
   function updateFocusGarden(force=false){
@@ -1928,7 +1928,7 @@ function startLofiRooms() {
     for(const s of focusGarden.state.sessions.filter(s=>s.completed&&!s.announced)){
       remember('focus',{date:LRCalendar.day(new Date(s.end)),id:s.id});
       if(s.room===meta.current&&s.plant&&room.get(s.plant))view.burst(s.plant,'petals',2.5);
-      Sound.ritualChime();toast('<span>It burst into bloom</span>',3000,true);companion?.say('Look at that. A whole little bloom.',true);focusGarden.ack(s.id);
+      Sound.ritualChime();toast('<span>'+(s.standalone?'Focus session complete. A little time well spent.':'It burst into bloom')+'</span>',3000,true);companion?.say(s.standalone?'Good company. Good focus.':'Look at that. A whole little bloom.',true);focusGarden.ack(s.id);
     }
     if(care)care.tick(0);
     const visual=JSON.stringify([meta.current,room.items.filter(it=>CAT[it.t].focusGrowth).map(it=>[it.id,focusGarden.growth(meta.current,it.id).stage])]);if(visual!==gardenVisual){gardenVisual=visual;activity.wake();}
@@ -2660,12 +2660,12 @@ function startLofiRooms() {
       }
       r.append(copy,iconPicker,grille,row,base);if(remove)base.appendChild(remove);sl.appendChild(r);
     }
-    const stationDisclosure=h('div','station-add-disclosure'),stationToggle=document.createElement('button');
+    const utilities=h('nav','radio-utilities');utilities.setAttribute('aria-label','Radio tools');target.insertBefore(utilities,sl);const stationDisclosure=h('div','station-add-disclosure'),stationToggle=document.createElement('button');
     stationToggle.type='button';stationToggle.className='station-add-toggle';stationToggle.setAttribute('aria-expanded','false');stationToggle.setAttribute('aria-controls','station-add-form');
-    stationToggle.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add station</span><svg class="station-add-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-    stationDisclosure.appendChild(stationToggle);
+    stationToggle.setAttribute('aria-label','Add station');stationToggle.title='Add station';stationToggle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+    utilities.appendChild(stationToggle);
     const add=document.createElement('form');add.id='station-add-form';add.className='addstation';add.hidden=true;add.noValidate=true;add.setAttribute('aria-label','Add a station');stationDisclosure.appendChild(add);
-    stationToggle.onclick=()=>{const expanded=stationToggle.getAttribute('aria-expanded')!=='true';stationToggle.setAttribute('aria-expanded',String(expanded));add.hidden=!expanded;};
+    stationToggle.onclick=()=>{const expanded=stationToggle.getAttribute('aria-expanded')!=='true';stationToggle.setAttribute('aria-expanded',String(expanded));add.hidden=!expanded;browse.hidden=true;browseToggle.setAttribute('aria-expanded','false');};
     add.innerHTML='<label class="station-field" for="stName">Station name<input id="stName" placeholder="Night jazz" maxlength="40" autocomplete="off"></label><label class="station-field" for="stUrl">Stream link<input id="stUrl" type="url" placeholder="https://…" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="none"></label><button type="submit" class="chipbtn primary" id="stAdd">Save station</button>';
     add.onsubmit = e => {e.preventDefault();
       const url = add.querySelector('#stUrl').value.trim(), name = add.querySelector('#stName').value.trim() || 'My station';
@@ -2674,7 +2674,10 @@ function startLofiRooms() {
       (meta.stations || (meta.stations = [])).push({ name, url, icon:icons[Math.floor(Math.random()*icons.length)] }); saveMeta(); Sound.chime();
       toast(`<span>Added ${name.replace(/</g, '&lt;')}. Use the arrows to tune in.</span>`, 2000, true); renderMenu(); document.querySelector('#menu-sound .station-add-toggle')?.focus({preventScroll:true});
     };
-    atlasUI.mountRadio(target);
+    const browse=h('section','station-browser');browse.id='station-browser';browse.hidden=true;
+    const browseToggle=document.createElement('button');browseToggle.type='button';browseToggle.className='station-browse-toggle';browseToggle.title='Browse stations';browseToggle.setAttribute('aria-label','Browse stations');browseToggle.setAttribute('aria-controls',browse.id);browseToggle.setAttribute('aria-expanded','false');browseToggle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>';utilities.appendChild(browseToggle);
+    browseToggle.onclick=()=>{const expanded=browseToggle.getAttribute('aria-expanded')!=='true';browse.hidden=!expanded;browseToggle.setAttribute('aria-expanded',String(expanded));add.hidden=true;stationToggle.setAttribute('aria-expanded','false');};
+    atlasUI.mountRadio(browse);
     target = sections.Settings;
     const settingsPanel=target;target=h('div','settings-toggle-grid');target.setAttribute('aria-label','Settings toggles');
     toggle('Music', !!meta.music, () => setControl('music',!meta.music));

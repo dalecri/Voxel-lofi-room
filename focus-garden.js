@@ -14,20 +14,20 @@
     const copy=s=>s&&({...s});
     function clock(s){const t=rituals.focus(s.room,s.bed);return t?.session===s.id?t:null;}
     function active(){return state.sessions.find(s=>s.status==='running') || null;}
-    function tick(){const completed=[];for(const s of state.sessions){if(s.status!=='running')continue;const t=clock(s);if(t&&!t.cancelled&&t.end<=now()){s.status='completed';s.completed=true;state.totalBlooms++;s.blossomDue=state.totalBlooms%4===0;if(s.blossomDue)state.blossomsGrown++;completed.push(copy(s));}}if(completed.length)persist();return completed;}
+    function tick(){const completed=[];for(const s of state.sessions){if(s.status!=='running')continue;const t=clock(s);if(t&&!t.cancelled&&t.end<=now()){s.status='completed';s.completed=true;if(!s.standalone){state.totalBlooms++;s.blossomDue=state.totalBlooms%4===0;if(s.blossomDue)state.blossomsGrown++;}completed.push(copy(s));}}if(completed.length)persist();return completed;}
     function start(room,bed,minutes){tick();if(active())return copy(active());if(!PRESETS.includes(minutes))throw Error('Choose 15, 25, or 50 minutes.');const id='garden-'+now().toString(36)+'-'+state.sessions.length;
       const t=rituals.light(room,bed,{kind:'garden',minutes,session:id});if(!t)throw Error('A seed is already growing. Pick up that session first.');
-      const s={id,date:day(new Date(t.start)),room,bed,minutes,start:t.start,end:t.end,completed:false,status:'running',seed:state.sessions.length%3,plant:null,sapling:null};state.sessions.push(s);try{persist();}catch(e){state.sessions.pop();rituals.snuff(room,bed);throw e;}return copy(s);
+      const s={id,date:day(new Date(t.start)),room,bed,minutes,start:t.start,end:t.end,completed:false,status:'running',seed:state.sessions.length%3,plant:null,sapling:null,standalone:bed==null};state.sessions.push(s);try{persist();}catch(e){state.sessions.pop();rituals.snuff(room,bed);throw e;}return copy(s);
     }
     function pocket(){tick();const s=active();if(!s)return null;rituals.snuff(s.room,s.bed);s.status='pocketed';persist();return copy(s);}
     function growth(room,plant){const s=state.sessions.find(s=>s.room===room&&s.plant===plant&&!s.archived);if(!s)return {stage:4};return {stage:s.completed?4:s.status==='running'?stageOf(clock(s)?.progress || 0):0};}
-    function detach(room,id){tick();for(const s of state.sessions)if(s.room===room&&(s.plant===id||s.bed===id)){if(s.status==='running'){rituals.snuff(s.room,s.bed);s.status='pocketed';}s.archived=true;}persist();}
+    function detach(room,id){tick();for(const s of state.sessions)if(!s.standalone&&s.room===room&&(s.plant===id||s.bed===id)){if(s.status==='running'){rituals.snuff(s.room,s.bed);s.status='pocketed';}s.archived=true;}persist();}
     // Place through the existing room support/footprint model. IDs are bound to
     // private sessions, never added as private metadata to shared decor items.
     function settle(room,roomId,LR){let changed=false,updated=false;
       const free=(type,near)=>{const cells=[];for(let x=0;x<room.n;x++)for(let z=0;z<room.n;z++)cells.push({x,z});cells.sort((a,b)=>Math.hypot(a.x-(near?.x||0),a.z-(near?.z||0))-Math.hypot(b.x-(near?.x||0),b.z-(near?.z||0)));return cells.map(p=>room.make(type,p)).find(it=>room.canPlace(it));};
       for(const s of state.sessions.filter(s=>s.room===roomId)){
-        const bed=room.get(s.bed);
+        if(s.standalone)continue;const bed=room.get(s.bed);
         if(s.status==='pocketed'){if(s.plant&&room.get(s.plant)?.t==='focusbloom'){room.remove(s.plant);changed=true;}continue;}
         if(!s.archived&&(!s.plant||!room.get(s.plant))&&bed?.t==='focusgarden'){
           let candidate=[0,1].map(lx=>room.make('focusbloom',{p:bed.id,lx,lz:0,c:s.seed})).find(it=>room.canPlace(it));
@@ -38,23 +38,23 @@
       }
       if(updated)persist();return changed;
     }
-    return {start,pocket,tick,growth,settle,detach,ack(id){const s=state.sessions.find(s=>s.id===id);if(s){s.announced=true;persist();}},get active(){const s=active();if(!s)return null;const t=clock(s);return {...s,remaining:t?.remaining || 0,progress:t?.progress || 0,stage:stageOf(t?.progress || 0)};},label(room,plant){return copy(state.sessions.find(s=>s.room===room&&s.plant===plant));},get state(){return JSON.parse(JSON.stringify(state));}};
+    return {start,pocket,tick,growth,settle,detach,withoutPlant(id){const s=state.sessions.find(s=>s.id===id);if(s&&!s.plant){s.standalone=true;persist();}},ack(id){const s=state.sessions.find(s=>s.id===id);if(s){s.announced=true;persist();}},get active(){const s=active();if(!s)return null;const t=clock(s);return {...s,remaining:t?.remaining || 0,progress:t?.progress || 0,stage:stageOf(t?.progress || 0)};},label(room,plant){return copy(state.sessions.find(s=>s.room===room&&s.plant===plant));},get state(){return JSON.parse(JSON.stringify(state));}};
   }
-  function createView({model,sheet,roomId,start,end,preview=()=>null}){
+  function createView({model,sheet,roomId,start,end,canPlant=()=>true,preview=()=>null}){
     let bed=null,host=null,selected=25,signature='';
     function open(id){bed=id;sheet('Focus Garden','A seed and a little time. Everything here can wait.',h=>{host=h('div','focus-garden');signature='';draw(true);});}
-    function draw(force=false){if(!host?.isConnected||!force&&!host.closest('.sheet.open'))return;const active=model.active,running=!!active,session=running?active:model.state.sessions.filter(s=>s.room===roomId()&&s.bed===bed).at(-1),finished=!running&&session?.completed;
-      const key=JSON.stringify([session?.id,running,finished,selected]);if(signature!==key){signature=key;host.replaceChildren();
+    function draw(force=false){if(!host?.isConnected||!force&&!host.closest('.sheet.open'))return;const active=model.active,running=!!active,session=running?active:model.state.sessions.filter(s=>s.room===roomId()&&s.bed===bed).at(-1),finished=!running&&session?.completed,standalone=running?!!active.standalone:finished?!!session.standalone:!canPlant(bed);
+      const key=JSON.stringify([session?.id,running,finished,selected,standalone]);if(signature!==key){signature=key;host.replaceChildren();
         const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-        const dial=el('div','garden-dial');dial.innerHTML='<svg viewBox="0 0 240 240" aria-hidden="true"><circle class="tea-dial-track" cx="120" cy="120" r="104"/><circle class="tea-dial-progress" cx="120" cy="120" r="104" transform="rotate(-90 120 120)" stroke-dasharray="653.45"/></svg>';
-        const middle=el('div','garden-dial-content'),image=el('img','garden-seedling');image.alt='Mystery seedling';image.width=84;image.height=84;const clock=el('b','garden-clock'),stage=el('span','garden-stage');clock.setAttribute('role','timer');clock.setAttribute('aria-live','off');middle.append(image,clock,stage);dial.appendChild(middle);host.appendChild(dial);
+        const dial=el('div','garden-dial tea-dial');dial.innerHTML='<svg viewBox="0 0 240 240" aria-hidden="true"><circle class="tea-dial-track" cx="120" cy="120" r="104"/><circle class="tea-dial-progress" cx="120" cy="120" r="104" transform="rotate(-90 120 120)" stroke-dasharray="653.45"/></svg>';
+        const ring=dial.querySelector('svg');for(let i=0;i<50;i++){const a=i/50*Math.PI*2,line=document.createElementNS('http://www.w3.org/2000/svg','line'),r=i%5===0?111:114;for(const [k,v] of Object.entries({x1:120+Math.sin(a)*r,y1:120-Math.cos(a)*r,x2:120+Math.sin(a)*118,y2:120-Math.cos(a)*118,class:i%5===0?'tea-tick major':'tea-tick'}))line.setAttribute(k,v);ring.appendChild(line);}const middle=el('div','garden-dial-content'),image=el('img','garden-seedling');image.alt='Mystery seedling';image.hidden=standalone;image.width=84;image.height=84;const clock=el('b','garden-clock'),stage=el('span','garden-stage');clock.setAttribute('role','timer');clock.setAttribute('aria-live','off');middle.append(image,clock,stage);dial.appendChild(middle);host.appendChild(dial);
         const presets=el('div','tea-presets');presets.setAttribute('role','group');presets.setAttribute('aria-label','Focus duration');for(const n of PRESETS){const b=el('button','tea-pill',n+' min');b.type='button';b.disabled=running;b.setAttribute('aria-pressed',String((running?active.minutes:selected)===n));b.onclick=()=>{selected=n;signature='';draw();};presets.appendChild(b);}host.appendChild(presets);
-        const status=el('p','garden-status');status.setAttribute('role','status');const button=el('button',running?'garden-end':'tea-start',running?'End session':finished?'Plant another seed':'Start');button.type='button';button.onclick=()=>{try{if(running)end();else start(bed,selected);signature='';draw();}catch(e){status.textContent=e.message;}};host.append(button,status);
-        if(finished)status.textContent='It burst into bloom';
+        const status=el('p','garden-status');status.setAttribute('role','status');const button=el('button',running?'garden-end':'tea-start',running?'End session':finished?(standalone?'Start again':'Plant another seed'):'Start');button.type='button';button.onclick=()=>{try{if(running)end();else start(bed,selected);signature='';draw();}catch(e){status.textContent=e.message;}};host.append(button,status);
+        if(finished)status.textContent=standalone?'A little time well spent.':'It burst into bloom';const note=el('p','garden-standalone-note','This timer runs without furniture interaction. Add a Focus Garden to grow a seed.');note.hidden=!standalone;host.appendChild(note);
       }
       const progress=running?active.progress:finished?1:0,stage=stageOf(progress),mins=running?active.minutes:selected,remaining=running?active.remaining:mins*60000;
-      host.dataset.state=running?'running':finished?'bloomed':'idle';host.dataset.stage=stage;const arc=host.querySelector('.tea-dial-progress');arc.style.strokeDashoffset=String(653.45*(1-progress));host.querySelector('.garden-clock').textContent=finished?'In bloom':running?`${Math.floor(Math.ceil(remaining/1000)/60)}:${String(Math.ceil(remaining/1000)%60).padStart(2,'0')}`:`${mins} MIN`;
-      host.querySelector('.garden-stage').textContent=finished?'Rooted in a little time':STAGES[stage];const image=host.querySelector('img'),src=preview(stage,session?.seed || 0);if(src&&image.getAttribute('src')!==src)image.src=src;
+      host.dataset.state=running?'running':finished?'bloomed':'idle';host.dataset.stage=stage;const arc=host.querySelector('.tea-dial-progress');arc.style.strokeDashoffset=String(653.45*(1-progress));host.querySelector('.garden-clock').textContent=finished?(standalone?'Complete':'In bloom'):running?`${Math.floor(Math.ceil(remaining/1000)/60)}:${String(Math.ceil(remaining/1000)%60).padStart(2,'0')}`:`${mins} MIN`;
+      host.querySelector('.garden-stage').textContent=standalone?(finished?'Time well spent':'A little time for you'):finished?'Rooted in a little time':STAGES[stage];const image=host.querySelector('img'),src=preview(stage,session?.seed || 0);if(src&&image.getAttribute('src')!==src)image.src=src;
     }
     return {open,refresh:draw};
   }

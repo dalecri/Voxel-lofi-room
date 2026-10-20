@@ -374,3 +374,20 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .timer-badge[data-timer=tea] { position:fixed; top:var(--tea-dock-top,84px); right:var(--tea-dock-right,16px); max-width:calc(100vw - 28px); box-sizing:border-box; }
 .timer-badges[data-keys=tea] { left:auto; bottom:auto; top:var(--tea-dock-top,84px); right:var(--tea-dock-right,16px); max-width:calc(100vw - 28px); align-items:flex-end; }
 .timer-badges[data-keys=tea] > [data-timer=tea] { position:static; }
+
+/* Control Centre: title at the upper right, utilities beside search. */
+.home-sheet-actions { gap:12px; }
+.home-sheet-title { flex:1; min-width:0; text-align:right; }
+.home-sheet-title h2 { margin:0; font-size:22px; }
+.home-sheet-title .muted { margin:4px 0 0; font-size:13px; }
+.home-sheet-actions .sheet-close { margin:0; }
+.home-app-controls > .sheet-icon { margin:0; }
+
+/* The receiver stays central; station management appears only when requested. */
+.radio-utilities { display:flex; justify-content:flex-end; gap:6px; margin:0 0 8px; }
+.radio-utilities > button { display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; border:1px solid var(--line); border-radius:14px; background:var(--chip); color:var(--ink); }
+.radio-utilities > button[aria-expanded=true] { border-color:var(--accent); color:var(--accent); }
+.radio-utilities > button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.station-add-disclosure { margin:0; border:0; }
+.station-add-disclosure:has(> form[hidden]),.station-browser[hidden] { display:none; }
+.station-add-disclosure .addstation,.station-browser { margin-top:14px; }

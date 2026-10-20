@@ -27,3 +27,12 @@ test('all focus presets share the rituals deadline and interrupted history write
  for(const minutes of G.PRESETS){const f=fixture(),s=f.garden.start(1,1,minutes);assert.equal(s.end-s.start,minutes*60000);assert.equal(f.rituals.activeFocus[0].session,s.id);}
  const f=fixture();f.rituals.light(1,1,{minutes:50,kind:'garden',session:'orphan'});const recovered=G.create({store:f.store,rituals:f.rituals,now:f.now});assert.equal(f.rituals.activeFocus.length,0);assert.equal(recovered.active,null);assert.ok(recovered.start(1,1,15));
 });
+
+test('standalone focus resumes the ritual clock and completes without planting or bloom rewards',()=>{
+ const f=fixture(),before=f.room.items.length,s=f.garden.start(1,null,15);assert.equal(s.standalone,true);f.garden.settle(f.room,1,LR);assert.equal(f.room.items.length,before);f.advance(60000);
+ const rituals=R.create({store:f.store,now:f.now}),restored=G.create({store:f.store,rituals,now:f.now});assert.equal(restored.active.remaining,840000);assert.equal(restored.active.end,s.end);f.advance(840000);rituals.tick();assert.equal(restored.tick()[0].completed,true);assert.equal(restored.state.totalBlooms,0);assert.equal(restored.state.blossomsGrown,0);assert.equal(restored.settle(f.room,1,LR),false);
+ restored.start(1,null,25);assert.equal(restored.pocket().standalone,true);assert.equal(restored.active,null);
+});
+test('a session without planting can detach from furniture without stopping its clock',()=>{
+ const f=fixture(),s=f.garden.start(1,f.bed.id,15);f.garden.withoutPlant(s.id);f.garden.detach(1,f.bed.id);assert.equal(f.garden.active.id,s.id);assert.equal(f.garden.settle(f.room,1,LR),false);assert.equal(f.garden.active.plant,null);
+});
