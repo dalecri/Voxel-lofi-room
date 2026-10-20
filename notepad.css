@@ -173,3 +173,5 @@
 .task-notebook .today-task-form input:focus { border-color:var(--accent); }
 .task-notebook .today-task-form input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .task-notebook .today-task-form .primary { box-sizing:border-box; min-height:48px; padding:10px 14px; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); font:800 14px/1.3 var(--font,Nunito,sans-serif); }
+/* To-Do tab: the day path sits at the top of the notebook, under the title. */
+.task-notebook > .task-journey.is-top { margin:0 0 10px; padding:0 0 12px; border-top:0; border-bottom:1px solid #9eaa9155; }
