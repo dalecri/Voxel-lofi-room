@@ -284,13 +284,19 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-sky.has-task-focus .today-welcome { margin:0 0 8px; }
 .today-sky.has-task-focus .today-welcome h2 { font-size:clamp(26px,5vw,34px); letter-spacing:-.025em; }
 .today-sky.has-task-focus .today-welcome p { display:none; }
+/* A continuous capsule for each weekday, with today filled in the room's accent. */
 .today-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; margin-bottom:26px; }
-.today-week-day { display:flex; flex-direction:column; align-items:center; gap:9px; padding:0; min-width:0; min-height:72px; color:var(--ink-dim); background:none; border:0; border-radius:24px; }
-.today-week-day > span { font-size:12px; line-height:1.5; }
-.today-week-day > b { display:grid; place-items:center; width:100%; max-width:46px; aspect-ratio:1; background:var(--chip); border-radius:50%; font:600 18px/1 Nunito,sans-serif; color:var(--ink); }
-.today-week-day[aria-current=date] > span { color:var(--ink); font-weight:900; }
-.today-week-day[aria-current=date] > b { background:var(--accent); color:var(--accent-ink,#fff); }
-.today-week-day:hover > b { outline:1px solid var(--accent); outline-offset:2px; }
+.today-week-day { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; box-sizing:border-box; padding:8px 0 10px; min-width:0; min-height:84px; color:var(--ink); background:var(--panel-solid); border:1px solid var(--line); border-radius:999px; }
+.today-week-day::before { content:''; flex:none; width:4px; height:4px; margin-bottom:1px; border-radius:50%; background:currentColor; opacity:0; }
+.today-week-day > span { color:var(--ink-dim); font:600 11px/1.2 Nunito,sans-serif; }
+.today-week-day > b { display:block; width:auto; max-width:none; aspect-ratio:auto; background:none; border-radius:0; font:800 17px/1.2 Nunito,sans-serif; color:inherit; }
+.today-week-day[aria-current=date] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink,#fffaf3); }
+.today-week-day[aria-current=date]::before { opacity:1; }
+.today-week-day[aria-current=date] > span { color:inherit; font-weight:800; }
+.today-week-day[aria-current=date] > b { background:none; color:inherit; }
+.today-week-day:hover { border-color:var(--accent); }
+.today-week-day:hover > b { outline:none; }
+
 .today-feature { display:grid; grid-template-columns:minmax(0,1fr) 56px; gap:10px; align-items:stretch; margin-bottom:26px; }
 .today-feature[data-active=caption] { grid-template-columns:56px minmax(0,1fr); }
 .today-feature.french-only { grid-template-columns:minmax(0,1fr); }
