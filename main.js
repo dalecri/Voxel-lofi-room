@@ -1485,6 +1485,7 @@ function startLofiRooms() {
     try { if (document.querySelector('select:open')) return; } catch (_) {}
     const futureDetails=$('.future-mail-details[open]');
     if(e.key==='Escape'&&futureDetails){e.preventDefault();futureDetails.open=false;futureDetails.querySelector('summary').focus();e.stopImmediatePropagation();return;}
+    if(e.target.matches('.compact-date input[type=date]')&&['Enter',' '].includes(e.key))return;
     if(e.target.matches('.today-feature-toggle')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
     if(e.target.matches('.today-widget')&&['Enter',' '].includes(e.key))return;
     if(e.target.matches('.today-widget-handle')&&['ArrowUp','ArrowDown'].includes(e.key))return;

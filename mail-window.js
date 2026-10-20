@@ -15,6 +15,18 @@
     const icon=ICONS.find(i=>i.id===normalizeIcon(value)),colors={d:'#393047',D:'#b9aa98',r:'#bd526c',R:'#ef8b9d',g:'#466a4a',G:'#83a46f',y:'#b58d45',Y:'#edc76e',L:'#a8c6b5'};
     return '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges">'+icon.rows.flatMap((row,y)=>[...row].flatMap((c,x)=>colors[c]?[`<rect x="${x}" y="${y}" width="1" height="1" fill="${colors[c]}"/>`]:[])).join('')+'</svg>';
   }
+  // Keep the native date input (validation, keyboard and mobile picker), but only
+  // give its calendar target space. The selected date is plain text beside it.
+  function compactDate(input){
+    const row=el('span','compact-date'),value=el('time','compact-date-value'),target=el('span','compact-date-target'),icon=el('span','compact-date-icon');
+    value.setAttribute('aria-hidden','true');icon.setAttribute('aria-hidden','true');
+    icon.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>';
+    const update=()=>{const date=new Date(input.value+'T12:00:00');value.textContent=input.value&&Number.isFinite(+date)?date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Choose date';value.dateTime=input.value||'';};
+    input.addEventListener('input',update);input.addEventListener('change',update);
+    const open=()=>{try{input.showPicker?.();}catch(e){/* native input remains the fallback */}};
+    input.addEventListener('click',open);input.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();open();}});
+    target.append(icon,input);row.append(value,target);update();return row;
+  }
   function decorate(form,head,page,from,initial,onChange) {
     if(!form.className.split(/\s+/).includes('pixel-postcard'))form.className+=' pixel-postcard';
     // One small corner stamp carries the picture; there is no large illustration.
@@ -89,7 +101,7 @@
       const dueKey = el('span'); dueKey.textContent = 'Deliver on';
       due = el('input'); due.type = 'date'; due.value = options.deliverOn.value || ''; due.required = options.deliverOn.required !== false;
       if (options.deliverOn.min) due.min = options.deliverOn.min;
-      due.setAttribute('aria-label', 'Deliver on'); dueRow.append(dueKey, due); foot.appendChild(dueRow);
+      due.setAttribute('aria-label', 'Deliver on'); dueRow.append(dueKey, compactDate(due)); foot.appendChild(dueRow);
     }
     const actions = el('div', 'mailwin-actions');
     const saved = el('p', 'mailwin-saved'); saved.setAttribute('role', 'status'); saved.textContent = options.status || '';
@@ -107,6 +119,6 @@
     if(postcard)foot.prepend(postcard.picker);
     return { form, name, fields, body, toolbar, foot, due, saved, actions, buttons, postcard };
   }
-  const api = { create, ICONS, normalizeIcon, art, readCard };
+  const api = { create, compactDate, ICONS, normalizeIcon, art, readCard };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRMailWindow = api;
 })(typeof window !== 'undefined' ? window : globalThis);
