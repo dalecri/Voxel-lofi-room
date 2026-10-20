@@ -27,8 +27,8 @@ with sync_playwright() as p:
   context.route('**/twostorycaptions.json',caption_route)
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu')
-  # Today has a compact desk; the full studio remains a separate tool.
-  page.get_by_role('tab',name='To-Do',exact=True).click();assert page.locator('#sheetBody .caption-studio, #sheetBody .journal-paper').count()==0;page.locator('.today-caption-text').wait_for(state='attached');assert request['count']==1;request['count']=0;page.keyboard.press('Escape')
+  # Today has a compact desk that only shows the saved export (no fetch on open); the full studio remains a separate tool.
+  page.get_by_role('tab',name='To-Do',exact=True).click();assert page.locator('#sheetBody .caption-studio, #sheetBody .journal-paper').count()==0;page.wait_for_timeout(600);assert request['count']==0;assert 'Tap ↻' in page.locator('.today-caption-empty').first.text_content();page.keyboard.press('Escape')
   # Control Center opens the caption studio, which fetches once.
   page.click('#bHome');page.locator('#homeView [data-app=captions]').click();page.wait_for_function('document.querySelectorAll(".caption-clip").length===3')
   desk=page.locator('.caption-studio');assert request['count']==1;assert desk.locator('h4').inner_text()=='Caption studio';assert desk.locator('.studio-house svg rect').count()>40
@@ -50,7 +50,7 @@ with sync_playwright() as p:
   page.locator('.caption-studio').screenshot(path=f'/tmp/caption-studio-{width}.png');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
   for phase in ['day','night']:
    page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
-   assert desk.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.getElementById("sheetBody")).color');assert desk.locator('h4').evaluate('e=>getComputedStyle(e).fontFamily.includes("Fredoka")');assert desk.locator('.caption-desc').first.evaluate('e=>getComputedStyle(e).fontFamily.includes("Nunito")');assert desk.locator('.caption-clip').first.evaluate('e=>getComputedStyle(e).borderRadius')=='24px';assert desk.get_by_role('button',name='Refresh captions',exact=True).bounding_box()['width']>=44
+   assert desk.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.getElementById("sheetBody")).color');assert desk.locator('h4').evaluate('e=>getComputedStyle(e).fontFamily.includes("Plus Jakarta Sans")');assert desk.locator('.caption-desc').first.evaluate('e=>getComputedStyle(e).fontFamily.includes("Nunito")');assert desk.locator('.caption-clip').first.evaluate('e=>getComputedStyle(e).borderRadius')=='24px';assert desk.get_by_role('button',name='Refresh captions',exact=True).bounding_box()['width']>=44
    assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.locator('#sheetBody').bounding_box()['width']<=560;page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');page.screenshot(path=f'/tmp/caption-dashboard-{phase}-{width}.png')
 
   page.keyboard.press('Escape');assert not errors,errors;context.close()

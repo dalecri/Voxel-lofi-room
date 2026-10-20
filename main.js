@@ -226,6 +226,8 @@ function startLofiRooms() {
   const motionMedia = matchMedia('(prefers-reduced-motion: reduce)');
   let motionPreference = store.get(LRHome.MOTION_KEY,null);
   Object.defineProperty(view,'reducedMotion',{get:()=>motionPreference ?? motionMedia.matches});
+  function applyToolTheme() { document.body.dataset.toolTheme = ['light','dark'].includes(meta.toolTheme) ? meta.toolTheme : 'pastel'; }
+  applyToolTheme();
   function applyMotion() {
     motionPreference = store.get(LRHome.MOTION_KEY,null);
     document.body.classList.toggle('reduce-motion', view.reducedMotion);
@@ -1947,7 +1949,7 @@ function startLofiRooms() {
   }
   function breathingSheet() {
     const body = $('#sheetBody'); body.dataset.merchant = '';
-    body.innerHTML = '<div class="grab"></div><h2>Ten minutes in your room</h2><p class="muted">Moon-blue light, a slow circle, a gentle tone. Breathe in as it opens, out as it softens. Four seconds in, six out, or simply follow at your own pace. Keep your eyes open. Leave whenever you like.</p><div class="rowbtns"><button class="chipbtn primary" id="breathStart">Settle in</button><button class="chipbtn" id="breathNotNow">Back</button></div>';
+    delete body.dataset.tool; body.innerHTML = '<div class="grab"></div><h2>Ten minutes in your room</h2><p class="muted">Moon-blue light, a slow circle, a gentle tone. Breathe in as it opens, out as it softens. Four seconds in, six out, or simply follow at your own pace. Keep your eyes open. Leave whenever you like.</p><div class="rowbtns"><button class="chipbtn primary" id="breathStart">Settle in</button><button class="chipbtn" id="breathNotNow">Back</button></div>';
     $('#breathStart').onclick = startBreathing; $('#breathNotNow').onclick = closeSheets; openSheet();
   }
   function startBreathing() {
@@ -2020,7 +2022,7 @@ function startLofiRooms() {
   function openShop(stall, purchased) {
     const body = $('#sheetBody');
     const here = merchantHere();
-    body.dataset.merchant = here ? 'here' : 'away';
+    body.dataset.merchant = here ? 'here' : 'away'; body.dataset.tool = 'merchant';
     body.innerHTML = `<div class="grab"></div><div class="rowbtns"><button class="chipbtn" id="shopBack">Menu</button><button class="chipbtn sheet-icon" id="shopClose" aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
       <h2>Mallow’s traveling treasures</h2><p id="shopBalance" role="status" aria-live="polite"></p>
       <p class="muted">${here ? 'Three little finds in a well-traveled satchel. Anything you take home is yours forever.' : 'Mallow is out wandering. He drops by cozy rooms from time to time. Missed him? He’ll come back another day. Your Fireflies and treasures are safe.'}</p>
@@ -2130,7 +2132,7 @@ function startLofiRooms() {
     if (!shop.owns('crown')) { openShop(); return; }
     const body = $('#sheetBody');
     body.dataset.merchant = '';
-    body.innerHTML = '<div class="grab"></div><h2>A crown for a cozy cat</h2><p class="muted">Tap a cat’s name to put on or take off their crown. Save the room to keep their outfit.</p><div class="rowbtns" id="crownCats"></div><button class="chipbtn" id="crownClose">Done</button>';
+    delete body.dataset.tool; body.innerHTML = '<div class="grab"></div><h2>A crown for a cozy cat</h2><p class="muted">Tap a cat’s name to put on or take off their crown. Save the room to keep their outfit.</p><div class="rowbtns" id="crownCats"></div><button class="chipbtn" id="crownClose">Done</button>';
     const cats = room.items.filter(i => i.t === 'cat' && !i.visitor);
     cats.forEach(cat => {
       const b = document.createElement('button'); b.className = 'chipbtn';
@@ -2144,7 +2146,7 @@ function startLofiRooms() {
   }
   // TwoStoryTails captions: a pixel studio sheet, from Control Center or the clapperboard.
   function captionStudio() {
-    codeSheet('Caption studio', 'TwoStoryTails clips, ready to copy.', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); });
+    codeSheet('Caption studio', 'TwoStoryTails clips, ready to copy.', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); }, 'captions');
     captionDesk.refresh();
   }
   // Cozy moments: a floating card under the room name, with the checklist and the cats' diary.
@@ -2287,13 +2289,17 @@ function startLofiRooms() {
     const history=body.querySelector('.mood-history');
     if(history){header.classList.add('mood-heading');header.append(title,history,close);}else header.append(title,close);
   }
-  function codeSheet(title, sub, build) {
+  // tool tags the sheet so the shared pastel tool styles (tools.css) can theme it.
+  const SHEET_TOOLS = { 'Caption studio':'captions', 'On the fridge door':'groceries', 'Pushup tally':'tally', 'The idea jar':'ideas', 'Tea':'tea', 'A little savings jar':'savings', 'Pixel maker':'sketch', 'French corner':'french', 'A little whiteboard':'whiteboard', 'A little wardrobe':'wardrobe', 'Files':'files', 'Rename file':'files', 'Delete this file?':'files', 'Calendar':'calendar', 'The newspaper':'newspaper', 'Book':'book' };
+  const SHEET_TOOL_SUBS = { 'TwoStoryTails posting plan':'tst', 'Your day, remembered gently.':'calendar' };
+  function codeSheet(title, sub, build, tool = '') {
     frenchUI?.close(false);
     letters.close(false);
     releaseRoomQR();
     home.close(false);
     roomToolsUI.close();
-    const body = $('#sheetBody'); delete body.dataset.dashboardFont; body.innerHTML = '';
+    if (!tool) tool = SHEET_TOOLS[title] || SHEET_TOOL_SUBS[sub] || '';
+    const body = $('#sheetBody'); delete body.dataset.dashboardFont; if (tool) body.dataset.tool = tool; else delete body.dataset.tool; body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
     const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
@@ -2536,7 +2542,7 @@ function startLofiRooms() {
     }
   }
   function doorPicker(door, relink) {
-    const body = $('#sheetBody'); delete body.dataset.dashboardFont; body.innerHTML = '';
+    const body = $('#sheetBody'); delete body.dataset.dashboardFont; delete body.dataset.tool; body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab'); h('h2', '', 'Where does this door go?');
     h('p', 'muted', 'Pick one of your rooms, or start a new one. Walking through brings you back the same way.');
@@ -2614,7 +2620,7 @@ function startLofiRooms() {
     saveIndex();
     const body = $('#sheetBody'), focused = document.activeElement;
     const focusState = focused?.matches('.toggle') ? {label:focused.textContent,panel:focused.closest('[role=tabpanel]')?.id,top:body.scrollTop} : null;
-    body.dataset.merchant = '';
+    body.dataset.merchant = ''; delete body.dataset.tool;
     body.dataset.dashboardFont=meta.dashboardMono?'mono':'default';
     body.innerHTML = '';
     const sections = LRDashboard.menu(body, store, closeSheets);
@@ -2754,6 +2760,11 @@ function startLofiRooms() {
     toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
     settingsNotes.push(['Calm performance','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.']);
     toggle('Monospace dashboard', meta.dashboardMono===true, () => { meta.dashboardMono=meta.dashboardMono!==true;saveMeta(); });
+    // Tool colors: each tool's pastel, or one calm light or dark palette for all of them.
+    const themeRow=document.createElement('div');themeRow.className='settings-tool-theme';themeRow.setAttribute('role','radiogroup');themeRow.setAttribute('aria-label','Tool colors');
+    const themeLabel=document.createElement('span');themeLabel.className='settings-tool-theme-label';themeLabel.textContent='Tool colors';themeRow.appendChild(themeLabel);
+    for(const [id,label] of [['pastel','Pastel'],['light','Light'],['dark','Dark']]){const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=label;b.setAttribute('role','radio');b.setAttribute('aria-checked',String((meta.toolTheme||'pastel')===id));b.onclick=()=>{meta.toolTheme=id;saveMeta();applyToolTheme();renderMenu();};themeRow.appendChild(b);}
+    settingsPanel.insertBefore(themeRow,target);
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
     toggle('Live extras', meta.liveExtras === true, () => { atlas.setEnabled(meta.liveExtras !== true); });
     settingsNotes.push(['Live extras','Public-domain art, aurora watch and Canadian holidays. Radio browsing, book searches, recipes and cat facts connect only when tapped.']);
