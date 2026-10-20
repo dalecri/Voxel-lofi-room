@@ -70,3 +70,11 @@ test('Today week is Monday-first with exactly one current day through month, yea
  }
  assert.equal(T.weekDays(new Date(2027,0,1))[0].date,'2026-12-28');assert.equal(T.weekDays(new Date(2027,0,1))[6].date,'2027-01-03');
 });
+
+test('weather card maps five local days from existing forecast and ignores disabled or invalid cache',()=>{
+ const now=new Date(2026,9,20,23,59),meta={liveWeather:true,weather:'rain',weatherFetchedAt:+now,weatherDetails:{temperature:14.6,forecast:[{date:'2026-10-20',low:3.7,high:18.2,condition:'rain'},{date:'2026-10-21',low:-2,high:9,condition:'snow'},{date:'2026-10-22',low:null,high:20,condition:'clear'}]}};
+ const card=T.weatherCard(meta,now);assert.equal(card.temperature,15);assert.equal(card.rows.length,5);assert.deepEqual(card.rows.map(r=>r.date),['2026-10-20','2026-10-21','2026-10-22','2026-10-23','2026-10-24']);assert.deepEqual([card.rows[0].low,card.rows[0].high],[4,18]);assert.equal(card.rows[1].low,-2);assert.equal(card.rows[2].high,null);assert.equal(card.note,'Local weather');
+ assert.equal(T.weatherCard({...meta,weatherFetchedAt:+now-7200000},now).note,'Cached forecast');
+ const off=T.weatherCard({...meta,liveWeather:false},now);assert.equal(off.temperature,null);assert.ok(off.rows.every(r=>r.high===null));assert.equal(off.note,'Live weather off');assert.equal(T.weatherCard({liveWeather:true},now).note,'Forecast unavailable');
+ const boundary=T.weatherCard({},new Date(2026,11,30));assert.equal(boundary.rows.at(-1).date,'2027-01-03');
+});
