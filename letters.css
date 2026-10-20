@@ -75,7 +75,7 @@
 /* Typewriter, sky edition: a floating sky-blue card with Plus Jakarta Sans,
    pill controls and a POST stamp. Same palette day and night. */
 #sheetBody:has(#lettersView) { --tw-bg:#a3dcf8; --tw-surface:#87caec; --tw-raise:#9bd5f3; --tw-edge:#73b9df; --tw-ink:#152a3a; --tw-muted:#3d6782; --tw-dark:#162b3b; --tw-on-dark:#a9e0fa; --tw-font:'Plus Jakarta Sans',Nunito,sans-serif;
-  left:12px; right:12px; bottom:calc(var(--sab,0px) + 12px); max-width:560px; height:min(88dvh,800px); max-height:none; margin:0 auto; padding:22px 22px 20px; border-radius:40px; background:var(--tw-bg); color:var(--tw-ink); font-family:var(--tw-font); }
+  left:0; right:0; bottom:0; max-width:560px; height:min(88dvh,800px); max-height:none; margin:0 auto; padding:22px 22px calc(var(--sab,0px) + 20px); border-radius:36px 36px 0 0; background:var(--tw-bg); color:var(--tw-ink); font-family:var(--tw-font); }
 #sheetBody:has(#lettersView) > .grab { display:none; }
 #sheetBody:has(#lettersView) .letter-heading { grid-template-columns:48px minmax(0,1fr) auto; gap:10px; margin:0 0 16px; }
 #sheetBody:has(#lettersView) .letter-heading h2 { color:var(--tw-ink); font:800 clamp(21px,5.4vw,25px)/48px var(--tw-font); letter-spacing:-.02em; }
@@ -137,6 +137,8 @@
 #sheetBody:has(#lettersView) .letter-row { border-color:var(--tw-edge); }
 #sheetBody:has(#lettersView) #lettersView .letter-row input { border-color:var(--tw-edge); background:var(--tw-raise); color:var(--tw-ink); font-family:var(--tw-font); }
 #sheetBody:has(#lettersView) #lettersView .letter-stack button.mailwin-btn { border-color:var(--tw-edge); border-radius:999px; background:var(--tw-raise); color:var(--tw-ink); font:700 15px/1.2 var(--tw-font); }
-@media(max-width:420px) { #sheetBody:has(#lettersView) { left:8px; right:8px; padding:18px 16px 16px; border-radius:34px; } #sheetBody:has(#lettersView) #lettersView .mailwin.pixel-postcard { padding:20px 18px 14px; } }
+@media(max-width:420px) { #sheetBody:has(#lettersView) { padding:18px 16px calc(var(--sab,0px) + 16px); border-radius:32px 32px 0 0; } #sheetBody:has(#lettersView) #lettersView .mailwin.pixel-postcard { padding:20px 18px 14px; } }
 @media(max-height:620px) { #sheetBody:has(#lettersView) { height:calc(100dvh - 24px); } }
 #sheetBody:has(#lettersView) #lettersView .letter-subject input:focus-visible { outline:none; box-shadow:inset 0 -2px 0 var(--tw-edge); }
+/* Anchored to the bottom edge like Control Center; it still slides up. */
+#sheetBody:has(#lettersView) { left:0; right:0; bottom:0; }
