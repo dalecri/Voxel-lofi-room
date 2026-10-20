@@ -42,7 +42,7 @@ with sync_playwright() as p:
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
-   page.set_viewport_size({'width':width,'height':1000});page.get_by_role('tab',name='Today',exact=True).click();today=page.locator('.today-google-focus .google-task-row').first;today.wait_for();page.mouse.move(0,0);today_style=appearance(today);assert today_style[2]=='4px';assert today_style[8:10]==['18px','18px'];assert 'Nunito' in today_style[5];assert today.evaluate('e=>getComputedStyle(e).animationName')=='none'
+   page.set_viewport_size({'width':width,'height':1000});page.get_by_role('tab',name='Today',exact=True).click();today=page.locator('.today-google-focus .google-task-row').first;today.wait_for();page.mouse.move(0,0);today_style=appearance(today);assert today_style[2]=='20px';assert today_style[8:10]==['18px','18px'];assert 'Nunito' in today_style[5];assert today.evaluate('e=>getComputedStyle(e).animationName')=='none'
    page.locator('.today-google-focus').screenshot(path=f'/tmp/shared-tasks-{phase}-{width}.png')
    page.get_by_role('tab',name='To-Do',exact=True).click();page.get_by_role('tab',name='Google',exact=True).click();other=page.locator('#menu-todo .google-task-row').first;other.wait_for();page.mouse.move(0,0);assert appearance(other)==today_style,(phase,width,appearance(other),today_style)
    assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
