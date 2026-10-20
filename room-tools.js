@@ -136,27 +136,43 @@
     function seal(letter){pendingSeal=letter?{...letter}:null;mailbox();const due=active?.querySelector('input[type=date]');due?.focus();try{due?.showPicker();}catch(e){/* the date row is open either way */}}
     function mailbox(){
       const sealed=pendingSeal;pendingSeal=null;
-      model.poll(false);shell('Letters to future you','A little time capsule, private to this device. It arrives on its date when you next visit your room.',root=>{
+      model.poll(false);shell('Letters to future you','',root=>{
+        root.classList.add('future-mail');
         const c=model.compose(),tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
         const ui=LRMailWindow.create({postcard:true,cardIcon:sealed?.cardIcon||c.cardIcon,title:'Email',icon:'envelope',label:'Compose a letter to future you',from:sealed?.from||c.from,to:sealed?.to||c.to,subject:sealed?.title||c.subject,body:sealed?'':c.body,placeholder:'Hey future me!',richText:false,deliverOn:{value:c.deliverOn,min:day(tomorrow)},status:c.draft&&!sealed?'Draft restored':'',buttons:[{label:'Save draft'},{label:'Send',className:'mailwin-send'}]});
         root.appendChild(ui.form);
-        const {form:win,body,due,saved,foot}=ui,from=ui.fields.From,to=ui.fields.To,title=ui.fields.Subject;
-        from.addEventListener('change',()=>run(()=>model.setFrom(from.value)));   // the sender is remembered even without a draft
+        const {form:win,body,due,saved}=ui,from=ui.fields.From,to=ui.fields.To,title=ui.fields.Subject;
+        body.rows=4;
         const snapshot=sealed?applyTypewriter(ui,sealed):null;
         const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,cardIcon:ui.postcard.icon,deliverOn:due.value});
+        const toolbar=document.createElement('div');toolbar.className='future-mail-toolbar';toolbar.appendChild(saved);
+        const envelopes=button(toolbar,`Your envelopes · ${model.state.mail.length}`,()=>{model.saveDraft(state());model.setFrom(from.value);mailboxEnvelopes();});envelopes.setAttribute('aria-label','Your envelopes');
+        const subject=title.closest('label');subject.classList.add('future-mail-subject');subject.appendChild(win.querySelector('.postcard-stamp'));
+        const details=document.createElement('details');details.className='future-mail-details';const summary=document.createElement('summary');summary.textContent='Letter details';const options=document.createElement('div');options.className='future-mail-options';options.append(win.querySelector('.mailwin-head'),ui.postcard.picker);details.append(summary,options);
+        button(options,'Done',()=>{details.open=false;summary.focus();},'chipbtn future-mail-options-close');
+        win.prepend(toolbar,subject,details);
+        const dock=document.createElement('div');dock.className='future-mail-dock';dock.append(ui.foot,ui.actions);win.appendChild(dock);
+        // Invalid hidden address fields must be visible when native validation focuses them.
+        win.addEventListener('invalid',e=>{if(details.contains(e.target))details.open=true;},true);
+        from.addEventListener('change',()=>run(()=>model.setFrom(from.value)));
         ui.buttons['Save draft'].onclick=()=>run(()=>{model.saveDraft(state());model.setFrom(from.value);const t=new Date();saved.textContent=`Draft saved ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;});
-        ui.buttons.Send.onclick=()=>run(()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value,cardIcon:ui.postcard.icon});sound.rustle();mailbox();});
-        if(model.state.mail.length){const h=document.createElement('p');h.className='mailwin-listhead';h.textContent='Your envelopes';root.appendChild(h);}
+        ui.buttons.Send.onclick=()=>run(()=>{if(!win.reportValidity())return;model.send({title:title.value,body:body.value,html:snapshot?LRLetters.sanitizeHTML(snapshot.body):'',letterhead:snapshot?.letterhead||'',deliverOn:due.value,from:from.value,to:to.value,cardIcon:ui.postcard.icon});sound.rustle();mailboxEnvelopes();});
+      });
+    }
+    function mailboxEnvelopes(){
+      model.poll(false);shell('Your envelopes','Letters stay sealed until their delivery date.',root=>{
+        button(root,'Write a letter',mailbox);
+        if(!model.state.mail.length)text(root,'No envelopes yet. A little room for a note to later.','muted');
         for(const l of model.state.mail){
           const row=document.createElement('section');row.className='roomtool-card mailwin-letter';row.dataset.mail=l.id;row.dataset.mailStatus=l.status;root.appendChild(row);text(row,l.title,'roomtool-title');
           text(row,l.status==='sealed'?`Sealed until ${l.deliverOn}`:l.read?`Opened · ${l.deliverOn}`:`Arrived · ${l.deliverOn}`,'muted');
           if(l.status==='arrived')button(row,'Read letter',()=>{const letter=model.read(l.id);if(letter)readMail(letter);});
-          removeButton(row,()=>{model.remove('mail',l.id);mailbox();});
+          removeButton(row,()=>{model.remove('mail',l.id);mailboxEnvelopes();});
         }
       });
     }
     function readMail(l){shell(l.title,l.letterhead || `A note from your past self · ${l.deliverOn}`,root=>{
-      root.appendChild(LRMailWindow.readCard(l,LRLetters.sanitizeHTML));button(root,'Back to mailbox',mailbox);
+      root.appendChild(LRMailWindow.readCard(l,LRLetters.sanitizeHTML));button(root,'Back to envelopes',mailboxEnvelopes);
     });}
     function groceries(){shell('On the fridge door','Your grocery list, private to this device.',root=>{
       const notebook=document.createElement('section');notebook.className='grocery-notebook';notebook.setAttribute('aria-label','Grocery notebook');root.appendChild(notebook);

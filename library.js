@@ -24,7 +24,7 @@
   function createView({model,sound,clean,beforeOpen=()=>{},reduced=()=>false}){
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
     const view=el('section','library-view');view.id='libraryView';view.hidden=true;view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-label','Private library');
-    const closeButton=el('button','library-close','×');closeButton.type='button';closeButton.setAttribute('aria-label','Close library');view.appendChild(closeButton);
+    const closeButton=el('button','library-close','×');closeButton.type='button';closeButton.setAttribute('aria-label','Close library');const heading=el('div','app-sheet-heading library-heading');heading.dataset.controlHeader='true';heading.append(el('h2','','My Library'),closeButton);view.appendChild(heading);
     const stage=el('div','library-stage');view.appendChild(stage);document.body.appendChild(view);
     let active=false,cover=true,index=0,rows=[],lastFocus=null,resumeId=null,gesture=null,swiped=false,timer=0,draft='',folder='all';
     const folders=[['all','All files'],['letters','Letters'],['ideas','Sparks'],['notes','Notes'],['new','New note']];

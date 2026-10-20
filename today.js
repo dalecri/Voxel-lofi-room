@@ -74,34 +74,106 @@
     const mounts=new Set(),badges=el('aside','timer-badges');badges.id='timerBadges';badges.hidden=true;badges.setAttribute('aria-label','Active timers');document.body.appendChild(badges);
     function safe(fn){try{fn();refresh();}catch(e){notice(e.message);}}
     function mountWidgets(host,rows){
-      const bar=el('div','today-arrange-bar'),edit=el('button','chipbtn today-arrange','Arrange widgets'),reset=el('button','chipbtn today-widget-reset','Reset order'),status=el('p','today-widget-status');
-      edit.type=reset.type='button';edit.setAttribute('aria-pressed','false');status.setAttribute('role','status');status.id='today-widget-status-'+(++tabSeq);reset.hidden=true;status.hidden=true;
-      bar.append(edit,reset);const stack=el('div','today-widget-stack');stack.id=status.id+'-stack';edit.setAttribute('aria-controls',stack.id);host.append(bar,status,stack);
-      const cards=new Map();let arranging=false,drag=null;
+      const bar=el('div','today-arrange-bar'),done=el('button','chipbtn today-widget-done','Done'),reset=el('button','chipbtn today-widget-reset','Reset order'),status=el('p','today-widget-status');
+      done.type=reset.type='button';status.setAttribute('role','status');status.id='today-widget-status-'+(++tabSeq);bar.hidden=status.hidden=true;
+      const hint=el('span','today-widget-help','Hold to move this widget. Keyboard: focus the widget and press Space, then use the up and down arrows. Escape finishes arranging.');hint.id=status.id+'-help';
+      bar.append(hint,reset,done);const stack=el('div','today-widget-stack');host.append(bar,status,stack);
+      const cards=new Map();let arranging=false,drag=null,pending=null,suppressedUntil=0,suppressedCard=null;
       const order=()=>[...stack.children].map(n=>n.dataset.widget);
-      const apply=ids=>{for(const id of widgetOrder(ids,[...cards.keys()]))stack.appendChild(cards.get(id).card);update();};
       function update(){const ids=order();for(const [id,row] of cards){row.up.disabled=ids[0]===id;row.down.disabled=ids.at(-1)===id;}}
+      const apply=ids=>{for(const id of widgetOrder(ids,[...cards.keys()]))stack.appendChild(cards.get(id).card);update();};
       const announce=text=>{status.textContent=text;status.hidden=false;};
-      function commit(before){const ids=order();if(ids.join()===before.join())return true;try{saveWidgetOrder(ids);return true;}catch(e){apply(before);announce('Could not save this layout. Your previous order is restored.');notice(e.message);return false;}}
-      function move(id,delta,focus){const before=order(),index=before.indexOf(id),next=index+delta;if(next<0||next>=before.length)return;const ids=before.slice();[ids[index],ids[next]]=[ids[next],ids[index]];apply(ids);if(commit(before))announce(`${cards.get(id).title} moved to position ${next+1} of ${ids.length}.`);(focus?.disabled?cards.get(id).handle:focus)?.focus({preventScroll:true});}
-      function stopDrag(cancel=false){const current=drag;if(!current)return;drag=null;cancelAnimationFrame(current.frame);current.card.classList.remove('is-dragging');stack.classList.remove('is-dragging');if(current.handle.hasPointerCapture(current.pointer))current.handle.releasePointerCapture(current.pointer);if(cancel){apply(current.before);announce('Move cancelled.');}else if(current.moved&&commit(current.before))announce(`${cards.get(current.id).title} is now position ${order().indexOf(current.id)+1} of ${cards.size}.`);update();}
+      function commit(before){
+        const ids=order();if(ids.join()===before.join())return true;
+        try{saveWidgetOrder(ids);return true;}catch(e){apply(before);announce('Could not save this layout. Your previous order is restored.');notice(e.message);return false;}
+      }
+      function move(id,delta,focus){
+        const before=order(),index=before.indexOf(id),next=index+delta;if(next<0||next>=before.length)return;
+        const ids=before.slice();[ids[index],ids[next]]=[ids[next],ids[index]];apply(ids);
+        if(commit(before))announce(`${cards.get(id).title} moved to position ${next+1} of ${ids.length}.`);
+        (focus?.disabled?cards.get(id).handle:focus)?.focus({preventScroll:true});
+      }
+      function removeGestureListeners(){
+        document.removeEventListener('pointermove',pointerMove,true);document.removeEventListener('pointerup',pointerEnd,true);document.removeEventListener('pointercancel',pointerCancel,true);document.removeEventListener('touchmove',touchMove);
+      }
+      function cancelPending(){if(pending){clearTimeout(pending.timer);pending=null;}if(!drag)removeGestureListeners();}
+      function stopDrag(cancel=false){
+        const current=drag;if(!current)return;drag=null;cancelAnimationFrame(current.frame);current.preview.remove();
+        current.card.classList.remove('is-dragging');stack.classList.remove('is-dragging');suppressedUntil=performance.now()+500;suppressedCard=current.card;
+        if(current.card.hasPointerCapture(current.pointer))current.card.releasePointerCapture(current.pointer);
+        removeGestureListeners();
+        if(cancel){apply(current.before);announce('Move cancelled.');}
+        else if(commit(current.before))announce(`${cards.get(current.id).title} is now position ${order().indexOf(current.id)+1} of ${cards.size}.`);
+        update();
+      }
+      function setArranging(on){
+        arranging=on;stack.classList.toggle('is-arranging',on);bar.hidden=status.hidden=!on;
+        status.textContent=on?'Drag a widget to move it. Tap Done when finished.':'';
+        for(const row of cards.values()){row.controls.hidden=!on;row.body.inert=on;}
+      }
+      function dragFrame(){
+        if(!drag)return;
+        if(!stack.isConnected){stopDrag(true);return;}
+        const current=drag,scroll=stack.closest('#sheetBody');
+        const left=Math.max(4,Math.min(innerWidth-current.width-4,current.x-current.offsetX));
+        current.preview.style.transform=`translate3d(${left}px,${current.y-current.offsetY}px,0)`;
+        if(scroll){const bounds=scroll.getBoundingClientRect();if(current.y<bounds.top+55)scroll.scrollTop-=10;else if(current.y>bounds.bottom-55)scroll.scrollTop+=10;}
+        const hit=document.elementFromPoint(current.x,current.y)?.closest('.today-widget');
+        if(hit&&hit!==current.card&&hit.parentElement===stack){
+          const box=hit.getBoundingClientRect();stack.insertBefore(current.card,current.y<box.top+box.height/2?hit:hit.nextSibling);
+          current.card.setPointerCapture(current.pointer);update();
+        }
+        if(drag)drag.frame=requestAnimationFrame(dragFrame);
+      }
+      function beginDrag(id,pointer,x,y){
+        cancelPending();if(!stack.isConnected)return;setArranging(true);
+        const {card}=cards.get(id);card.focus({preventScroll:true});card.setPointerCapture(pointer);
+        const box=card.getBoundingClientRect(),preview=card.cloneNode(true);preview.removeAttribute('data-widget');preview.removeAttribute('id');preview.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+        preview.classList.add('today-widget-drag-preview');preview.setAttribute('aria-hidden','true');preview.inert=true;preview.tabIndex=-1;
+        preview.style.width=box.width+'px';preview.style.fontFamily=getComputedStyle(card).fontFamily;document.body.appendChild(preview);
+        drag={id,card,preview,pointer,before:order(),x,y,offsetX:x-box.left,offsetY:y-box.top,width:box.width,frame:0};
+        card.classList.add('is-dragging');stack.classList.add('is-dragging');suppressedUntil=Infinity;suppressedCard=card;
+        addGestureListeners();dragFrame();
+      }
+      function pointerMove(e){
+        if(pending&&pending.pointer===e.pointerId){if(Math.hypot(e.clientX-pending.x,e.clientY-pending.y)>8)cancelPending();}
+        if(drag?.pointer===e.pointerId){drag.x=e.clientX;drag.y=e.clientY;if(e.cancelable)e.preventDefault();}
+      }
+      function pointerEnd(e){if(pending?.pointer===e.pointerId)cancelPending();if(drag?.pointer===e.pointerId)stopDrag();}
+      function pointerCancel(e){if(pending?.pointer===e.pointerId)cancelPending();if(drag?.pointer===e.pointerId)stopDrag(true);}
+      // Let normal swipes scroll; once a stationary hold activates, retain the touch for dragging.
+      function touchMove(e){if(drag&&e.cancelable)e.preventDefault();}
+      function addGestureListeners(){
+        document.addEventListener('pointermove',pointerMove,true);document.addEventListener('pointerup',pointerEnd,true);document.addEventListener('pointercancel',pointerCancel,true);document.addEventListener('touchmove',touchMove,{passive:false});
+      }
       for(const [id,title,node] of rows){
         const card=el('section','today-widget'),controls=el('div','today-widget-controls'),label=el('b','',title),handle=el('button','today-widget-handle'),up=el('button','today-widget-move','↑'),down=el('button','today-widget-move','↓'),body=el('div','today-widget-body');
-        card.dataset.widget=id;card.setAttribute('aria-label',title+' widget');handle.type=up.type=down.type='button';handle.setAttribute('aria-label','Drag '+title+' widget');handle.setAttribute('aria-describedby',status.id);handle.title='Drag to rearrange, or use arrow keys';handle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="1.7"/><circle cx="16" cy="5" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="19" r="1.7"/><circle cx="16" cy="19" r="1.7"/></svg>';
+        card.dataset.widget=id;card.tabIndex=0;card.setAttribute('aria-label',title+' widget');card.setAttribute('aria-describedby',hint.id);
+        handle.type=up.type=down.type='button';handle.setAttribute('aria-label','Drag '+title+' widget');handle.title='Drag to move, or use arrow keys';
+        handle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="1.7"/><circle cx="16" cy="5" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="19" r="1.7"/><circle cx="16" cy="19" r="1.7"/></svg>';
         up.setAttribute('aria-label','Move '+title+' widget up');down.setAttribute('aria-label','Move '+title+' widget down');controls.hidden=true;controls.append(handle,label,up,down);body.appendChild(node);card.append(controls,body);stack.appendChild(card);cards.set(id,{card,controls,body,up,down,handle,title});
         up.onclick=()=>move(id,-1,up);down.onclick=()=>move(id,1,down);
-        handle.onkeydown=e=>{if(e.key==='Escape'&&drag){e.preventDefault();e.stopPropagation();stopDrag(true);}else if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();move(id,e.key==='ArrowUp'?-1:1,handle);}};
-        handle.onpointerdown=e=>{
-          if(!arranging||e.button!==0)return;stopDrag(true);handle.focus({preventScroll:true});handle.setPointerCapture(e.pointerId);
-          drag={id,card,handle,pointer:e.pointerId,before:order(),start:e.clientY,x:e.clientX,y:e.clientY,moved:false,frame:0};
-          const tick=()=>{if(!drag)return;if(!stack.isConnected){stopDrag(true);return;}if(drag.moved){const scroll=stack.closest('#sheetBody');if(scroll){const bounds=scroll.getBoundingClientRect();if(drag.y<bounds.top+55)scroll.scrollTop-=10;else if(drag.y>bounds.bottom-55)scroll.scrollTop+=10;}const hit=document.elementFromPoint(drag.x,drag.y)?.closest('.today-widget');if(hit&&hit!==card&&hit.parentElement===stack){const box=hit.getBoundingClientRect();stack.insertBefore(card,drag.y<box.top+box.height/2?hit:hit.nextSibling);handle.setPointerCapture(drag.pointer);update();}}drag.frame=requestAnimationFrame(tick);};drag.frame=requestAnimationFrame(tick);
+        card.onkeydown=e=>{
+          if(e.target===card&&['Enter',' '].includes(e.key)){e.preventDefault();setArranging(true);handle.focus({preventScroll:true});}
+          else if(e.target===handle&&['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();move(id,e.key==='ArrowUp'?-1:1,handle);}
         };
-        handle.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;drag.x=e.clientX;drag.y=e.clientY;if(Math.abs(drag.y-drag.start)>6){drag.moved=true;card.classList.add('is-dragging');stack.classList.add('is-dragging');}};
-        handle.onpointerup=e=>{if(drag?.pointer===e.pointerId)stopDrag();};handle.onpointercancel=()=>stopDrag(true);handle.onlostpointercapture=()=>{if(drag)stopDrag(true);};
+        card.onpointerdown=e=>{
+          if(e.button!==0||e.isPrimary===false||e.target.closest('input,textarea,select,[contenteditable="true"]'))return;
+          if(e.target.closest('.today-widget-controls')&&e.target.closest('button')!==handle)return;
+          cancelPending();if(drag)return;
+          addGestureListeners();
+          if(arranging){beginDrag(id,e.pointerId,e.clientX,e.clientY);return;}
+          pending={pointer:e.pointerId,x:e.clientX,y:e.clientY,timer:setTimeout(()=>{if(pending)beginDrag(id,e.pointerId,e.clientX,e.clientY);},500)};
+        };
+        card.onlostpointercapture=e=>{if(drag?.pointer===e.pointerId)stopDrag(true);};
+        card.oncontextmenu=e=>{if(pending||arranging)e.preventDefault();};
+        card.addEventListener('click',e=>{if(e.target.closest('.today-widget-controls'))return;if(arranging||suppressedCard===card&&e.detail>0&&performance.now()<suppressedUntil){if(!drag&&suppressedCard===card){suppressedCard=null;suppressedUntil=0;}e.preventDefault();e.stopImmediatePropagation();}},true);
       }
       apply(context().meta.dashboardWidgetOrder);
-      edit.onclick=()=>{stopDrag(true);arranging=!arranging;stack.classList.toggle('is-arranging',arranging);edit.textContent=arranging?'Done':'Arrange widgets';edit.setAttribute('aria-pressed',String(arranging));reset.hidden=!arranging;status.hidden=!arranging;status.textContent=arranging?'Drag a handle or use the arrows to move a widget.':'';for(const row of cards.values()){row.controls.hidden=!arranging;row.body.inert=arranging;}};
+      done.onclick=()=>{cancelPending();stopDrag();setArranging(false);cards.get(order()[0]).card.focus({preventScroll:true});};
       reset.onclick=()=>{const before=order();apply(WIDGET_IDS);if(commit(before))announce('Default widget order restored.');};
+      host.addEventListener('pointerdown',e=>{if(arranging&&!e.target.closest('.today-widget,.today-arrange-bar')){cancelPending();stopDrag();setArranging(false);}});
+      host.addEventListener('keydown',e=>{if(arranging&&e.key==='Escape'){e.preventDefault();e.stopPropagation();const current=drag?.id;cancelPending();stopDrag(true);setArranging(false);cards.get(current||order()[0]).card.focus({preventScroll:true});}});
     }
     function mountMoment(host) {
       const card=el('section','today-moment'),label=el('h3','today-card-label',"Today's little moment"),name=el('b','today-moment-name'),hint=el('p','today-moment-hint'),streak=el('span','today-streak'),got=el('button','chipbtn primary today-got','Got it');

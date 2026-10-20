@@ -61,3 +61,75 @@
 .roomtool .pixel-postcard .mailwin-due input,.roomtool .pixel-postcard button.mailwin-btn { border-radius:14px; }
 .roomtool .mailwin-letter { border-radius:20px; }
 .roomtool .mailwin-letter button { border-radius:14px; }
+
+/* Future mail keeps its complete composer in the shared sheet; history has its own view. */
+#sheetBody:has(.future-mail) { display:flex; flex-direction:column; height:84dvh; max-height:84dvh; overflow:hidden; box-sizing:border-box; }
+#sheetBody:has(.future-mail) > .muted { display:none; }
+.future-mail { display:flex; flex-direction:column; flex:1; min-height:0; width:100%; max-width:640px; margin:0 auto; }
+.future-mail .mailwin.pixel-postcard { display:flex; flex-direction:column; flex:1; min-height:0; max-width:none; margin:0; padding:16px; border:1px solid var(--line); border-radius:24px; background:var(--panel-solid); color:var(--ink); box-shadow:none; --post-ink:var(--ink); --mw-ink:var(--ink); }
+.future-mail .pixel-postcard::after,.future-mail .postcard-signature { display:none; }
+.future-mail-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:36px; margin-bottom:8px; }
+.future-mail .mailwin-saved { flex:1; min-width:0; margin:0; color:var(--ink-dim); font:600 11px/1.3 Nunito,sans-serif; }
+.future-mail .mailwin-saved:empty { display:block; }
+.future-mail .future-mail-toolbar button { flex:none; margin:0; min-height:36px; padding:6px 8px; border:0; border-radius:12px; background:var(--chip); color:var(--ink); box-shadow:none; font:700 12px/1.3 Nunito,sans-serif; }
+.future-mail .pixel-postcard .future-mail-subject { box-sizing:border-box; width:100%; position:relative; display:block; min-height:44px; padding-right:54px; margin:0; }
+.future-mail .future-mail-subject .mailwin-key { position:absolute; width:1px; height:1px; clip-path:inset(50%); overflow:hidden; }
+.future-mail .pixel-postcard .future-mail-subject input.mailwin-val { width:100%; padding:4px 0; border:0; border-radius:8px; background:transparent; color:var(--ink); font:500 22px/1.5 Fredoka,sans-serif; }
+.future-mail .future-mail-subject .postcard-stamp { right:0; top:0; width:40px; height:40px; box-sizing:border-box; border:1px solid var(--line); border-radius:12px; background:var(--chip); }
+.future-mail-details { position:relative; flex:none; padding-bottom:8px; border-bottom:1px solid var(--line); }
+.future-mail-details summary { display:flex; align-items:center; gap:8px; min-height:32px; cursor:pointer; color:var(--ink-dim); font:700 12px/1.3 Nunito,sans-serif; list-style:none; }
+.future-mail-details summary::-webkit-details-marker { display:none; }
+.future-mail-details summary::after { content:'⌄'; }
+.future-mail-details[open] summary::after { transform:rotate(180deg); }
+.future-mail-options { position:absolute; left:0; right:0; top:100%; z-index:4; box-sizing:border-box; max-height:50dvh; overflow:auto; padding:12px; border:1px solid var(--line); border-radius:18px; background:var(--panel-solid); box-shadow:0 12px 30px #0002; }
+.future-mail .future-mail-options .mailwin-head { padding:0 0 8px; border:0; }
+.future-mail .future-mail-options .mailwin-row { grid-template-columns:40px minmax(0,1fr); margin:0; min-height:36px; }
+.future-mail .pixel-postcard .future-mail-options .mailwin-key { color:var(--ink-dim); font:700 12px/1.3 Nunito,sans-serif; letter-spacing:0; }
+.future-mail .pixel-postcard .future-mail-options input.mailwin-val { min-width:0; min-height:36px; padding:4px; border:0; background:var(--chip); color:var(--ink); font:400 14px/1.3 Nunito,sans-serif; }
+.future-mail .future-mail-options .postcard-picker { padding:0; gap:5px; }
+.future-mail .postcard-picker legend { color:var(--ink-dim); font:700 12px/1.3 Nunito,sans-serif; }
+.future-mail .postcard-picker button { border:1px solid var(--line); background:var(--chip); }
+.future-mail .postcard-picker button[aria-pressed=true] { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 20%,var(--panel-solid)); box-shadow:none; }
+.future-mail .pixel-postcard .mailwin-page { display:flex; flex:1; min-height:0; }
+.future-mail .pixel-postcard textarea.mailwin-body { flex:1; box-sizing:border-box; width:100%; min-height:60px; height:auto; margin:0; padding:12px 0; border:0; border-radius:12px; background:transparent; color:var(--ink); resize:none; font:400 16px/1.6 Nunito,sans-serif; }
+.future-mail textarea.mailwin-body::placeholder { color:var(--ink-dim); }
+.future-mail .mailwin-foot { display:block; padding:0; border:0; background:transparent; }
+.future-mail .mailwin-hint { display:none; }
+.future-mail .mailwin-due { display:flex; flex-wrap:nowrap; gap:10px; min-height:44px; color:var(--ink-dim); font:700 12px/1.3 Nunito,sans-serif; }
+.future-mail .pixel-postcard .mailwin-due input { flex:1; width:100%; min-width:0; box-sizing:border-box; min-height:44px; padding:6px 10px; border:1px solid var(--line); border-radius:12px; background:var(--chip); color:var(--ink); font:500 14px/1.3 Nunito,sans-serif; }
+.future-mail .mailwin-actions { display:flex; flex-wrap:nowrap; gap:8px; padding:8px 0 0; border:0; }
+.future-mail .pixel-postcard button.mailwin-btn { flex:1; min-height:44px; margin:0; padding:8px 12px; border:1px solid var(--line); border-radius:14px; background:var(--chip); color:var(--ink); box-shadow:none; font:800 14px/1.3 Nunito,sans-serif; letter-spacing:0; }
+.future-mail .pixel-postcard button.mailwin-send { border-color:transparent; background:var(--accent); color:var(--accent-ink,#fffaf3); }
+.future-mail :is(input,textarea,button,summary):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media(max-width:360px) { .future-mail .mailwin.pixel-postcard { padding:12px; } .future-mail .pixel-postcard .future-mail-subject input.mailwin-val { font-size:20px; } }
+@media(max-height:500px) {
+  #sheetBody:has(.future-mail) { padding-top:10px; padding-bottom:10px; }
+  #sheetBody:has(.future-mail) > .grab { margin-bottom:4px; }
+  #sheetBody:has(.future-mail) .app-sheet-heading { margin-bottom:4px; }
+  .future-mail .mailwin.pixel-postcard { padding:8px 12px; border-radius:20px; }
+  .future-mail-toolbar { min-height:28px; margin-bottom:0; }
+  .future-mail .future-mail-toolbar button { min-height:28px; padding:4px 8px; }
+  .future-mail .pixel-postcard .future-mail-subject { box-sizing:border-box; width:100%; min-height:36px; }
+  .future-mail .pixel-postcard .future-mail-subject input.mailwin-val { padding:0; font-size:20px; }
+  .future-mail .future-mail-subject .postcard-stamp { width:32px; height:32px; }
+  .future-mail-details { padding-bottom:2px; }
+  .future-mail-details summary { min-height:28px; }
+  .future-mail .pixel-postcard textarea.mailwin-body { min-height:44px; padding:4px 0; }
+  .future-mail .mailwin-actions { padding-top:4px; }
+}
+
+.future-mail .future-mail-subject .postcard-stamp svg { width:100%; height:100%; max-width:30px; max-height:30px; }
+.future-mail .pixel-postcard textarea.mailwin-body:focus { box-shadow:none; }
+.future-mail .pixel-postcard textarea.mailwin-body:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+.future-mail .future-mail-options-close { display:block; width:100%; min-height:44px; margin:8px 0 0; border:1px solid var(--line); border-radius:12px; background:var(--chip); color:var(--ink); font:700 12px/1.3 Nunito,sans-serif; }
+@media(max-height:500px) {
+  .future-mail-details { position:static; }
+  .future-mail-options { left:8px; right:8px; top:8px; padding:8px; max-height:calc(100% - 16px); }
+  .future-mail .future-mail-options .mailwin-head { padding-bottom:4px; }
+  .future-mail .future-mail-options .mailwin-row { min-height:30px; }
+  .future-mail .pixel-postcard .future-mail-options input.mailwin-val { min-height:30px; }
+  .future-mail .future-mail-options .postcard-picker { gap:4px; }
+  .future-mail .postcard-picker legend { margin-bottom:6px; }
+  .future-mail .future-mail-options-close { min-height:32px; margin-top:4px; padding:4px; }
+}

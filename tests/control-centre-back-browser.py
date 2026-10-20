@@ -21,12 +21,12 @@ with sync_playwright() as p:
  def launch(app):
   home.locator('.home-search').fill('');home.locator('[data-app='+app+']').click();back.wait_for();assert_header()
  def assert_header():
-  row=page.locator('.control-return-actions,.letter-heading.has-control-return');assert row.count()==1
-  b=back.bounding_box();x=row.locator(':scope > :last-child').bounding_box();r=row.bounding_box()
+  row=page.locator('.control-return-actions,[data-control-header].has-control-return');assert row.count()==1
+  b=back.bounding_box();x=row.locator('.sheet-close,.french-close,.library-close,.barnaby-close,.cozy-pop-close,#shopClose,#crownClose,#photoClose').first.bounding_box();r=row.bounding_box()
   assert abs(b['y']-x['y'])<=1 and b['x']<x['x'],(b,x)
   assert abs(b['x']-r['x'])<=1 and abs(x['x']+x['width']-r['x']-r['width'])<=1
   if row.locator('h2').count():
-   t=row.locator('h2').bounding_box();assert abs(t['x']+t['width']/2-r['x']-r['width']/2)<=1
+   t=row.locator('h2').bounding_box();assert abs(t['x']+t['width']/2-r['x']-r['width']/2)<=1;assert abs(t['y']+t['height']/2-b['y']-b['height']/2)<=1
   if body.locator(':scope > .menu-nav').count():assert row.bounding_box()['y']+row.bounding_box()['height']<=body.locator(':scope > .menu-nav').bounding_box()['y']+1
  def returned(app,query=''):
   back.click();home.wait_for();assert page.evaluate('__lr.home.active');assert home.locator('.home-search').input_value()==query;assert home.locator('[data-app='+app+']').evaluate('e=>e===document.activeElement');assert back.count()==0
@@ -52,7 +52,7 @@ with sync_playwright() as p:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':900})
-   for app in ['tea','french','sound','library','typewriter']:
+   for app in ['tea','french','sound','library','typewriter','tally','whiteboard','groceries','ideas','mailbox']:
     launch(app);assert back.bounding_box()['width']>=44;assert back.bounding_box()['height']>=44;assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/control-back-{app}-{phase}-{width}.png');returned(app)
  page.set_viewport_size({'width':390,'height':400});launch('typewriter');assert page.locator('#letterScroll').bounding_box()['height']>=40;assert page.locator('#letterSend').bounding_box()['y']+page.locator('#letterSend').bounding_box()['height']<=400;returned('typewriter');page.set_viewport_size({'width':1280,'height':900})
  # Every built-in Control Centre app supplies the same return path.

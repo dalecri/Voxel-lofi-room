@@ -312,12 +312,12 @@ function startLofiRooms() {
   function clearControlReturn(){if(!controlReturn)return;controlReturn.observer.disconnect();clearTimeout(controlReturn.timeout);unmountControlReturn(controlReturn);controlReturn.button.remove();controlReturn=null;}
   function controlReturnTarget(){
     if($('#homeView'))return null;
-    if(library.active)return {host:library.view,close:library.view.querySelector('.library-close'),overlay:true};
-    if(barnaby.active)return {host:document.querySelector('.barnaby-chrome'),close:document.querySelector('.barnaby-close')};
+    if(library.active)return {host:library.view.querySelector('.library-heading'),close:library.view.querySelector('.library-close'),inline:true};
+    if(barnaby.active)return {host:document.querySelector('.barnaby-chrome'),close:document.querySelector('.barnaby-close'),inline:true};
     if($('#photo').classList.contains('open'))return {host:$('#photo'),close:$('#photoClose'),overlay:true};
-    if(cozyOpen())return {host:cozyPop.querySelector('.cozy-pop-head'),close:cozyPop.querySelector('.cozy-pop-close')};
+    if(cozyOpen())return {host:cozyPop.querySelector('.cozy-pop-head'),close:cozyPop.querySelector('.cozy-pop-close'),inline:true};
     if(!$('#sheet').classList.contains('open'))return null;
-    const body=$('#sheetBody'),close=body.querySelector('.french-close,.sheet-close,#shopClose,#crownClose');
+    const body=$('#sheetBody');alignSheetHeader(body);const close=body.querySelector('.french-close,.sheet-close,#shopClose,#crownClose');
     if(!close)return null;
     const header=close.closest('[data-control-header]');
     return {host:header||body,close,inline:!!header};
@@ -1482,8 +1482,12 @@ function startLofiRooms() {
     if (!$('#sheet').classList.contains('open') || letters.active || frenchUI?.active) return;
     // Let an open native picker handle Escape and its own keyboard navigation.
     try { if (document.querySelector('select:open')) return; } catch (_) {}
+    const futureDetails=$('.future-mail-details[open]');
+    if(e.key==='Escape'&&futureDetails){e.preventDefault();futureDetails.open=false;futureDetails.querySelector('summary').focus();e.stopImmediatePropagation();return;}
     if(e.target.matches('.today-feature-toggle')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-    if(e.target.matches('.today-widget-handle')&&(['ArrowUp','ArrowDown'].includes(e.key)||e.key==='Escape'&&e.target.closest('.today-widget-stack.is-dragging')))return;
+    if(e.target.matches('.today-widget')&&['Enter',' '].includes(e.key))return;
+    if(e.target.matches('.today-widget-handle')&&['ArrowUp','ArrowDown'].includes(e.key))return;
+    if(e.key==='Escape'&&e.target.closest('.today-weather')?.querySelector('.today-widget-stack.is-arranging'))return;
     if(e.target.matches('.pixel-grid')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' ','z','Z'].includes(e.key))return;
     const typing = e.target.matches('input, textarea, select') || e.target.isContentEditable;
     const menuShortcut = !typing && !e.ctrlKey && !e.metaKey && !e.altKey && ['h','?'].includes(e.key.toLowerCase()) && !!$('#menu-today');
@@ -2142,7 +2146,7 @@ function startLofiRooms() {
   const cozyPop = document.createElement('section');
   cozyPop.id = 'cozyMoments'; cozyPop.className = 'cozy-pop panel'; cozyPop.hidden = true;
   cozyPop.setAttribute('role', 'dialog'); cozyPop.setAttribute('aria-labelledby', 'cozyMomentsTitle');
-  cozyPop.innerHTML = `<div class="cozy-pop-head"><h2 id="cozyMomentsTitle">Cozy moments</h2><span class="cozy-pop-count"></span><button type="button" class="chipbtn sheet-icon cozy-pop-close" aria-label="Close cozy moments"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  cozyPop.innerHTML = `<div class="cozy-pop-head app-sheet-heading" data-control-header="true"><h2 id="cozyMomentsTitle">Cozy moments</h2><span class="cozy-pop-count"></span><button type="button" class="chipbtn sheet-icon cozy-pop-close" aria-label="Close cozy moments"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <div class="cozy-pop-tabs" role="group" aria-label="Journal feeds"><button type="button" class="chipbtn" id="bMomentDiary">Checklist</button><button type="button" class="chipbtn" id="bCatDiary">The cats’ version</button></div>
     <div class="disc cozy-pop-feed" id="journalFeed"></div>`;
   document.body.appendChild(cozyPop);
@@ -2265,6 +2269,18 @@ function startLofiRooms() {
     d.items.forEach(i => { ['c', 'r'].forEach(k => { if (i[k] == null) i[k] = 0; }); if (i.on == null) i.on = false; });
     return d;
   }
+  function alignSheetHeader(body){
+    if(body.querySelector('[data-control-header],#homeView'))return;
+    const close=body.querySelector('.french-close,.sheet-close,#shopClose,#crownClose');
+    const title=body.querySelector(':scope > h2,.tea-heading,.french-chrome h2');
+    if(!close||!title)return;
+    // French keeps its reusable title and progress within its own view.
+    const french=title.closest('.french-chrome');
+    if(french){french.classList.add('app-sheet-heading');french.dataset.controlHeader='true';return;}
+    const header=document.createElement('div');header.className='app-sheet-heading';header.dataset.controlHeader='true';
+    const grab=body.querySelector(':scope > .grab');if(grab)grab.after(header);else body.prepend(header);
+    header.append(title,close);
+  }
   function codeSheet(title, sub, build) {
     frenchUI?.close(false);
     letters.close(false);
@@ -2276,7 +2292,7 @@ function startLofiRooms() {
     h('div', 'grab');
     const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
     h('h2', '', title); h('p', 'muted', sub);
-    build(h); openSheet();
+    build(h); alignSheetHeader(body);openSheet();
   }
   function widgetLinks(panel, links, id) {
     links.forEach(row => {

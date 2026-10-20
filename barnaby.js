@@ -15,7 +15,7 @@
     view.setAttribute('role', 'dialog');
     view.setAttribute('aria-modal', 'true');
     view.setAttribute('aria-label', "Barnaby's Dandelion Odyssey");
-    const chrome = el('header', 'barnaby-chrome');
+    const chrome = el('header', 'barnaby-chrome app-sheet-heading');chrome.dataset.controlHeader='true';
     const title = el('h2', '', "Barnaby's Dandelion Odyssey");
     const closeButton = el('button', 'barnaby-close', '×');
     closeButton.type = 'button';
