@@ -120,29 +120,42 @@
 .todo-heading .task-tab[aria-selected=true] { background:var(--panel-solid); color:var(--ink); box-shadow:0 1px 3px #0002; }
 .todo-heading .task-tab:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
-/* Shared task cards: Today and To-Do use the same surface and etched checks. */
-:is(.task-notebook,.today-google-focus) { --pulp-bg:var(--panel-solid); --indent-dark:color-mix(in srgb,var(--ink) 12%,transparent); --indent-light:color-mix(in srgb,var(--panel-solid) 85%,white); }
-:is(.task-notebook,.today-google-focus) .today-task-list,:is(.task-notebook,.today-google-focus) .google-task-list { display:flex; flex-direction:column; gap:16px; }
-:is(.task-notebook,.today-google-focus) .today-task,:is(.task-notebook,.today-google-focus) .today-task.done,:is(.task-notebook,.today-google-focus) .google-task-row {
-  position:relative; overflow:hidden; padding:20px; border:0; border-radius:8px;
-  background:var(--pulp-bg); box-shadow:2px 2px 5px var(--indent-dark),-2px -2px 5px var(--indent-light);
-  grid-template-columns:40px minmax(0,1fr) 28px; gap:8px;
-  transition:transform .4s cubic-bezier(.16,1,.3,1),box-shadow .4s cubic-bezier(.16,1,.3,1);
-  animation:todo-card-in .6s ease-out both;
+/* Shared vellum sheets: local tasks, Google tasks and groceries. */
+:is(.task-notebook,.today-google-focus,.grocery-notebook) { --vellum-border:color-mix(in srgb,var(--ink) 16%,transparent); --vellum-bg:color-mix(in srgb,var(--ink) 4%,var(--panel-solid)); --note-paper:var(--panel-solid); --note-ink:var(--ink); --note-muted:var(--ink-dim); --note-rule:var(--line); }
+.grocery-notebook { background:var(--panel-solid); border-color:var(--line); box-shadow:none; color:var(--ink); }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task-list,.google-task-list,.grocery-items) { position:relative; display:flex; flex-direction:column; gap:1px; isolation:isolate; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row) {
+  position:relative; padding:24px; border:1px solid var(--vellum-border); border-bottom:0; border-radius:0; background:var(--vellum-bg); color:var(--ink); box-shadow:none; gap:12px;
+  transition:transform .5s cubic-bezier(.23,1,.32,1),background .5s ease,box-shadow .5s ease;
+  animation:task-vellum-in .6s cubic-bezier(.2,.8,.2,1) both;
 }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row) { background:color-mix(in srgb,var(--vellum-bg) 80%,transparent); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); }
+}
+:is(.task-notebook,.today-google-focus) .today-task { grid-template-columns:40px minmax(0,1fr) 28px; }
 :is(.task-notebook,.today-google-focus) .google-task-row { grid-template-columns:40px minmax(0,1fr); }
-:is(.task-notebook,.today-google-focus) .today-task::before,:is(.task-notebook,.today-google-focus) .google-task-row::before { content:""; position:absolute; left:0; top:0; height:100%; width:4px; background:var(--accent); transform:scaleY(0); transition:transform .3s ease; pointer-events:none; }
-:is(.task-notebook,.today-google-focus) .today-task:focus-within::before,:is(.task-notebook,.today-google-focus) .google-task-row:focus-within::before { transform:scaleY(1); }
-:is(.task-notebook,.today-google-focus) .task-checkmark { position:relative; width:20px; height:20px; border:0; border-radius:4px; background:var(--pulp-bg); box-shadow:inset 2px 2px 4px var(--indent-dark),inset -1px -1px 2px var(--indent-light); transition:background .3s ease; }
-:is(.task-notebook,.today-google-focus) .today-task-check[aria-checked=true] .task-checkmark,:is(.task-notebook,.today-google-focus) .google-task-check[aria-checked=true] .task-checkmark { background:var(--accent); box-shadow:none; }
-:is(.task-notebook,.today-google-focus) .task-checkmark svg { display:none; }
-:is(.task-notebook,.today-google-focus) [aria-checked=true] .task-checkmark::after { content:""; position:absolute; top:50%; left:50%; width:6px; height:6px; border-radius:50%; background:white; transform:translate(-50%,-50%); box-shadow:0 0 10px #ffffffcc; }
-:is(.task-notebook,.today-google-focus) .today-task-text,:is(.task-notebook,.today-google-focus) .google-task-copy b { font:400 .95rem/1.45 ui-monospace,'Courier New',monospace; transition:opacity .3s ease,transform .3s ease; }
-:is(.task-notebook,.today-google-focus) .today-task.done .today-task-text,:is(.task-notebook,.today-google-focus) .google-task-row.completed .google-task-copy b { text-decoration:line-through; opacity:.4; transform:scale(.98); }
-@keyframes todo-card-in { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.grocery-notebook .grocery-row { grid-template-columns:minmax(0,1fr) 28px; }
+.grocery-notebook .grocery-row label { grid-template-columns:40px minmax(0,1fr); gap:12px; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row):first-child { border-radius:4px 4px 0 0; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row):last-child { border-bottom:1px solid var(--vellum-border); border-radius:0 0 4px 4px; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row):only-child { border-radius:4px; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.task-checkmark,.grocery-check) { position:relative; width:18px; height:18px; border:1.5px solid var(--ink-dim); border-radius:0; background:transparent; color:var(--panel-solid); box-shadow:none; transition:background .3s ease,border-color .3s ease; }
+:is(.task-notebook,.today-google-focus) :is(.today-task-check,.google-task-check)[aria-checked=true] .task-checkmark,.grocery-notebook .grocery-row input:checked~.grocery-check { background:var(--ink); border-color:var(--ink); color:var(--panel-solid); box-shadow:none; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.task-checkmark,.grocery-check) svg { display:block; width:14px; height:14px; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task-text,.google-task-copy b,.grocery-name) { font:400 1.05rem/1.5 var(--font,Nunito,sans-serif); letter-spacing:-.01em; color:var(--ink); transition:opacity .3s ease; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task.done,.google-task-row.completed,.grocery-row.done) :is(.today-task-text,.google-task-copy b,.grocery-name) { text-decoration:line-through; color:var(--ink); opacity:.4; transform:none; }
+:is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.google-task-copy small,.google-task-row time) { font:400 11px/1.4 ui-monospace,monospace; color:var(--ink-dim); }
+:is(.task-notebook,.grocery-notebook) :is(.today-task-form,.grocery-add) { margin-top:24px; border:0; padding-top:0; }
+.task-notebook .today-task-form input,.roomtool .grocery-notebook .grocery-add input { border:0; border-bottom:1px solid var(--vellum-border); border-radius:0; background:transparent; color:var(--ink); font:400 14px/1.4 ui-monospace,monospace; padding:12px 8px; }
+.task-notebook .today-task-form input:focus,.roomtool .grocery-notebook .grocery-add input:focus { border-bottom-color:var(--ink); }
+.roomtool .grocery-notebook .grocery-add-button { background:var(--chip); color:var(--ink); border-color:var(--line); }
+.grocery-notebook .grocery-empty,.grocery-notebook .grocery-add .roomtool-field,.roomtool .grocery-notebook .grocery-remove { color:var(--ink-dim); }
+.task-notebook .today-task-form input::placeholder,.roomtool .grocery-notebook .grocery-add input::placeholder { color:var(--ink-dim); opacity:.8; }
+.todo-heading h2 { font-size:clamp(28px,6vw,38px); letter-spacing:-.04em; }
+@keyframes task-vellum-in { from { opacity:0; transform:translateY(16px) rotateX(-5deg); } to { opacity:1; transform:none; } }
 @media(hover:hover) {
-  :is(.task-notebook,.today-google-focus) .today-task:hover,:is(.task-notebook,.today-google-focus) .google-task-row:hover { transform:translateX(4px); box-shadow:4px 4px 10px var(--indent-dark),-2px -2px 5px var(--indent-light); }
-  :is(.task-notebook,.today-google-focus) .today-task:hover::before,:is(.task-notebook,.today-google-focus) .google-task-row:hover::before { transform:scaleY(1); }
+  :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row):hover { z-index:2; background:color-mix(in srgb,var(--ink) 8%,var(--panel-solid)); transform:translateY(-2px); box-shadow:-6px 8px 20px #0002; border-color:color-mix(in srgb,var(--ink) 28%,transparent); }
 }
-@media(max-width:360px) { :is(.task-notebook,.today-google-focus) .today-task,:is(.task-notebook,.today-google-focus) .google-task-row { padding:14px 10px; gap:5px; } .todo-heading { gap:8px; } }
-@media(prefers-reduced-motion:reduce) { :is(.task-notebook,.today-google-focus) .today-task,:is(.task-notebook,.today-google-focus) .google-task-row,:is(.task-notebook,.today-google-focus) .task-checkmark,:is(.task-notebook,.today-google-focus) .today-task-text,:is(.task-notebook,.today-google-focus) .google-task-copy b,:is(.task-notebook,.today-google-focus) .today-task::before,:is(.task-notebook,.today-google-focus) .google-task-row::before { animation:none; transition:none; } }
+@media(max-width:360px) { :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row) { padding:18px 10px; gap:5px; } .grocery-notebook .grocery-row label { gap:5px; } .todo-heading { gap:8px; } }
+@media(prefers-reduced-motion:reduce) { :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row,.task-checkmark,.grocery-check,.today-task-text,.google-task-copy b,.grocery-name) { animation:none; transition:none; } }
+@media(prefers-reduced-transparency:reduce) { :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row) { background:var(--vellum-bg); -webkit-backdrop-filter:none; backdrop-filter:none; } }

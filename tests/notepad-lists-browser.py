@@ -20,13 +20,13 @@ with sync_playwright() as p:
  for text in ['Take daily supplements','Scoop cat litter','Daily home chore','Workout','One important thing','TwoStoryTails Post']:
   page.get_by_role('textbox',name='A little task',exact=True).fill(text);page.get_by_role('button',name='＋ Add',exact=True).click()
  first=page.get_by_role('checkbox',name='Take daily supplements',exact=True);first.focus();page.keyboard.press('Space');assert first.is_checked();assert tasks.locator('.task-counter').inner_text()=='1 of 6'
- # Checkboxes precede their text; normal rows are compact and the companion/form stay in the paper.
+ # Checkboxes precede their text; rows use a shared vellum surface and the companion/form stay in the paper.
  assert tasks.locator('.today-task').first.evaluate('e=>e.querySelector(".today-task-check").getBoundingClientRect().right<=e.querySelector(".today-task-text").getBoundingClientRect().left')
  assert tasks.locator('.task-journey').count()==1;assert tasks.locator('.today-task-form').count()==1
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
-   page.set_viewport_size({'width':width,'height':844});fit();assert tasks.locator('.today-task').evaluate_all('es=>es.every(e=>e.getBoundingClientRect().height<=60)');tasks.screenshot(path=f'/tmp/notepad-todo-{phase}-{width}.png')
+   page.set_viewport_size({'width':width,'height':844});fit();assert tasks.locator('.today-task-list').evaluate('e=>getComputedStyle(e).gap')=='1px';assert tasks.locator('.task-checkmark').first.evaluate('e=>getComputedStyle(e).width')=='18px';tasks.screenshot(path=f'/tmp/notepad-todo-{phase}-{width}.png')
  page.get_by_role('button',name='Icon for task: Workout',exact=True).click();page.get_by_role('button',name='Use 🌙',exact=True).click();assert page.get_by_role('button',name='Icon for task: Workout',exact=True).inner_text()=='🌙'
  page.get_by_role('button',name='Remove task: One important thing',exact=True).click();assert tasks.locator('.today-task').count()==5
  page.keyboard.press('Escape');page.evaluate("__lr.roomToolsUI.open('groceries')");groceries=page.locator('.grocery-notebook')
@@ -37,8 +37,11 @@ with sync_playwright() as p:
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
-   page.set_viewport_size({'width':width,'height':844});fit();groceries.screenshot(path=f'/tmp/notepad-groceries-{phase}-{width}.png')
+   page.set_viewport_size({'width':width,'height':844});fit();assert groceries.locator('.grocery-items').evaluate('e=>getComputedStyle(e).gap')=='1px';assert groceries.locator('.grocery-check').first.evaluate('e=>getComputedStyle(e).width')=='18px';assert groceries.locator('.grocery-row').first.evaluate('e=>getComputedStyle(e).backdropFilter')=='blur(18px)';assert groceries.locator('.grocery-name').first.evaluate('e=>getComputedStyle(e).opacity')=='0.4';groceries.screenshot(path=f'/tmp/notepad-groceries-{phase}-{width}.png')
+ assert groceries.locator('.grocery-row').first.evaluate('e=>getComputedStyle(e).animationName')=='none'
+ assert groceries.locator('.grocery-name').first.evaluate('e=>getComputedStyle(e).color===getComputedStyle(e.closest(".grocery-notebook")).color')
+ media=context.new_cdp_session(page);media.send('Emulation.setEmulatedMedia',{'features':[{'name':'prefers-reduced-motion','value':'reduce'},{'name':'prefers-reduced-transparency','value':'reduce'}]});assert groceries.locator('.grocery-row').first.evaluate('e=>getComputedStyle(e).backdropFilter')=='none'
  page.get_by_role('button',name='Remove grocery: Apples',exact=True).click();assert page.get_by_role('checkbox',name='Apples',exact=True).count()==0;page.get_by_role('button',name='Clear checked items',exact=True).click();assert page.get_by_role('checkbox',name='Milk',exact=True).count()==0
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');ready();menu();assert page.get_by_role('checkbox',name='Take daily supplements',exact=True).is_checked();page.keyboard.press('Escape');page.evaluate("__lr.roomToolsUI.open('groceries')");assert page.get_by_role('checkbox').count()==3;assert not errors,errors
- print('PASS compact To-Do and grocery stationery, left checks, keyboard check, add/delete/clear, icon editing, reload persistence, 320/390/1280 day/night, no console errors',flush=True);browser.close()
+ print('PASS vellum To-Do and grocery lists, left checks, keyboard check, add/delete/clear, icon editing, reload persistence, 320/390/1280 day/night, no console errors',flush=True);browser.close()
 server.shutdown()
