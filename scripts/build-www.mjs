@@ -16,6 +16,7 @@ for (const f of ['friend-cards.js', 'friend-cards.css', 'captions.js', 'captions
 for (const name of ['qrcode-generator', 'jsqr']) cpSync(join(root, 'vendor', name), join(out, 'vendor', name), { recursive: true });
 cpSync(join(root, 'packs'), join(out, 'packs'), { recursive: true });
 cpSync(join(root, 'games'), join(out, 'games'), { recursive: true });
+copyFileSync(join(root, 'assets', 'mailbox-access.png'), join(out, 'assets', 'mailbox-access.png'));
 copyFileSync(join(root, 'assets', 'icon.png'), join(out, 'assets', 'icon.png'));
 copyFileSync(join(root, 'assets', 'library-pixel.ttf'), join(out, 'assets', 'library-pixel.ttf'));
 copyFileSync(join(root, 'assets', 'french.json'), join(out, 'assets', 'french.json'));

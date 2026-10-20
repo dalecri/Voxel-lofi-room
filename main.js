@@ -274,7 +274,7 @@ function startLofiRooms() {
     const b=$('#bAppShortcut'),p=shortcutApp();
     b.replaceChildren();
     $('#bEditAppShortcut').hidden=!p;
-    if(p){const icon=document.createElement('span');icon.textContent=p.icon || '↗';icon.setAttribute('aria-hidden','true');b.appendChild(icon);}
+    if(p){const icon=document.createElement(p.iconSrc?'img':'span');if(p.iconSrc){icon.src=p.iconSrc;icon.alt='';icon.className='mail-access-icon';}else icon.textContent=p.icon || '↗';icon.setAttribute('aria-hidden','true');b.appendChild(icon);}
     else b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
     b.title=p?`Open ${p.label}. Change in Control Centre.`:'Choose room shortcut';
     b.setAttribute('aria-label',p?'Open '+p.label:'Choose room shortcut');
@@ -285,7 +285,7 @@ function startLofiRooms() {
       const grid=h('div','launcher-grid'),empty=h('p','muted');
       const draw=()=>{grid.replaceChildren();const q=search.value.trim().toLocaleLowerCase(),selected=store.get(APP_SHORTCUT_KEY,null),rows=controlApps().filter(p=>p.label.toLocaleLowerCase().includes(q));empty.textContent=rows.length?'':'No matching apps.';
         for(const p of rows){const b=document.createElement('button');b.type='button';b.className='launcher-tile';b.dataset.shortcut=p.id;b.setAttribute('aria-pressed',String(p.id===selected));
-          const icon=document.createElement('span');icon.className='launcher-icon';icon.textContent=p.icon || '↗';icon.setAttribute('aria-hidden','true');const name=document.createElement('b');name.textContent=p.label;b.append(icon,name);
+          const icon=document.createElement('span');icon.className='launcher-icon';icon.textContent=p.icon || '↗';icon.setAttribute('aria-hidden','true');if(p.iconSrc){const art=document.createElement('img');art.src=p.iconSrc;art.alt='';art.className='mail-access-icon';icon.replaceChildren(art);}const name=document.createElement('b');name.textContent=p.label;b.append(icon,name);
           b.onclick=()=>{store.set(APP_SHORTCUT_KEY,p.id);updateAppShortcut();closeSheets();$('#bAppShortcut').focus({preventScroll:true});toast(`<span>Shortcut set to ${esc(p.label)}</span>`,1800,true);};grid.appendChild(b);
         }
       };search.oninput=draw;draw();
@@ -305,7 +305,7 @@ function startLofiRooms() {
     // Reusable views (especially French) may already be detached after a sheet switch.
     // Restore their original close button there too, before discarding the temporary row.
     if(state.marker?.parentNode)state.marker.replaceWith(state.close);
-    state.row?.remove();state.host?.classList.remove('has-control-return');
+    if(state.inline)state.button.remove();else state.row?.remove();state.inline=false;state.host?.classList.remove('has-control-return');
     state.row=state.host=state.close=state.marker=null;
   }
   function clearControlReturn(){if(!controlReturn)return;controlReturn.observer.disconnect();clearTimeout(controlReturn.timeout);unmountControlReturn(controlReturn);controlReturn.button.remove();controlReturn=null;}
@@ -318,7 +318,8 @@ function startLofiRooms() {
     if(!$('#sheet').classList.contains('open'))return null;
     const body=$('#sheetBody'),close=body.querySelector('.french-close,.sheet-close,#shopClose,#crownClose');
     if(!close)return null;
-    return {host:body,close};
+    const header=close.closest('[data-control-header]');
+    return {host:header||body,close,inline:!!header};
   }
   function beginControlReturn(run,restore){
     clearControlReturn();
@@ -331,6 +332,7 @@ function startLofiRooms() {
       state.entered=true;clearTimeout(state.timeout);
       if(state.row?.isConnected&&state.host===target.host&&state.close===target.close)return;
       unmountControlReturn(state);
+      if(target.inline){state.inline=true;state.host=state.row=target.host;state.close=target.close;target.host.classList.add('has-control-return');target.host.prepend(button);return;}
       const row=document.createElement('div');row.className='control-return-actions'+(target.overlay?' control-return-overlay':'');
       state.host=target.host;state.row=row;state.close=target.close;
       target.host.classList.add('has-control-return');

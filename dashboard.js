@@ -74,7 +74,7 @@
       const search=h('input','dashboard-search');search.type='search';search.placeholder='Find an app';search.setAttribute('aria-label','Find an app');
       const grid=h('div','launcher-grid'),empty=h('p','muted');
       function draw(){grid.replaceChildren();const all=destinations(CAT,widgets,model.custom).concat(typeof localDestinations==='function'?localDestinations():localDestinations),q=search.value.toLocaleLowerCase(),rows=all.filter(p=>p.label.toLocaleLowerCase().includes(q));empty.textContent=rows.length?'':'No matching destinations.';
-        rows.forEach(p=>{const b=button(grid,'',()=>p.action?p.action():launch(p),'launcher-tile');const icon=element('span','launcher-icon',p.icon);icon.setAttribute('aria-hidden','true');b.append(icon,element('b','',p.label));b.title=p.url || p.label;});
+        rows.forEach(p=>{const b=button(grid,'',()=>p.action?p.action():launch(p),'launcher-tile');const icon=element('span','launcher-icon',p.icon);icon.setAttribute('aria-hidden','true');if(p.iconSrc){const art=element('img','mail-access-icon');art.src=p.iconSrc;art.alt='';icon.replaceChildren(art);}b.append(icon,element('b','',p.label));b.title=p.url || p.label;});
         const add=button(grid,'',addPortal,'launcher-tile');const icon=element('span','launcher-icon','＋');icon.setAttribute('aria-hidden','true');add.append(icon,element('b','','Add your own'));
       }search.oninput=draw;draw();
     });}

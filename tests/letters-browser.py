@@ -16,7 +16,7 @@ with sync_playwright() as p:
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[];outbound=[]
  page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:outbound.append(r.url) if not r.url.startswith(('http://127.0.0.1:','blob:','data:')) else None)
- page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.letters')
+ page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.letters');page.evaluate('__lr.renderLoop.stop()')
  page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.n=10;a.room.name='Letter Room';a.setMode('explore',true);a.room.add(a.room.make('vintagetypewriter',{x:4,z:4}));a.changed();a.view.setPhase('day',true);a.view.frame(.1,a.view.t+.1);
   window.__sounds={clacks:[],bells:0,returns:0};const S=a.Sound,clack=S.clack,bell=S.typeBell,carriage=S.carriageReturn;
   S.clack=function(...args){__sounds.clacks.push(args);return clack.apply(this,args)};S.typeBell=function(...args){__sounds.bells++;return bell.apply(this,args)};S.carriageReturn=function(...args){__sounds.returns++;return carriage.apply(this,args)};
@@ -24,6 +24,9 @@ with sync_playwright() as p:
  point=page.evaluate('''() => {const a=__lr,it=a.room.items[0],p=a.view.root.localToWorld(a.view.itemPoint(it.id,[8,5,4])).project(a.view.cam),r=a.view.r.domElement.getBoundingClientRect(),x=r.left+(p.x+1)*r.width/2,y=r.top+(1-p.y)*r.height/2;for(let dy=-15;dy<=15;dy+=3)for(let dx=-15;dx<=15;dx+=3)if(a.view.pickItem(x+dx,y+dy)?.id===it.id)return {x:x+dx,y:y+dy};throw Error('no typewriter target')}''')
  page.mouse.click(point['x'],point['y']);page.locator('#lettersView').wait_for(state='visible')
  assert page.evaluate('__lr.letters.active && __lr.Sound.writing')
+ assert page.locator('.letter-heading h2').evaluate('e=>{const r=e.getBoundingClientRect(),s=e.closest("#sheetBody").getBoundingClientRect();return Math.abs(r.x+r.width/2-s.x-s.width/2)<1}')
+ assert not page.locator('.letter-details').evaluate('e=>e.open')
+ assert page.locator('.letter-tab').count()==0
  assert page.evaluate('__sounds.returns')==1 and page.evaluate('__sounds.clacks[0]')==[1,False]
  win=page.locator('#lettersView .mailwin');assert win.locator('.mailwin-typewriter').count()==1;assert 'Typewriter' in win.locator('.mailwin-name').text_content()
  assert page.locator('.letter-machine .letter-roller,.letter-keyboard,.letter-sticky,.letter-tag').count()==0;assert page.locator('.letter-machine .letter-tools').count()==1;assert page.locator('.letter-machine #letterSave').count()==1
@@ -33,6 +36,7 @@ with sync_playwright() as p:
  subject=page.locator('#lettersView').get_by_label('Subject',exact=True);body=page.locator('#letterBody')
  assert 'Letter Room' in page.evaluate('__lr.letters.model.get().letterhead')
  assert 'crisdalessio@gmail.com' not in page.evaluate('localStorage.getItem("lr.letters")')
+ subject.focus();page.keyboard.press('Tab');assert page.locator('.letter-details summary').evaluate('e=>e===document.activeElement');page.keyboard.press('Tab');assert body.evaluate('e=>e===document.activeElement')
  subject.fill('PRIVATE_LETTERHEAD');body.click();page.keyboard.type('PRIVATE_LETTER_BODY Dear friend, ',delay=12)
  for label,text in [('Bold','bold words'),('Italic','italic words'),('Underline','underlined words')]:
   page.get_by_role('button',name=label,exact=True).click();page.keyboard.type(text,delay=12);page.get_by_role('button',name=label,exact=True).click();page.keyboard.type(' ')
@@ -50,7 +54,7 @@ with sync_playwright() as p:
  page.evaluate('__lr.Sound.setMusic(true)');assert page.evaluate('__lr.Sound.music && __lr.Sound.writing')
  page.screenshot(path='/tmp/typewriter-letter-mobile.png')
  # Reload immediately after the last input, before the debounce can run.
- page.keyboard.type(' RELOAD_TAIL');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.letters')
+ page.keyboard.type(' RELOAD_TAIL');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.letters');page.evaluate('__lr.renderLoop.stop()')
  page.evaluate('__lr.interact(__lr.room.items[0].id)')
  # The working room may have been replaced on reload before its ordinary decor autosave.
  if not page.evaluate('__lr.letters.active'):page.evaluate('__lr.letters.open()')

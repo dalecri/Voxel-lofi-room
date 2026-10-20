@@ -74,7 +74,7 @@
   function createView({store,sheet,dismiss,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{},onClose=()=>{},sender=()=>'',rememberSender=()=>{},onSendToFuture=()=>{}}) {
     const model=create({store,onSaved}),view=document.createElement('section');view.id='lettersView';view.hidden=true;
     view.setAttribute('aria-label','Write a letter');
-    view.innerHTML=`<div class="letter-chrome"><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton">Letters</button><button type="button" id="letterExport">Save as file</button></div>
+    view.innerHTML=`<div class="letter-chrome"><span id="letterStatus" role="status" aria-live="polite"></span><button type="button" id="letterListButton"><img src="assets/mailbox-access.png" class="mail-access-icon" alt="">Letters</button><button type="button" id="letterExport">Save as file</button></div>
       <div id="letterScroll" class="letter-stage"></div>
       <section id="letterList" hidden role="dialog" aria-label="Your letters"><div class="letter-stack"><div class="letter-list-top"><h2>Your letters</h2><button type="button" class="mailwin-btn mailwin-small" id="letterListClose">Back to the letter</button></div><p>Saved on this device. Only a file you choose to export leaves your room.</p><button type="button" class="mailwin-btn" id="letterNew">New letter</button><div id="letterRows"></div></div></section>`;
     const windowUi=root.LRMailWindow.create({postcard:true,onIconChange:()=>schedule(),title:'Typewriter',icon:'typewriter',label:'Write a letter',from:sender(),to:'Me',subject:'',richText:true,bodyId:'letterBody',placeholder:'Dear friend,',buttons:[{label:'Save',id:'letterSave'},{label:'Send to future',className:'mailwin-send',id:'letterSend'}]});
@@ -82,11 +82,17 @@
     const machine=document.createElement('div');machine.className='letter-machine';
     machine.append(windowUi.toolbar,windowUi.actions);
     const card=document.createElement('div');card.className='letter-card';
-    card.innerHTML='<div class="letter-tab" aria-hidden="true"></div>';
     card.appendChild(windowUi.form);
     view.querySelector('#letterScroll').appendChild(card);
     view.querySelector('#letterScroll').after(machine);
     const $=s=>view.querySelector(s),body=windowUi.body,subject=windowUi.fields.Subject,from=windowUi.fields.From,to=windowUi.fields.To,scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
+    // Writing comes first; addresses, signature and stamp choices share one quiet disclosure.
+    const subjectRow=subject.closest('label');subjectRow.classList.add('letter-subject');
+    const head=windowUi.form.querySelector('.mailwin-head'),details=document.createElement('details');details.className='letter-details';
+    const summary=document.createElement('summary');summary.textContent='Letter details';
+    head.before(subjectRow,details);details.append(summary,head,windowUi.form.querySelector('.postcard-signature'),windowUi.foot);
+    const exportButton=$('#letterExport');exportButton.setAttribute('aria-label','Save as file');exportButton.title='Save as file';
+    exportButton.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/></svg>';
     let active=false,timer=null,lastRange=null,lastFocus=null,lastClack=-Infinity,lastBell=-Infinity,beforeLine=null,composing=false,compositionLine=null;
     function message(text) {status.textContent=text;}
     function safe(action) {try{return action();}catch(e){message(e.message || 'Could not save on this device.');return false;}}
@@ -97,8 +103,8 @@
     }
     function schedule() {message('Saving…');clearTimeout(timer);timer=setTimeout(flush,250);}
     function load() {
-      const l=model.get(),all=model.list(),n=l?all.length-all.findIndex(x=>x.id===l.id):0;
-      card.querySelector('.letter-tab').textContent='NO.'+String(n).padStart(4,'0');windowUi.postcard.setDate(l?cardDate(new Date(l.createdAt||Date.now())):'');
+      const l=model.get();
+      windowUi.postcard.setDate(l?cardDate(new Date(l.createdAt||Date.now())):'');
       subject.value=l?.title || '';from.value=sender();windowUi.postcard.set(l?.cardIcon);body.innerHTML=sanitizeHTML(l?.body || '');
       body.contentEditable=l?'true':'false';subject.disabled=from.disabled=to.disabled=!l;
       $('#letterExport').disabled=!l;windowUi.buttons.Save.disabled=!l;windowUi.buttons['Send to future'].disabled=!l;
@@ -155,8 +161,15 @@
     function open() {
       if(active)return;lastFocus=document.activeElement;beforeOpen();
       // codeSheet closes any previous editor. Activate only after the shared sheet is built.
-      sheet('Typewriter','A little letter, just yours.',h=>{h('div','letter-sheet-content').appendChild(view);const closeButton=view.closest('#sheetBody')?.querySelector('.sheet-close');if(closeButton){closeButton.id='letterClose';closeButton.onclick=()=>{if(!list.hidden){list.hidden=true;body.focus();}else close();};}});
-      active=true;view.hidden=false;list.hidden=true;
+      sheet('Typewriter','',h=>{
+        h('div','letter-sheet-content').appendChild(view);
+        const host=view.closest('#sheetBody'),closeButton=host?.querySelector('.sheet-close'),title=host?.querySelector(':scope > h2');
+        if(closeButton&&title){
+          const header=document.createElement('div');header.className='letter-heading';header.dataset.controlHeader='true';title.before(header);header.append(title,closeButton);
+          closeButton.id='letterClose';closeButton.onclick=()=>{if(!list.hidden){list.hidden=true;body.focus();}else close();};
+        }
+      });
+      active=true;view.hidden=false;list.hidden=true;details.open=false;
       if(!model.current)safe(()=>model.add(roomName()));load();viewport();onWriting(true);sound.clack(1,false);sound.carriageReturn();
       // Opening the paper does not summon the mobile keyboard until the owner taps it.
       view.closest('#sheetBody')?.querySelector('#letterClose')?.focus({preventScroll:true});
@@ -202,7 +215,7 @@
     window.addEventListener('keydown',e=>{
       if(!active)return;
       if(e.key==='Tab'){
-        const scope=list.hidden?(view.closest('#sheetBody')||view):list,header=list.hidden?[]:[...(view.closest('#sheetBody')?.querySelectorAll('.control-return-actions button')||[])],items=[...header,...scope.querySelectorAll('button:not(:disabled),input,[contenteditable="true"],[contenteditable="plaintext-only"]')].filter(n=>n.getClientRects().length);
+        const scope=list.hidden?(view.closest('#sheetBody')||view):list,header=list.hidden?[]:[...(view.closest('#sheetBody')?.querySelectorAll('.control-return-actions button,.letter-heading button')||[])],items=[...header,...scope.querySelectorAll('button:not(:disabled),input,summary,[contenteditable="true"],[contenteditable="plaintext-only"]')].filter(n=>n.getClientRects().length);
         const first=items[0],last=items[items.length-1];
         if(items.length && (e.shiftKey && (document.activeElement===first || !items.includes(document.activeElement)) || !e.shiftKey && (document.activeElement===last || !items.includes(document.activeElement)))){e.preventDefault();(e.shiftKey?last:first).focus();}
       }

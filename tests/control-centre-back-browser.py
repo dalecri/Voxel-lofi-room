@@ -21,14 +21,16 @@ with sync_playwright() as p:
  def launch(app):
   home.locator('.home-search').fill('');home.locator('[data-app='+app+']').click();back.wait_for();assert_header()
  def assert_header():
-  row=page.locator('.control-return-actions');assert row.count()==1
+  row=page.locator('.control-return-actions,.letter-heading.has-control-return');assert row.count()==1
   b=back.bounding_box();x=row.locator(':scope > :last-child').bounding_box();r=row.bounding_box()
   assert abs(b['y']-x['y'])<=1 and b['x']<x['x'],(b,x)
   assert abs(b['x']-r['x'])<=1 and abs(x['x']+x['width']-r['x']-r['width'])<=1
+  if row.locator('h2').count():
+   t=row.locator('h2').bounding_box();assert abs(t['x']+t['width']/2-r['x']-r['width']/2)<=1
   if body.locator(':scope > .menu-nav').count():assert row.bounding_box()['y']+row.bounding_box()['height']<=body.locator(':scope > .menu-nav').bounding_box()['y']+1
  def returned(app,query=''):
   back.click();home.wait_for();assert page.evaluate('__lr.home.active');assert home.locator('.home-search').input_value()==query;assert home.locator('[data-app='+app+']').evaluate('e=>e===document.activeElement');assert back.count()==0
- open_home();home.locator('.home-search').fill('French');home.locator('[data-app=french]').click();back.wait_for();assert page.evaluate('__lr.french.active');returned('french','French')
+ open_home();page.wait_for_function('[...document.querySelectorAll("[data-app=mailbox] .mail-access-icon,[data-app=letters] .mail-access-icon")].length===2 && [...document.querySelectorAll("[data-app=mailbox] .mail-access-icon,[data-app=letters] .mail-access-icon")].every(i=>i.complete&&i.naturalWidth>0)');home.locator('.home-search').fill('French');home.locator('[data-app=french]').click();back.wait_for();assert page.evaluate('__lr.french.active');returned('french','French')
  # Long menu position and the launching tile survive a round trip.
  home.locator('.home-search').fill('');home.locator('[data-app=calendar]').scroll_into_view_if_needed();top=body.evaluate('e=>e.scrollTop');home.locator('[data-app=calendar]').click();back.wait_for();returned('calendar');assert abs(body.evaluate('e=>e.scrollTop')-top)<2
  # Sheet rebuilds and nested views keep the contextual button.

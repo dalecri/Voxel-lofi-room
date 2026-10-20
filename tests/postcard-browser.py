@@ -21,7 +21,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();page.evaluate('__lr.letters.open()')
  card=page.locator('#lettersView .pixel-postcard');assert card.count()==1;assert page.locator('.postcard-picture').count()==0;assert card.locator('.postcard-stamp').get_attribute('aria-label')=='Tulips pixel illustration'
  page.locator('#letterBody').fill('Here is a tiny pixel letter, tucked inside its own little world.');page.get_by_label('Subject',exact=True).fill('Thinking of you today')
- card.get_by_role('button',name='Cat picture',exact=True).click();assert card.get_by_role('button',name='Cat picture',exact=True).get_attribute('aria-pressed')=='true';page.locator('#letterSave').click();assert page.evaluate('__lr.letters.model.get().cardIcon')=='cat'
+ page.locator('.letter-details summary').click();card.get_by_role('button',name='Cat picture',exact=True).click();assert card.get_by_role('button',name='Cat picture',exact=True).get_attribute('aria-pressed')=='true';page.locator('#letterSave').click();assert page.evaluate('__lr.letters.model.get().cardIcon')=='cat'
  page.reload(wait_until='networkidle');ready();page.evaluate('__lr.letters.open()');assert card.locator('.postcard-stamp').get_attribute('aria-label')=='Cat pixel illustration'
  # Sending the regular letter retains formatting and permits choosing a different future-card picture.
  page.locator('#letterSend').click();future=page.locator('#sheet .pixel-postcard');assert future.locator('.postcard-stamp').get_attribute('aria-label')=='Cat pixel illustration';assert page.locator('textarea.mailwin-body').evaluate('e=>e.readOnly')
