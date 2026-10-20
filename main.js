@@ -2283,7 +2283,8 @@ function startLofiRooms() {
     if(french){french.classList.add('app-sheet-heading');french.dataset.controlHeader='true';return;}
     const header=document.createElement('div');header.className='app-sheet-heading';header.dataset.controlHeader='true';
     const grab=body.querySelector(':scope > .grab');if(grab)grab.after(header);else body.prepend(header);
-    header.append(title,close);
+    const history=body.querySelector('.mood-history');
+    if(history){header.classList.add('mood-heading');header.append(title,history,close);}else header.append(title,close);
   }
   function codeSheet(title, sub, build) {
     frenchUI?.close(false);
