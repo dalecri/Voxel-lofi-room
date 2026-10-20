@@ -150,6 +150,7 @@
     function applyTypewriter(ui,snapshot){
       ui.body.value=plainLetter(snapshot.body);ui.body.readOnly=true;ui.fields.Subject.value=snapshot.title;
       if(snapshot.from)ui.fields.From.value=snapshot.from;if(snapshot.to)ui.fields.To.value=snapshot.to;ui.postcard.set(snapshot.cardIcon);
+      if(snapshot.deliverOn&&ui.due&&(!ui.due.min||snapshot.deliverOn>=ui.due.min))ui.due.value=snapshot.deliverOn;
       if(!ui.foot.querySelector('.mailwin-hint'))text(ui.foot,'Typewriter formatting will travel inside this envelope.','mailwin-hint');
       return snapshot;
     }
