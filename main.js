@@ -315,6 +315,7 @@ function startLofiRooms() {
     },
   });
   frenchUI = LRFrench.createView({
+    sheet:codeSheet,dismiss:closeSheets,
     model: LRFrench.create({ store, onStudied() { remember('french', { id: LRCalendar.day(new Date()) }); } }),
     portrait: reaction => companionPortrait('idle', reaction),
     onCorrect() {
@@ -1428,7 +1429,7 @@ function startLofiRooms() {
   }
   // Handle the top sheet before crate navigation, text fields or cat-view controls.
   window.addEventListener('keydown', e => {
-    if (!$('#sheet').classList.contains('open') || letters.active) return;
+    if (!$('#sheet').classList.contains('open') || letters.active || frenchUI?.active) return;
     // Let an open native picker handle Escape and its own keyboard navigation.
     try { if (document.querySelector('select:open')) return; } catch (_) {}
     if(e.target.matches('.today-feature-toggle')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
@@ -1870,6 +1871,7 @@ function startLofiRooms() {
     $('#bMenu').setAttribute('aria-expanded',String(!!$('#menu-today')));
   }
   function closeSheets() {
+    if(frenchUI?.active){frenchUI.close();return;}
     if(letters.active){letters.close();return;}
     if(home.active){home.close();return;}
     releaseRoomQR();
@@ -2213,6 +2215,7 @@ function startLofiRooms() {
     return d;
   }
   function codeSheet(title, sub, build) {
+    frenchUI?.close(false);
     letters.close(false);
     releaseRoomQR();
     home.close(false);
@@ -2529,6 +2532,7 @@ function startLofiRooms() {
   }
   function homeSearch(toggleHost) { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace,toggleHost}); }
   function renderMenu() {
+    frenchUI?.close(false);
     letters.close(false);
     releaseRoomQR();
     villageView?.destroy(); villageView=null;

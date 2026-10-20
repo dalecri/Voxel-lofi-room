@@ -221,7 +221,7 @@
     });
   }
 
-  function createView({ model, portrait = () => '', onCorrect = () => {}, beforeOpen = () => {}, reduced = () => false } = {}) {
+  function createView({ model, portrait = () => '', onCorrect = () => {}, beforeOpen = () => {}, reduced = () => false, sheet, dismiss = () => {} } = {}) {
     const doc = root.document;
     const el = (tag, cls, text) => { const node = doc.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node; };
     const overlay = el('section');
@@ -230,7 +230,7 @@
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-label', 'French corner');
-    const chrome = el('header', 'french-chrome');
+    const chrome = el('div', 'french-chrome');
     const title = el('h2', '', 'French corner');
     const progress = el('p', 'french-progress');
     progress.setAttribute('role', 'status');
@@ -294,15 +294,12 @@
     const againBtn = el('button', 'french-btn french-again', 'Another round');
     againBtn.type = 'button';
     done.append(donePalWrap, doneTitle, doneCopy, againBtn);
-    body.append(decks, study, done);
+    const chooseDecks=el('button','french-btn french-choose-decks','Choose decks');chooseDecks.type='button';
+    body.append(decks, study, done, chooseDecks);
     overlay.append(chrome, body);
-    doc.body.appendChild(overlay);
-    let active = false, lastFocus = null, todayHost = null, todayCardId = null;
+    // Mounted in the shared sheet on open; the same nodes retain card state.
+    let active = false, lastFocus = null, todayHost = null, todayCardId = null, choosingDecks = false;
 
-    function viewport() {
-      overlay.style.height = (root.visualViewport?.height || root.innerHeight) + 'px';
-      overlay.style.top = (root.visualViewport?.offsetTop || 0) + 'px';
-    }
     function showPal(img, reaction) {
       let src = '';
       try { src = portrait(reaction) || ''; } catch (e) { src = ''; }
@@ -373,7 +370,9 @@
     }
     function paint(reaction) {
       overlay.classList.toggle('is-reduced', !!reduced() || root.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
-      const state = model.view();
+      if(active&&!choosingDecks&&model.view().mode==='decks'&&model.cards().length&&model.selection().length)model.start();
+      const state = choosingDecks?{mode:'decks'}:model.view();
+      chooseDecks.hidden=state.mode==='decks'||!model.cards().length;
       decks.hidden = state.mode !== 'decks';
       study.hidden = state.mode !== 'study';
       done.hidden = state.mode !== 'done';
@@ -401,22 +400,29 @@
       if (state.mode === 'study' && action !== 'flip') cardBtn.focus();
     }
     function open() {
-      if (!active) {
-        lastFocus = doc.activeElement;
-        beforeOpen();
-        active = true;
-        overlay.hidden = false;
-        viewport();
-      }
+      if(active){paint();return;}
+      lastFocus = doc.activeElement;
+      beforeOpen();
+      choosingDecks=false;
+      if(model.cards().length&&model.view().mode!=='study'&&model.selection().length)model.start();
+      if(sheet)sheet('French corner','',h=>{
+        h('div','french-sheet-content').appendChild(overlay);
+        const host=overlay.closest('#sheetBody');
+        host?.querySelector(':scope > .sheet-close')?.remove();
+        host?.querySelector(':scope > h2')?.remove();
+        host?.querySelector(':scope > p.muted')?.remove();
+      });
+      active = true;
+      overlay.hidden = false;
       paint();
-      closeBtn.focus();
+      (model.view().mode==='study'?cardBtn:closeBtn).focus({preventScroll:true});
     }
-    function close() {
+    function close(hideSheet=true) {
       if (!active) return;
       try { model.close(); } catch (e) { /* closing still wins */ }
       active = false;
       overlay.hidden = true;
-      if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
+      if(hideSheet){dismiss();if(lastFocus?.isConnected&&lastFocus!==doc.body&&lastFocus.getClientRects().length)lastFocus.focus({preventScroll:true});else doc.getElementById('bHome')?.focus({preventScroll:true});}
     }
     function mountToday(host,{flip=false}={}) {
       if (!host) return;
@@ -445,21 +451,21 @@
       paintToday();
     }
     closeBtn.onclick = event => { event.stopPropagation(); close(); };
-    startBtn.onclick = () => { if (startBtn.disabled) return; try { model.start(checkedDecks()); } catch (e) { progress.textContent = e.message; return; } paint(); cardBtn.focus(); };
+    startBtn.onclick = () => { if (startBtn.disabled) return; try { model.start(checkedDecks()); choosingDecks=false; } catch (e) { progress.textContent = e.message; return; } paint(); cardBtn.focus(); };
+    chooseDecks.onclick=()=>{model.close();choosingDecks=true;paint();deckList.querySelector('input')?.focus();};
     cardBtn.onclick = () => { if (!model.view().flipped) grade('flip'); };
     skipBtn.onclick = () => grade('skip');
     learnBtn.onclick = () => grade('learning');
     knewBtn.onclick = () => grade('known');
     againBtn.onclick = () => { try { model.start(); } catch (e) { progress.textContent = e.message; return; } paint(); cardBtn.focus(); };
     root.addEventListener('keydown', event => {
-      if (!active || event.key !== 'Escape') return;
-      event.preventDefault();
-      close();
-      event.stopImmediatePropagation();
+      if (!active) return;
+      if(event.key==='Escape'){event.preventDefault();close();event.stopImmediatePropagation();}
+      else if(event.key==='Tab'){
+        const nodes=[...overlay.querySelectorAll('button,input')].filter(n=>!n.disabled&&n.getClientRects().length),first=nodes[0],last=nodes.at(-1);
+        if(first&&(!overlay.contains(doc.activeElement)||event.shiftKey&&doc.activeElement===first||!event.shiftKey&&doc.activeElement===last)){event.preventDefault();(event.shiftKey?last:first).focus();}
+      }
     }, true);
-    root.addEventListener('resize', () => { if (active) viewport(); });
-    root.visualViewport?.addEventListener('resize', () => { if (active) viewport(); });
-    root.visualViewport?.addEventListener('scroll', () => { if (active) viewport(); });
     return { open, close, mountToday, refresh: paint, overlay, get active() { return active; }, get model() { return model; } };
   }
 

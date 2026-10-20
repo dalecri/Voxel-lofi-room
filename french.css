@@ -1,8 +1,8 @@
 /* French corner: cream paper cards in the room's day and night palette. */
 #frenchView {
-  position: fixed; inset: 0; z-index: 55;
+  position:relative; min-width:0;
   display: flex; flex-direction: column;
-  overflow: hidden;
+  overflow:visible;
   background: var(--panel-solid); color: var(--ink);
   font-family: var(--font);
   --paper: #fff6e8;
@@ -13,20 +13,19 @@
 #frenchView[hidden] { display: none; }
 .french-chrome {
   display: flex; align-items: center; gap: 10px; flex: none;
-  padding: calc(env(safe-area-inset-top, 0px) + 10px) max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));
+  padding:8px 0 12px;
   border-bottom: 1px solid var(--line); background: var(--panel-solid);
 }
 .french-chrome h2 { margin: 0; flex: 1; min-width: 0; font-family: var(--display); font-weight: 600; font-size: 22px; }
 .french-progress { margin: 0; font-weight: 800; font-size: 14px; color: var(--ink-dim); }
 #frenchView button.french-close {
-  flex: none; width: 42px; height: 42px; border-radius: 50%;
+  flex: none; width: 44px; height: 44px; border-radius: 16px;
   display: grid; place-items: center; text-align: center;
   background: var(--chip); border: 1px solid var(--line); color: var(--ink);
   font-size: 28px; line-height: 1;
 }
 .french-body {
-  flex: 1; min-height: 0; overflow: auto;
-  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  min-height:0; padding:8px 0 0;
 }
 .french-lead, .french-note, .french-done-copy { margin: 0 0 14px; line-height: 1.45; }
 .french-note { color: var(--ink-dim); }
@@ -47,12 +46,12 @@
 #frenchView button.french-card {
   display: block; width: 100%; padding: 0; border: 0; background: transparent; color: var(--paper-ink); text-align: center;
 }
-.french-flip { display: grid; min-height: 250px; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+.french-flip { display: grid; min-height:clamp(190px,30dvh,250px); transform-style: preserve-3d; transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
 .french-flip.is-back { transform: rotateY(180deg); }
 .french-face {
   grid-area: 1 / 1; backface-visibility: hidden;
   display: flex; flex-direction: column; justify-content: center; gap: 8px;
-  min-height: 250px; padding: 28px 18px 22px; border-radius: 18px; border: 1px solid var(--paper-line);
+  min-height:clamp(190px,30dvh,250px); padding: 28px 18px 22px; border-radius: 18px; border: 1px solid var(--paper-line);
   background:
     radial-gradient(ellipse at 20% 0%, rgba(255,255,255,.45), transparent 52%),
     repeating-linear-gradient(0deg, rgba(90, 60, 30, .045) 0 1px, transparent 1px 8px),
@@ -101,3 +100,7 @@ button.french-today small { font-size: 14px; font-weight: 700; color: var(--ink-
   .french-actions { flex-direction: column; }
   #frenchView button.french-btn { flex-basis: auto; }
 }
+
+#frenchView button.french-choose-decks { display:block; width:auto; margin:12px auto 0; min-height:44px; padding:8px 14px; background:transparent; color:var(--ink-dim); font-size:13px; }
+#frenchView button.french-choose-decks[hidden] { display:none; }
+.french-sheet-content { min-width:0; }

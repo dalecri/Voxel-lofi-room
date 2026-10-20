@@ -204,7 +204,7 @@ Ritual tests are included in `node --test tests/*.test.cjs`. After `npm run buil
 
 ## Private ambient widgets
 
-Place a **French corner** desk for a daily French note: a word, English translation and example sentence from 30 built-in entries. The note changes at local midnight without a network request. Tapping the desk or the French entry in Control Centre opens the full Wordnest study session. The **Mini fridge** opens groceries and Photo magnets. The newspaper shows CBC News Top Stories; tap it for a reading sheet with article links that open in a new tab.
+Place a **French corner** desk for a daily French note: a word, English translation and example sentence from 30 built-in entries. The note changes at local midnight without a network request. Tapping the desk or the French entry in Control Centre opens directly into the Wordnest flashcards in a slide-up sheet. Use **Choose decks** to change the study selection. The **Mini fridge** opens groceries and Photo magnets. The newspaper shows CBC News Top Stories; tap it for a reading sheet with article links that open in a new tab.
 
 `widgets.js` owns the `WIDGETS` registry, refresh rules, private surface rendering and `lr.widgets` storage. Widgets attach automatically to their furniture, and never write data into room items. Newspaper requests go directly to CBC at most once per hour, including failed attempts and reloads. Last good headlines persist with their timestamp and a “cached” label when stale or offline. With no cache, the sheet quietly says there are no cached headlines yet. Browser CORS or network policy can prevent a live CBC fetch; there is no proxy or second network source.
 

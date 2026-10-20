@@ -13,6 +13,7 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(viewport={'width':390,'height':844})
  context.add_init_script("localStorage.setItem('lr.intro','true')")
+ context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[]
  page.on('pageerror',lambda e:errors.append(str(e)))
  page.on('console',lambda m:errors.append(m.text) if m.type=='error' and 'Failed to load resource' not in m.text else None)
@@ -27,11 +28,11 @@ with sync_playwright() as p:
  assert page.evaluate("(()=>{const d=__lr.room.items.find(i=>i.t==='frenchdesk'),f=__lr.room.items.find(i=>i.t==='minifridge');let note=null,bad=false;__lr.view.objs.get(d.id).traverse(o=>{if(o.name==='widget:fridge-note')note=o});__lr.view.objs.get(f.id).traverse(o=>{if(o.name.startsWith('widget:'))bad=true});return !!note&&!bad&&Math.abs(note.rotation.x+Math.PI/2)<.001&&note.position.y>1.5&&note.position.y<1.53})()")
  page.wait_for_function('__lr.widgets.data("fridge-note").word')
  # The Control Centre previews the desk and launches the same full session.
- page.click('#bHome');tile=page.locator('#homeView [data-app=french]');image=tile.locator('.home-furniture');assert image.get_attribute('data-furniture')=='frenchdesk';assert not image.evaluate('e=>e.classList.contains("absent")');tile.click();page.locator('#frenchView').wait_for(state='visible');assert page.locator('.french-deck input').count()==19;page.get_by_role('button',name='Close French corner',exact=True).click()
+ page.click('#bHome');tile=page.locator('#sheet [data-app=french]');image=tile.locator('.home-furniture');assert image.get_attribute('data-furniture')=='frenchdesk';assert not image.evaluate('e=>e.classList.contains("absent")');tile.click();page.locator('#frenchView').wait_for(state='visible');assert page.evaluate('__lr.french.model.view().mode')=='study';assert page.locator('.french-card').is_visible();assert page.locator('#sheet #frenchView').count()==1;assert page.locator('#frenchView').evaluate('e=>getComputedStyle(e).position')=='relative';assert page.locator('.french-chrome').evaluate('e=>getComputedStyle(e).position')!='fixed';page.get_by_role('button',name='Close French corner',exact=True).click();assert page.locator('#sheet').get_attribute('aria-hidden')=='true'
  page.evaluate('__lr.interact(__lr.room.items[0].id)')
  page.locator('#frenchView').wait_for(state='visible')
  page.wait_for_function('__lr.french.model.cards().length===803')
- assert page.locator('.french-deck input').count()==19
+ assert page.locator('.french-card').is_visible();assert page.locator('.french-card').evaluate('e=>e===document.activeElement');page.get_by_role('button',name='Choose decks',exact=True).click();assert page.locator('.french-deck input').count()==19
  for box in page.locator('.french-deck input').all():
   if box.is_checked():box.uncheck()
  assert page.get_by_role('button',name='Start studying',exact=True).is_disabled()
@@ -86,16 +87,19 @@ with sync_playwright() as p:
 
  page.evaluate('__lr.french.open()')
  page.locator('#frenchView').wait_for(state='visible')
- page.get_by_role('button',name='Start studying',exact=True).click()
- for width in (320,390):
+ assert page.locator('.french-card').is_visible()
+ for width in (320,390,1280):
   page.set_viewport_size({'width':width,'height':844})
+  assert page.locator('#sheetBody').bounding_box()['height']<=page.viewport_size['height']*.84+1;assert page.locator('#sheetBody').bounding_box()['y']>0;assert page.locator('.french-chrome').bounding_box()['y']>=page.locator('#sheetBody').bounding_box()['y'];assert page.locator('.french-close').bounding_box()['y']>=page.locator('#sheetBody').bounding_box()['y'];page.screenshot(path=f'/tmp/french-sheet-{width}.png')
   assert page.evaluate('document.querySelector("#frenchView").scrollWidth<=document.querySelector("#frenchView").clientWidth+1 && document.documentElement.scrollWidth<=innerWidth+1')
  page.evaluate("__lr.setPhase('night',true)")
  assert page.locator('.french-card').is_visible()
+ close=page.get_by_role('button',name='Close French corner',exact=True);close.focus();page.keyboard.press('Shift+Tab');assert page.get_by_role('button',name='Choose decks',exact=True).evaluate('e=>e===document.activeElement');page.keyboard.press('Tab');assert close.evaluate('e=>e===document.activeElement');page.keyboard.press('Escape');assert not page.evaluate('__lr.french.active');assert page.locator('#sheet').get_attribute('aria-hidden')=='true';assert page.locator('#bHome').evaluate('e=>e===document.activeElement')
+ page.evaluate('__lr.french.open()');page.locator('#sheet').click(position={'x':5,'y':5});assert not page.evaluate('__lr.french.active');page.evaluate('__lr.french.open();__lr.calendar.openDay("2026-10-20")');assert not page.evaluate('__lr.french.active');assert page.locator('#frenchView').count()==0;page.keyboard.press('Escape')
  # The final mastered card leaves a calm empty state and a usable keyboard focus.
  page.evaluate("__lr.french.close();__lr.french.model.setCards([{id:'quick-final',deck:'d',fr:'Merci',en:'Thank you'}]);__lr.french.refresh()")
  page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();page.locator('.french-today-card .french-review-known').click();assert page.locator('.french-review-done').is_visible();assert page.locator('.french-quick-actions').is_hidden();assert page.locator('.french-review-done').evaluate('e=>e===document.activeElement')
  assert not errors,errors
- print('PASS: French corner decks, mixed grading, saved card ids, today word, mobile width',flush=True)
+ print('PASS: direct French study sheet, decks, grading and persistence, Today word, focus trap/return, backdrop/Escape/Close, sheet switching, phone/desktop bounds',flush=True)
  browser.close()
 server.shutdown()
