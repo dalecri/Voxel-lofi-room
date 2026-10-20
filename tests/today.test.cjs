@@ -78,3 +78,10 @@ test('weather card maps five local days from existing forecast and ignores disab
  const off=T.weatherCard({...meta,liveWeather:false},now);assert.equal(off.temperature,null);assert.ok(off.rows.every(r=>r.high===null));assert.equal(off.note,'Live weather off');assert.equal(T.weatherCard({liveWeather:true},now).note,'Forecast unavailable');
  const boundary=T.weatherCard({},new Date(2026,11,30));assert.equal(boundary.rows.at(-1).date,'2027-01-03');
 });
+
+test('widget order ignores invalid, duplicate and obsolete IDs and restores missing widgets',()=>{
+ assert.deepEqual(T.widgetOrder(null),T.WIDGET_IDS);
+ assert.deepEqual(T.widgetOrder(['weather','weather','old',null,{},'week']),['weather','week','feature','tasks','tools']);
+ assert.deepEqual(T.widgetOrder('weather'),T.WIDGET_IDS);
+ const saved=['tools','feature'];assert.deepEqual(T.widgetOrder(saved,['week','feature','tools']),['tools','feature','week']);assert.deepEqual(saved,['tools','feature']);
+});

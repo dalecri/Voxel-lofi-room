@@ -20,7 +20,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu')
  card=page.get_by_role('region',name='Weather forecast',exact=True)
  assert card.is_visible();assert card.locator('li').count()==5
- assert card.evaluate('e=>e===e.parentElement.lastElementChild')
+ assert card.evaluate('e=>e.closest("[data-widget]")===e.closest(".today-widget-stack").lastElementChild')
  assert card.locator('.today-forecast-temperature').inner_text()=='—°';assert card.locator('.today-forecast-note').inner_text()=='Live weather off'
  page.evaluate("""()=>{const now=new Date(),forecast=Array.from({length:7},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12);return {date:[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'),low:i-2,high:i+18,condition:['clear','rain','storm','snow'][i%4]}});Object.assign(__lr.meta,{liveWeather:true,weather:'clear',weatherFetchedAt:Date.now(),weatherDetails:{temperature:24.3,forecast}});__lr.todayUI.refresh()}""")
  assert card.locator('.today-forecast-temperature').inner_text()=='24°';assert card.locator('.today-forecast-note').inner_text()=='Local weather'

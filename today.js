@@ -64,10 +64,45 @@
     const garden=focus.find(f=>f.kind==='garden'&&f.active);if(garden)rows.push({id:'garden',icon:'🌱',title:'Focus Garden',value:countdown(garden.remaining),target:'garden',focus:garden});
     return rows;
   }
-  function createView({model,context,openTimer,openRitual=()=>{},completeMoment=()=>{},portrait=()=>null,portraitKey=()=>'',celebrate=()=>{},hidden=()=>false,notice=()=>{}}) {
+  const WIDGET_IDS=['week','feature','tasks','tools','weather'];
+  function widgetOrder(value,available=WIDGET_IDS){
+    const allowed=[...new Set(available.filter(id=>WIDGET_IDS.includes(id)))];
+    return [...new Set([...(Array.isArray(value)?value:[]),...allowed])].filter(id=>allowed.includes(id));
+  }
+  function createView({model,context,openTimer,openRitual=()=>{},completeMoment=()=>{},portrait=()=>null,portraitKey=()=>'',celebrate=()=>{},hidden=()=>false,notice=()=>{},saveWidgetOrder=()=>{}}) {
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const mounts=new Set(),badges=el('aside','timer-badges');badges.id='timerBadges';badges.hidden=true;badges.setAttribute('aria-label','Active timers');document.body.appendChild(badges);
     function safe(fn){try{fn();refresh();}catch(e){notice(e.message);}}
+    function mountWidgets(host,rows){
+      const bar=el('div','today-arrange-bar'),edit=el('button','chipbtn today-arrange','Arrange widgets'),reset=el('button','chipbtn today-widget-reset','Reset order'),status=el('p','today-widget-status');
+      edit.type=reset.type='button';edit.setAttribute('aria-pressed','false');status.setAttribute('role','status');status.id='today-widget-status-'+(++tabSeq);reset.hidden=true;status.hidden=true;
+      bar.append(edit,reset);const stack=el('div','today-widget-stack');stack.id=status.id+'-stack';edit.setAttribute('aria-controls',stack.id);host.append(bar,status,stack);
+      const cards=new Map();let arranging=false,drag=null;
+      const order=()=>[...stack.children].map(n=>n.dataset.widget);
+      const apply=ids=>{for(const id of widgetOrder(ids,[...cards.keys()]))stack.appendChild(cards.get(id).card);update();};
+      function update(){const ids=order();for(const [id,row] of cards){row.up.disabled=ids[0]===id;row.down.disabled=ids.at(-1)===id;}}
+      const announce=text=>{status.textContent=text;status.hidden=false;};
+      function commit(before){const ids=order();if(ids.join()===before.join())return true;try{saveWidgetOrder(ids);return true;}catch(e){apply(before);announce('Could not save this layout. Your previous order is restored.');notice(e.message);return false;}}
+      function move(id,delta,focus){const before=order(),index=before.indexOf(id),next=index+delta;if(next<0||next>=before.length)return;const ids=before.slice();[ids[index],ids[next]]=[ids[next],ids[index]];apply(ids);if(commit(before))announce(`${cards.get(id).title} moved to position ${next+1} of ${ids.length}.`);(focus?.disabled?cards.get(id).handle:focus)?.focus({preventScroll:true});}
+      function stopDrag(cancel=false){const current=drag;if(!current)return;drag=null;cancelAnimationFrame(current.frame);current.card.classList.remove('is-dragging');stack.classList.remove('is-dragging');if(current.handle.hasPointerCapture(current.pointer))current.handle.releasePointerCapture(current.pointer);if(cancel){apply(current.before);announce('Move cancelled.');}else if(current.moved&&commit(current.before))announce(`${cards.get(current.id).title} is now position ${order().indexOf(current.id)+1} of ${cards.size}.`);update();}
+      for(const [id,title,node] of rows){
+        const card=el('section','today-widget'),controls=el('div','today-widget-controls'),label=el('b','',title),handle=el('button','today-widget-handle'),up=el('button','today-widget-move','↑'),down=el('button','today-widget-move','↓'),body=el('div','today-widget-body');
+        card.dataset.widget=id;card.setAttribute('aria-label',title+' widget');handle.type=up.type=down.type='button';handle.setAttribute('aria-label','Drag '+title+' widget');handle.setAttribute('aria-describedby',status.id);handle.title='Drag to rearrange, or use arrow keys';handle.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="1.7"/><circle cx="16" cy="5" r="1.7"/><circle cx="8" cy="12" r="1.7"/><circle cx="16" cy="12" r="1.7"/><circle cx="8" cy="19" r="1.7"/><circle cx="16" cy="19" r="1.7"/></svg>';
+        up.setAttribute('aria-label','Move '+title+' widget up');down.setAttribute('aria-label','Move '+title+' widget down');controls.hidden=true;controls.append(handle,label,up,down);body.appendChild(node);card.append(controls,body);stack.appendChild(card);cards.set(id,{card,controls,body,up,down,handle,title});
+        up.onclick=()=>move(id,-1,up);down.onclick=()=>move(id,1,down);
+        handle.onkeydown=e=>{if(e.key==='Escape'&&drag){e.preventDefault();e.stopPropagation();stopDrag(true);}else if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();move(id,e.key==='ArrowUp'?-1:1,handle);}};
+        handle.onpointerdown=e=>{
+          if(!arranging||e.button!==0)return;stopDrag(true);handle.focus({preventScroll:true});handle.setPointerCapture(e.pointerId);
+          drag={id,card,handle,pointer:e.pointerId,before:order(),start:e.clientY,x:e.clientX,y:e.clientY,moved:false,frame:0};
+          const tick=()=>{if(!drag)return;if(!stack.isConnected){stopDrag(true);return;}if(drag.moved){const scroll=stack.closest('#sheetBody');if(scroll){const bounds=scroll.getBoundingClientRect();if(drag.y<bounds.top+55)scroll.scrollTop-=10;else if(drag.y>bounds.bottom-55)scroll.scrollTop+=10;}const hit=document.elementFromPoint(drag.x,drag.y)?.closest('.today-widget');if(hit&&hit!==card&&hit.parentElement===stack){const box=hit.getBoundingClientRect();stack.insertBefore(card,drag.y<box.top+box.height/2?hit:hit.nextSibling);handle.setPointerCapture(drag.pointer);update();}}drag.frame=requestAnimationFrame(tick);};drag.frame=requestAnimationFrame(tick);
+        };
+        handle.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;drag.x=e.clientX;drag.y=e.clientY;if(Math.abs(drag.y-drag.start)>6){drag.moved=true;card.classList.add('is-dragging');stack.classList.add('is-dragging');}};
+        handle.onpointerup=e=>{if(drag?.pointer===e.pointerId)stopDrag();};handle.onpointercancel=()=>stopDrag(true);handle.onlostpointercapture=()=>{if(drag)stopDrag(true);};
+      }
+      apply(context().meta.dashboardWidgetOrder);
+      edit.onclick=()=>{stopDrag(true);arranging=!arranging;stack.classList.toggle('is-arranging',arranging);edit.textContent=arranging?'Done':'Arrange widgets';edit.setAttribute('aria-pressed',String(arranging));reset.hidden=!arranging;status.hidden=!arranging;status.textContent=arranging?'Drag a handle or use the arrows to move a widget.':'';for(const row of cards.values()){row.controls.hidden=!arranging;row.body.inert=arranging;}};
+      reset.onclick=()=>{const before=order();apply(WIDGET_IDS);if(commit(before))announce('Default widget order restored.');};
+    }
     function mountMoment(host) {
       const card=el('section','today-moment'),label=el('h3','today-card-label',"Today's little moment"),name=el('b','today-moment-name'),hint=el('p','today-moment-hint'),streak=el('span','today-streak'),got=el('button','chipbtn primary today-got','Got it');
       card.setAttribute('aria-label',"Today's little moment");got.type='button';got.onclick=()=>{safe(completeMoment);if(got.disabled){card.tabIndex=-1;card.focus({preventScroll:true});}};card.append(label,name,hint,streak,got);host.appendChild(card);
@@ -101,7 +136,7 @@
         local.onclick=()=>show('todo');remote.onclick=()=>show('google');tabs.onkeydown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();show(notebook.dataset.tab==='google'?'todo':'google',true);}};
         const heading=tasksHost?.querySelector('.todo-heading');if(heading){heading.appendChild(tabs);pageTitle.remove();}else pageTitle.replaceWith(tabs);notebook.appendChild(googlePage);mountGoogle=()=>google(googlePage);let saved='todo';try{saved=localStorage.getItem('lr.todoTab')==='google'?'google':'todo';}catch(e){}show(saved);}section.append(notebook);
       // The To-Do tab can host the notebook on its own; Today then keeps the sky, moment and rituals.
-      if(tasksHost){host.appendChild(panel);tasksHost.appendChild(section);}else{panel.append(section);host.appendChild(panel);}mountGoogle?.();if(googleToday)googleToday(panel.querySelector('.today-google-focus'));   // the Google panel only paints once it is on the page
+      if(tasksHost){host.appendChild(panel);tasksHost.appendChild(section);}else{dashboardMain.append(section);host.appendChild(panel);}mountWidgets(weatherBody,[['week','This week',week],['feature','French & captions',feature],['tasks',"Today's tasks",dashboardMain],['tools','Quick tools',rail],['weather','Weather',forecastCard]]);mountGoogle?.();if(googleToday)googleToday(panel.querySelector('.today-google-focus'));   // the Google panel only paints once it is on the page
       let signature='',lastPortrait='',weekKey='';form.onsubmit=e=>{e.preventDefault();safe(()=>{if(model.add(input.value))input.value='';});input.focus();};
       const entry={panel,refresh(){const ctx=context(),w=weather(ctx.meta,ctx.now || new Date()),part=daypart(ctx.meta.phase);sky.dataset.phase=part.theme;hello.textContent=part.greeting+', Cris';greetingSub.textContent=part.subline;const days=weekDays(ctx.now || new Date()),wk=JSON.stringify(days);if(wk!==weekKey){weekKey=wk;week.replaceChildren();for(const d of days){const b=el('button','today-week-day');b.type='button';b.dataset.date=d.date;b.setAttribute('aria-label',new Date(d.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}));if(d.today)b.setAttribute('aria-current','date');b.append(el('span','',d.label),el('b','',String(d.number)));b.onclick=()=>openDay(d.date);week.appendChild(b);}}sky.dataset.sky=ctx.meta.weather || 'clear';condition.textContent=w.label+' · '+(w.temperature || '—°C');chance.textContent=w.probability===null&&!ctx.meta.liveWeather?'':w.chance;chance.hidden=!chance.textContent;updated.textContent=w.stale?'Forecast cached':w.fetched?'Forecast updated':'';condition.title=condition.textContent;details.hidden=!chance.textContent&&w.probability===null&&!updated.textContent;drops.hidden=w.probability===null;[...drops.children].forEach((d,i)=>{d.classList.toggle('wet',i<w.probability/10);d.textContent=ctx.meta.weather==='snow'?'❄':'💧';});
         const forecast=weatherCard(ctx.meta,ctx.now || new Date()),fk=JSON.stringify(forecast);if(fk!==forecastKey){forecastKey=fk;currentSymbol.textContent=weatherSymbol(forecast.condition);currentName.textContent=forecast.label;currentTemp.textContent=forecast.temperature===null?'—°':forecast.temperature+'°';currentTemp.setAttribute('aria-label',forecast.temperature===null?'Temperature unavailable':forecast.temperature+' degrees Celsius');currentNote.textContent=forecast.note;forecastList.replaceChildren();for(const day of forecast.rows){const row=el('li'),date=el('time','',day.day),symbol=el('span','today-forecast-day-icon',weatherSymbol(day.condition)),low=el('span','today-forecast-low',day.low===null?'—':String(day.low)),high=el('span','today-forecast-high',day.high===null?'—':String(day.high));date.dateTime=day.date;symbol.setAttribute('aria-hidden','true');row.setAttribute('aria-label',day.day+(day.condition?', '+SKY[day.condition][1]+', low '+day.low+', high '+day.high+' degrees Celsius':', forecast unavailable'));row.append(date,symbol,low,high);forecastList.appendChild(row);}}
@@ -134,5 +169,5 @@
     const dockResize=new ResizeObserver(dock);document.querySelectorAll('header,.chips,.explorebar,.tools,#tray,#catbar').forEach(n=>dockResize.observe(n));
     return {mount,mountMoment,refresh,badges,tick(time){if(time<next)return;next=time+1000;refresh();}};
   }
-  const api={KEY,SKY,daypart,weekDays,STARTERS,ICONS,iconFor,journey,weather,weatherCard,countdown,timers,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRToday=api;
+  const api={KEY,SKY,WIDGET_IDS,widgetOrder,daypart,weekDays,STARTERS,ICONS,iconFor,journey,weather,weatherCard,countdown,timers,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRToday=api;
 })(typeof window!=='undefined'?window:globalThis);

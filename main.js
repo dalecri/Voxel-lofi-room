@@ -240,6 +240,7 @@ function startLofiRooms() {
     }return taskPortraits.get(key);
   }
   const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus,daily:dailyInfo(),streak:store.get('lr.dailyStreak',{}).n||0,letterDraft:!!letters.model.get()?.body,ideaCount:roomTools.homeState.ideas.length}),
+    saveWidgetOrder:order=>{const previous=meta.dashboardWidgetOrder;try{meta.dashboardWidgetOrder=order;saveMeta();if(JSON.stringify(store.get('lr.meta',{}).dashboardWidgetOrder)!==JSON.stringify(order))throw Error('Could not save this layout on your device.');}catch(e){meta.dashboardWidgetOrder=previous;throw e;}},
     completeMoment:()=>dailyCheck(dailyInfo().D.id),
     openRitual:id=>{closeSheets();if(id==='garden'){const active=rituals.activeFocus.find(f=>f.kind==='garden'&&f.active),bed=room.items.find(i=>i.t==='focusgarden');gardenUI.open(active?.id || bed?.id || null);}else if(id==='letter')letters.open();else if(id==='ideas')launchTool({id:'ideas'});},
     portraitKey:()=>JSON.stringify(wardrobe.slots),portrait:pose=>companionPortrait(pose),
@@ -1482,6 +1483,7 @@ function startLofiRooms() {
     // Let an open native picker handle Escape and its own keyboard navigation.
     try { if (document.querySelector('select:open')) return; } catch (_) {}
     if(e.target.matches('.today-feature-toggle')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+    if(e.target.matches('.today-widget-handle')&&(['ArrowUp','ArrowDown'].includes(e.key)||e.key==='Escape'&&e.target.closest('.today-widget-stack.is-dragging')))return;
     if(e.target.matches('.pixel-grid')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter',' ','z','Z'].includes(e.key))return;
     const typing = e.target.matches('input, textarea, select') || e.target.isContentEditable;
     const menuShortcut = !typing && !e.ctrlKey && !e.metaKey && !e.altKey && ['h','?'].includes(e.key.toLowerCase()) && !!$('#menu-today');
