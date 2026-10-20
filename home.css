@@ -520,3 +520,13 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 /* Match the idea cards' seeded, theme-aware pastel backgrounds. */
 .space-today .today-feature-pane.french-soft-background { background-color:var(--panel-solid); color:var(--ink); }
 .space-today .french-soft-background .french-quick-actions button { background:var(--chip); border-color:var(--line); color:var(--ink); }
+/* Sort tools: a small menu under the button next to Settings. */
+.home-sort-wrap { position:relative; flex:none; }
+.home-sort-wrap > .sheet-icon { margin:0; }
+.home-sort.is-sorted { background:var(--ink); color:var(--panel-solid); }
+.home-sort-menu { position:absolute; z-index:5; top:calc(100% + 8px); right:0; display:grid; gap:4px; min-width:160px; padding:6px; border:1px solid var(--line); border-radius:20px; background:var(--panel-solid); box-shadow:var(--shadow); }
+.home-sort-menu[hidden] { display:none; }
+.home-sort-item { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:44px; margin:0; padding:0 14px; border:0; border-radius:14px; background:transparent; color:var(--ink); font:700 15px/1.2 var(--font); text-align:left; cursor:pointer; }
+.home-sort-item:hover,.home-sort-item:focus-visible { background:var(--chip); }
+.home-sort-item[aria-checked=true] { background:var(--chip); }
+.home-sort-item[aria-checked=true]::after { content:''; width:10px; height:5px; margin-top:-3px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(-45deg); }
