@@ -2,7 +2,7 @@
 // external apps are derived from the real portal definitions and private links.
 (function(root) {
   const TOOLS=[
-    ['typewriter','Typewriter','⌨','Write a letter'],
+    ['typewriter','Notetaker','📝','Lists and notes'],
     ['digest','Daily Brief','🗞','Your morning paper at the door'],
     ['captions','Caption studio','🎬','TwoStoryTails clips, ready to copy'],
     ['library','My Library','📖','Letters, sparks, and quick notes'],

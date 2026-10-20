@@ -9,7 +9,7 @@
     Settings:'<path d="m9 3 1-1h4l1 3 2 1 3-1 2 3-2 2v3l2 2-2 3-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-3 2-2v-3L2 8l2-3 3 1 2-1Z"/><circle cx="12" cy="11" r="3"/>'
   };
   const FILE_TABS = ['Letters','Scenes','Photos'];
-  const EMPTY = {Letters:'No letters yet — the typewriter is waiting.',Scenes:'No scenes yet — build a memory, then save it as a scene.',Photos:'No photos yet — take one with the camera.'};
+  const EMPTY = {Letters:'No notes yet — the notetaker is waiting.',Scenes:'No scenes yet — build a memory, then save it as a scene.',Photos:'No photos yet — take one with the camera.'};
   const KEYS = {portals:'lr.portals',Letters:'lr.letters',Scenes:'lr.scenes',Photos:'lr.photos'};
   const url = value => {try {const u=new URL(value);return /^https?:$/.test(u.protocol)?u.href:'';}catch(e){return '';}};
   // Read live catalog/widget definitions each time. Room-travel doors have no web

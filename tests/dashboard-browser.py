@@ -34,7 +34,7 @@ with sync_playwright() as p:
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu');assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Sound';escape()
  print('PASS: five menu sections, every preset, relocated controls, radio add/remove, journal feeds, persistent tab and keyboard navigation',flush=True)
  page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.name='Private Files';a.room.n=10;a.meta.visitors=false;a.meta.realtime=false;a.setPhase('day',true);a.setMode('explore',true);for(const [t,x,z] of [['phone',1,1],['filecab',3,1],['appportal',5,1],['crt',7,1],['pomodorocandle',1,4]])a.room.add(a.room.make(t,{x,z}));a.changed();window.__opened=[];window.open=(u,target,features)=>{__opened.push({u,target,features});};}''')
- tap('filecab');assert page.get_by_role('tab').all_text_contents()==['Letters','Scenes','Photos'];assert page.locator('.files-empty:visible').inner_text()=='No letters yet — the typewriter is waiting.';assert page.evaluate('localStorage.getItem("lr.letters")') is None
+ tap('filecab');assert page.get_by_role('tab').all_text_contents()==['Letters','Scenes','Photos'];assert page.locator('.files-empty:visible').inner_text()=='No notes yet — the notetaker is waiting.';assert page.evaluate('localStorage.getItem("lr.letters")') is None
  tab('Scenes');assert 'No scenes yet' in body.inner_text();tab('Photos');assert 'No photos yet' in body.inner_text();escape()
  tap('phone');expected=page.evaluate('LRDashboard.destinations(LR.CAT,__lr.widgets).map(p=>p.label)');assert len(expected)>=7
  for label in expected:assert page.get_by_role('button',name=label,exact=True).is_visible(),label

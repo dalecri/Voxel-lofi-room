@@ -19,7 +19,7 @@ test('a subject title saves on the letter and the letter store stays letters-onl
  f.model.update({letterhead:saved.letterhead,body:saved.body});
  assert.equal(f.model.get().title,'For later');
  f.model.update({letterhead:saved.letterhead,body:'x',title:'   '});
- assert.equal(f.model.get().title,'Untitled letter');
+ assert.equal(f.model.get().title,'Untitled note');
  assert.deepEqual(Object.keys(f.values),['lr.letters']);
 });
 test('letters list creates unique IDs, renames, switches, deletes and persists an empty stack',()=>{
@@ -42,7 +42,7 @@ test('decor projection strips letter data at every shared boundary without readi
 });
 test('unavailable storage reports failure instead of claiming the draft was saved',()=>{
  const model=L.create({store:{get:(k,d)=>d,set:()=>{}},clean:v=>v});
- assert.throws(()=>model.add('Room'),/Could not save/);assert.equal(model.get().title,'Untitled letter');
+ assert.throws(()=>model.add('Room'),/Could not save/);assert.equal(model.get().title,'Untitled note');
 });
 test('writing gain stays quiet through ducking, restores on close, and typing effects respect mute',()=>{
  const vm=require('node:vm'),fs=require('node:fs'),ctx={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../sound.js'),'utf8'),ctx);
