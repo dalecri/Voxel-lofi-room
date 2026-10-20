@@ -102,6 +102,27 @@
     // Google's documented task-list collection is users/@me/lists, not /lists.
     const taskLists=()=>request('lists','https://tasks.googleapis.com/tasks/v1/users/@me/lists',{},taskListRows,TASKS_SCOPE,300000);
     const tasks=(listId=token?.listId || '@default')=>request('tasks:'+listId,'https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(listId)+'/tasks',{showCompleted:'false',maxResults:'100'},taskRows,TASKS_SCOPE,60000);
+    async function addHousekeepingTask(title){
+      title=String(title||'').trim();if(!title)throw Error('Add a grocery first.');
+      if(!connected())return false;
+      if(!usable(TASKS_WRITE_SCOPE))throw Error('Reconnect Google to add groceries to Housekeeping.');
+      const version=generation,lists=await taskLists();
+      if(version!==generation||!usable(TASKS_WRITE_SCOPE))throw Error('Reconnect Google to add groceries to Housekeeping.');
+      const matches=lists.filter(l=>l.title.trim().toLowerCase()==='housekeeping');
+      if(matches.length!==1)throw Error(matches.length?'More than one Housekeeping list exists in Google Tasks. Give the intended list a unique name.':'Could not find your Housekeeping list. Check Google Tasks and try adding your next grocery.');
+      const listId=matches[0].id,key='tasks:'+listId,abort=new AbortController();controllers.add(abort);const timer=setTimeout(()=>abort.abort(),12000);
+      const invalidate=()=>{taskRevisions.set(key,(taskRevisions.get(key)||0)+1);pending.delete(key);cache.delete(key);};
+      invalidate();
+      try{
+        const response=await fetcher('https://tasks.googleapis.com/tasks/v1/lists/'+encodeURIComponent(listId)+'/tasks',{method:'POST',headers:{Authorization:'Bearer '+token.access_token,'Content-Type':'application/json'},body:JSON.stringify({title}),credentials:'omit',referrerPolicy:'no-referrer',signal:abort.signal});
+        if(version!==generation)throw Error('Reconnect Google to check Housekeeping.');
+        if(response.status===401||response.status===403){clear(true);throw Error('Reconnect Google to add groceries to Housekeeping.');}
+        if(!response.ok)throw Error('Could not confirm this grocery in Google Tasks. Check Housekeeping before adding it there.');
+        const body=await response.json();if(version!==generation||!body||typeof body.id!=='string'||!body.id)throw Error('Could not confirm this grocery in Google Tasks. Check Housekeeping before adding it there.');
+        invalidate();notify();return true;
+      }catch(e){if(version===generation)invalidate();throw Error(e.name==='AbortError'||e instanceof TypeError?'Could not confirm this grocery in Google Tasks. Check Housekeeping before adding it there.':e.message||'Could not confirm this grocery in Google Tasks.');}
+      finally{clearTimeout(timer);controllers.delete(abort);}
+    }
     async function setTaskCompleted(listId,id,done){
       if(!usable(TASKS_WRITE_SCOPE))throw Error('Reconnect Google to enable task check-offs.');
       if(typeof id!=='string'||!id||typeof listId!=='string'||!listId)throw Error('This task is unavailable.');
@@ -123,7 +144,7 @@
         taskRevisions.set(key,(taskRevisions.get(key)||0)+1);pending.delete(key);cache.set(key,{rows:list,until:now()+60000});notify();return true;
       }finally{clearTimeout(timer);controllers.delete(abort);}
     }
-    return {connect,events,taskLists,tasks,setTaskCompleted,get canCompleteTasks(){return connected()&&granted(token.scope,[TASKS_WRITE_SCOPE]);},get taskEditingRequested(){return requested.includes(TASKS_WRITE_SCOPE);},check(){if(token&&!connected())clear(true);return connected();},subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
+    return {connect,events,taskLists,tasks,addHousekeepingTask,setTaskCompleted,get canCompleteTasks(){return connected()&&granted(token.scope,[TASKS_WRITE_SCOPE]);},get taskEditingRequested(){return requested.includes(TASKS_WRITE_SCOPE);},check(){if(token&&!connected())clear(true);return connected();},subscribe(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
       get selectedList(){return token?.listId || '@default';},selectList(id){if(!connected()||typeof id!=='string'||!id||id.length>500)return;const before=token.listId;token.listId=id;try{storage.setItem(TOKEN,JSON.stringify(token));}catch(e){token.listId=before;return;}notify();},
       get cachedLists(){return cached('lists');},cachedEvents:d=>cached('events:'+monthKey(d)),get cachedTasks(){return cached('tasks:'+(token?.listId || '@default'));},cachedTasksFor(listId){return cached('tasks:'+listId);},
       disconnect(){const value=token?.access_token;clear();if(!value)return;const revoke=()=>{try{root.google.accounts.oauth2.revoke(value,()=>{});}catch(e){/* local disconnect still succeeds */}};
@@ -136,7 +157,7 @@
     const b=el('button','chipbtn',upgrade?'Reconnect to enable task check-offs':google.connected?'Connected to '+label:google.reconnect?'Reconnect '+label:'Connect '+label);b.type='button';b.disabled=google.connected&&!upgrade||!google.configured;b.onclick=async()=>{b.disabled=true;await google.connect();if(host.isConnected)refresh();};row.appendChild(b);
     if(google.connected||google.reconnect){const off=el('button','chipbtn','Disconnect');off.type='button';off.onclick=()=>{google.disconnect();if(host.isConnected)refresh();};row.appendChild(off);}
     if(google.connected&&lists.length>1){const l=el('label','google-task-picker','Task list'),select=el('select');select.setAttribute('aria-label','Google task list');for(const e of [{id:'@default',title:'Default list'},...lists]){const option=el('option','',e.title);option.value=e.id;select.appendChild(option);}select.value=google.selectedList;select.onchange=()=>google.selectList(select.value);l.appendChild(select);row.appendChild(l);}
-    note.textContent=!google.configured?'Google is optional. An OAuth client ID has not been configured. Everything local is ready.':google.reconnect?'Google needs a fresh connection. Tap Reconnect to try again. Your local lists and calendar are still here.':google.taskEditingRequested?'Task check-offs sync to your Google account. Calendar stays read-only.':'Optional and read-only. Calendar and Tasks are read; nothing is written to Google.';
+    note.textContent=!google.configured?'Google is optional. An OAuth client ID has not been configured. Everything local is ready.':google.reconnect?'Google needs a fresh connection. Tap Reconnect to try again. Your local lists and calendar are still here.':google.taskEditingRequested?'Task check-offs and new groceries sync to Google Tasks. Calendar stays read-only.':'Optional and read-only. Calendar and Tasks are read; nothing is written to Google.';
   }
   function createTasksView({google,now=Date.now,holdMs=2500,undoMs=15000}){
     const mounts=new Set(),changes=new Map();let error='',nextRefresh=0;

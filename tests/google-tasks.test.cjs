@@ -55,3 +55,24 @@ test('reading a scheduled list leaves manual list selection and other task cache
  const e=env({fetcher:async url=>({ok:true,status:200,json:async()=>({items:[{id:'task',title:url,due:'2026-10-19T00:00:00Z'}]})})});await e.g.connect();e.g.selectList('other');await e.g.tasks('other');await e.g.tasks('statcan');await e.g.tasks('todo');
  assert.equal(e.g.selectedList,'other');assert.ok(e.g.cachedTasks[0].title.includes('/other/'));assert.ok(e.g.cachedTasksFor('statcan')[0].title.includes('/statcan/'));assert.ok(e.g.cachedTasksFor('todo')[0].title.includes('/todo/'));assert.equal(JSON.parse(e.map.get(C.TOKEN)).listId,'other');e.g.disconnect();assert.deepEqual(e.g.cachedTasksFor('statcan'),[]);
 });
+
+test('new groceries create undated tasks only in Housekeeping without changing selection or storing content',async()=>{
+ const calls=[];const e=env({scope:C.TASKS_EDIT_SCOPES,fetcher:async(url,options)=>{calls.push({url,options});return {ok:true,status:200,json:async()=>options.method==='POST'?{id:'new',title:JSON.parse(options.body).title}:url.includes('users/@me/lists')?{items:[{id:'work',title:'Work'},{id:'home / list',title:'  HOUSEKEEPING  '}]}:{items:[]}};}});
+ await e.g.connect();e.g.selectList('work');await e.g.tasks('home / list');let changes=0;e.g.subscribe(()=>changes++);
+ assert.equal(await e.g.addHousekeepingTask('  PRIVATE_GROCERY  '),true);
+ const posts=calls.filter(c=>c.options.method==='POST');assert.equal(posts.length,1);assert(posts[0].url.endsWith('/lists/home%20%2F%20list/tasks'));assert.deepEqual(JSON.parse(posts[0].options.body),{title:'PRIVATE_GROCERY'});assert.equal(posts[0].options.headers.Authorization,'Bearer PRIVATE_SHARED_TOKEN');assert.equal(e.g.selectedList,'work');assert.deepEqual(e.g.cachedTasksFor('home / list'),[]);assert.equal(changes,1);assert.deepEqual([...e.map.keys()],[C.TOKEN]);assert(!e.map.get(C.TOKEN).includes('PRIVATE_GROCERY'));
+ const shared=W.shareDecor({items:[],groceries:[{text:'PRIVATE_GROCERY'}]});assert(!JSON.stringify(shared).includes('PRIVATE_GROCERY'));
+});
+test('groceries stay local while disconnected; missing, ambiguous and read-only Housekeeping never writes',async()=>{
+ const off=env({fetcher:()=>assert.fail('disconnected must not fetch')});assert.equal(await off.g.addHousekeepingTask('Milk'),false);
+ const read=env();await read.g.connect();await assert.rejects(read.g.addHousekeepingTask('Milk'),/Reconnect/);assert.equal(read.calls.length,0);
+ for(const items of [[],[{id:'a',title:'Housekeeping'},{id:'b',title:'housekeeping'}]]){
+  let writes=0;const e=env({scope:C.TASKS_EDIT_SCOPES,fetcher:async(url,o)=>{if(o.method!=='GET')writes++;return {ok:true,json:async()=>({items})};}});await e.g.connect();await assert.rejects(e.g.addHousekeepingTask('Milk'),/Housekeeping/);assert.equal(writes,0);
+ }
+});
+test('Housekeeping creation reports failures without retries; authorization failure requires reconnect',async()=>{
+ for(const status of [401,403,503]){let posts=0;const e=env({scope:C.TASKS_EDIT_SCOPES,fetcher:async(url,o)=>{if(o.method==='POST'){posts++;return {ok:false,status};}return {ok:true,json:async()=>({items:[{id:'home',title:'Housekeeping'}]})};}});await e.g.connect();await assert.rejects(e.g.addHousekeepingTask('Milk'));assert.equal(posts,1);assert.equal(e.g.connected,status===503);assert.equal(e.g.reconnect,status!==503);}
+});
+test('disconnect while resolving Housekeeping prevents a late grocery write',async()=>{
+ let resolve,posts=0;const e=env({scope:C.TASKS_EDIT_SCOPES,fetcher:async(url,o)=>{if(o.method==='POST')posts++;return new Promise(r=>resolve=r);}});await e.g.connect();const job=e.g.addHousekeepingTask('Milk');e.g.disconnect();resolve({ok:true,json:async()=>({items:[{id:'home',title:'Housekeeping'}]})});await assert.rejects(job,/Reconnect/);assert.equal(posts,0);
+});

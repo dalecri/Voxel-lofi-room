@@ -101,7 +101,7 @@
   }
   function ideaAdded(idea){const date=new Date(idea?.createdAt);if(!Number.isFinite(date.getTime()))return 'Kept in your jar';const parts=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long'}).formatToParts(date);return `Added ${parts.find(p=>p.type==='day').value} ${parts.find(p=>p.type==='month').value}`;}
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
-  function createView({model,sheet,renderer,room,editing,hidden,letters,onBrew=()=>{},onPhotos=()=>{},sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
+  function createView({model,sheet,renderer,room,editing,hidden,letters,onBrew=()=>{},onPhotos=()=>{},onGroceryAdded=async()=>false,sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
     let active=null,anchor=null,resize=null,canvas=null,status=null,frameTime=0;
     let teaMinutes=3;
     const badges=new Map(),button=(parent,label,fn,cls='chipbtn')=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>run(fn);parent.appendChild(b);return b;};
@@ -174,7 +174,7 @@
     function readMail(l){shell(l.title,l.letterhead || `A note from your past self · ${l.deliverOn}`,root=>{
       root.appendChild(LRMailWindow.readCard(l,LRLetters.sanitizeHTML));button(root,'Back to envelopes',mailboxEnvelopes);
     });}
-    function groceries(){shell('On the fridge door','Your grocery list, private to this device.',root=>{
+    function groceries(){shell('On the fridge door','New groceries also go to Housekeeping when Google is connected.',root=>{
       const notebook=document.createElement('section');notebook.className='grocery-notebook';notebook.setAttribute('aria-label','Grocery notebook');root.appendChild(notebook);
       const title=document.createElement('h3');title.textContent='Groceries';notebook.appendChild(title);
       const items=document.createElement('div');items.className='grocery-items';notebook.appendChild(items);
@@ -186,7 +186,18 @@
       }
       if(!model.state.groceries.length)text(items,'🧺 Nothing on the list yet. A little space for what you need.','grocery-empty');
       const form=document.createElement('form');form.className='grocery-add';notebook.appendChild(form);const input=field(form,'Add groceries');input.autocomplete='off';input.placeholder='Something for the basket…';
-      const add=()=>{model.addGrocery(input.value);groceries();active.querySelector('input:not([type=checkbox])').focus();};form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add,'grocery-add-button');
+      const add=()=>{
+        const value=input.value.trim();model.addGrocery(value);groceries();active.querySelector('input:not([type=checkbox])').focus();
+        const feedback=status;
+        // Save locally first. Never replay an uncertain remote write: it may already exist.
+        Promise.resolve().then(()=>onGroceryAdded(value)).then(added=>{
+          if(added&&feedback.isConnected)feedback.textContent='Added to Housekeeping in Google Tasks.';
+        }).catch(e=>{
+          const message='Saved here. '+(e.message||'Could not confirm it in Google Tasks.');
+          if(feedback.isConnected)feedback.textContent=message;else notice(message);
+        });
+      };
+      form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add,'grocery-add-button');
       button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
     });}
     function tally(){shell('Pushup tally','One rep at a time. Just yours, on this device.',root=>{

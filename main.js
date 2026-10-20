@@ -181,6 +181,7 @@ function startLofiRooms() {
   const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
     editing: () => state.mode === 'edit', hidden: () => library.active || letters.active || barnaby.active || frenchUI?.active || filming || document.hidden || $('#photo').classList.contains('open'),
     onPhotos: id => cozy.photoPicker(id),
+    onGroceryAdded: text => googleCalendar.addHousekeepingTask(text),
     hangPixel:grid=>{const it=LRPixelMaker.hang(room,meta.current,grid,(id,piece,art)=>roomTools.pinPixel(id,piece,art),LR);changed();save();cozy.frame(0,view.t+1);closeSheets();toast('<span>Your pixel print is on the wall. Move it in Decorate.</span>',2400,true);return it;},
     portrait:reaction=>companionPortrait('idle',reaction),portraitKey:()=>JSON.stringify(wardrobe.slots),music:()=>!!meta.music,toggleMusic:()=>setMusic(!meta.music),
     letters, sound: Sound,
