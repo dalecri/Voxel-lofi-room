@@ -4,7 +4,7 @@ require('../furniture.js');W.register(LR);
 function fixture(){const data=new Map(),store={get:(k,d)=>structuredClone(data.get(k)??d),set:(k,v)=>data.set(k,structuredClone(v))};return {store,data};}
 test('one tool directory includes every private room tool and file section with unique stable IDs',()=>{
  const ids=L.TOOLS.map(t=>t.id);assert.equal(new Set(ids).size,ids.length);assert.ok(!ids.includes('focus'));
- for(const id of ['tally','typewriter','mailbox','groceries','ideas','tea','savings','sketch','french','whiteboard','breathing','wardrobe','merchant','letters','scenes','photos','camera','newspaper','tst','todo','moments','captions','digest','rooms','sound','settings'])assert.ok(ids.includes(id),id);
+ for(const id of ['mood','tally','typewriter','mailbox','groceries','ideas','tea','savings','sketch','french','whiteboard','breathing','wardrobe','merchant','letters','scenes','photos','camera','newspaper','tst','todo','moments','captions','digest','rooms','sound','settings'])assert.ok(ids.includes(id),id);
  assert.ok(L.TOOLS.every(t=>t.label&&t.icon&&t.description&&!t.url));
 });
 test('Home directory derives actual portal/widget destinations and reflects private custom links after reload',()=>{

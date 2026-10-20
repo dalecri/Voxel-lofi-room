@@ -33,7 +33,7 @@
       mail:Array.isArray(old.mail)?old.mail:[],groceries:Array.isArray(old.groceries)?old.groceries:[],ideas:Array.isArray(old.ideas)?old.ideas:[],
       // Tally lives inside lr.tools, never a separate lr.tally storage key.
       tally:old.tally&&validDate(old.tally.date)?{date:old.tally.date,count:Number.isSafeInteger(old.tally.count)&&old.tally.count>=0?old.tally.count:0,completed:!!old.tally.completed||(Number.isSafeInteger(old.tally.count)&&old.tally.count>=TALLY_GOAL)}:null,
-      lastIdea:old.lastIdea||null,tea:old.tea||null,mailFrom:typeof old.mailFrom==='string'?old.mailFrom:null,mailDraft:old.mailDraft&&typeof old.mailDraft==='object'?old.mailDraft:null,goal:old.goal||null,deposits:Array.isArray(old.deposits)?old.deposits:[],pixel:Pixel.normalize(old.pixel),pixelPosters:old.pixelPosters&&typeof old.pixelPosters==='object'?old.pixelPosters:{}};
+      lastIdea:old.lastIdea||null,tea:old.tea||null,mailFrom:typeof old.mailFrom==='string'?old.mailFrom:null,mailDraft:old.mailDraft&&typeof old.mailDraft==='object'?old.mailDraft:null,goal:old.goal||null,deposits:Array.isArray(old.deposits)?old.deposits:[],pixel:Pixel.normalize(old.pixel),moodLog:Array.isArray(old.moodLog)?old.moodLog.slice(0,500):[],books:old.books&&typeof old.books==='object'&&!Array.isArray(old.books)?old.books:{},pixelPosters:old.pixelPosters&&typeof old.pixelPosters==='object'?old.pixelPosters:{}};
     const save=()=>{store.set(KEY,state);if(JSON.stringify(store.get(KEY,null))!==JSON.stringify(state))throw Error('Could not save on this device.');};
     const id=prefix=>prefix+'-'+now().getTime().toString(36)+'-'+state.next++;
     function tally(){const date=day(now());if(!state.tally||state.tally.date!==date){const before=state.tally;state.tally={date,count:0,completed:false};try{save();}catch(e){state.tally=before;throw e;}}return copy(state.tally);}
@@ -70,6 +70,26 @@
     }
     function read(id){poll(false);const l=state.mail.find(l=>l.id===id);if(!l||l.status!=='arrived')return null;l.read=true;l.notified=true;save();return copy(l);}
     function remove(collection,id){const a=state[collection];if(!['mail','groceries','ideas','deposits'].includes(collection)||!a.some(x=>x.id===id))return false;state[collection]=a.filter(x=>x.id!==id);save();return true;}
+    function recordMood(value,prompt,note=''){
+      if(!Number.isFinite(value)||value<0||value>1||!Number.isInteger(prompt)||prompt<0||prompt>2)throw Error('Choose a mood first.');
+      const before=state.moodLog,next=state.next;
+      const entry={id:id('mood'),value,prompt,note:clip(note,160),createdAt:now().getTime()};
+      state.moodLog=[entry,...before].slice(0,500);
+      try{save();}catch(e){state.moodLog=before;state.next=next;throw e;}return copy(entry);
+    }
+    const bookKey=(room,id)=>JSON.stringify([String(room),String(id)]);
+    function book(room,id){
+      const saved=state.books[bookKey(room,id)];
+      return {title:clip(saved?.title,80),pages:Array.isArray(saved?.pages)&&saved.pages.length>=2?saved.pages.slice(0,100).map(p=>clip(p,5000)):['','']};
+    }
+    function saveBook(room,id,value){
+      const key=bookKey(room,id),before=state.books[key];
+      const pages=Array.isArray(value.pages)?value.pages.slice(0,100).map(p=>clip(p,5000)):['',''];
+      while(pages.length<2||pages.length%2)pages.push('');
+      state.books[key]={title:clip(value.title,80),pages};
+      try{save();}catch(e){if(before===undefined)delete state.books[key];else state.books[key]=before;throw e;}
+      return book(room,id);
+    }
     function addGrocery(text){text=String(text).trim();if(!text)throw Error('What do you need from the shop?');state.groceries.push({id:id('grocery'),text,done:false});save();}
     function checkGrocery(id,done){const g=state.groceries.find(g=>g.id===id);if(g){g.done=!!done;save();}}
     function clearGroceries(){state.groceries=state.groceries.filter(g=>!g.done);save();}
@@ -83,7 +103,7 @@
     function deposit(value,note=''){if(!state.goal)throw Error('Set a goal first.');const n=cents(value);if(!Number.isSafeInteger(total()+n))throw Error('That total is too large for this jar.');state.deposits.unshift({id:id('deposit'),cents:n,note:String(note).trim(),date:day(now())});save();}
     if('strokes' in old)save(); // Retire the private freehand format; pixel sketches start fresh.
     const pixels=Pixel.create({read:()=>state.pixel,write:g=>{const before=state.pixel;state.pixel=g;try{save();}catch(e){state.pixel=before;throw e;}}});
-    return {get tally(){return tally();},countRep,send,saveDraft,clearDraft,setFrom,compose,get mailDraft(){return state.mailDraft?copy(state.mailDraft):null;},poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,pixels,pinPixel(room,id,grid){state.pixelPosters[`${room}:${id}`]=Pixel.normalize(grid);save();},pixelPoster(room,id){const g=state.pixelPosters[`${room}:${id}`];return g?Pixel.normalize(g):null;},total,
+    return {get tally(){return tally();},countRep,recordMood,get moods(){return copy(state.moodLog);},book,saveBook,send,saveDraft,clearDraft,setFrom,compose,get mailDraft(){return state.mailDraft?copy(state.mailDraft):null;},poll,read,remove,addGrocery,checkGrocery,clearGroceries,addIdea,shake,brew,cancelTea,enjoyTea,goal,deposit,pixels,pinPixel(room,id,grid){state.pixelPosters[`${room}:${id}`]=Pixel.normalize(grid);save();},pixelPoster(room,id){const g=state.pixelPosters[`${room}:${id}`];return g?Pixel.normalize(g):null;},total,
       get homeState(){return {tea:state.tea?copy(state.tea):null,mail:state.mail.map(l=>({id:l.id,status:l.status,deliverOn:l.deliverOn,read:l.read})),ideas:copy(state.ideas)};},get state(){return copy(state);},get tea(){return state.tea?copy(state.tea):null;},get visual(){return {unread:state.mail.some(l=>l.status==='arrived'&&!l.read),ideas:state.ideas.length,level:state.goal?Math.min(8,Math.ceil(total()/state.goal.target*8)):0};},get remaining(){return state.tea?.status==='brewing'?Math.max(0,state.tea.endAt-now().getTime()):0;}};
   }
   // Presentation order only. The model's newest-first list and lastIdea are untouched.
@@ -101,7 +121,7 @@
   }
   function ideaAdded(idea){const date=new Date(idea?.createdAt);if(!Number.isFinite(date.getTime()))return 'Kept in your jar';const parts=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long'}).formatToParts(date);return `Added ${parts.find(p=>p.type==='day').value} ${parts.find(p=>p.type==='month').value}`;}
   function kind(it,C){return C.privateTool || (it.t==='minifridge'||C.tap==='door'&&/fridge|icebox|refrigerator/i.test(C.name)?'groceries':it.t==='kettle'?'tea':it.t==='mailbox'?'mailbox':null);}
-  function createView({model,sheet,renderer,room,editing,hidden,letters,onBrew=()=>{},onPhotos=()=>{},onGroceryAdded=async()=>false,sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
+  function createView({model,sheet,renderer,room,editing,hidden,letters,onBrew=()=>{},onPhotos=()=>{},onGroceryAdded=async()=>false,bookRoom=()=>'',sound,notice=()=>{},portrait=()=>null,portraitKey=()=>'',music=()=>false,toggleMusic=()=>{},hangPixel=()=>{}}){
     let active=null,anchor=null,resize=null,canvas=null,status=null,frameTime=0;
     let teaMinutes=3;
     const badges=new Map(),button=(parent,label,fn,cls='chipbtn')=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>run(fn);parent.appendChild(b);return b;};
@@ -118,7 +138,7 @@
       close();sheet(LRLetters.escapeHTML(title),LRLetters.escapeHTML(sub),h=>{const root=h('div','roomtool');root.dataset.roomTool='true';status=document.createElement('p');status.className='roomtool-status muted';status.setAttribute('role','status');status.setAttribute('aria-live','polite');root.appendChild(status);active=root;build(root);});
     }
     function open(tool,id=anchor){anchor=id;
-      if(tool==='mailbox')mailbox();else if(tool==='groceries')groceries();else if(tool==='ideas')ideas();else if(tool==='tea')tea();else if(tool==='savings')savings();else if(tool==='sketch')sketch();else if(tool==='tally')tally();
+      if(tool==='mailbox')mailbox();else if(tool==='groceries')groceries();else if(tool==='ideas')ideas();else if(tool==='tea')tea();else if(tool==='savings')savings();else if(tool==='sketch')sketch();else if(tool==='tally')tally();else if(tool==='book')editableBook();else if(tool==='mood')shell('Mood tracker','',root=>LRMoodTracker.mount(root,{model}));
     }
     // The same pixel email window the typewriter writes in. Rich text stays off here.
     let pendingSeal=null;
@@ -174,6 +194,26 @@
     function readMail(l){shell(l.title,l.letterhead || `A note from your past self · ${l.deliverOn}`,root=>{
       root.appendChild(LRMailWindow.readCard(l,LRLetters.sanitizeHTML));button(root,'Back to envelopes',mailboxEnvelopes);
     });}
+    function editableBook(){
+      const roomId=bookRoom(),piece=anchor;if(!room().get(piece))return;
+      let draft=model.book(roomId,piece),page=0;
+      shell('Book','',root=>{
+        root.classList.add('editable-book');
+        const pieceData=room().get(piece),palette=LR.CAT[pieceData.t].vars[pieceData.c||0]||LR.CAT[pieceData.t].vars[0];
+        root.style.setProperty('--book-cover','#'+palette[0].toString(16).padStart(6,'0'));
+        const title=field(root,'Book title','text',draft.title);title.className='book-title';title.maxLength=80;title.placeholder='Untitled book';title.parentElement.className='book-title-row';
+        const spread=document.createElement('div');spread.className='book-spread';root.appendChild(spread);
+        const pages=[0,1].map(side=>{const paper=document.createElement('div');paper.className='book-paper';const input=document.createElement('textarea');input.maxLength=5000;input.spellcheck=true;input.setAttribute('aria-label',side?'Right page':'Left page');input.placeholder=side?'A little more…':'Start writing here…';const number=document.createElement('small');number.className='book-page-number';paper.append(input,number);spread.appendChild(paper);return {input,number};});
+        const nav=document.createElement('nav');nav.className='book-navigation';nav.setAttribute('aria-label','Book pages');root.appendChild(nav);
+        const previous=button(nav,'‹',()=>{page-=2;paint();});previous.setAttribute('aria-label','Previous book pages');
+        const add=button(nav,'＋',()=>{if(draft.pages.length>=100)return;draft.pages.push('','');if(persist()){page=draft.pages.length-2;paint();}});add.setAttribute('aria-label','Add book pages');
+        const next=button(nav,'›',()=>{page+=2;paint();});next.setAttribute('aria-label','Next book pages');
+        const feedback=status;feedback.classList.add('book-save-status');root.appendChild(feedback);
+        function persist(){try{model.saveBook(roomId,piece,draft);feedback.textContent='Saved';return true;}catch(e){feedback.textContent=e.message||'Could not save this book. Keep this page open and try editing again.';return false;}}
+        function paint(){pages.forEach(({input,number},i)=>{input.value=draft.pages[page+i]||'';number.textContent=String(page+i+1);});previous.disabled=page===0;next.disabled=page+2>=draft.pages.length;add.disabled=draft.pages.length>=100;}
+        title.oninput=()=>{draft.title=title.value;persist();};pages.forEach(({input},i)=>input.oninput=()=>{draft.pages[page+i]=input.value;persist();});paint();
+      });
+    }
     function groceries(){shell('On the fridge door','New groceries also go to Housekeeping when Google is connected.',root=>{
       const notebook=document.createElement('section');notebook.className='grocery-notebook';notebook.setAttribute('aria-label','Grocery notebook');root.appendChild(notebook);
       const title=document.createElement('h3');title.textContent='Groceries';notebook.appendChild(title);
@@ -309,9 +349,14 @@
     return {open,close,seal,tick,frame,flush:flushStroke};
   }
   function register(L){
-    const {def,CAT}=L;
+    const {def,CAT,shade}=L;
     CAT.minifridge.privateTool='groceries';CAT.kettle.privateTool='tea';
     if(CAT.mailbox){CAT.mailbox.privateTool='mailbox';CAT.mailbox.tap='roomtool';}
+    def('editablebook',{name:'Writing book',kind:'small',group:'cozy',size:[1,1],tap:'roomtool',privateTool:'book',vars:[[0x79494c],[0x627b68],[0x526b86]],build(m,[c]){
+      m.box(1,0,0,7,1,8,shade(c,.75)).box(1,1,1,6,3,7,0xf0dfb5).box(1,3,0,7,4,8,c).box(6,0,0,7,4,8,shade(c,.8));
+      m.box(2,4,2,5,5,4,0xd9b574);for(const z of [1,6])m.box(6,4,z,7,5,z+1,0xc49b60);
+      for(const z of [2,4,6])m.set(0,2,z,0xd1bc94);
+    }});
     def('letterbox',{name:'Future-self mailbox',kind:'small',group:'cozy',size:[1,1],tap:'roomtool',privateTool:'mailbox',vars:[[0xd6b591],[0x94aaa1]],build(m,[c]){
       m.box(1,0,1,7,1,7,0x78634c).box(1,1,1,7,5,7,c).blob(4,5,4,3,2,3,c).box(2,3,7,6,4,8,0x554a40).box(2,1,7,6,2,8,0xffefcf);
       m.part('privateMailFlag',[7,3,3],'z');m.box(7,3,3,8,8,4,0x846f58).box(7,6,3,8,8,6,0xb96760);m.main();

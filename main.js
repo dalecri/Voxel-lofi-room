@@ -182,6 +182,7 @@ function startLofiRooms() {
     editing: () => state.mode === 'edit', hidden: () => library.active || letters.active || barnaby.active || frenchUI?.active || filming || document.hidden || $('#photo').classList.contains('open'),
     onPhotos: id => cozy.photoPicker(id),
     onGroceryAdded: text => googleCalendar.addHousekeepingTask(text),
+    bookRoom: () => meta.current,
     hangPixel:grid=>{const it=LRPixelMaker.hang(room,meta.current,grid,(id,piece,art)=>roomTools.pinPixel(id,piece,art),LR);changed();save();cozy.frame(0,view.t+1);closeSheets();toast('<span>Your pixel print is on the wall. Move it in Decorate.</span>',2400,true);return it;},
     portrait:reaction=>companionPortrait('idle',reaction),portraitKey:()=>JSON.stringify(wardrobe.slots),music:()=>!!meta.music,toggleMusic:()=>setMusic(!meta.music),
     letters, sound: Sound,
@@ -394,7 +395,7 @@ function startLofiRooms() {
   function launchTool(p) {
     if(p.url){dashboard.launch(p);return;}
     const find=(...types)=>room.items.find(i=>types.includes(i.t));
-    const tools={tally:['tallycounter'],mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
+    const tools={mood:[],tally:['tallycounter'],mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
     if(p.id==='library')library.open();
     else if(p.id==='digest')digestUI.open();
@@ -1485,6 +1486,7 @@ function startLofiRooms() {
     try { if (document.querySelector('select:open')) return; } catch (_) {}
     const futureDetails=$('.future-mail-details[open]');
     if(e.key==='Escape'&&futureDetails){e.preventDefault();futureDetails.open=false;futureDetails.querySelector('summary').focus();e.stopImmediatePropagation();return;}
+    if(e.key==='Escape'&&$('#sheetBody .mood-panel:not([hidden])'))return;
     if(e.target.matches('.compact-date input[type=date]')&&['Enter',' '].includes(e.key))return;
     if(e.target.matches('.today-feature-toggle')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
     if(e.target.matches('.today-widget')&&['Enter',' '].includes(e.key))return;

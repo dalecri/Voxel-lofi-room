@@ -8,6 +8,7 @@
     ['library','My Library','📖','Letters, sparks, and quick notes'],
     ['mailbox','Future-self mailbox','✉','Send a note to later'],
     ['groceries','Grocery list','🥬','A little less to remember'],
+    ['mood','Mood tracker','☺','A moment to check in'],
     ['ideas','Idea jar','💡','Keep a spark for later'],
     ['tea','Tea timer','🫖','Put the kettle on'],
     ['tally','Pushup tally','＋','One rep at a time'],

@@ -105,3 +105,26 @@ test('tally clicker builds every variant and room share output contains decor bu
  T.register(L);const C=L.CAT.tallycounter;assert.equal(C.name,'Pushup tally counter');assert.equal(C.kind,'small');assert.equal(C.group,'cozy');assert.deepEqual(C.size,[1,1]);assert.equal(C.tap,'roomtool');assert.equal(T.kind({t:'tallycounter'},C),'tally');for(const vars of C.vars){const m=new L.Model();C.build(m,vars);assert.ok(Object.values(m.parts).some(p=>p.vox.size));}
  const f=fixture();f.model.countRep();const d=W.shareDecor({...new L.Room().serialize(),tally:f.model.tally,tools:f.model.state,items:[{id:1,t:'tallycounter',x:2,z:2,tally:f.model.tally}]});assert.equal(d.items[0].t,'tallycounter');assert.ok(!JSON.stringify(d).includes('tally":'));assert.ok(!JSON.stringify(d).includes('completed'));assert.ok(!('tools' in d));
 });
+
+test('writing books build every cover and fit free table/shelf surface cells',()=>{
+ T.register(L);const C=L.CAT.editablebook;assert.equal(C.kind,'small');assert.equal(T.kind({t:'editablebook'},C),'book');assert.deepEqual(C.size,[1,1]);const hashes=new Set();
+ for(const palette of C.vars){const m=new L.Model();C.build(m,palette);hashes.add(JSON.stringify(Object.values(m.parts).map(p=>[...p.vox])));assert(Object.values(m.parts).some(p=>p.vox.size));}assert.equal(hashes.size,3);
+ const room=new L.Room();room.items=[];const table=room.add({t:'desk',x:2,z:2,r:0,c:0});const piece={t:'editablebook',p:table.id,lx:0,lz:0,r:0,c:0};assert(room.canPlace(piece));room.add(piece);assert(!room.canPlace({...piece,id:undefined}));assert(room.canPlace({...piece,id:undefined,lx:1}));
+ const d=W.shareDecor(room.serialize());assert(d.items.some(i=>i.t==='editablebook'&&i.p===table.id));const reloaded=new L.Room();assert(reloaded.load(d));assert(reloaded.items.some(i=>i.t==='editablebook'&&i.p===table.id));
+});
+test('book text is independently saved per room and piece, bounded and private',()=>{
+ const f=fixture();f.model.saveBook('room-a',1,{title:'PRIVATE_BOOK',pages:['Left <script>literal</script>','Right']});f.model.saveBook('room-a',2,{title:'Second',pages:['different','']});f.model.saveBook('room-b',1,{title:'Other room',pages:['elsewhere','']});
+ const reload=f.reload();assert.equal(reload.book('room-a',1).pages[0],'Left <script>literal</script>');assert.equal(reload.book('room-a',2).pages[0],'different');assert.equal(reload.book('room-b',1).title,'Other room');assert.deepEqual(reload.book('absent',1),{title:'',pages:['','']});
+ const copy=reload.book('room-a',1);copy.pages[0]='changed';assert.notEqual(reload.book('room-a',1).pages[0],'changed');
+ reload.saveBook('room-a',1,{title:'x'.repeat(100),pages:['y'.repeat(6000)]});assert.equal(reload.book('room-a',1).title.length,80);assert.equal(reload.book('room-a',1).pages[0].length,5000);assert.equal(reload.book('room-a',1).pages.length,2);
+ assert.deepEqual(Object.keys(f.data),[T.KEY]);const shared=W.shareDecor({items:[{id:1,t:'editablebook',books:f.model.state.books}],tools:f.model.state});assert(!JSON.stringify(shared).includes('PRIVATE_BOOK'));
+});
+test('failed book saves restore the previous in-memory book',()=>{
+ const f=fixture();f.model.saveBook('a',1,{title:'Before',pages:['keep','']});f.store.set=()=>{throw Error('disk full');};assert.throws(()=>f.model.saveBook('a',1,{title:'After',pages:['lost','']}),/disk full/);assert.equal(f.model.book('a',1).title,'Before');
+});
+
+test('mood check-ins persist real history with bounded notes and private storage',()=>{
+ const f=fixture();assert.deepEqual(f.model.moods,[]);const entry=f.model.recordMood(.5,2,'PRIVATE_MOOD');assert.equal(entry.value,.5);assert.equal(entry.prompt,2);assert.equal(f.reload().moods[0].note,'PRIVATE_MOOD');const copy=f.model.moods;copy[0].note='edited';assert.equal(f.model.moods[0].note,'PRIVATE_MOOD');
+ for(const value of [NaN,-1,2])assert.throws(()=>f.model.recordMood(value,0));assert.throws(()=>f.model.recordMood(1,3));f.model.recordMood(1,0,'x'.repeat(200));assert.equal(f.model.moods[0].note.length,160);assert.deepEqual(Object.keys(f.data),[T.KEY]);assert(!JSON.stringify(W.shareDecor({items:[],tools:f.model.state,moodLog:f.model.moods})).includes('PRIVATE_MOOD'));
+ f.store.set=()=>{throw Error('full');};assert.throws(()=>f.model.recordMood(0,0,'lost'),/full/);assert.equal(f.model.moods.length,2);
+});
