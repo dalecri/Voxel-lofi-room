@@ -102,9 +102,16 @@
       });
     }
     function whiteboard(id) {
-      const key=roomId();sheet('A little whiteboard','A bigger surface for a thought. Saved privately as you write.',h=>{
-        const label=h('label','roomtool-field');label.textContent='On the board';const input=element('textarea');input.setAttribute('aria-label','Whiteboard text');input.maxLength=1200;input.rows=10;input.value=model.surface(key,id).text;label.appendChild(input);const status=h('p','muted');status.textContent='Saved on this device.';
-        input.oninput=()=>{try{model.write(key,id,input.value);status.textContent='Saved on this device.';scanAt=0;}catch(e){status.textContent=e.message;}};
+      const key=roomId();sheet('A little whiteboard','A place to leave a thought.',h=>{
+        const panel=h('section','whiteboard-panel');panel.setAttribute('aria-label','Room whiteboard');
+        const label=element('label');label.className='whiteboard-label';label.htmlFor='whiteboardText';label.textContent='On the board';
+        const input=element('textarea');input.id='whiteboardText';input.className='whiteboard-text';input.setAttribute('aria-label','Whiteboard text');input.setAttribute('aria-describedby','whiteboardStatus');input.maxLength=1200;input.rows=8;input.placeholder='A thought, a reminder, a little room for anything…';input.value=model.surface(key,id).text;
+        const footer=element('div');footer.className='whiteboard-footer';
+        const status=element('p','Saved on this device.');status.id='whiteboardStatus';status.className='whiteboard-status';status.setAttribute('role','status');
+        const count=element('span');count.className='whiteboard-count';count.setAttribute('aria-label','Characters used');
+        const updateCount=()=>{count.textContent=`${input.value.length} / ${input.maxLength}`;};updateCount();
+        footer.append(status,count);panel.append(label,input,footer);
+        input.oninput=()=>{updateCount();try{model.write(key,id,input.value);status.textContent='Saved on this device.';scanAt=0;}catch(e){status.textContent=e.message;}};
       });
     }
     function imageFor(key,data) {

@@ -400,7 +400,7 @@ the equipped costume. The scoreboard reads `lr.dailyStreak` directly.
 Take a camera photo to collect it in Files, then tap the collage to pin it. On a
 mini fridge, tap **Photo magnets** in the grocery sheet. French lives at the
 corner desk. Pins reference existing `lr.photos` records instead of copying images.
-Removing a cabinet photo removes its displayed image. Whiteboard text autosaves.
+Removing a cabinet photo removes its displayed image. The whiteboard opens a rounded, theme-aware writing card with a spacious text area, a live 1,200-character count and an autosave status. Whiteboard text autosaves.
 All surface text, pins, and each resident cat's favorite seat live privately in
 `lr.cozy`, scoped by room and item/cat. They never enter LR0/LR1 room codes. Private
 surfaces are badged in Decorate and suppressed during photos and timelapses.

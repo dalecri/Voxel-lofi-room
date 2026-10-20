@@ -150,3 +150,15 @@ button.mailwin-small { padding:7px 10px 6px; font-size:18px; box-shadow:2px 2px 
 .idea-front,.idea-back{background-color:var(--panel-solid)}
 .roomtool .idea-cycle{background:transparent}
 .idea-front .idea-card-label,.idea-back .idea-card-label{color:var(--ink-dim)}
+
+/* Private whiteboard: a rounded writing card in the room's active palette. */
+.whiteboard-panel { box-sizing:border-box; width:100%; max-width:640px; margin:18px auto 4px; padding:20px; border:1px solid var(--line); border-radius:26px; background:color-mix(in srgb,var(--accent) 5%,var(--panel-solid)); color:var(--ink); box-shadow:0 6px 18px #00000008; }
+.whiteboard-label { display:block; margin:0 0 14px; color:var(--ink-dim); font:800 12px/1.4 Nunito,sans-serif; letter-spacing:.05em; }
+.whiteboard-panel .whiteboard-text { display:block; box-sizing:border-box; width:100%; min-width:0; min-height:clamp(180px,34dvh,340px); margin:0; padding:16px; border:1px solid var(--line); border-radius:18px; background:var(--panel-solid); color:var(--ink); caret-color:var(--accent); font:400 18px/1.7 Nunito,sans-serif; resize:vertical; }
+.whiteboard-text::placeholder { color:var(--ink-dim); opacity:.75; }
+.whiteboard-text:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.whiteboard-footer { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-top:14px; color:var(--ink-dim); font:600 12px/1.5 Nunito,sans-serif; }
+.whiteboard-status { flex:1; min-width:0; margin:0; overflow-wrap:anywhere; }
+.whiteboard-count { flex:none; font-variant-numeric:tabular-nums; }
+@media(max-width:360px) { .whiteboard-panel { padding:16px; } .whiteboard-panel .whiteboard-text { padding:12px; font-size:17px; } }
+@media(max-height:480px) { .whiteboard-panel .whiteboard-text { min-height:140px; } }
