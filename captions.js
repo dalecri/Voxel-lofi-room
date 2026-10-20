@@ -73,7 +73,7 @@
     const titles=add('div','studio-titles','',head);add('h4','','Caption studio',titles);
     const status=add('p','caption-desk-status',s.cached?'Cached · last saved export':s.failed?'The studio is offline. Refresh when you’re back.':s.loading?'Fetching the latest export…':'TwoStoryTails · unpublished',titles);status.setAttribute('role','status');
     if(s.data?.exportedAt){const date=new Date(s.data.exportedAt);if(Number.isFinite(date.getTime()))status.appendChild(doc.createTextNode(' · Exported '+date.toLocaleString()));}
-    const refresh=add('button','caption-refresh',s.loading?'Refreshing…':'Refresh',head);refresh.type='button';refresh.disabled=s.loading;refresh.onclick=()=>model.refresh();
+    const refresh=add('button','caption-refresh','↻',head);refresh.type='button';refresh.setAttribute('aria-label','Refresh captions');refresh.title='Refresh captions';refresh.setAttribute('aria-busy',String(s.loading));refresh.disabled=s.loading;refresh.onclick=()=>model.refresh();
     if(!s.rows.length){add('p','caption-empty',s.loading?'Threading the film… one moment.':s.failed?'No clips reached the studio yet. Try Refresh when you’re online.':'Every clip is published. The studio cats are taking a well-earned nap.');return;}
     const reel=add('div','studio-reel','');
     s.rows.forEach((clip,index)=>{
@@ -87,7 +87,7 @@
       const button=add('button','caption-copy','Copy',article);button.type='button';button.setAttribute('aria-label','Copy caption: '+clip.desc);
       button.onclick=async()=>{const ok=await copy(copyPayload(clip));button.textContent=ok?'Copied':'Copy failed';button.classList.toggle('is-copied',ok);button.setAttribute('aria-label',ok?'Caption copied':'Copy failed, try again');setTimeout(()=>{if(button.isConnected){button.textContent='Copy';button.classList.remove('is-copied');button.setAttribute('aria-label','Copy caption: '+clip.desc);}},1800);};
     });
-    add('p','studio-foot','A new reel arrives at midnight.');
+    add('p','studio-foot','Three fresh ideas each day.');
   }
   // A single readable clipping on Today, backed by the same three daily picks.
   function renderDaily(host,model) {

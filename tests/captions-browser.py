@@ -14,7 +14,7 @@ fixture={'exportedFrom':'TwoStoryCaptions','exportedAt':'2026-10-18T12:00:00Z','
  for i in range(200)],'brands':[],'tasks':[]}
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
- for width in [390,1280]:
+ for width in [320,390,1280]:
   context=browser.new_context(viewport={'width':width,'height':1000},reduced_motion='reduce',timezone_id='America/Toronto')
   context.add_init_script('''const RealDate=Date;window.captionShift=0;window.Date=class extends RealDate{constructor(...a){super(...(a.length?a:[RealDate.now()+window.captionShift]));}static now(){return RealDate.now()+window.captionShift;}};if(!localStorage.getItem('captionFixture')){localStorage.setItem('captionFixture','true');const r={v:1,name:'Newsroom',n:10,wall:{style:'paint',color:0},floor:{style:'oak'},items:[]};for(const [k,v] of Object.entries({'lr.intro':true,'lr.rooms':[{id:101,name:r.name,n:0}],'lr.room.101':r,'lr.menuTab':'Today','lr.meta':{current:101,phase:'night',realtime:false,dreamy:false,visitors:false,mischief:false,calmPerformance:true}}))localStorage.setItem(k,JSON.stringify(v));}
    Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copied=text;}}});''')
@@ -26,7 +26,7 @@ with sync_playwright() as p:
    else:route.fulfill(json=fixture)
   context.route('**/twostorycaptions.json',caption_route)
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
-  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.click('#bMenu')
+  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()');page.click('#bMenu')
   # Today has a compact desk; the full studio remains a separate tool.
   page.get_by_role('tab',name='To-Do',exact=True).click();assert page.locator('#sheetBody .caption-studio, #sheetBody .journal-paper').count()==0;page.locator('.today-caption-text').wait_for(state='attached');assert request['count']==1;request['count']=0;page.keyboard.press('Escape')
   # Control Center opens the caption studio, which fetches once.
@@ -48,6 +48,11 @@ with sync_playwright() as p:
   # The clapperboard furniture opens the same studio.
   page.keyboard.press('Escape');page.evaluate('''() => {const a=__lr;a.setMode('explore',true);const it=a.room.make('captionboard',{x:2,z:2});a.room.add(it);a.changed();a.interact(it.id);}''');page.wait_for_function('document.querySelectorAll(".caption-clip").length===3');assert request['count']==before+1
   page.locator('.caption-studio').screenshot(path=f'/tmp/caption-studio-{width}.png');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
+  for phase in ['day','night']:
+   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
+   assert desk.evaluate('e=>getComputedStyle(e).color===getComputedStyle(document.getElementById("sheetBody")).color');assert desk.locator('h4').evaluate('e=>getComputedStyle(e).fontFamily.includes("Fredoka")');assert desk.locator('.caption-desc').first.evaluate('e=>getComputedStyle(e).fontFamily.includes("Nunito")');assert desk.locator('.caption-clip').first.evaluate('e=>getComputedStyle(e).borderRadius')=='24px';assert desk.get_by_role('button',name='Refresh captions',exact=True).bounding_box()['width']>=44
+   assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.locator('#sheetBody').bounding_box()['width']<=560;page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');page.screenshot(path=f'/tmp/caption-dashboard-{phase}-{width}.png')
+
   page.keyboard.press('Escape');assert not errors,errors;context.close()
  browser.close()
 server.shutdown()

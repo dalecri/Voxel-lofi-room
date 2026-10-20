@@ -255,7 +255,7 @@ Claps, saga state, room-size snapshots and the daily pushup best live under **`l
 
 ## Caption studio
 
-TwoStoryTails captions live in their own **Caption studio**, a pixel film reel opened from **Control Center** or by tapping the **Caption clapperboard** (Tech; charcoal with yellow, charcoal with pink, or blue with mint). The header shows a tiny pixel two-story house. Each of today's three unpublished clips is a film frame with sprocket holes, tone stickers, numbered takes and a chunky **Copy** button. The export is fetched only when the studio opens, never in the background, and the last export stays cached for offline reading. A new reel of three arrives at local midnight.
+TwoStoryTails captions live in their own **Caption studio**, opened from **Control Center** or by tapping the **Caption clapperboard** (Tech; charcoal with yellow, charcoal with pink, or blue with mint). It shares Today's typography, rounded cards and day/night palette, with a small pixel house in the header. Each of today's three unpublished clips shows tone tags, numbered caption options and a compact **Copy** button. The studio refreshes the export when opened and shares the offline caption cache with Today. A fresh selection of three arrives at local midnight.
 
 ## Typewriter letters
 
