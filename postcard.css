@@ -51,3 +51,13 @@
   .pixel-postcard .mailwin-row:last-of-type { margin-right:0; }
   .postcard-picker { gap:8px; }
 }
+
+/* Future letters use the app's rounded card and control shapes. */
+.roomtool .pixel-postcard { border-radius:24px; }
+.roomtool .pixel-postcard .postcard-stamp { border-radius:12px; }
+.roomtool .pixel-postcard input.mailwin-val { border-radius:8px; }
+.roomtool .pixel-postcard .mailwin-body,.roomtool .pixel-postcard .roomtool-letter { border-radius:12px; }
+.roomtool .pixel-postcard .postcard-picker button { border-radius:12px; }
+.roomtool .pixel-postcard .mailwin-due input,.roomtool .pixel-postcard button.mailwin-btn { border-radius:14px; }
+.roomtool .mailwin-letter { border-radius:20px; }
+.roomtool .mailwin-letter button { border-radius:14px; }
