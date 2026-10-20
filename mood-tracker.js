@@ -13,7 +13,6 @@
     const el=(tag,cls,text,parent=host)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;parent.appendChild(n);return n;};
     const button=(parent,text,aria,fn)=>{const b=el('button','',text,parent);b.type='button';b.setAttribute('aria-label',aria);b.onclick=fn;return b;};
     const main=el('div','mood-main'),top=el('div','mood-top',undefined,main);
-    button(top,'↺','Reset mood',()=>{value=.5;note='';paint();});
     const toggle=el('div','mood-prompt-toggle',undefined,top);toggle.setAttribute('role','group');toggle.setAttribute('aria-label','Check-in type');
     const promptButtons=Object.entries(PROMPTS).map(([id,[name]])=>{const b=button(toggle,name,name,()=>{prompt=Number(id);paint();});return [Number(id),b];});
     const history=button(top,'','Mood history',openHistory);history.className='mood-history chipbtn sheet-icon';history.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';

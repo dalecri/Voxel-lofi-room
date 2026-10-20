@@ -7,10 +7,9 @@
 .roomtool.mood-tracker { --mood-bg:#d2f35c; --mood-fg:#1a430b; --mood-accent:#a2c728; --mood-surface:#c2e549; position:relative; flex:1; width:100%; max-width:none; height:auto; min-height:0; margin:0; padding:8px 4px 0; border-radius:0; overflow:hidden; background:var(--mood-bg); color:var(--mood-fg); font-family:Nunito,sans-serif; transition:background-color .16s,color .16s; }
 .mood-tracker,.mood-tracker * { box-sizing:border-box; }
 .mood-main { display:flex; flex-direction:column; justify-content:space-between; gap:12px; height:100%; }
-.mood-top { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:8px; flex:none; }
+.mood-top { display:flex; align-items:center; justify-content:center; flex:none; }
 .roomtool.mood-tracker button { display:inline-flex; align-items:center; justify-content:center; flex:none; min-height:44px; margin:0; padding:8px 14px; border:0; border-radius:999px; box-shadow:none; background:var(--mood-surface); color:var(--mood-fg); font:800 14px/1.2 Nunito,sans-serif; cursor:pointer; }
 .roomtool.mood-tracker button:hover { filter:brightness(.97); }
-.mood-top > button:first-child { position:relative; width:44px; padding:0; font-size:22px; }
 .mood-prompt-toggle { display:flex; justify-self:center; padding:4px; gap:4px; border-radius:999px; background:var(--mood-surface); }
 .roomtool.mood-tracker .mood-prompt-toggle button { min-height:36px; padding:6px 12px; font-size:12px; white-space:nowrap; }
 .roomtool.mood-tracker .mood-prompt-toggle button[aria-pressed=true] { background:var(--mood-fg); color:var(--mood-bg); }
