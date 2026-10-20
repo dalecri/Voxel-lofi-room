@@ -438,3 +438,14 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-forecast-low,.today-forecast-high { text-align:right; font-variant-numeric:tabular-nums; }
 .today-forecast-low { color:var(--ink-dim); }
 @media(max-width:360px) { .space-today .today-forecast-card { gap:6px; padding:6px; border-radius:22px; } .today-forecast-current { padding:14px 10px; } .today-forecast-condition { gap:5px; font-size:12px; } .today-forecast-list { padding:10px 7px; } .today-forecast-list li { font-size:12px; gap:3px; } }
+
+/* A little scalloped clock beside the greeting; weather lives in the footer. */
+.today-flower-clock { display:flex; align-items:center; flex:none; width:94px; height:76px; padding:5px 4px 5px 8px; border:1px solid var(--line); border-radius:18px; background:color-mix(in srgb,var(--accent) 23%,var(--panel-solid)); color:var(--ink); }
+.today-flower-label { writing-mode:vertical-rl; font:700 11px/1 var(--font); letter-spacing:.02em; }
+.today-flower-clock svg { display:block; width:66px; height:66px; flex:none; overflow:visible; }
+.today-flower-face { fill:var(--ink); }
+.today-flower-hour,.today-flower-minute { stroke-linecap:round; stroke-width:7; }
+.today-flower-hour { stroke:var(--accent); }
+.today-flower-minute,.today-flower-pivot { stroke:var(--panel-solid); fill:var(--panel-solid); }
+.today-flower-pivot { stroke:none; }
+@media(max-width:360px) { .today-flower-clock { width:82px; height:68px; padding-left:6px; border-radius:16px; } .today-flower-clock svg { width:58px; height:58px; } .today-flower-label { font-size:10px; } }

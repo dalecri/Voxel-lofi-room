@@ -78,3 +78,9 @@ test('weather card maps five local days from existing forecast and ignores disab
  const off=T.weatherCard({...meta,liveWeather:false},now);assert.equal(off.temperature,null);assert.ok(off.rows.every(r=>r.high===null));assert.equal(off.note,'Live weather off');assert.equal(T.weatherCard({liveWeather:true},now).note,'Forecast unavailable');
  const boundary=T.weatherCard({},new Date(2026,11,30));assert.equal(boundary.rows.at(-1).date,'2027-01-03');
 });
+
+test('flower clock uses the actual local hour and minute, with correct twelve-hour hand angles',()=>{
+ for(const [h,m,ha,ma,period] of [[0,0,0,0,'Night'],[9,30,285,180,'Morning'],[12,0,0,0,'Afternoon'],[17,15,157.5,90,'Evening'],[23,59,359.5,354,'Night']]){
+  const now=new Date(2026,9,20,h,m),f=T.clockFace(now);assert.equal(f.hourAngle,ha);assert.equal(f.minuteAngle,ma);assert.equal(f.period,period);assert.equal(f.label,now.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}));
+ }
+});
