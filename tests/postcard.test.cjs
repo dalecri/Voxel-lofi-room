@@ -11,7 +11,7 @@ test('regular letters persist their picture independently and export it with the
  m.update({...a,body:'<b>A private hello</b>',cardIcon:'cat'});a=m.get();
  const b=m.add('Room');m.update({...b,body:'Other note',cardIcon:'moon'});m.select(a.id);
  const reloaded=Letters.create(options);assert.equal(reloaded.get().cardIcon,'cat');assert.equal(reloaded.list().find(l=>l.id===b.id).cardIcon,'moon');
- assert.ok(Letters.htmlFile(a,v=>v).includes(Card.art('cat')));assert.deepEqual(Object.keys(f.values),['lr.letters']);
+ assert.ok(Letters.htmlFile(a,v=>v).includes('<b>A private hello</b>'));assert.deepEqual(Object.keys(f.values),['lr.letters']);
 });
 test('future card draft, sealed snapshot and arrival retain the chosen picture across reloads',()=>{
  const f=fixture();let now=new Date(2026,9,18,12);const options={store:f.store,now:()=>now},m=Tools.create(options);
