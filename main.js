@@ -395,7 +395,7 @@ function startLofiRooms() {
   function launchTool(p) {
     if(p.url){dashboard.launch(p);return;}
     const find=(...types)=>room.items.find(i=>types.includes(i.t));
-    const tools={mood:[],tally:['tallycounter'],mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
+    const tools={mood:['moodjournal'],tally:['tallycounter'],mailbox:['mailbox','letterbox'],groceries:['minifridge'],ideas:['ideajar'],tea:['kettle'],savings:['savingsjar','tipjar'],sketch:['sketchbook']};
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
     if(p.id==='library')library.open();
     else if(p.id==='digest')digestUI.open();

@@ -128,3 +128,11 @@ test('mood check-ins persist real history with bounded notes and private storage
  for(const value of [NaN,-1,2])assert.throws(()=>f.model.recordMood(value,0));assert.throws(()=>f.model.recordMood(1,3));f.model.recordMood(1,0,'x'.repeat(200));assert.equal(f.model.moods[0].note.length,160);assert.deepEqual(Object.keys(f.data),[T.KEY]);assert(!JSON.stringify(W.shareDecor({items:[],tools:f.model.state,moodLog:f.model.moods})).includes('PRIVATE_MOOD'));
  f.store.set=()=>{throw Error('full');};assert.throws(()=>f.model.recordMood(0,0,'lost'),/full/);assert.equal(f.model.moods.length,2);
 });
+
+
+test('mood journals build every cover, sit on surfaces and share as decor only',()=>{
+ T.register(L);const C=L.CAT.moodjournal;assert.equal(C.kind,'small');assert.deepEqual(C.size,[1,1]);assert.equal(C.shop,undefined);assert.equal(C.tap,'roomtool');assert.equal(T.kind({t:'moodjournal'},C),'mood');
+ const hashes=new Set();for(const palette of C.vars){const m=new L.Model();assert.doesNotThrow(()=>C.build(m,palette));hashes.add(JSON.stringify(Object.values(m.parts).map(p=>[...p.vox])));assert(Object.values(m.parts).some(p=>p.vox.size));}assert.equal(hashes.size,3);
+ const r=new L.Room();r.items=[];const desk=r.add({t:'desk',x:2,z:2,r:0,c:0}),journal={t:'moodjournal',p:desk.id,lx:0,lz:0,r:0,c:2};assert(r.canPlace(journal));r.add(journal);assert(!r.canPlace({...journal,id:undefined}));
+ const d=W.shareDecor({...r.serialize(),moodLog:[{note:'PRIVATE_MOOD'}]});assert(!JSON.stringify(d).includes('PRIVATE_MOOD'));const copy=new L.Room();assert(copy.load(d));assert.equal(copy.items.find(i=>i.t==='moodjournal').p,desk.id);
+});

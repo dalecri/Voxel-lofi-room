@@ -20,3 +20,6 @@ test('Home directory derives actual portal/widget destinations and reflects priv
 });
 
 test('French previews follow the corner desk and never a fridge',()=>{require('../french.js');assert.deepEqual(L.FURNITURE.french,['frenchdesk']);assert.deepEqual(L.furniture({id:'french'},[{t:'minifridge',c:1}],LR.CAT),{id:'frenchdesk',variant:0,present:false});assert.deepEqual(L.furniture({id:'french'},[{t:'frenchdesk',c:2}],LR.CAT),{id:'frenchdesk',variant:2,present:true});});
+
+
+test('Mood tracker previews the placed journal cover',()=>{require('../room-tools.js').register(LR);assert.deepEqual(L.FURNITURE.mood,['moodjournal']);assert.deepEqual(L.furniture({id:'mood'},[],LR.CAT),{id:'moodjournal',variant:0,present:false});assert.deepEqual(L.furniture({id:'mood'},[{t:'moodjournal',c:2}],LR.CAT),{id:'moodjournal',variant:2,present:true});});

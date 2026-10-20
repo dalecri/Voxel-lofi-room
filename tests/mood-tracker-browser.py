@@ -34,7 +34,13 @@ with sync_playwright() as p:
  assert page.locator('.mood-eyes').evaluate('e=>getComputedStyle(e).animationName')=='none'
  page.get_by_role('button',name='Back to Control Centre',exact=True).click();page.locator('#homeView').wait_for();page.locator('[data-app=mood]').click();assert page.locator('.mood-count').inner_text()=='1'
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI');page.evaluate('__lr.renderLoop.stop();__lr.roomToolsUI.open("mood")');page.get_by_role('button',name='Mood history',exact=True).click();assert 'PRIVATE_MOOD' in page.locator('.mood-entry').inner_text()
- raw=page.evaluate('async()=>JSON.stringify(await __lr.readCode(await __lr.roomCode()))');assert 'PRIVATE_MOOD' not in raw;assert not errors,errors
+ # A surface-placed journal opens the same tracker and the same private history.
+ page.keyboard.press('Escape');page.keyboard.press('Escape')
+ page.evaluate('''()=>{const r=__lr.room;r.items=[];const table=r.add({t:'desk',x:2,z:2,c:0,r:0});window.journalId=r.add({t:'moodjournal',p:table.id,lx:0,lz:0,c:1,r:0}).id;__lr.changed();__lr.interact(journalId);}''')
+ assert page.locator('.mood-tracker').is_visible();page.get_by_role('button',name='Mood history',exact=True).click();assert 'PRIVATE_MOOD' in page.locator('.mood-entry').inner_text()
+ for variant in range(3):
+  data=page.evaluate('c=>__lr.view.thumb({t:"moodjournal",c,r:0})',variant);import base64;(Path(f'/tmp/mood-journal-{variant}.png')).write_bytes(base64.b64decode(data.split(',')[1]))
+ raw=page.evaluate('async()=>JSON.stringify(await __lr.readCode(await __lr.roomCode()))');assert 'moodjournal' in raw;assert 'PRIVATE_MOOD' not in raw;assert not errors,errors
  print('PASS mood tracker: Control Centre/Back, slider and expressions/colors, notes, real history/reload/privacy, Escape panels, reduced motion and themed phone/desktop layouts')
  browser.close()
 server.shutdown()

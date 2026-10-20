@@ -352,6 +352,14 @@
     const {def,CAT,shade}=L;
     CAT.minifridge.privateTool='groceries';CAT.kettle.privateTool='tea';
     if(CAT.mailbox){CAT.mailbox.privateTool='mailbox';CAT.mailbox.tap='roomtool';}
+    def('moodjournal',{name:'Mood journal',kind:'small',group:'cozy',size:[1,1],tap:'roomtool',privateTool:'mood',vars:[[0xc78270],[0x809b84],[0x9383ad]],build(m,[cover]){
+      // Cloth cover, cream page edges, stitched spine, ribbon and a tiny sun.
+      m.box(1,0,0,7,1,8,shade(cover,.75)).box(1,1,1,6,3,7,0xf5e8cb).box(1,3,0,7,4,8,cover);
+      m.box(6,0,0,7,4,8,shade(cover,.7)).box(5,4,0,6,5,8,shade(cover,.6));
+      m.box(2,1,7,3,2,9,0xd8b769).box(2,1,8,3,3,9,0xd8b769);
+      for(const z of [1,3,5,7])m.set(6,4,z,0xe5cbb0);
+      for(const [x,z] of [[3,2],[2,3],[3,3],[4,3],[3,4]])m.set(x,4,z,0xf5dfac);
+    }});
     def('editablebook',{name:'Writing book',kind:'small',group:'cozy',size:[1,1],tap:'roomtool',privateTool:'book',vars:[[0x79494c],[0x627b68],[0x526b86]],build(m,[c]){
       m.box(1,0,0,7,1,8,shade(c,.75)).box(1,1,1,6,3,7,0xf0dfb5).box(1,3,0,7,4,8,c).box(6,0,0,7,4,8,shade(c,.8));
       m.box(2,4,2,5,5,4,0xd9b574);for(const z of [1,6])m.box(6,4,z,7,5,z+1,0xc49b60);
