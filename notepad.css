@@ -42,7 +42,7 @@
 .task-notebook .today-task-remove { flex:none; width:24px; min-height:44px; padding:0; border:0; border-radius:4px; background:transparent; color:#808674; font:400 19px/1 Nunito,sans-serif; text-align:center; }
 .task-notebook .today-icon-picker { border-color:#9eaa9166; padding:8px 0; }
 .task-notebook .today-icon-picker button { background:#fff8e5; }
-.task-notebook > .task-journey { margin:10px 0 0; padding:10px 0 0; border-top:1px solid #9eaa9155; color:var(--note-muted); }
+.task-notebook > .task-journey { margin:10px 0 0; padding:10px 0 0; color:var(--note-muted); }
 .task-notebook .task-journey-summary { min-height:0; margin:0; padding:0; border-radius:0; background:none; color:#64725c; font:600 14px/1.4 Nunito,sans-serif; }
 .task-notebook .task-journey-summary::after { content:none; }
 .task-notebook .task-day-path { height:92px; }
@@ -90,7 +90,6 @@
 .task-google-page select { background:#fffaf0; color:var(--note-ink); border:1px solid #d6caa9; }
 
 .task-google-page .google-task-day-date { color:var(--note-muted); }
-.task-google-page .google-task-day-heading { border-color:var(--note-rule); }
 
 /* Google's two day groups use the same small checks and ink as My list. */
 .task-google-page .google-task-row { display:grid; grid-template-columns:36px minmax(0,1fr); align-items:center; gap:5px; min-height:44px; padding:0; border:0; background:transparent; }
@@ -174,4 +173,4 @@
 .task-notebook .today-task-form input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .task-notebook .today-task-form .primary { box-sizing:border-box; min-height:48px; padding:10px 14px; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); font:800 14px/1.3 var(--font,Nunito,sans-serif); }
 /* To-Do tab: the day path sits at the top of the notebook, under the title. */
-.task-notebook > .task-journey.is-top { margin:0 0 10px; padding:0 0 12px; border-top:0; border-bottom:1px solid #9eaa9155; }
+.task-notebook > .task-journey.is-top { margin:0 0 10px; padding:0 0 12px; }

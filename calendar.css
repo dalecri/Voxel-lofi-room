@@ -18,7 +18,7 @@
 /* Only today's tasks and tomorrow's small look-ahead live on the dashboard. */
 .google-task-days { display:grid; gap:18px; margin-top:18px; }
 .google-task-day { min-width:0; }
-.google-task-day-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:8px; }
+.google-task-day-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; padding-bottom:8px; }
 .google-task-day-heading h4 { margin:0; font:500 18px/1.3 var(--display); }
 .google-task-day-date { font-size:12px; color:var(--ink-dim); }
 .google-task-day .google-task-list { margin:0; }
