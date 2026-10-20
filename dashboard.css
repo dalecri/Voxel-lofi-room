@@ -1,3 +1,5 @@
+/* Keep dashboard navigation at the same height for short and long tabs. */
+.sheet #sheetBody:has(> .menu-nav) { height:84%; }
 .dashboard-tabs{position:sticky;top:0;z-index:1;background:var(--panel-solid);display:flex;gap:4px;overflow-x:auto;margin:12px 0 16px;padding:3px 0 6px;clear:both}
 .dashboard-tabs .chipbtn{flex:1;white-space:nowrap;padding:9px 10px;font-size:13px}
 .dashboard-tabs [aria-selected=true]{background:var(--accent);color:var(--panel-solid)}
