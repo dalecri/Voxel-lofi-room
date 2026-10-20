@@ -265,7 +265,7 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 /* Today's Google list gets the first useful space after the welcome. */
 .today-sky.has-task-focus .today-weather { padding-bottom:0; }
 .today-sky.has-task-focus .today-google-focus { margin:0 0 18px; }
-.today-google-focus .google-tasks-heading { align-items:center; border-bottom:1px solid var(--note-rule); padding-bottom:8px; }
+.today-google-focus .google-tasks-heading { align-items:center; padding-bottom:8px; }
 .today-google-focus .google-tasks-heading h3 { font:600 22px/1.2 Fredoka,sans-serif; }
 .today-google-focus .google-task-source { font:700 12px/1.4 Nunito,sans-serif; color:var(--note-muted); }
 .today-google-focus .google-task-days { margin-top:10px; }
