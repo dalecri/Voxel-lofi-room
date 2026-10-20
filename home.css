@@ -268,7 +268,6 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-google-focus .google-tasks-heading { align-items:center; border-bottom:1px solid var(--note-rule); padding-bottom:8px; }
 .today-google-focus .google-tasks-heading h3 { font:600 22px/1.2 Fredoka,sans-serif; }
 .today-google-focus .google-task-source { font:700 12px/1.4 Nunito,sans-serif; color:var(--note-muted); }
-.today-google-focus .google-task-all { display:block; margin:8px 0 0 auto; padding:5px 8px; min-height:32px; font-size:12px; }
 .today-google-focus .google-task-days { margin-top:10px; }
 .today-google-focus .google-task-day-heading { padding-bottom:6px; }
 .today-sky.has-task-focus .today-weather-details { padding:10px 0 0; border-top:1px solid var(--line); }
@@ -517,3 +516,7 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .barnaby-chrome.app-sheet-heading { margin:0; padding:calc(env(safe-area-inset-top) + 8px) 12px 8px; border-bottom:1px solid var(--line); }
 #sheetBody .tea-top { grid-template-columns:1fr auto; }
 #sheetBody:has(.app-sheet-heading) .studio-titles h4 { display:none; }
+
+/* Match the idea cards' seeded, theme-aware pastel backgrounds. */
+.space-today .today-feature-pane.french-soft-background { background-color:var(--panel-solid); color:var(--ink); }
+.space-today .french-soft-background .french-quick-actions button { background:var(--chip); border-color:var(--line); color:var(--ink); }

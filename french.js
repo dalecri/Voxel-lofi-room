@@ -221,7 +221,7 @@
     });
   }
 
-  function createView({ model, portrait = () => '', onCorrect = () => {}, beforeOpen = () => {}, reduced = () => false, sheet, dismiss = () => {} } = {}) {
+  function createView({ model, portrait = () => '', onCorrect = () => {}, beforeOpen = () => {}, reduced = () => false, todayBackground = () => '', sheet, dismiss = () => {} } = {}) {
     const doc = root.document;
     const el = (tag, cls, text) => { const node = doc.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node; };
     const overlay = el('section');
@@ -316,6 +316,8 @@
       if (!btn) return;
       const card=model.quickWord();
       btn.hidden=!card;const shell=btn.closest('.french-today-card');
+      const backdrop=btn.closest('.today-feature-pane')||shell,gradient=todayBackground(card?.id||'complete');
+      if(backdrop&&gradient){backdrop.classList.add('french-soft-background');backdrop.style.backgroundImage=gradient;}
       if(shell){shell.hidden=!model.cards().length;shell.querySelector('.french-quick-actions').hidden=!card;shell.querySelector('.french-review-done').hidden=!!card;shell.querySelector('.french-review-status').textContent=card?'':'Every word in this deck is learned.';}
       if(!card){todayCardId=null;return;}
       todayCardId=card.id;btn.dataset.cardId=card.id;

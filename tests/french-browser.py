@@ -82,11 +82,13 @@ with sync_playwright() as p:
  page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
  today=page.locator('.french-today')
  assert today.locator('b').inner_text() and today.locator('small').inner_text()
- today.click();assert today.get_attribute('aria-pressed')=='true';assert today.locator('.french-example').is_visible()
+ surface=page.locator('.today-feature-pane.french-soft-background');gradient=surface.evaluate('e=>e.style.backgroundImage');assert 'radial-gradient' in gradient
+ expected=page.evaluate('id=>{const e=document.createElement("div");e.style.backgroundImage=LRRoomTools.ideaBackground({id:"french:"+id});return e.style.backgroundImage}',today.get_attribute('data-card-id'));assert gradient==expected
+ today.click();assert surface.evaluate('e=>e.style.backgroundImage')==gradient;assert today.get_attribute('aria-pressed')=='true';assert today.locator('.french-example').is_visible()
  # Quick controls are siblings of the flip button and share Wordnest progress.
  quick=page.locator('.french-today-card');word_id=today.get_attribute('data-card-id');known=quick.get_by_role('button',name='Mark as learned',exact=True);learning=quick.get_by_role('button',name='Still learning',exact=True)
  assert today.locator('button').count()==0
- known.click();assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)=='known';assert today.get_attribute('data-card-id')!=word_id;assert today.get_attribute('aria-pressed')=='false';learning_id=today.get_attribute('data-card-id')
+ known.click();assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',word_id)=='known';assert today.get_attribute('data-card-id')!=word_id;assert today.get_attribute('aria-pressed')=='false';learning_id=today.get_attribute('data-card-id');assert surface.evaluate('e=>e.style.backgroundImage')!=gradient
  learning.click();assert page.evaluate('(id)=>__lr.french.model.progress().cards[id].status',learning_id)=='learning';assert today.get_attribute('data-card-id') not in [word_id,learning_id];assert today.get_attribute('aria-pressed')=='false';assert quick.get_by_role('button',name='Next word →',exact=True).count()==0
  for _ in range(page.evaluate('LRFrench.GAP')):known.click()
  assert today.get_attribute('data-card-id')==learning_id;assert learning.get_attribute('aria-pressed')=='true';assert not page.evaluate('__lr.french.active')

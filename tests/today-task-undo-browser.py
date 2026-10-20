@@ -31,7 +31,7 @@ with sync_playwright() as p:
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(20000)
  def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
  def open_today():page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
- page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();open_today();focus=page.locator('.today-google-focus');check=focus.get_by_role('checkbox',name='statcan task for today',exact=True);check.wait_for()
+ page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();open_today();focus=page.locator('.today-google-focus');check=focus.get_by_role('checkbox',name='statcan task for today',exact=True);check.wait_for();assert focus.get_by_role('button',name='All tasks',exact=True).count()==0
  check.click();undo=focus.get_by_role('button',name='Undo statcan task for today',exact=True);undo.wait_for();undo.click();check.wait_for();assert writes[-1][2]['status']=='needsAction'
  check.click();undo.wait_for();started=page.evaluate('performance.now()');page.wait_for_timeout(1500);assert undo.is_visible();undo.wait_for(state='detached',timeout=2200);elapsed=page.evaluate('performance.now()')-started;assert 2700<=elapsed<=3600,elapsed
  assert focus.locator('.google-task-feedback').count()==0;assert check.count()==0;assert saved[('statcan','one')]=='completed'

@@ -390,5 +390,5 @@
       for(let z=1;z<8;z+=2)m.box(7,2,z,9,3,z+1,0x8c847a);m.box(12,2,1,13,3,7,0xd8a659);
     }});
   }
-  const api={KEY,TALLY_GOAL,MAIL_DEFAULTS,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,ideaCards,ideaAdded,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
+  const api={KEY,TALLY_GOAL,MAIL_DEFAULTS,day,validDate,cents,amount,TEA_PRESETS,dialMinutes,teaDisplay,ideaCards,ideaAdded,ideaBackground,kind,create,createView,register};if(typeof module!=='undefined'&&module.exports)module.exports=api;else{root.LRRoomTools=api;register(root.LR);}
 })(typeof window!=='undefined'?window:globalThis);

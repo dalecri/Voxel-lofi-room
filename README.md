@@ -622,3 +622,6 @@ Date selection for future-letter delivery and local calendar events uses a share
 
 
 The free **Mood journal** in Cozy is a one-cell surface item with coral, sage and lavender covers, stitched binding, a ribbon bookmark and a small sun on its cover. Place it on a table or shelf and tap it to open the same Mood tracker and private check-in history as Control Centre. The launcher previews its actual cover when present. Room codes carry the journal decor and placement, while mood notes remain private.
+
+
+Today's French pane reuses the idea cards' soft radial-gradient generator, keyed by the current word so its backdrop stays stable while flipping and changes with the next word. Both themes use their own panel and text colors. The task widget no longer has an All tasks button; the To-Do tab remains available from the navigation.

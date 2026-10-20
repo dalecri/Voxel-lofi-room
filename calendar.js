@@ -182,15 +182,14 @@
     function paint(entry){
       const host=entry.host,focus=host.contains(root.document.activeElement)?root.document.activeElement.dataset.taskAction:null;host.replaceChildren();const heading=el('div','google-tasks-heading');
       if(entry.scheduled||!host.closest('.task-google-page'))heading.append(el('h3','',entry.scheduled?"Today's tasks":'Google Tasks'));host.appendChild(heading);
-      const chosen=selection(entry);let allTasks=null;
+      const chosen=selection(entry);
       if(entry.scheduled&&google.connected){
         heading.appendChild(el('span','google-task-source',chosen.title+' · Google'));
-        if(entry.openTasks){const all=el('button','chipbtn google-task-all','All tasks');all.type='button';all.onclick=entry.openTasks;allTasks=all;}
         if(google.taskEditingRequested&&!google.canCompleteTasks){const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google',lists:[]});}
       } else {const auth=el('div');host.appendChild(auth);googleAuth(auth,google,()=>update(entry),{label:'Google',...(entry.scheduled?{lists:[]}: {})});}
       if(error){const note=el('p','google-task-error',error);note.setAttribute('role','status');host.appendChild(note);}
       if(!google.connected)return;
-      if(entry.scheduled&&!chosen.id){host.appendChild(el('p','muted small',entry.loadedLists?`Your ${chosen.requested} list wasn’t found. You can choose a list in To-Do.`:`Finding your ${chosen.requested} list…`));if(allTasks)host.appendChild(allTasks);return;}
+      if(entry.scheduled&&!chosen.id){host.appendChild(el('p','muted small',entry.loadedLists?`Your ${chosen.requested} list wasn’t found. You can choose a list in To-Do.`:`Finding your ${chosen.requested} list…`));return;}
       const listId=chosen.id,visible=[...(entry.scheduled?google.cachedTasksFor(listId):google.cachedTasks)];
       for(const state of [...changes.values()].sort((a,b)=>a.index-b.index))if(state.listId===listId&&(state.busy||state.done&&now()<state.hideAt)&&!visible.some(t=>t.id===state.task.id))visible.splice(Math.min(state.index,visible.length),0,state.task);
       const groups=el('div','google-task-days');host.appendChild(groups);
@@ -211,7 +210,6 @@
         if(!list.children.length)section.appendChild(el('p','muted small google-task-empty',group.id==='today'?'Nothing scheduled for today.':'Nothing scheduled for tomorrow.'));
       }
       for(const state of changes.values())if(state.listId===listId&&state.done&&!state.busy&&now()<state.until&&(!(entry.scheduled||entry.todayOnly)||!state.todayUndoExpired&&now()<state.todayUntil)){const feedback=el('div','google-task-feedback'),label=el('span','',state.task.title+' · completed'),undo=el('button','chipbtn','Undo');undo.type='button';undo.setAttribute('aria-label','Undo '+state.task.title);undo.dataset.taskAction='undo:'+state.task.id;undo.onclick=()=>change(state.task,listId,false);feedback.append(label,undo);host.appendChild(feedback);}
-      if(allTasks)host.appendChild(allTasks);
       if(focus){const candidates=[...host.querySelectorAll('[data-task-action]')];(candidates.find(b=>b.dataset.taskAction===focus)||candidates.find(b=>b.dataset.taskAction==='undo:'+focus.slice(focus.indexOf(':')+1))||candidates.find(b=>b.dataset.taskAction==='check:'+focus.slice(focus.indexOf(':')+1)))?.focus({preventScroll:true});}
     }
     function update(entry){
