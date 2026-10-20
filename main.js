@@ -350,7 +350,13 @@ function startLofiRooms() {
     state.observer=new MutationObserver(sync);controlReturn=state;state.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','aria-hidden']});
     // Camera snapshots arrive asynchronously; wait for their existing preview.
     state.timeout=setTimeout(()=>{if(controlReturn===state&&!state.entered)clearControlReturn();},15000);
-    try{run();sync();}catch(e){clearControlReturn();throw e;}
+    try{run();sync();slideToolIn();}catch(e){clearControlReturn();throw e;}
+  }
+  // Control Centre closes and the tool's sheet opens in the same frame, so the CSS
+  // transition never runs. Replay the Library's slide-up on the new sheet instead.
+  function slideToolIn(){
+    if(view.reducedMotion||!$('#sheet').classList.contains('open'))return;
+    $('#sheetBody').animate?.([{transform:'translateY(100%)'},{transform:'translateY(0)'}],{duration:350,easing:'cubic-bezier(.2,.9,.3,1)'});
   }
   const home = LRHome.createView({
     sheet:codeSheet,dismiss:closeSheets,
@@ -1490,6 +1496,7 @@ function startLofiRooms() {
     const futureDetails=$('.future-mail-details[open]');
     if(e.key==='Escape'&&futureDetails){e.preventDefault();futureDetails.open=false;futureDetails.querySelector('summary').focus();e.stopImmediatePropagation();return;}
     if(e.key==='Escape'&&$('#sheetBody .mood-panel:not([hidden])'))return;
+    if(e.target.closest?.('.home-sort-menu'))return;   // the Sort tools menu owns its Escape/arrow keys
     if(e.target.matches('.compact-date input[type=date]')&&['Enter',' '].includes(e.key))return;
     if(e.target.matches('.today-feature-toggle')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
     if(e.target.matches('.today-widget')&&['Enter',' '].includes(e.key))return;

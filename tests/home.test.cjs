@@ -35,3 +35,11 @@ test('Home never writes derived state and all Home/private source data stays out
  const ctx=fixture(),before=JSON.stringify(ctx.data);H.snapshot(ctx);assert.equal(JSON.stringify(ctx.data),before);
  const d=W.shareDecor({name:'Room',n:10,home:{text:'PRIVATE_HOME'},reducedMotion:true,letters:{text:'PRIVATE_LETTER'},scenes:[],tools:{ideas:['PRIVATE_IDEA']},items:[{id:1,t:'phone',x:2,z:2,home:'PRIVATE_HOME'}]});assert.ok(!JSON.stringify(d).includes('PRIVATE'));assert.ok(!('home' in d));
 });
+test('Control Centre sort: Default keeps curated order, A-Z and Z-A sort by label without mutating',()=>{
+ const rows=[{id:'t',label:'Typewriter'},{id:'c',label:'caption studio'},{id:'b',label:'Daily Brief'}],before=JSON.stringify(rows);
+ assert.deepEqual(H.sortApps(rows,'default').map(r=>r.id),['t','c','b']);
+ assert.deepEqual(H.sortApps(rows,'az').map(r=>r.id),['c','b','t']);
+ assert.deepEqual(H.sortApps(rows,'za').map(r=>r.id),['t','b','c']);
+ assert.deepEqual(H.sortApps(rows,'bogus').map(r=>r.id),['t','c','b']);
+ assert.equal(JSON.stringify(rows),before);assert.deepEqual(H.SORTS.map(s=>s[0]),['default','az','za']);
+});

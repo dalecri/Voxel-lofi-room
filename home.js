@@ -41,6 +41,14 @@
     if(unread)notifications.push({id:'mail',title:unread===1?'A letter has arrived':`${unread} letters have arrived`,sub:'A note from your past self.',target:'mailbox'});
     return {sections:SECTIONS,today:{date:now.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'}),phase:PHASES[meta.phase] || 'Afternoon',clock:meta.realtime?'following the clock':'your chosen daypart',weather:({clear:'Clear',rain:'Rain',storm:'Storm',snow:'Snow'})[meta.weather] || 'Clear',daily,streak:store.get('lr.dailyStreak',{n:0}).n || 0,waiting:[teaLine,merchant?'Traveling merchant · visiting your room':'Traveling merchant · out wandering',unread?`${unread} future-self letter${unread===1?'':'s'} arrived`:'No letters waiting']},notifications,coziness:coziness({...ctx,now})};
   }
+  // Control Centre tool order: Default keeps the curated order; A-Z / Z-A sort by label.
+  const SORTS=[['default','Default'],['az','A–Z'],['za','Z–A']];
+  const SORT_KEY='lr.homeSort';
+  function sortApps(rows,mode){
+    if(mode!=='az'&&mode!=='za')return rows.slice();
+    const sorted=rows.slice().sort((a,b)=>String(a.label).localeCompare(String(b.label),undefined,{sensitivity:'base'}));
+    return mode==='za'?sorted.reverse():sorted;
+  }
   let searchId=0;
   function createSearch({sources,navigate,toggleHost}) {
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -65,6 +73,23 @@
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
     const view=el('section','home-view');view.id='homeView';view.setAttribute('aria-label','Control Centre apps');
     const settings=el('button','chipbtn sheet-icon home-settings');settings.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3 1-1h4l1 3 2 1 3-1 2 3-2 2v3l2 2-2 3-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-3 2-2v-3L2 8l2-3 3 1 2-1Z"/><circle cx="12" cy="11" r="3"/></svg>';settings.title='Open Settings';settings.type='button';settings.setAttribute('aria-label','Open Settings');settings.onclick=()=>{depart(()=>actions.navigate('settings'),'settings');};
+    let sortMode='default';try{const saved=root.localStorage?.getItem(SORT_KEY);if(SORTS.some(([id])=>id===saved))sortMode=saved;}catch(e){}
+    const sortWrap=el('div','home-sort-wrap'),sortButton=el('button','chipbtn sheet-icon home-sort'),sortMenu=el('div','home-sort-menu');
+    sortButton.type='button';sortButton.title='Sort tools';sortButton.setAttribute('aria-label','Sort tools');sortButton.setAttribute('aria-haspopup','menu');sortButton.setAttribute('aria-expanded','false');
+    sortButton.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>';
+    sortMenu.setAttribute('role','menu');sortMenu.setAttribute('aria-label','Sort tools');sortMenu.hidden=true;sortMenu.id='home-sort-menu';sortButton.setAttribute('aria-controls',sortMenu.id);
+    const sortItems=SORTS.map(([id,label])=>{const item=el('button','home-sort-item',label);item.type='button';item.dataset.sort=id;item.setAttribute('role','menuitemradio');item.onclick=()=>{setSort(id);closeSort(true);};sortMenu.appendChild(item);return item;});
+    function paintSort(){sortItems.forEach(i=>i.setAttribute('aria-checked',String(i.dataset.sort===sortMode)));sortButton.classList.toggle('is-sorted',sortMode!=='default');}
+    function setSort(id){sortMode=id;try{root.localStorage?.setItem(SORT_KEY,id);}catch(e){}paintSort();launchApps();}
+    function openSort(){sortMenu.hidden=false;sortButton.setAttribute('aria-expanded','true');(sortItems.find(i=>i.dataset.sort===sortMode)||sortItems[0]).focus({preventScroll:true});document.addEventListener('pointerdown',outsideSort,true);}
+    function closeSort(focus){if(sortMenu.hidden)return;sortMenu.hidden=true;sortButton.setAttribute('aria-expanded','false');document.removeEventListener('pointerdown',outsideSort,true);if(focus)sortButton.focus({preventScroll:true});}
+    function outsideSort(e){if(!sortWrap.contains(e.target))closeSort(false);}
+    sortButton.onclick=()=>sortMenu.hidden?openSort():closeSort(true);
+    sortMenu.addEventListener('keydown',e=>{const i=sortItems.indexOf(document.activeElement);
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeSort(true);}
+      else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();sortItems[(i+(e.key==='ArrowDown'?1:sortItems.length-1))%sortItems.length].focus();}
+      else if(e.key==='Tab')closeSort(false);});
+    sortWrap.append(sortButton,sortMenu);paintSort();
     const main=el('div','home-content');view.appendChild(main);const sections={};
     SECTIONS.forEach(name=>{const section=el('section','home-section');section.setAttribute('aria-label',name);main.appendChild(section);sections[name]=section;});
     const appSearch=el('input','home-search');appSearch.type='search';appSearch.placeholder='Find a tool or app';appSearch.setAttribute('aria-label','Find a tool or app');
@@ -73,7 +98,7 @@
     if(actions.chooseShortcut){shortcut=el('button','chipbtn sheet-icon home-shortcut');shortcut.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 2-1 8h8L10 22l1-8H3Z"/></svg>';shortcut.type='button';shortcut.title='Set room shortcut';shortcut.setAttribute('aria-label','Set room shortcut');shortcut.onclick=()=>{depart(()=>actions.chooseShortcut(),'shortcut');};}
     let lastPreviewKey='';
     function updatePreviews(){const key=previewKey();if(key===lastPreviewKey)return;lastPreviewKey=key;const entries=new Map(apps().map(p=>[p.id,p]));for(const b of appGrid.querySelectorAll('[data-app]')){const p=entries.get(b.dataset.app),asset=p&&preview(p);let img=b.querySelector('.home-furniture');if(!asset){img?.remove();b.querySelector('.home-asset-hint')?.remove();continue;}if(!img){img=el('img','home-furniture');img.alt='';img.setAttribute('aria-hidden','true');b.appendChild(img);}if(img.getAttribute('src')!==asset.src)img.src=asset.src;img.classList.toggle('absent',!asset.present);img.dataset.furniture=asset.id;const hint=b.querySelector('.home-asset-hint') || el('small','home-asset-hint muted');hint.textContent=asset.present?'In your room':'Not placed in this room';b.appendChild(hint);}}
-    function launchApps(){appGrid.replaceChildren();const q=appSearch.value.trim().toLocaleLowerCase(),rows=apps().filter(p=>(p.label+' '+(p.description || '')).toLocaleLowerCase().includes(q));appEmpty.textContent=rows.length?'':'No matching apps. Try another word.';
+    function launchApps(){appGrid.replaceChildren();const q=appSearch.value.trim().toLocaleLowerCase(),rows=sortApps(apps().filter(p=>(p.label+' '+(p.description || '')).toLocaleLowerCase().includes(q)),sortMode);appEmpty.textContent=rows.length?'':'No matching apps. Try another word.';
       for(const p of rows){const b=el('button','home-app'),icon=el('span','home-app-icon',p.icon),copy=el('span');b.type='button';b.dataset.app=p.id;icon.setAttribute('aria-hidden','true');if(p.iconSrc){const art=el('img','mail-access-icon');art.src=p.iconSrc;art.alt='';icon.replaceChildren(art);}copy.append(el('b','',p.label),el('small','muted',p.description));b.append(icon,copy);b.onclick=()=>{if(p.url){actions.launch(p);return;}depart(()=>actions.launch(p),p.id);};appGrid.appendChild(b);}
       const add=el('button','home-app');add.type='button';add.textContent='＋ Add your own';add.onclick=()=>depart(()=>actions.addPortal(),'add');appGrid.appendChild(add);lastPreviewKey=null;updatePreviews();
     }
@@ -86,19 +111,19 @@
       beforeOpen();appSearch.value=restore?.query || '';launchApps();
       // codeSheet calls home.close(false). Mark active only after it has built
       // this sheet, so opening ourselves cannot recursively dismiss ourselves.
-      sheet('Control Centre','Your tools and apps.',h=>{h('div','home-sheet-content').appendChild(view);const body=view.closest('#sheetBody'),close=body?.querySelector(':scope > .sheet-close');if(close){const tools=el('div','home-sheet-actions'),titles=el('div','home-sheet-title'),title=body.querySelector(':scope > h2'),sub=body.querySelector(':scope > p.muted');if(title)titles.appendChild(title);if(sub)titles.appendChild(sub);tools.append(titles,close);body.insertBefore(tools,body.querySelector(':scope > .home-sheet-content'));controls.appendChild(settings);if(shortcut)controls.appendChild(shortcut);}});
+      sheet('Control Centre','Your tools and apps.',h=>{h('div','home-sheet-content').appendChild(view);const body=view.closest('#sheetBody'),close=body?.querySelector(':scope > .sheet-close');if(close){const tools=el('div','home-sheet-actions'),titles=el('div','home-sheet-title'),title=body.querySelector(':scope > h2'),sub=body.querySelector(':scope > p.muted');if(title)titles.appendChild(title);if(sub)titles.appendChild(sub);tools.append(titles,close);body.insertBefore(tools,body.querySelector(':scope > .home-sheet-content'));controls.append(settings,sortWrap);if(shortcut)controls.appendChild(shortcut);}});
       active=true;
       const body=view.closest('#sheetBody');if(body)body.scrollTop=restore?.top || 0;
       const target=restore?(restore.focus==='settings'?settings:restore.focus==='shortcut'?shortcut:restore.focus==='add'?appGrid.lastElementChild:[...appGrid.querySelectorAll('[data-app]')].find(b=>b.dataset.app===restore.focus)):null;
       (target || (restore?appSearch:body?.querySelector('.sheet-close')))?.focus({preventScroll:true});
     }
     function closeView(focus=true){
-      if(!active)return;active=false;
+      if(!active)return;active=false;closeSort(false);
       if(view.contains(document.activeElement))document.activeElement.blur();
       view.remove();dismiss();if(focus)onClose();
     }
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
     return {open,close:closeView,refresh,view,get active(){return active;},tick(time){if(!active||time<next)return;next=time+1000;refresh();updatePreviews();}};
   }
-  const api={SECTIONS,MOTION_KEY,PHASES,day,reducedMotion,search,coziness,snapshot,createSearch,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRHome=api;
+  const api={SECTIONS,SORTS,SORT_KEY,sortApps,MOTION_KEY,PHASES,day,reducedMotion,search,coziness,snapshot,createSearch,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRHome=api;
 })(typeof window!=='undefined'?window:globalThis);
