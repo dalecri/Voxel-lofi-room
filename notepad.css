@@ -166,3 +166,10 @@
 #menu-todo .task-notebook-heading:has(.task-counter[hidden]) { display:none; }
 #menu-todo .task-list-progress { display:none; }
 #menu-todo .task-notebook > .task-journey { border-top:0; }
+
+/* Task entry uses the same rounded, themed fields as the rest of the app. */
+.task-notebook .today-task-form { align-items:stretch; gap:8px; }
+.task-notebook .today-task-form input { box-sizing:border-box; min-height:48px; margin:0; padding:12px 14px; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); font:500 16px/1.4 var(--font,Nunito,sans-serif); }
+.task-notebook .today-task-form input:focus { border-color:var(--accent); }
+.task-notebook .today-task-form input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.task-notebook .today-task-form .primary { box-sizing:border-box; min-height:48px; padding:10px 14px; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); font:800 14px/1.3 var(--font,Nunito,sans-serif); }
