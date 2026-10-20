@@ -42,7 +42,7 @@ with sync_playwright() as p:
  failure['on']=False;a().click();section.get_by_role('button',name='Undo PRIVATE_TASK_A',exact=True).wait_for();picker=section.get_by_role('combobox',name='Google task list',exact=True);picker.select_option('work');section.get_by_role('checkbox',name='PRIVATE_WORK',exact=True).wait_for();assert section.get_by_role('button',name='Undo PRIVATE_TASK_A',exact=True).count()==0
  picker.select_option('@default');section.get_by_role('button',name='Undo PRIVATE_TASK_A',exact=True).click();a().wait_for();assert writes[-1][0]=='@default';assert writes[-1][2]=={'status':'needsAction','completed':None}
  assert page.evaluate("localStorage.getItem('lr.todayTasks')")==before
- notebook=page.locator('.task-notebook');journey=notebook.locator('.task-journey');assert journey.count()==1;assert notebook.locator('h3').count()==0;assert journey.evaluate('e=>e.nextElementSibling.classList.contains("today-task-form")');assert page.locator('.today-tasks > .task-journey').count()==0;assert journey.evaluate('e=>getComputedStyle(e).borderTopWidth')=='1px'
+ notebook=page.locator('.task-notebook');journey=notebook.locator('.task-journey');assert journey.count()==1;assert notebook.locator('h3').count()==0;assert journey.evaluate('e=>e.nextElementSibling.classList.contains("today-task-form")');assert page.locator('.today-tasks > .task-journey').count()==0;assert journey.evaluate('e=>getComputedStyle(e).borderTopWidth')=='0px'
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.todayUI.refresh()}',phase)
   for width in [320,390,1280]:

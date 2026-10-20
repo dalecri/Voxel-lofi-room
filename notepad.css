@@ -159,3 +159,10 @@
 @media(max-width:360px) { :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row) { padding:18px 10px; gap:5px; } .grocery-notebook .grocery-row label { gap:5px; } .todo-heading { gap:8px; } }
 @media(prefers-reduced-motion:reduce) { :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row,.task-checkmark,.grocery-check,.today-task-text,.google-task-copy b,.grocery-name) { animation:none; transition:none; } }
 @media(prefers-reduced-transparency:reduce) { :is(.task-notebook,.today-google-focus,.grocery-notebook) :is(.today-task,.today-task.done,.google-task-row,.grocery-row) { background:var(--vellum-bg); -webkit-backdrop-filter:none; backdrop-filter:none; } }
+
+/* To-Do sits directly on the sheet; only the task rows have a surface. */
+#menu-todo .task-notebook { padding:0; margin:8px 0 16px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+#menu-todo .task-notebook-heading { min-height:0; padding:0; margin:0 0 8px; border:0; }
+#menu-todo .task-notebook-heading:has(.task-counter[hidden]) { display:none; }
+#menu-todo .task-list-progress { display:none; }
+#menu-todo .task-notebook > .task-journey { border-top:0; }
