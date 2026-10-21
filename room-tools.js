@@ -160,30 +160,29 @@
       model.poll(false);shell('Letters to future you','',root=>{
         root.classList.add('future-mail');
         const c=model.compose(),tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
-        const ui=LRMailWindow.create({postcard:true,cardIcon:sealed?.cardIcon||c.cardIcon,title:'Email',icon:'envelope',label:'Compose a letter to future you',from:sealed?.from||c.from,to:sealed?.to||c.to,subject:sealed?.title||c.subject,body:sealed?'':c.body,placeholder:'Hey future me!',richText:false,deliverOn:{value:c.deliverOn,min:day(tomorrow)},status:c.draft&&!sealed?'Draft restored':'',buttons:[{label:'Save draft'},{label:'Send',className:'mailwin-send'}]});
+        const ui=LRMailWindow.create({postcard:true,cardIcon:sealed?.cardIcon||c.cardIcon,title:'Email',icon:'envelope',label:'Compose a letter to future you',from:sealed?.from||c.from,to:sealed?.to||c.to,subject:sealed?.title||c.subject,body:sealed?'':c.body,placeholder:'Dear future me…',richText:false,deliverOn:{value:c.deliverOn,min:day(tomorrow)},status:c.draft&&!sealed?'Draft restored':'',buttons:[{label:'Save draft'},{label:'Send',className:'mailwin-send'}]});
         root.appendChild(ui.form);
         mailHeading(root,mailboxEnvelopes);
         const {form:win,body,due,saved}=ui,from=ui.fields.From,to=ui.fields.To,title=ui.fields.Subject;
         body.rows=4;
         const snapshot=sealed?applyTypewriter(ui,sealed):null;
         const state=()=>({from:from.value,to:to.value,subject:title.value,body:body.value,cardIcon:ui.postcard.icon,deliverOn:due.value});
-        const toolbar=document.createElement('div');toolbar.className='future-mail-toolbar';toolbar.appendChild(saved);
-        if(!saved.textContent)saved.textContent='Time capsule note';
-        const envelopes=button(toolbar,'',()=>{model.saveDraft(state());model.setFrom(from.value);mailboxEnvelopes();});envelopes.setAttribute('aria-label','Your envelopes');envelopes.className='chipbtn future-mail-envelopes';
-        const envCount=document.createElement('span');envCount.className='future-mail-count';envCount.setAttribute('aria-hidden','true');envCount.textContent=String(model.state.mail.length);envelopes.append(envCount,document.createTextNode('Your envelopes'));
+        // The envelope button in the header opens the envelopes; the draft status rides along with the buttons.
+        saved.classList.add('future-mail-status');
         const subject=title.closest('label');subject.classList.add('future-mail-subject');subject.appendChild(win.querySelector('.postcard-stamp'));
         const details=document.createElement('details');details.className='future-mail-details';const summary=document.createElement('summary');summary.textContent='Letter details';const options=document.createElement('div');options.className='future-mail-options';options.append(win.querySelector('.mailwin-head'),ui.postcard.picker);details.append(summary,options);
-        const stampName=document.createElement('span');stampName.className='future-mail-stampname';const paintStamp=()=>{const icon=LRMailWindow.ICONS.find(i=>i.id===ui.postcard.icon);stampName.innerHTML='';const b=document.createElement('b');b.textContent='Stamp:';stampName.append(b,' '+(icon?.name||'Tulips'));};paintStamp();
-        ui.postcard.picker.addEventListener('click',()=>requestAnimationFrame(paintStamp));
         button(options,'Done',()=>{details.open=false;summary.focus();},'chipbtn future-mail-options-close');
-        const meta=document.createElement('div');meta.className='future-mail-meta';meta.append(details,stampName);
-        win.prepend(toolbar,subject,meta);
+        const meta=document.createElement('div');meta.className='future-mail-meta';meta.append(details);
+        win.prepend(subject,meta);
         // Quick delivery presets, a friendly date pill over the native picker, and the dock.
-        const quick=document.createElement('div');quick.className='future-mail-quick';const ql=document.createElement('span');ql.textContent='Quick set:';quick.appendChild(ql);
-        for(const [label,step] of [['+1 Week',d=>d.setDate(d.getDate()+7)],['+1 Month',d=>d.setMonth(d.getMonth()+1)],['+6 Months',d=>d.setMonth(d.getMonth()+6)],['+1 Year',d=>d.setFullYear(d.getFullYear()+1)]]){const b=button(quick,label,()=>{const d=new Date();d.setHours(12,0,0,0);step(d);due.value=day(d);due.dispatchEvent(new Event('input',{bubbles:true}));},'future-mail-preset');b.setAttribute('aria-label','Deliver '+label.replace('+','in ').toLowerCase());}
+        const quick=document.createElement('div');quick.className='future-mail-quick';quick.setAttribute('role','group');quick.setAttribute('aria-label','Deliver in');
+        const presets=[];
+        for(const [label,step] of [['1 week',d=>d.setDate(d.getDate()+7)],['1 month',d=>d.setMonth(d.getMonth()+1)],['6 months',d=>d.setMonth(d.getMonth()+6)],['1 year',d=>d.setFullYear(d.getFullYear()+1)]]){const target=()=>{const d=new Date();d.setHours(12,0,0,0);step(d);return day(d);};const b=button(quick,label,()=>{due.value=target();due.dispatchEvent(new Event('input',{bubbles:true}));paintPresets();},'future-mail-preset');b.setAttribute('aria-label','Deliver in '+label);presets.push([b,target]);}
+        const paintPresets=()=>presets.forEach(([b,target])=>b.setAttribute('aria-pressed',String(due.value===target())));
+        due.addEventListener('input',paintPresets);due.addEventListener('change',paintPresets);paintPresets();
         win.querySelector('.mailwin-page').after(quick);
         const sendBtn=ui.buttons.Send;sendBtn.innerHTML='<span>Send</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
-        const dock=document.createElement('div');dock.className='future-mail-dock';dock.append(ui.foot,ui.actions);win.appendChild(dock);
+        const dock=document.createElement('div');dock.className='future-mail-dock';dock.append(ui.foot,saved,ui.actions);win.appendChild(dock);
         // Invalid hidden address fields must be visible when native validation focuses them.
         win.addEventListener('invalid',e=>{if(details.contains(e.target))details.open=true;},true);
         from.addEventListener('change',()=>run(()=>model.setFrom(from.value)));
@@ -198,7 +197,7 @@
       const svg=p=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
       const back=document.createElement('button');back.type='button';back.className='chipbtn sheet-icon control-back future-mail-back';back.setAttribute('aria-label','Back');back.innerHTML=svg('<path d="M19 12H5m6-6-6 6 6 6"/>');back.onclick=()=>closeButton.click();header.prepend(back);
       const waiting=model.state.mail.filter(l=>l.status==='arrived'&&!l.read).length,env=document.createElement('button');env.type='button';env.className='chipbtn sheet-icon future-mail-inbox';env.id='mailInbox';
-      env.setAttribute('aria-label',`Your envelopes, ${waiting} unread`);env.innerHTML=svg('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>')+`<span class="future-mail-badge" aria-hidden="true">${waiting>9?'9+':waiting}</span>`;env.onclick=onEnvelopes;closeButton.before(env);
+      env.setAttribute('aria-label','Your envelopes');env.title=waiting?`${waiting} unread`:'Your envelopes';env.innerHTML=svg('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>')+(waiting?`<span class="future-mail-badge" aria-hidden="true">${waiting>9?'9+':waiting}</span>`:'');env.onclick=onEnvelopes;closeButton.before(env);
     }
     function mailboxEnvelopes(){
       model.poll(false);shell('Your envelopes','',root=>{
@@ -235,18 +234,22 @@
         title.oninput=()=>{draft.title=title.value;persist();};pages.forEach(({input},i)=>input.oninput=()=>{draft.pages[page+i]=input.value;persist();});paint();
       });
     }
-    function groceries(){shell('On the fridge door','',root=>{
+    function groceries(){shell('Groceries','',root=>{
       const notebook=document.createElement('section');notebook.className='grocery-notebook';notebook.setAttribute('aria-label','Grocery notebook');root.appendChild(notebook);
       const title=document.createElement('h3');title.textContent='Groceries';notebook.appendChild(title);
+      // Add first, then a one-line count, then the list itself.
+      const form=document.createElement('form');form.className='grocery-add';notebook.appendChild(form);
+      const left=model.state.groceries.filter(g=>!g.done).length,got=model.state.groceries.length-left;
+      const summary=text(notebook,model.state.groceries.length?`${left} to get${got?` · ${got} in the basket`:''}`:'','grocery-summary');summary.hidden=!model.state.groceries.length;
       const items=document.createElement('div');items.className='grocery-items';notebook.appendChild(items);
 
       for(const g of model.state.groceries){
         const row=document.createElement('div');row.className='grocery-row'+(g.done?' done':'');const label=document.createElement('label'),check=document.createElement('input'),name=document.createElement('span'),mark=document.createElement('span');
         check.type='checkbox';check.checked=g.done;check.setAttribute('aria-label',g.text);name.className='grocery-name';name.textContent=g.text;mark.className='grocery-check';mark.setAttribute('aria-hidden','true');mark.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>';
-        label.append(check,mark,name);row.appendChild(label);check.onchange=()=>run(()=>{model.checkGrocery(g.id,check.checked);row.classList.toggle('done',check.checked);});const remove=button(row,'×',()=>{model.remove('groceries',g.id);groceries();},'grocery-remove');remove.setAttribute('aria-label','Remove grocery: '+g.text);items.appendChild(row);
+        label.append(check,mark,name);row.appendChild(label);check.onchange=()=>run(()=>{model.checkGrocery(g.id,check.checked);row.classList.toggle('done',check.checked);const l=model.state.groceries.filter(x=>!x.done).length,d=model.state.groceries.length-l;summary.textContent=`${l} to get${d?` · ${d} in the basket`:''}`;const c=active?.querySelector('.grocery-clear');if(c)c.hidden=!d;});const remove=button(row,'×',()=>{model.remove('groceries',g.id);groceries();},'grocery-remove');remove.setAttribute('aria-label','Remove grocery: '+g.text);items.appendChild(row);
       }
-      if(!model.state.groceries.length)text(items,'🧺 Nothing on the list yet. A little space for what you need.','grocery-empty');
-      const form=document.createElement('form');form.className='grocery-add';notebook.appendChild(form);const input=field(form,'Add groceries');input.autocomplete='off';input.placeholder='Something for the basket…';
+      if(!model.state.groceries.length)text(items,'Nothing to get.','grocery-empty');
+      const input=field(form,'Add groceries');input.autocomplete='off';input.placeholder='Add an item';
       const add=()=>{
         const value=input.value.trim();model.addGrocery(value);groceries();active.querySelector('input:not([type=checkbox])').focus();
         const feedback=status;
@@ -258,8 +261,8 @@
           if(feedback.isConnected)feedback.textContent=message;else notice(message);
         });
       };
-      form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add,'grocery-add-button');
-      button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
+      form.onsubmit=e=>{e.preventDefault();run(add);};const addButton=button(form,'',add,'grocery-add-button');addButton.setAttribute('aria-label','Add to list');addButton.title='Add to list';addButton.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+      const clear=button(root,'Clear checked items',()=>{model.clearGroceries();groceries();},'chipbtn grocery-clear');clear.hidden=!model.state.groceries.some(g=>g.done);if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
     });}
     function tally(){shell('Pushup tally','',root=>{
       root.classList.add('pushup-tally');text(root,'Creatine 5g · 50 pushups a day','muted small tally-habit');
@@ -275,14 +278,14 @@
       const stack=document.createElement('div');stack.className='idea-stack';root.appendChild(stack);
       const position=text(root,'','idea-position muted small');position.setAttribute('role','status');
       const actions=document.createElement('div');actions.className='idea-actions';root.appendChild(actions);
-      const shake=button(actions,'Shake the jar',()=>{const idea=model.shake();if(!idea)return;frontId=idea.id;reason='shaken';draw('is-shaken');const v=renderer();if(anchor&&v.objs.has(anchor)){v.excite(anchor);v.burst(anchor,'magic',.8);}sound.rustle();},'chipbtn idea-shake');
-      const drop=button(actions,'Drop in an idea',()=>{form.hidden=!form.hidden;drop.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)input.focus();},'chipbtn');drop.setAttribute('aria-expanded','false');drop.setAttribute('aria-controls','ideaDropForm');
+      const shake=button(actions,'Shake the jar',()=>{const idea=model.shake();if(!idea)return;frontId=idea.id;reason='shaken';draw('is-shaken');const v=renderer();if(anchor&&v.objs.has(anchor)){v.excite(anchor);v.burst(anchor,'magic',.8);}sound.rustle();},'chipbtn idea-shake');shake.setAttribute('aria-label','Shake the jar');shake.title='Shake the jar';shake.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>';
+      const drop=button(actions,'Drop in an idea',()=>{form.hidden=!form.hidden;drop.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)input.focus();},'chipbtn idea-drop');drop.setAttribute('aria-label','Drop in an idea');drop.title='Drop in an idea';drop.innerHTML='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';drop.setAttribute('aria-expanded','false');drop.setAttribute('aria-controls','ideaDropForm');
       const form=document.createElement('form');form.id='ideaDropForm';form.className='idea-drop-form';form.hidden=true;root.appendChild(form);const input=field(form,'A little idea','textarea');input.rows=3;input.placeholder='Something worth keeping…';input.required=true;
       const submit=button(form,'Drop in jar',()=>{});submit.type='submit';button(form,'Not now',()=>{form.hidden=true;drop.setAttribute('aria-expanded','false');drop.focus();});
       form.onsubmit=e=>{e.preventDefault();run(()=>{model.addIdea(input.value);frontId=model.state.ideas[0].id;reason='latest';sound.plop();input.value='';form.hidden=true;drop.setAttribute('aria-expanded','false');draw('is-dropped');stack.querySelector('.idea-cycle')?.focus({preventScroll:true});});};
       const reveal=()=>{form.hidden=false;drop.setAttribute('aria-expanded','true');input.focus();};
       function draw(animation=''){
-        const cards=ideaCards(model.state.ideas,frontId);frontId=cards.top?.id || null;stack.replaceChildren();count.textContent=` · ${cards.count} spark${cards.count===1?'':'s'}`;shake.disabled=!cards.count;position.textContent=cards.count?`${cards.index+1} of ${cards.count} spark${cards.count===1?'':'s'} · Tap the card to browse`:'A little room for your next idea.';
+        const cards=ideaCards(model.state.ideas,frontId);frontId=cards.top?.id || null;stack.replaceChildren();count.textContent=` · ${cards.count} spark${cards.count===1?'':'s'}`;shake.disabled=!cards.count;position.textContent=cards.count?`${cards.index+1} of ${cards.count} · tap to browse`:'';
         for(let i=cards.behind.length-1;i>=0;i--){const back=document.createElement('div');back.className='idea-back idea-back-'+i;back.setAttribute('aria-hidden','true');back.style.backgroundImage=ideaBackground(cards.behind[i]);text(back,'A LITTLE SPARK','idea-card-label');text(back,cards.behind[i].text,'idea-back-text');stack.appendChild(back);}
         const front=document.createElement('article');front.className='idea-front '+animation;stack.appendChild(front);
         if(!cards.top){const invite=button(front,'The jar is empty. Drop in your first spark.',reveal,'idea-cycle idea-invite');invite.setAttribute('aria-label','The jar is empty. Drop in your first spark.');return;}
