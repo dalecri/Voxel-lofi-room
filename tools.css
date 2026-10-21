@@ -16,7 +16,7 @@
 #sheetBody[data-tool="files"] { --ps-bg:#f1e9df; --ps-surface:#e6dbcd; --ps-light:#faf6f0; --ps-edge:#d8cbb9; --ps-ink:#2f261e; --ps-muted:#85776a; --ps-dark:#3d3129; --ps-on-dark:#f6efe6; }
 #sheetBody[data-tool="calendar"] { --ps-bg:#f7e0d2; --ps-surface:#f0d0bd; --ps-light:#faefe9; --ps-edge:#dbbaa7; --ps-ink:#331d0f; --ps-muted:#7d5740; --ps-dark:#392213; --ps-on-dark:#f5e1d4; }
 #sheetBody[data-tool="newspaper"] { --ps-bg:#ebe5d8; --ps-surface:#e1d9c5; --ps-light:#f4f0e9; --ps-edge:#d3c6a9; --ps-ink:#2c2516; --ps-muted:#7d6940; --ps-dark:#332b1a; --ps-on-dark:#ebe5d8; }
-#sheetBody[data-tool="tst"] { --ps-bg:#ffcde4; --ps-surface:#f0c0d6; --ps-light:#faeaf2; --ps-edge:#dca9c0; --ps-ink:#330f20; --ps-muted:#7d405c; --ps-dark:#391325; --ps-on-dark:#f6d6e5; }
+#sheetBody[data-tool="tst"] { --ps-bg:#eef2fa; --ps-surface:#e1e7f3; --ps-light:#f8faff; --ps-edge:#cfd8ea; --ps-ink:#14213d; --ps-muted:#5d6b86; --ps-dark:#14213d; --ps-on-dark:#ffffff; }
 #sheetBody[data-tool="book"] { --ps-bg:#e9dcc6; --ps-surface:#e1d0b2; --ps-light:#f0e7d8; --ps-edge:#d3bc94; --ps-ink:#302512; --ps-muted:#7d6640; --ps-dark:#372b15; --ps-on-dark:#ebdfcb; }
 .library-view { --ps-bg:#efd9c3; --ps-surface:#e9cbad; --ps-light:#f4e6d7; --ps-edge:#d4b596; --ps-ink:#33210f; --ps-muted:#7d5e40; --ps-dark:#392613; --ps-on-dark:#f0dbc7; }
 /* Shared shell: docked to the bottom edge, slides up with the sheet. */

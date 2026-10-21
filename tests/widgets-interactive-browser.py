@@ -49,15 +49,15 @@ with sync_playwright() as p:
         page.evaluate('type=>__lr.interact(__lr.room.items.find(it=>it.t===type).id)',type)
     tap('tstcorkboard')
     body=page.locator('#sheetBody')
-    for text in ['@twostorytails','twice weekly','Nature-documentary deadpan','Corporate-CEO satire','Next post:']:
-        assert text in body.inner_text(),text
+    assert body.locator('.tst-published').is_visible() and body.locator('.tst-tile').count()==30
+    assert '@twostorytails' in body.locator('.tst-handle').text_content()
     for label,url in [('Instagram','https://www.instagram.com/twostorytails'),('TikTok','https://www.tiktok.com/@twostorytails')]:
         link=body.get_by_role('link',name=label,exact=True)
         assert link.get_attribute('target')=='_blank' and link.get_attribute('rel')=='noopener noreferrer'
         with context.expect_page() as opened: link.click()
         tab=opened.value;tab.wait_for_load_state();assert tab.url==url;assert tab.evaluate('window.opener===null');tab.close()
     page.evaluate('document.querySelector("#sheet").classList.remove("open")')
-    print('PASS: posting plan renders, nine private badges, portal shimmer and both exact social links open isolated tabs',flush=True)
+    print('PASS: published grid renders, nine private badges, portal shimmer and both exact social links open isolated tabs',flush=True)
     # A real candle tap starts the flame feedback before window.open runs.
     point=page.evaluate('''() => {
       const a=__lr,it=a.room.items.find(i=>i.t==='pomodorocandle');
