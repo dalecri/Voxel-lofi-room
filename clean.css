@@ -1,0 +1,146 @@
+/* Clean pass for Daily Brief, Letters to future you, Groceries and the Idea jar.
+   The same rules as Today, Calendar, Mood and Notetaker: one focal thing, room to
+   breathe, big type, no boxes inside boxes, round icon buttons and one dark pill. */
+
+/* ---------- Daily Brief: an editorial page, not a stack of cards ---------- */
+#sheetBody:has(.drift-reader) .drift-reader .drift-paper.brief-paper { margin:0; padding:4px 6px 0; border:0; border-radius:0; background:none; box-shadow:none; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow { display:inline-flex; margin:0 0 6px; padding:5px 12px; border-radius:999px; background:var(--db-dark); color:var(--db-on-dark); font:800 12px/1 var(--db-font); letter-spacing:.04em; text-transform:none; opacity:1; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-masthead { margin:0; color:var(--db-ink); text-align:left; font:800 clamp(38px,11vw,50px)/1.02 var(--db-font); letter-spacing:-.045em; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-edition { margin:6px 0 0; color:var(--db-muted); text-align:left; font:700 15px/1.4 var(--db-font); letter-spacing:0; text-transform:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-slim { margin:26px 0 0; padding:0; border:0; background:none; color:var(--db-ink); font:700 21px/1.4 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .drift-columns,#sheetBody:has(.drift-reader) .drift-reader .drift-pet-grid { display:grid; grid-template-columns:1fr; gap:0; margin:0; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-card { margin:30px 0 0; padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-kicker { display:flex; align-items:center; gap:8px; margin:0 0 6px; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-kicker-icon { display:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-card .press-kicker { margin:0; color:var(--db-muted); font:800 12px/1.2 var(--db-font); letter-spacing:.09em; text-transform:uppercase; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-card h3 { margin:0 0 6px; color:var(--db-ink); font:800 21px/1.25 var(--db-font); letter-spacing:-.02em; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-lead h3 { font-size:clamp(26px,7vw,31px); line-height:1.15; letter-spacing:-.03em; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-body { margin:0; color:color-mix(in srgb,var(--db-ink) 78%,transparent); font:500 16.5px/1.55 var(--db-font); }
+/* Today in the house: the one soft tile on the page. */
+#sheetBody:has(.drift-reader) .drift-reader .brief-today { padding:20px 20px 16px; border-radius:28px; background:var(--db-surface); }
+#sheetBody:has(.drift-reader) .drift-reader .brief-today-line { margin:0; color:var(--db-ink); font:800 19px/1.35 var(--db-font); letter-spacing:-.01em; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-card-foot { display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:0; border:0; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-items { display:grid; flex:1; gap:6px; margin:0; padding:0; list-style:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-items li { display:flex; align-items:baseline; gap:10px; color:var(--db-ink); font:600 15px/1.4 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .brief-items b { flex:none; padding:0; border-radius:0; background:none; color:var(--db-muted); font:800 11px/1.4 var(--db-font); letter-spacing:.09em; text-transform:uppercase; }
+#sheetBody:has(.drift-reader) .drift-reader .press-clap { flex:none; min-width:44px; min-height:44px; margin:0 0 0 auto; padding:0 12px; border:1.5px solid var(--db-edge); border-radius:999px; background:transparent; color:var(--db-ink); box-shadow:none; font:800 14px/1 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .press-clap[aria-pressed=true] { border-color:var(--db-dark); background:var(--db-dark); color:var(--db-on-dark); }
+#sheetBody:has(.drift-reader) .drift-reader .drift-pets { margin:34px 0 0; padding:0; border:0; background:none; }
+#sheetBody:has(.drift-reader) .drift-reader :is(.drift-desk,.brief-weekly) { margin:34px 0 -12px; color:var(--db-ink); font:800 13px/1.2 var(--db-font); letter-spacing:.09em; text-transform:uppercase; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-memory { display:flex; align-items:center; gap:10px; min-height:44px; padding:6px 14px 6px 6px; border:1.5px solid var(--db-edge); border-radius:999px; background:transparent; color:var(--db-ink); font:700 14px/1 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .drift-memory img { width:44px; height:32px; border-radius:999px; object-fit:cover; }
+#sheetBody:has(.drift-reader) .drift-reader .is-shrunk h3 { font-size:17px; }
+/* Past briefs: day pills like the week strip on Today. */
+#sheetBody:has(.drift-reader) .drift-reader .brief-past { margin:36px 0 4px; padding:0; border:0; background:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-past-head { display:flex; align-items:center; justify-content:space-between; margin:0 0 12px; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-past-head h3 { margin:0; color:var(--db-muted); font:800 12px/1 var(--db-font); letter-spacing:.09em; text-transform:uppercase; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-viewall { min-height:44px; margin:0; padding:0 4px; border:0; background:none; color:var(--db-ink); font:800 14px/1 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .drift-archive { display:flex; gap:8px; overflow-x:auto; margin:0 -6px; padding:2px 6px 8px; scrollbar-width:none; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-archive.is-all { flex-wrap:wrap; overflow:visible; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-archive::-webkit-scrollbar { display:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-chip { display:grid; flex:none; place-items:center; align-content:center; gap:4px; width:54px; min-height:78px; margin:0; padding:10px 0; border:1.5px solid var(--db-edge); border-radius:999px; background:transparent; color:var(--db-ink); box-shadow:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-chip small { color:var(--db-muted); font:700 12px/1 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .brief-chip b { font:800 20px/1 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .brief-chip[aria-pressed=true] { border-color:var(--db-dark); background:var(--db-dark); color:var(--db-on-dark); }
+#sheetBody:has(.drift-reader) .drift-reader .brief-chip[aria-pressed=true] small { color:inherit; opacity:.8; }
+
+/* ---------- Letters to future you: the sheet is the letter ---------- */
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin { padding:2px 4px 0; border:0; border-radius:0; background:none; box-shadow:none; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-subject { display:flex; align-items:center; gap:12px; margin:0; padding:0; border:0; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-subject .mailwin-key { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard .future-mail-subject input.mailwin-val { flex:1; min-width:0; padding:0; border:0; background:none; color:var(--fm-ink); font:800 clamp(25px,7vw,30px)/1.2 var(--fm-font); letter-spacing:-.025em; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-subject .postcard-stamp { flex:none; width:52px; height:52px; margin:0; padding:6px; border:0; border-radius:18px; background:var(--fm-surface); box-shadow:none; transform:rotate(4deg); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-meta { display:flex; align-items:center; margin:4px 0 0; padding:0; border:0; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-details summary { min-height:36px; padding:0; color:var(--fm-muted); font:700 14px/1 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .mailwin-page { margin:10px 0 0; padding:0; border:0; background:none; box-shadow:none; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard textarea.mailwin-body { padding:0; border:0; background:none; color:var(--fm-ink); font:500 18px/1.6 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard textarea.mailwin-body::placeholder { color:var(--fm-muted); opacity:.75; }
+/* Deliver in: one row of pills; the chosen one is filled. */
+#sheetBody:has(.future-mail) .future-mail .future-mail-quick { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0; padding:0; border:0; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-quick > span { display:none; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-preset { min-height:40px; margin:0; padding:0 14px; border:1.5px solid var(--fm-edge); border-radius:999px; background:transparent; color:var(--fm-ink); box-shadow:none; font:800 14px/1 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-preset[aria-pressed=true] { border-color:var(--fm-dark); background:var(--fm-dark); color:var(--fm-on-dark); }
+#sheetBody:has(.future-mail) .future-mail .mailwin-due { min-height:48px; margin:10px 0 0; padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
+#sheetBody:has(.future-mail) .future-mail .mailwin-due .mailwin-key { color:var(--fm-muted); font:800 12px/1 var(--fm-font); letter-spacing:.09em; text-transform:uppercase; }
+#sheetBody:has(.future-mail) .future-mail .compact-date-value { color:var(--fm-ink); font:800 18px/1 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-dock { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:10px 0 0; padding:0; border:0; background:none; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-dock .mailwin-foot:empty { display:none; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-status { flex:1 0 100%; order:-1; margin:0; color:var(--fm-muted); font:700 13px/1.2 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-status:empty { display:none; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-dock .mailwin-actions { display:flex; flex:1; gap:10px; margin:0; }
+#sheetBody:has(.future-mail) .future-mail .future-mail-dock button.mailwin-btn:not(.mailwin-send) { flex:none; min-height:54px; padding:0 18px; border:0; background:transparent; color:var(--fm-ink); box-shadow:none; font:800 16px/1 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-dock button.mailwin-send { flex:1; min-height:54px; border:0; border-radius:999px; background:var(--fm-dark); color:var(--fm-on-dark); box-shadow:none; font:800 17px/1 var(--fm-font); }
+
+/* ---------- Groceries: one field, one count, one list ---------- */
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook { margin:4px 0 8px; padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook > h3 { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-add { display:flex; align-items:center; gap:0; margin:0; padding:4px 4px 4px 20px; border:0; border-radius:999px; background:var(--ps-surface); }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-add .roomtool-field { flex:1; margin:0; font-size:0; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-add input { width:100%; min-height:50px; padding:0; border:0; border-radius:0; background:transparent; color:var(--ps-ink); font:600 17px/1.2 var(--ps-font); box-shadow:none; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-add input:focus { outline:none; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-add input::placeholder { color:var(--ps-muted); opacity:1; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-add-button { display:grid; place-items:center; flex:none; width:50px; height:50px; min-height:50px; margin:0; padding:0; border:0; border-radius:50%; background:var(--ps-dark); color:var(--ps-on-dark); box-shadow:none; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-summary { margin:22px 4px 6px; color:var(--ps-muted); font:800 13px/1.2 var(--ps-font); letter-spacing:.06em; text-transform:uppercase; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-items { display:grid; gap:0; margin:0; padding:0; border:0; background:none; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-row,#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-row.done { display:grid; grid-template-columns:minmax(0,1fr) 40px; align-items:center; min-height:52px; margin:0; padding:0 0 0 2px; border:0; border-radius:0; background:none; box-shadow:none; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-row label { display:grid; grid-template-columns:30px minmax(0,1fr); gap:14px; align-items:center; min-height:52px; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-check { display:grid; place-items:center; width:28px; height:28px; border:2px solid var(--ps-dark); border-radius:50%; background:transparent; color:var(--ps-on-dark); }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-check svg { width:16px; height:16px; opacity:0; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-row input:checked ~ .grocery-check { border-color:var(--ps-dark); background:var(--ps-dark); color:var(--ps-on-dark); }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-row input:checked ~ .grocery-check svg { opacity:1; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-name { color:var(--ps-ink); font:600 18px/1.35 var(--ps-font); }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-row.done .grocery-name { color:var(--ps-muted); text-decoration:line-through; text-decoration-thickness:1.5px; }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-remove { width:40px; height:40px; min-height:40px; margin:0; padding:0; border:0; border-radius:50%; background:transparent; color:var(--ps-muted); box-shadow:none; font:400 22px/1 var(--ps-font); }
+#sheetBody[data-tool=groceries] .roomtool .grocery-notebook .grocery-empty { margin:34px 0 18px; color:var(--ps-muted); text-align:center; font:700 17px/1.4 var(--ps-font); }
+#sheetBody[data-tool=groceries] .roomtool > .chipbtn { min-height:44px; margin:8px 8px 0 0; padding:0 14px; border:0; border-radius:999px; background:transparent; color:var(--ps-muted); box-shadow:none; font:800 14px/1 var(--ps-font); }
+#sheetBody[data-tool=groceries] .roomtool > .chipbtn:hover { background:var(--ps-surface); color:var(--ps-ink); }
+
+/* ---------- Idea jar: one card, two round buttons ---------- */
+#sheetBody[data-tool=ideas] .idea-jar .idea-stack { position:relative; margin:6px 0 0; padding:0 0 18px; }
+#sheetBody[data-tool=ideas] .idea-jar :is(.idea-front,.idea-back) { border:0; border-radius:34px; background:radial-gradient(120% 90% at 22% 12%,var(--ps-light) 0%,var(--ps-surface) 62%,color-mix(in srgb,var(--ps-surface) 80%,var(--ps-edge)) 100%) !important; box-shadow:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-front { position:relative; z-index:3; min-height:250px; }
+/* The pile behind: two quiet layers peeking out under the card. */
+#sheetBody[data-tool=ideas] .idea-jar .idea-back { position:absolute; inset:0 0 18px; overflow:hidden; color:transparent; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-back * { visibility:hidden; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-back-0 { z-index:2; transform:translateY(10px) scale(.95); opacity:.7; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-back-1 { z-index:1; transform:translateY(19px) scale(.9); opacity:.45; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-back:nth-of-type(n+3) { display:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-cycle { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; width:100%; min-height:250px; margin:0; padding:30px 34px; border:0; border-radius:34px; background:transparent; color:var(--ps-ink); text-align:center; box-shadow:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-card-label { color:var(--ps-muted); font:800 11px/1 var(--ps-font); letter-spacing:.12em; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-card-text { color:var(--ps-ink); font:800 clamp(23px,6.6vw,29px)/1.25 var(--ps-font); letter-spacing:-.02em; overflow-wrap:anywhere; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-card-date { color:var(--ps-muted); font:700 13px/1 var(--ps-font); }
+#sheetBody[data-tool=ideas] .idea-jar .idea-invite { font:800 clamp(21px,6vw,25px)/1.3 var(--ps-font); color:var(--ps-ink); }
+#sheetBody[data-tool=ideas] .idea-jar .idea-remove { position:absolute; z-index:4; top:12px; right:12px; width:40px; height:40px; min-height:40px; margin:0; padding:0; border:0; border-radius:50%; background:transparent; color:var(--ps-muted); box-shadow:none; font:400 22px/1 var(--ps-font); }
+#sheetBody[data-tool=ideas] .idea-jar .idea-position { margin:6px 0 0; color:var(--ps-muted); text-align:center; font:700 13px/1.3 var(--ps-font); }
+#sheetBody[data-tool=ideas] .idea-jar .idea-position:empty { display:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-actions { display:flex; justify-content:center; gap:18px; margin:16px 0 4px; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-actions .chipbtn { display:grid; place-items:center; flex:none; width:64px; height:64px; min-height:64px; margin:0; padding:0; border:1.5px solid var(--ps-edge); border-radius:50%; background:transparent; color:var(--ps-ink); box-shadow:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-actions .idea-drop { border-color:var(--ps-dark); background:var(--ps-dark); color:var(--ps-on-dark); }
+#sheetBody[data-tool=ideas] .idea-jar .idea-actions .chipbtn:disabled { opacity:.4; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form { display:grid; gap:10px; margin:14px 0 0; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form[hidden] { display:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form .roomtool-field { margin:0; font-size:0; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form textarea { width:100%; min-height:96px; padding:16px 18px; border:0; border-radius:24px; background:var(--ps-surface); color:var(--ps-ink); font:600 17px/1.45 var(--ps-font); resize:none; box-shadow:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form textarea:focus { outline:2px solid var(--ps-dark); outline-offset:0; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form .chipbtn { min-height:50px; margin:0; border:0; border-radius:999px; font:800 16px/1 var(--ps-font); box-shadow:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form .chipbtn[type=submit] { background:var(--ps-dark); color:var(--ps-on-dark); }
+#sheetBody[data-tool=ideas] .idea-jar .idea-drop-form .chipbtn:not([type=submit]) { background:transparent; color:var(--ps-muted); }
+@media (prefers-reduced-motion:reduce) { #sheetBody[data-tool=ideas] .idea-jar :is(.idea-front,.idea-back) { transition:none; } }
+/* Letters: clear the old stacked fills and rules so the page reads as one sheet. */
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin :is(.future-mail-subject,.future-mail-meta,.mailwin-page,.future-mail-quick) { border:0; border-radius:0; background:none; box-shadow:none; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-subject { padding:0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-quick { padding:0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .mailwin-page { padding:0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .mailwin-page::before,#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .mailwin-page::after { display:none; }
+/* Daily Brief: the big masthead is the title, so the header keeps only its buttons. */
+#sheetBody:has(.drift-reader) .brief-heading > h2 { opacity:0; }
+#sheetBody[data-tool=groceries] .roomtool :is(.grocery-clear,.grocery-summary)[hidden] { display:none; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-card-date { margin-top:0; }
+#sheetBody[data-tool=ideas] .idea-jar .idea-card-text { width:100%; text-align:center; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-quick { justify-content:flex-start; }
+/* Letters: the letter's own title is the headline; the header keeps its buttons. */
+#sheetBody:has(.future-mail) .future-mail-heading > h2 { opacity:0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-quick button.future-mail-preset { min-height:40px; margin:0; padding:0 14px; border:1.5px solid var(--fm-edge); border-radius:999px; background:transparent; color:var(--fm-ink); box-shadow:none; font:800 14px/1 var(--fm-font); }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-quick button.future-mail-preset[aria-pressed=true] { border-color:var(--fm-dark); background:var(--fm-dark); color:var(--fm-on-dark); }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-details { margin:0; padding:0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-details > summary { padding:0; }

@@ -64,7 +64,6 @@
     const shortDate=d=>new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
     const md=d=>new Date(d+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const svg=(path,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
-    const MASCOT='<svg viewBox="0 0 48 32" width="44" height="30" aria-hidden="true"><circle cx="14" cy="13" r="10" fill="currentColor"/><circle cx="34" cy="13" r="10" fill="currentColor"/><path d="M19 26q5 4 10 0" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
     function chipLabel(saved,today){if(!saved.brief)return saved.week;const yesterday=day(new Date(new Date(today+'T12:00').getTime()-DAY));return saved.date===today?`Today • ${md(saved.date)}`:saved.date===yesterday?`Yesterday • ${md(saved.date)}`:md(saved.date);}
     function open(key){try{model.ensure();const current=model.open(key);if(!current)return;onRead();try{sound.flip();}catch(e){/* optional paper rustle */}sheet('Daily brief','',h=>{
       const root=h('div','drift-reader'),host=root.closest('#sheetBody'),title=host?.querySelector(':scope > h2'),closeButton=host?.querySelector('.sheet-close');
@@ -83,9 +82,8 @@
         if(value.sceneId){const scene=scenes().find(s=>s.id===value.sceneId);if(scene){const b=el('button','drift-memory','Open this scene'),src=scene.decor&&thumb({...scene.decor,id:scene.id});b.type='button';if(src){const img=document.createElement('img');img.src=src;img.alt='';b.prepend(img);}b.onclick=()=>openScene(scene);foot.appendChild(b);}}
         if(press&&label&&type!=='closing')foot.appendChild(clapButton(type,label));if(foot.children.length)block.appendChild(foot);return block;}
       function paint(value){root.__value=value;root.replaceChildren();const paper=el('article','drift-paper brief-paper'+(value.slim?' is-slim':''));paper.setAttribute('aria-label','Daily Brief');
-        const top=el('div','brief-top'),eyebrow=el('p','drift-eyebrow',value.brief?'Delivered to your door':'From the weekly archive');top.appendChild(eyebrow);if(value.brief)top.appendChild(el('span','brief-no',`No. ${value.no}`));
-        const titleRow=el('div','brief-title-row'),titles=el('div','brief-titles');titles.append(el('h2','drift-masthead','Daily Brief'),el('p','drift-edition',value.brief?`${longDate(value.date)}${value.sunday?' · Sunday edition':''}`:`${value.week} · The week of ${value.from} to ${value.through}`));
-        const mascot=el('span','brief-mascot');mascot.innerHTML=MASCOT;titleRow.append(titles,mascot);paper.append(top,titleRow);
+        // Masthead: issue number, the name, the date. Nothing else competes with the stories.
+        paper.append(el('p','drift-eyebrow',value.brief?`No. ${value.no}`:'Weekly archive'),el('h2','drift-masthead','Daily Brief'),el('p','drift-edition',value.brief?`${longDate(value.date)}${value.sunday?' · Sunday edition':''}`:`${value.week} · The week of ${value.from} to ${value.through}`));
         const daily=new Set(['streak','first','record','drought','diary','forecast']),front=value.sections.filter(s=>value.brief&&daily.has(s.type)),columns=value.sections.filter(s=>s.type==='saga'),rest=value.sections.filter(s=>!front.includes(s)&&s.type!=='saga');
         if(value.slim)paper.appendChild(el('p','brief-slim','“A quiet night in the house. A slim brief today.”'));
         const lead=front.find(s=>s.lead),today=front.find(s=>s.type==='forecast');if(lead)paper.appendChild(section(lead));if(today)paper.appendChild(section(today));
@@ -94,9 +92,11 @@
         if(rest.length){if(value.sunday)paper.appendChild(el('h3','brief-weekly','The week, folded'));const cols=el('div','drift-columns');for(const s of rest)cols.appendChild(section(s));paper.appendChild(cols);}
         root.appendChild(paper);
         if(press&&keyOf(value)===keyOf(model.latest||{}))try{press.seen('brief',keyOf(value),value.sections.map(s=>s.type).filter(t=>t&&t!=='closing'));}catch(e){/* preferences are optional */}
-        const past=el('section','brief-past'),pastHead=el('div','brief-past-head'),viewAll=el('button','brief-viewall',showAll?'Show less':'View all →');viewAll.type='button';viewAll.setAttribute('aria-expanded',String(showAll));viewAll.onclick=()=>{showAll=!showAll;paint(value);};
+        const past=el('section','brief-past'),pastHead=el('div','brief-past-head'),viewAll=el('button','brief-viewall',showAll?'Less':'All');viewAll.type='button';viewAll.setAttribute('aria-expanded',String(showAll));viewAll.onclick=()=>{showAll=!showAll;paint(value);};
         pastHead.append(el('h3','','Past briefs'),viewAll);const chips=el('div','drift-archive'+(showAll?' is-all':''));const today2=day(new Date());
-        for(const saved of model.issues.slice(0,showAll?60:14)){const on=keyOf(saved)===keyOf(value),b=el('button','brief-chip',chipLabel(saved,today2));b.type='button';if(on&&saved.brief)b.appendChild(el('small','',`No. ${saved.no}`));b.setAttribute('aria-pressed',String(on));b.onclick=()=>{try{const next=model.open(keyOf(saved));onRead();paint(next);}catch(e){notice(e.message);}};chips.appendChild(b);}
+        for(const saved of model.issues.slice(0,showAll?60:14)){const on=keyOf(saved)===keyOf(value),b=el('button','brief-chip');b.type='button';b.setAttribute('aria-label',chipLabel(saved,today2)+(saved.brief?`, No. ${saved.no}`:''));
+          // Day pills, like the week strip on Today: weekday over the date number.
+          if(saved.brief){const d=new Date(saved.date+'T12:00');b.append(el('small','',saved.date===today2?'Today':d.toLocaleDateString(undefined,{weekday:'short'})),el('b','',String(d.getDate())));}else b.append(el('small','','Week'),el('b','',String(saved.week).replace(/^.*W/,'')));b.setAttribute('aria-pressed',String(on));b.onclick=()=>{try{const next=model.open(keyOf(saved));onRead();paint(next);}catch(e){notice(e.message);}};chips.appendChild(b);}
         past.append(pastHead,chips);root.appendChild(past);}
       paint(current);
     });}catch(e){notice(e.message);}}

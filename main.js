@@ -972,6 +972,7 @@ function startLofiRooms() {
     if (tap === 'captions') { Sound.flip(); captionStudio(); return; }
     if (tap === 'wardrobe') { wardrobeSheet(); return; }
     if (tap === 'newspaper') { newspaperSheet(); return; }
+    if (tap === 'brief') { digestUI.open(); return; }
     if (tap === 'shop') { openShop(id); return; }
     if (tap === 'crown') { crownSheet(); return; }
     if (care) setTimeout(() => care.tick(0), 60);   // reflect a caring tap right away
@@ -2297,7 +2298,7 @@ function startLofiRooms() {
     if(history){header.classList.add('mood-heading');header.append(title,history,close);}else header.append(title,close);
   }
   // tool tags the sheet so the shared pastel tool styles (tools.css) can theme it.
-  const SHEET_TOOLS = { 'Caption studio':'captions', 'On the fridge door':'groceries', 'Pushup tally':'tally', 'The idea jar':'ideas', 'Tea':'tea', 'A little savings jar':'savings', 'Pixel maker':'sketch', 'French corner':'french', 'A little whiteboard':'whiteboard', 'A little wardrobe':'wardrobe', 'Files':'files', 'Rename file':'files', 'Delete this file?':'files', 'Calendar':'calendar', 'The newspaper':'newspaper', 'Book':'book' };
+  const SHEET_TOOLS = { 'Caption studio':'captions', 'Groceries':'groceries', 'On the fridge door':'groceries', 'Pushup tally':'tally', 'The idea jar':'ideas', 'Tea':'tea', 'A little savings jar':'savings', 'Pixel maker':'sketch', 'French corner':'french', 'A little whiteboard':'whiteboard', 'A little wardrobe':'wardrobe', 'Files':'files', 'Rename file':'files', 'Delete this file?':'files', 'Calendar':'calendar', 'The newspaper':'newspaper', 'Book':'book' };
   const SHEET_TOOL_SUBS = { 'TwoStoryTails posting plan':'tst', 'Your day, remembered gently.':'calendar' };
   function codeSheet(title, sub, build, tool = '') {
     frenchUI?.close(false);

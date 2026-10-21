@@ -539,6 +539,16 @@
       for (let z = 3; z < 7; z += 2) m.box(4, 1, z, 7, 2, z + 1, 0x999387);
     },
   });
+  // The Daily Brief's doormat: the same folded paper that lands by the door each morning.
+  def('morningpaper', {
+    name: 'Morning paper', kind: 'rug', group: 'decor', size: [2, 1], tap: 'brief', vars: [[]],
+    build(m) {
+      m.box(0, 0, 0, 16, 1, 8, 0xa67b50).box(1, 0, 1, 15, 1, 7, 0xc39a66);
+      m.box(3, 1, 1, 14, 2, 7, 0xf6e9cc).box(4, 2, 2, 13, 3, 3, 0x645749);
+      for (let z = 4; z < 7; z++) m.box(4, 2, z, 9, 3, z + 1, 0xb4a68c);
+      m.box(10, 2, 4, 13, 3, 6, 0xd0af77);
+    },
+  });
   def('teacup', {
     name: 'Tea cup', kind: 'small', group: 'kitchen', size: [1, 1], tap: 'sip', steam: [4, 4, 4], steamRate: 0.9,
     vars: [[0xf4f0e8, 0x7ab0d8], [0xf0b4c0, 0xffffff], [0x9ad0c8, 0xf4f0e8], [0xf2c14e, 0xffffff]],
