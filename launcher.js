@@ -26,7 +26,7 @@
     ['camera','Room camera','◎','Take a photo'],
     ['calendar','Calendar','📅','A little memory of your days'],
     ['newspaper','Newspaper','📰','Read the headlines'],
-    ['tst','TwoStoryTails plan','📌','Your posting corkboard'],
+    ['tst','TwoStoryTails','📌','Your published captions'],
     ['todo','To-Do','✓','Your list for today'],
     ['moments','Cozy moments','✦','The checklist and the cats’ version'],
     ['rooms','Rooms','⌂','Your home and new places'],

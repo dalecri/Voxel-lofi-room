@@ -514,7 +514,8 @@ function startLofiRooms() {
   ensureDaily();
   const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog, exclusives: LRShop.exclusives });
   const catJournal = LRLife.journal({ store });
-  const captionDesk = LRCaptions.create({store,changed:()=>{const host=$('.caption-studio');if(host)LRCaptions.render(host,captionDesk);const daily=$('.today-caption-desk');if(daily)LRCaptions.renderDaily(daily,captionDesk);}});
+  const tstPublished = LRTstPublished.create({ store });
+  const captionDesk = LRCaptions.create({store,published:id=>tstPublished.publishedClip(id),changed:()=>{const host=$('.caption-studio');if(host)LRCaptions.render(host,captionDesk,{publish:publishClip});const daily=$('.today-caption-desk');if(daily)LRCaptions.renderDaily(daily,captionDesk);}});
   const journalNews = LRLife.newspaper({ store, moments: MOMENTS });
   // The house press: pattern stories, tomorrow's box, pet sagas and claps (private, lr.press).
   const press = LRPress.create({ store });
@@ -2192,8 +2193,54 @@ function startLofiRooms() {
   }
   // TwoStoryTails captions: a pixel studio sheet, from Control Center or the clapperboard.
   function captionStudio() {
-    codeSheet('Caption studio', '', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); }, 'captions');
+    codeSheet('Caption studio', '', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk, { publish: publishClip }); }, 'captions');
     captionDesk.refresh();
+  }
+  // Published: a caption leaves the studio and joins the TwoStoryTails grid.
+  function publishClip(clip) {
+    const post = tstPublished.publish({ clip: clip.id, text: LRCaptions.copyPayload(clip) });
+    if (!post) return;
+    try { Sound.chime(); } catch (e) { /* optional interface sound */ }
+    captionDesk.changed(); todayUI.refresh();
+    toast('<b>Published</b><span>Moved to your TwoStoryTails grid.</span>', 2200, true);
+  }
+  // TwoStoryTails: every published caption as a colourful grid, filterable by cat and category.
+  const tstView = { cat: null, category: null, shown: LRTstPublished.PAGE };
+  const tstSvg = p => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  function openPublished() {
+    codeSheet('TwoStoryTails', '', h => {
+      const links = h('div', 'tst-links');
+      const handle = document.createElement('span'); handle.className = 'tst-handle'; handle.textContent = LRWidgets.TST_CONTENT.account; links.appendChild(handle);
+      for (const l of LRWidgets.TST_CONTENT.links) { const a = document.createElement('a'); a.className = 'tst-link'; a.textContent = l.label; a.href = l.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; links.appendChild(a); }
+      LRTstPublished.render(h('section', 'tst-published'), { model: tstPublished, open: openTstPost, state: tstView });
+    }, 'tst');
+  }
+  function openTstPost(id) {
+    const post = tstPublished.get(id); if (!post) { openPublished(); return; }
+    codeSheet('TwoStoryTails', '', h => {
+      const host = h('section', 'tst-post'), el = (tag, cls, text, parent = host) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; parent.appendChild(n); return n; };
+      const back = el('button', 'tst-back', '‹ All posts'); back.type = 'button'; back.onclick = openPublished;
+      const cat = LRTstPublished.CATEGORIES.find(c => c.id === post.category);
+      const card = el('div', 'tst-tile tst-tile-big'); card.dataset.category = post.category; card.style.setProperty('--tile', cat.color);
+      const icon = el('span', 'tst-icon', undefined, card); icon.innerHTML = tstSvg(LRTstPublished.ICONS[post.icon]);
+      const text = el('p', 'tst-text', post.text, card);
+      const edit = el('textarea', 'tst-edit'); edit.value = post.text; edit.hidden = true; edit.maxLength = 600; edit.setAttribute('aria-label', 'Caption text');
+      el('p', 'tst-label', 'Cats');
+      const cats = el('div', 'tst-cats tst-cats-small'); cats.setAttribute('role', 'group'); cats.setAttribute('aria-label', 'Cats in this post');
+      for (const c of LRTstPublished.CATS) { const b = el('button', 'tst-cat', undefined, cats); b.type = 'button'; b.style.setProperty('--cat', c.color); b.setAttribute('aria-pressed', String(post.cats.includes(c.id))); const face = el('span', 'tst-cat-face', c.name[0], b); face.setAttribute('aria-hidden', 'true'); el('span', 'tst-cat-name', c.name, b);
+        b.onclick = () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); const now = tstPublished.get(id).cats.filter(x => x !== c.id); tstPublished.update(id, { cats: on ? [...now, c.id] : now }); }; }
+      el('p', 'tst-label', 'Category');
+      const chips = el('div', 'tst-chips tst-chips-wrap'); chips.setAttribute('role', 'radiogroup'); chips.setAttribute('aria-label', 'Category');
+      for (const c of LRTstPublished.CATEGORIES) { const b = el('button', 'tst-chip', undefined, chips); b.type = 'button'; b.setAttribute('role', 'radio'); b.style.setProperty('--chip-dot', c.color); b.setAttribute('aria-checked', String(post.category === c.id)); el('span', 'tst-chip-dot', undefined, b); el('span', '', c.name, b);
+        b.onclick = () => { const next = tstPublished.update(id, { category: c.id }); for (const x of chips.children) x.setAttribute('aria-checked', String(x === b)); card.dataset.category = c.id; card.style.setProperty('--tile', c.color); icon.innerHTML = tstSvg(LRTstPublished.ICONS[next.icon]); }; }
+      const actions = el('div', 'tst-actions');
+      const copyBtn = el('button', 'tst-action tst-copy', 'Copy', actions); copyBtn.type = 'button';
+      copyBtn.onclick = async () => { const ok = await LRCaptions.copy(tstPublished.get(id).text); copyBtn.textContent = ok ? 'Copied' : 'Try again'; setTimeout(() => { if (copyBtn.isConnected) copyBtn.textContent = 'Copy'; }, 1800); };
+      const editBtn = el('button', 'tst-action', 'Edit text', actions); editBtn.type = 'button';
+      editBtn.onclick = () => { if (edit.hidden) { edit.hidden = false; text.hidden = true; editBtn.textContent = 'Save text'; edit.focus(); } else { const next = tstPublished.update(id, { text: edit.value }); if (next) text.textContent = next.text; edit.hidden = true; text.hidden = false; editBtn.textContent = 'Edit text'; } };
+      const remove = el('button', 'tst-action tst-remove', post.from === 'studio' ? 'Back to studio' : 'Remove', actions); remove.type = 'button';
+      remove.onclick = () => { if (!remove.dataset.confirm) { remove.dataset.confirm = 'yes'; remove.textContent = post.from === 'studio' ? 'Move it back?' : 'Remove for good?'; return; } tstPublished.remove(id); captionDesk.changed(); todayUI.refresh(); openPublished(); toast(`<span>${post.from === 'studio' ? 'Back in the Caption studio.' : 'Removed from your grid.'}</span>`, 2000, true); };
+    }, 'tst');
   }
   // Cozy moments: a floating card under the room name, with the checklist and the cats' diary.
   const cozyPop = document.createElement('section');
@@ -2381,12 +2428,8 @@ function startLofiRooms() {
     widgets.refresh([it.t]);
     const data = widgets.data(def.id), links = widgets.destinations(it.t);
     if (def.id === 'tst-corkboard') {
-      codeSheet(data.title, 'TwoStoryTails posting plan', h => {
-        h('p').textContent = `Posting cadence: ${data.cadence}`;
-        h('p').textContent = `Content pillars: ${data.pillars.join(' · ')}`;
-        h('p').textContent = `Next post: ${data.nextPost}`;
-        widgetLinks(h('div', 'widget-news'), links, it.id);
-      });
+      if (widgetView && it.id) widgetView.feedback(it.id);
+      openPublished();
     } else if (links.length > 1) {
       codeSheet('Choose a destination', CAT[it.t].name, h => widgetLinks(h('div', 'widget-news'), links, it.id));
     } else if (links.length) {
@@ -3198,7 +3241,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

@@ -30,7 +30,7 @@
     return Array.from({length:Math.min(3,pool.length)},(_,i)=>pool[(start+i)%pool.length]);
   }
   const copyPayload = clip => options(clip.captions)[0] ?? clip.desc;
-  function create({store,url=CAPTIONS_URL,fetcher=(...args)=>root.fetch(...args),changed=()=>{},now=Date.now}) {
+  function create({store,url=CAPTIONS_URL,fetcher=(...args)=>root.fetch(...args),changed=()=>{},now=Date.now,published=()=>false}) {
     let saved;try { saved=store.get(KEY,null); } catch(e) { /* storage unavailable */ }
     let data=saved?.url===url ? parse(saved.data) : null, cached=!!data, loading=false, failed=false, pending=null;
     function refresh() {
@@ -49,7 +49,9 @@
       });
       return pending;
     }
-    return {refresh,get state(){return {enabled:!!url, data, rows:dailyRows(data,new Date(now())), cached, loading, failed};}};
+    // Clips published from the studio leave the daily picks; removing the post brings them back.
+    const open=()=>data?{...data,clips:data.clips.filter(c=>!published(c.id))}:data;
+    return {refresh,changed,get state(){return {enabled:!!url, data, rows:dailyRows(open(),new Date(now())), cached, loading, failed};}};
   }
   async function copy(text,{navigator=root.navigator,document=root.document}={}) {
     try {await navigator.clipboard.writeText(text);return true;} catch(e) { /* older WebView or permission denied */ }
@@ -64,7 +66,7 @@
   const HOUSE_COLORS={o:'#2b2833',r:'#d9737f',w:'#fff1d6',y:'#f6d83c',k:'#2b2833',b:'#9a6b4f'};
   const house=()=>'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" shape-rendering="crispEdges">'+HOUSE.flatMap((row,y)=>[...row].flatMap((c,x)=>HOUSE_COLORS[c]?[`<rect x="${x}" y="${y}" width="1" height="1" fill="${HOUSE_COLORS[c]}"/>`]:[])).join('')+'</svg>';
   // The caption studio: a pixel film reel of today's three unpublished clips.
-  function render(host,model) {
+  function render(host,model,{publish=null}={}) {
     host.replaceChildren();const s=model.state;host.hidden=!s.enabled;if(host.hidden)return;
     const doc=host.ownerDocument;
     const add=(tag,cls,text,parent=host)=>{const el=doc.createElement(tag);el.className=cls;el.textContent=text;parent.appendChild(el);return el;};
@@ -84,7 +86,8 @@
       if(clip.platform)add('small','caption-platform',clip.platform,meta);
       add('p','caption-desc',clip.desc,article);
       if(clip.captions.length){const list=add('ol','caption-options','',article);for(const option of clip.captions)add('li','',option,list);}
-      const button=add('button','caption-copy','Copy',article);button.type='button';button.setAttribute('aria-label','Copy caption: '+clip.desc);
+      const actions=add('div','caption-actions','',article);if(publish){const done=add('button','caption-publish','Published',actions);done.type='button';done.setAttribute('aria-label','Mark as published: '+clip.desc);done.title='Move to your TwoStoryTails grid';done.onclick=()=>publish(clip);}
+      const button=add('button','caption-copy','Copy',actions);button.type='button';button.setAttribute('aria-label','Copy caption: '+clip.desc);
       button.onclick=async()=>{const ok=await copy(copyPayload(clip));button.textContent=ok?'Copied':'Copy failed';button.classList.toggle('is-copied',ok);button.setAttribute('aria-label',ok?'Caption copied':'Copy failed, try again');setTimeout(()=>{if(button.isConnected){button.textContent='Copy';button.classList.remove('is-copied');button.setAttribute('aria-label','Copy caption: '+clip.desc);}},1800);};
     });
     add('p','studio-foot','Three fresh ideas each day.');
