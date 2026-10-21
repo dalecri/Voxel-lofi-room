@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/letters-browser.py. Notetaker: checklists, photos, autosave, safe paste, export, native bridge and privacy."""
+"""npm run build && python3 tests/letters-browser.py. Notetaker: checklists, autosave, safe paste, export, native bridge and privacy."""
 import functools,json
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -28,12 +28,12 @@ with sync_playwright() as p:
  # Notes look: honey-gold header and toolbar, big bold title, docked to the bottom edge.
  assert page.locator('#sheetBody > h2').inner_text()=='Notetaker'
  assert page.get_by_role('button',name='All notes',exact=True).is_visible();assert page.get_by_role('button',name='Save as file',exact=True).is_visible();assert page.get_by_role('button',name='More',exact=True).is_visible()
- assert [b.get_attribute('aria-label') for b in page.locator('.note-toolbar button').all()]==['Checklist','Take a photo','Add a photo','New note']
+ assert [b.get_attribute('aria-label') for b in page.locator('.note-toolbar > button,.note-toolbar > .note-more-wrap > button').all()]==['Checklist','Save as file','More','New note'];assert page.locator('#noteCamera,#noteAttach,#notePhoto').count()==0
  page.wait_for_function('(()=>{const r=document.querySelector("#sheetBody").getBoundingClientRect();return Math.abs(r.bottom-innerHeight)<2 && r.top>0})()')
  assert title.evaluate('e=>Number(getComputedStyle(e).fontWeight)>=700 && parseFloat(getComputedStyle(e).fontSize)>=26')
  assert page.locator('.note-toolbar button').first.evaluate('e=>getComputedStyle(e).color')=='rgb(210, 166, 90)'
  assert body.evaluate('e=>e.classList.contains("is-empty")')
- assert page.locator('.note-toolbar button').evaluate_all('es=>es.every(e=>e.getBoundingClientRect().width>=44&&e.getBoundingClientRect().height>=44)')
+ assert page.locator('.note-toolbar > button,.note-toolbar > .note-more-wrap > button').evaluate_all('es=>es.every(e=>e.getBoundingClientRect().width>=44&&e.getBoundingClientRect().height>=44)')
  # Title, then a checklist with ticks that save.
  title.fill('PRIVATE_NOTE_TITLE');title.press('Enter');assert body.evaluate('e=>e===document.activeElement')
  page.click('#noteChecklist')
@@ -53,27 +53,16 @@ with sync_playwright() as p:
  page.evaluate('__lr.letters.open()');body=page.locator('#letterBody');assert 'RELOAD_TAIL' in body.inner_text();assert page.locator('#noteTitle').input_value()=='PRIVATE_NOTE_TITLE'
  assert body.locator('li[data-checked=true]').count()==2;assert 'Letter Room' in page.evaluate('__lr.letters.model.get().letterhead')
  print('PASS: furniture tap opens the Notetaker; notes look; title; checklists tick by tap and Ctrl+Enter; immediate-reload autosave',flush=True)
- # Photos: picked images shrink into the note as inline data, never a remote address.
- body.click();page.keyboard.press('Control+End')
- png='iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFWEXHbQSACj/P8Fu7N9hAAAAAElFTkSuQmCC'
- import base64
- with page.expect_file_chooser() as chooser:page.click('#noteAttach')
- chooser.value.set_files({'name':'cat.png','mimeType':'image/png','buffer':base64.b64decode(png)})
- page.wait_for_function('document.querySelectorAll("#letterBody img").length===1')
- assert body.locator('img').get_attribute('src').startswith('data:image/jpeg;base64,');assert body.locator('li img').count()==0
- with page.expect_file_chooser() as chooser:page.click('#noteCamera')
- assert page.locator('#notePhoto').get_attribute('capture')=='environment';chooser.value.set_files([])
- page.wait_for_function('localStorage.getItem("lr.letters").includes("data:image/jpeg")')
  # Paste keeps simple styles and lists; scripts, handlers and remote images never survive.
  page.evaluate('''() => {const b=document.querySelector('#letterBody');b.focus();const r=document.createRange();r.selectNodeContents(b);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r);const d=new DataTransfer();d.setData('text/html','<p>PRIVATE_PASTE <strong>Bonjour</strong> <span style="font-style:italic">café</span><img src="https://example.com/NOTE_LEAK" onerror="window.__unsafe=1"><a href="javascript:window.__unsafe=1">x</a><script>window.__unsafe=1</script></p><ul><li data-checked="true" onclick="window.__unsafe=1">pasted done</li></ul>');b.dispatchEvent(new ClipboardEvent('paste',{clipboardData:d,bubbles:true,cancelable:true}));}''')
  assert page.evaluate('!window.__unsafe');assert body.locator('script,a,iframe,[style],[onerror],[onclick]').count()==0
  assert body.locator('img[src^="https:"]').count()==0;assert body.locator('li[data-checked=true]').filter(has_text='pasted done').count()==1
  assert body.locator('strong,b').filter(has_text='Bonjour').count()==1
- print('PASS: photos shrink into inline data (camera asks for the rear camera); sanitized paste keeps lists, drops remote images and scripts',flush=True)
+ print('PASS: sanitized paste keeps lists, drops remote images and scripts',flush=True)
  # Save as file: a standalone page in the same notes look.
  with page.expect_download() as downloaded:page.get_by_role('button',name='Save as file',exact=True).click()
  download=downloaded.value;assert download.suggested_filename=='note-2026-10-15.html';download.save_as('/tmp/note-2026-10-15.html')
- html=Path('/tmp/note-2026-10-15.html').read_text();assert 'PRIVATE_NOTE_TITLE' in html and 'café' in html and 'Letter Room' in html and 'data-checked="true"' in html and 'data:image/jpeg' in html
+ html=Path('/tmp/note-2026-10-15.html').read_text();assert 'PRIVATE_NOTE_TITLE' in html and 'café' in html and 'Letter Room' in html and 'data-checked="true"' in html
  assert 'NOTE_LEAK' not in html and '<script>' not in html and 'javascript:' not in html
  exported=context.new_page();exported.set_content(html);assert 'PRIVATE_ITEM_ONE' in exported.locator('article').inner_text();assert exported.locator('li[data-checked=true]').count()>=2;exported.close()
  page.evaluate('''() => {window.__cap=window.Capacitor;window.__native=[];window.Capacitor={isNativePlatform:()=>true,registerPlugin:name=>({save:async data=>{__native.push({name,...data});return {saved:true}}})};}''')
@@ -114,7 +103,7 @@ with sync_playwright() as p:
  # Close returns focus; nothing private reaches a shared room code.
  page.click('#letterClose');assert not page.evaluate('__lr.letters.active || __lr.Sound.writing')
  code=page.evaluate('__lr.roomCode()');raw=json.dumps(page.evaluate('code=>__lr.readCode(code)',code))+str(code)
- assert all(s not in raw for s in ['PRIVATE_NOTE_TITLE','PRIVATE_ITEM_ONE','PRIVATE_PASTE','data:image/jpeg'])
+ assert all(s not in raw for s in ['PRIVATE_NOTE_TITLE','PRIVATE_ITEM_ONE','PRIVATE_PASTE'])
  assert not outbound,outbound;assert not errors,errors
  browser.close()
 server.shutdown()

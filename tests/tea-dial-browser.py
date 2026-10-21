@@ -39,16 +39,16 @@ with sync_playwright() as p:
  page.evaluate("__lr.roomToolsUI.open('tea')");assert focus.get_attribute('data-tea-state')=='ready';assert float(arc.get_attribute('data-progress'))==1;assert mascot.get_attribute('data-state')=='happy';assert mascot.locator('img').get_attribute('src')!=image;assert page.locator('.tea-note').inner_text()=='Your tea is ready.';assert page.get_by_role('button',name='Enjoy the tea',exact=True).is_visible()
  for width,height in [(320,568),(390,700),(390,844),(1280,900),(844,390)]:
   page.set_viewport_size({'width':width,'height':height});body.evaluate('e=>e.scrollTop=0')
-  controls=page.locator('.tea-top > *').evaluate_all('es=>es.map(e=>{const r=e.getBoundingClientRect();return {y:r.y+r.height/2,left:r.left,right:r.right}})');assert len(controls)==3;assert max(r['y'] for r in controls)-min(r['y'] for r in controls)<1
-  assert all(controls[i]['right']<=controls[i+1]['left'] for i in range(2));assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');assert body.evaluate('e=>e.scrollHeight<=e.clientHeight+1'),(width,height,body.evaluate('e=>[e.scrollHeight,e.clientHeight,getComputedStyle(e).paddingBottom]'),focus.locator(':scope > *').evaluate_all('es=>es.map(e=>[e.className,e.getBoundingClientRect().height,getComputedStyle(e).margin])'))
+  assert page.locator('.tea-top .tea-current').is_hidden();assert page.locator('.tea-preset').evaluate_all('es=>es.every(e=>e.getBoundingClientRect().height>=44 && e.querySelector("b").getClientRects().length===1)')
+  assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');assert body.evaluate('e=>e.scrollHeight<=e.clientHeight+1'),(width,height,body.evaluate('e=>[e.scrollHeight,e.clientHeight,getComputedStyle(e).paddingBottom]'),focus.locator(':scope > *').evaluate_all('es=>es.map(e=>[e.className,e.getBoundingClientRect().height,getComputedStyle(e).margin])'))
   page.screenshot(path=f'/tmp/tea-compact-{width}-{height}.png')
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':844});body.evaluate('e=>e.scrollTop=0');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');a=action.bounding_box();m=mascot.bounding_box();assert a['x']+a['width']<=m['x'];assert not page.locator('#timerBadges').is_visible();page.screenshot(path=f'/tmp/tea-dial-{phase}-{width}.png')
  page.get_by_role('button',name='Enjoy the tea',exact=True).click();assert page.evaluate('__lr.roomTools.tea.status')=='done';assert mascot.get_attribute('data-state')=='calm';assert action.inner_text()=='Brew tea'
- tune=page.get_by_role('button',name='♫ Tune in',exact=True);tune.click();assert page.evaluate('__lr.meta.music && __lr.meta.station===0');assert tune.get_attribute('aria-pressed')=='true';tune.click();assert not page.evaluate('__lr.meta.music')
+ assert page.get_by_role('button',name='♫ Tune in',exact=True).count()==0
  page.get_by_role('button',name='Herbal · 5 min',exact=True).click();page.get_by_role('button',name='Brew tea',exact=True).click();page.get_by_role('button',name='Cancel steep',exact=True).click();assert page.evaluate('__lr.roomTools.tea') is None;assert action.inner_text()=='Brew tea'
  page.emulate_media(reduced_motion='reduce');assert page.locator('.tea-steam i').first.evaluate('e=>getComputedStyle(e).animationName')=='none';assert not errors,errors
- print('PASS kettle tea dial 1–10, presets and keyboard, progress/locked controls, background and reload deadline, one ready chime, stateful mascot, enjoy/cancel, Tune in, reduced motion and mobile/desktop day/night',flush=True);browser.close()
+ print('PASS kettle tea dial 1–10, presets and keyboard, progress/locked controls, background and reload deadline, one ready chime, stateful mascot, enjoy/cancel',flush=True);browser.close()
 server.shutdown()
