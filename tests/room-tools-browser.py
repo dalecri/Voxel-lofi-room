@@ -76,7 +76,7 @@ with sync_playwright() as p:
  page.locator('#sheet').get_by_label('Goal name',exact=True).fill('PRIVATE_GOAL');page.locator('#sheet').get_by_label('Target amount',exact=True).fill('100.00');page.get_by_role('button',name='Save goal',exact=True).click()
  for value in ['0.10','0.20','24.70']:
   page.locator('#sheet').get_by_label('Deposit amount',exact=True).fill(value);page.locator('#sheet').get_by_label('Deposit note',exact=True).fill('PRIVATE_DEPOSIT');page.get_by_role('button',name='Log deposit',exact=True).click()
- assert '25.00 of 100.00' in page.locator('#sheetBody').inner_text();assert page.evaluate('__lr.shop.balance===__wallet')
+ t=page.locator('#sheetBody').inner_text();assert '$25.00' in t and 'of $100.00' in t;assert page.evaluate('__lr.shop.balance===__wallet')
  page.evaluate('__lr.roomToolsUI.frame(1)');assert page.evaluate('''() => {const a=__lr,p=a.view.objs.get(a.room.items.find(i=>i.t==='savingsjar').id).userData.parts;return Array.from({length:8},(_,i)=>p['privateCoin'+i].visible)}''')==[True,True,False,False,False,False,False,False]
  # Capture rendering must not expose a private coin level or unread-mail flag.
  assert page.evaluate('''() => {const v=__lr.view,draw=v.draw;let leaked=false;v.draw=function(){leaked=[...v.objs.values()].some(o=>Object.entries(o.userData.parts).some(([n,p])=>n.startsWith('private')&&p.visible));return draw.call(this)};try{v.snapshot();}finally{v.draw=draw;}return !leaked;}''')

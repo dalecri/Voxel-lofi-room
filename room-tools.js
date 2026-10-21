@@ -338,13 +338,35 @@
       if(mascot.dataset.key!==key){mascot.dataset.key=key;const src=portrait(d.mascot);image.hidden=!src;if(src)image.src=src;image.alt=d.mascot==='happy'?'Your little roommate is happy the tea is ready':d.mascot==='watching'?'Your little roommate watches the tea steep':'Your little roommate keeps you company';}
     }
     function savings(){shell('A little savings jar','',root=>{
-      const data=model.state,goal=field(root,'Goal name','text',data.goal?.title||''),target=field(root,'Target amount','text',data.goal?amount(data.goal.target):'');target.inputMode='decimal';
-      button(root,'Save goal',()=>{model.goal(goal.value,target.value);savings();});
-      if(!data.goal)return;const total=model.total();text(root,`${amount(total)} of ${amount(data.goal.target)} · ${data.goal.title}`,'roomtool-title');
-      const progress=document.createElement('progress');progress.max=data.goal.target;progress.value=Math.min(total,data.goal.target);progress.setAttribute('aria-label','Savings progress');root.appendChild(progress);
-      if(total>=data.goal.target)text(root,'You made room for your goal. Lovely.');
-      const value=field(root,'Deposit amount');value.inputMode='decimal';const note=field(root,'Deposit note');button(root,'Log deposit',()=>{model.deposit(value.value,note.value);sound.coin();savings();});
-      for(const d of data.deposits){const row=document.createElement('div');row.className='roomtool-card';text(row,`${amount(d.cents)} · ${d.date}${d.note?' · '+d.note:''}`);removeButton(row,()=>{model.remove('deposits',d.id);savings();});root.appendChild(row);}
+      root.classList.add('savings-jar');
+      const data=model.state,total=model.total(),goal=data.goal,pct=goal?Math.min(1,total/Math.max(1,goal.target)):0;
+      // The jar fills with what you have set aside.
+      const hero=document.createElement('section');hero.className='savings-hero';root.appendChild(hero);
+      const fill=Math.round(98*pct),top=130-fill,coins=[[44,122],[60,124],[76,121],[52,112],[68,113],[60,103],[46,96],[74,95]].slice(0,Math.ceil(pct*8));
+      hero.innerHTML=`<div class="savings-art" aria-hidden="true"><svg viewBox="0 0 120 140" width="120" height="140"><defs><clipPath id="savingsJarClip"><path d="M30 32 Q22 36 22 48 V116 Q22 130 36 130 H84 Q98 130 98 116 V48 Q98 36 90 32 Z"/></clipPath></defs>
+        <g clip-path="url(#savingsJarClip)"><rect x="0" y="0" width="120" height="140" class="savings-glass"/><rect x="0" y="${top}" width="120" height="${fill+12}" class="savings-fill"/><path d="M0 ${top} Q30 ${top-5} 60 ${top} T120 ${top}" class="savings-wave"/>${coins.map(([x,y])=>`<circle cx="${x}" cy="${Math.max(y,top+6)}" r="7" class="savings-coin"/>`).join('')}</g>
+        <path d="M30 32 Q22 36 22 48 V116 Q22 130 36 130 H84 Q98 130 98 116 V48 Q98 36 90 32 Z" class="savings-outline"/><rect x="34" y="14" width="52" height="16" rx="5" class="savings-lid"/><path d="M34 52 V100" class="savings-shine"/></svg>
+        ${goal?`<span class="savings-percent">${Math.round(pct*100)}%</span>`:''}</div>`;
+      const copy=document.createElement('div');copy.className='savings-copy';hero.appendChild(copy);
+      text(copy,goal?'$'+amount(total):'$0.00','savings-total');
+      text(copy,goal?`of $${amount(goal.target)} · ${goal.title}`:'Name a goal to start filling the jar.','savings-of');
+      if(goal){const progress=document.createElement('progress');progress.max=goal.target;progress.value=Math.min(total,goal.target);progress.setAttribute('aria-label','Savings progress');copy.appendChild(progress);}
+      if(goal&&total>=goal.target)text(copy,'You made room for your goal. Lovely.','savings-done');
+      // Goal: front and centre until it exists, then folded under Edit goal.
+      const goalHost=goal?document.createElement('details'):document.createElement('section');goalHost.className='savings-goal';root.appendChild(goalHost);
+      if(goal){const summary=document.createElement('summary');summary.textContent='Edit goal';goalHost.appendChild(summary);}else text(goalHost,'What are you saving for?','savings-ask');
+      const goalName=field(goalHost,'Goal name','text',goal?.title||''),target=field(goalHost,'Target amount','text',goal?amount(goal.target):'');goalName.placeholder='A trip, a lamp, a rainy day';target.inputMode='decimal';target.placeholder='0.00';
+      button(goalHost,'Save goal',()=>{model.goal(goalName.value,target.value);savings();},'chipbtn savings-save');
+      if(!goal)return;
+      // Deposit: an amount, quick chips, an optional note, one button.
+      const dep=document.createElement('section');dep.className='savings-deposit';root.insertBefore(dep,goalHost);
+      const value=field(dep,'Deposit amount');value.inputMode='decimal';value.placeholder='0.00';
+      const chips=document.createElement('div');chips.className='savings-chips';dep.appendChild(chips);
+      for(const n of [5,10,20])button(chips,'+$'+n,()=>{const now=Number(value.value)||0;value.value=(now+n).toFixed(2);value.focus();},'chipbtn savings-chip');
+      const note=field(dep,'Deposit note');note.placeholder='What for? (optional)';
+      button(dep,'Log deposit',()=>{model.deposit(value.value,note.value);sound.coin();savings();},'chipbtn savings-log');
+      if(data.deposits.length){const list=document.createElement('section');list.className='savings-history';root.insertBefore(list,goalHost);text(list,'Deposits','savings-history-title');
+        for(const d of data.deposits){const row=document.createElement('div');row.className='roomtool-card savings-row';const coin=document.createElement('span');coin.className='savings-row-coin';coin.setAttribute('aria-hidden','true');row.appendChild(coin);const info=document.createElement('div');info.className='savings-row-info';text(info,'$'+amount(d.cents),'savings-row-amount');text(info,`${d.date}${d.note?' · '+d.note:''}`,'savings-row-note');row.appendChild(info);removeButton(row,()=>{model.remove('deposits',d.id);savings();});list.appendChild(row);}}
     });}
     function flushStroke(){model.pixels.end();}
     function sketch(){shell('Pixel maker','',root=>{
