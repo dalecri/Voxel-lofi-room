@@ -177,7 +177,6 @@
 #sheetBody[data-tool=calendar] .calendar-day[aria-pressed=true]:not([aria-current=date]) { box-shadow:inset 0 0 0 2px var(--ps-dark); }
 #sheetBody[data-tool=calendar] .calendar-legend { margin:0 2px; color:var(--ps-muted); font:600 12.5px/1.7 var(--ps-font); }
 #sheetBody[data-tool=calendar] .calendar-auth { margin-top:14px; }
-#sheetBody[data-tool=calendar]:has(.calendar-view) .app-sheet-heading > h2 { opacity:0; }
 
 /* ---------- Files: a memory shelf ---------- */
 #sheetBody[data-tool=files] .dashboard-tabs,#sheetBody[data-tool=files] [role=tablist] { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; margin:0 0 18px; padding:4px; border:0; border-radius:999px; background:var(--ps-surface); }
@@ -264,3 +263,54 @@
 .radio-library .radio-library-row.is-playing .radio-library-channel .radio-eq { height:16px; }
 @media (prefers-reduced-motion:reduce) { .radio-library.is-playing .radio-vinyl,.radio-eq i { animation:none; } .radio-eq i { transform:scaleY(.7); } .radio-library .radio-arm { transition:none; } }
 body.reduce-motion .radio-library.is-playing .radio-vinyl,body.reduce-motion .radio-eq i { animation:none; }
+
+/* Calendar: ‹ Month Year › sits centred in the header. */
+#sheetBody[data-tool=calendar] .app-sheet-heading > h2.calendar-heading { display:flex; justify-content:center; min-width:0; margin:0; }
+#sheetBody[data-tool=calendar] .calendar-heading .calendar-nav { display:inline-flex; align-items:center; justify-content:center; gap:4px; min-width:0; margin:0; }
+#sheetBody[data-tool=calendar] .calendar-heading .calendar-nav .calendar-month { order:0; min-width:0; margin:0 2px; text-align:center; font:800 clamp(19px,5.4vw,24px)/1.1 var(--ps-font); letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#sheetBody[data-tool=calendar] .calendar-heading .calendar-nav button { width:36px; height:36px; min-width:36px; min-height:36px; background:transparent; font-size:22px; }
+#sheetBody[data-tool=calendar] .calendar-heading .calendar-nav button:hover { background:var(--ps-surface); }
+#sheetBody[data-tool=calendar] .calendar-view > .calendar-grid { margin-top:14px; }
+
+/* ---------- Savings jar: a jar that fills up ---------- */
+#sheetBody[data-tool=savings] .savings-jar { display:grid; gap:18px; }
+#sheetBody[data-tool=savings] .savings-hero { display:flex; align-items:center; gap:18px; padding:18px 20px; border-radius:30px; background:radial-gradient(120% 100% at 20% 10%,var(--ps-light),var(--ps-surface)); }
+#sheetBody[data-tool=savings] .savings-art { position:relative; flex:none; }
+#sheetBody[data-tool=savings] .savings-art svg { display:block; overflow:visible; }
+#sheetBody[data-tool=savings] .savings-glass { fill:#ffffff55; }
+#sheetBody[data-tool=savings] .savings-fill { fill:color-mix(in srgb,var(--ps-dark) 55%,var(--ps-edge)); transition:y .6s ease,height .6s ease; }
+#sheetBody[data-tool=savings] .savings-wave { fill:none; stroke:color-mix(in srgb,var(--ps-dark) 40%,#fff); stroke-width:2; opacity:.6; }
+#sheetBody[data-tool=savings] .savings-coin { fill:#f2c45a; stroke:#c9962e; stroke-width:1.5; }
+#sheetBody[data-tool=savings] .savings-outline { fill:none; stroke:var(--ps-dark); stroke-width:3; }
+#sheetBody[data-tool=savings] .savings-lid { fill:var(--ps-dark); }
+#sheetBody[data-tool=savings] .savings-shine { stroke:#ffffffaa; stroke-width:4; stroke-linecap:round; }
+#sheetBody[data-tool=savings] .savings-percent { position:absolute; right:-10px; top:-4px; padding:5px 9px; border-radius:999px; background:var(--ps-dark); color:var(--ps-on-dark); font:800 12px/1 var(--ps-font); }
+#sheetBody[data-tool=savings] .savings-copy { display:grid; gap:6px; min-width:0; }
+#sheetBody[data-tool=savings] .savings-total { margin:0; color:var(--ps-ink); font:800 clamp(32px,9vw,42px)/1 var(--ps-font); letter-spacing:-.03em; }
+#sheetBody[data-tool=savings] .savings-of { margin:0; color:var(--ps-muted); font:700 14px/1.35 var(--ps-font); overflow-wrap:anywhere; }
+#sheetBody[data-tool=savings] .savings-copy progress { width:100%; height:8px; margin:4px 0 0; border:0; border-radius:999px; overflow:hidden; background:var(--ps-light); appearance:none; }
+#sheetBody[data-tool=savings] .savings-copy progress::-webkit-progress-bar { background:var(--ps-light); border-radius:999px; }
+#sheetBody[data-tool=savings] .savings-copy progress::-webkit-progress-value { background:var(--ps-dark); border-radius:999px; }
+#sheetBody[data-tool=savings] .savings-copy progress::-moz-progress-bar { background:var(--ps-dark); border-radius:999px; }
+#sheetBody[data-tool=savings] .savings-done { margin:2px 0 0; color:var(--ps-ink); font:800 13px/1.3 var(--ps-font); }
+/* Fields: soft pills with the label tucked above. */
+#sheetBody[data-tool=savings] .savings-jar .roomtool-field { display:grid; gap:6px; margin:0; color:var(--ps-muted); font:800 11px/1 var(--ps-font); letter-spacing:.08em; text-transform:uppercase; }
+#sheetBody[data-tool=savings] .savings-jar .roomtool-field input { min-height:50px; padding:0 18px; border:0; border-radius:999px; background:var(--ps-surface); color:var(--ps-ink); font:700 17px/1 var(--ps-font); letter-spacing:0; text-transform:none; box-shadow:none; }
+#sheetBody[data-tool=savings] .savings-jar .roomtool-field input::placeholder { color:var(--ps-muted); opacity:.75; }
+#sheetBody[data-tool=savings] .savings-ask { margin:4px 0 0; color:var(--ps-ink); font:800 22px/1.25 var(--ps-font); letter-spacing:-.02em; }
+#sheetBody[data-tool=savings] .savings-goal,#sheetBody[data-tool=savings] .savings-deposit { display:grid; gap:12px; }
+#sheetBody[data-tool=savings] details.savings-goal > summary { min-height:40px; color:var(--ps-muted); font:800 14px/40px var(--ps-font); cursor:pointer; }
+#sheetBody[data-tool=savings] :is(.savings-save,.savings-log) { min-height:52px; margin:0; border:0; border-radius:999px; background:var(--ps-dark); color:var(--ps-on-dark); box-shadow:none; font:800 16px/1 var(--ps-font); }
+#sheetBody[data-tool=savings] .savings-chips { display:flex; gap:8px; margin-top:-4px; }
+#sheetBody[data-tool=savings] .savings-chip { flex:1; min-height:40px; margin:0; border:1.5px solid var(--ps-edge); border-radius:999px; background:transparent; color:var(--ps-ink); box-shadow:none; font:800 14px/1 var(--ps-font); }
+/* History: a coin, the amount, the note. */
+#sheetBody[data-tool=savings] .savings-history { display:grid; gap:8px; }
+#sheetBody[data-tool=savings] .savings-history-title { margin:6px 2px 2px; color:var(--ps-muted); font:800 12px/1 var(--ps-font); letter-spacing:.09em; text-transform:uppercase; }
+#sheetBody[data-tool=savings] .savings-row.roomtool-card { display:flex; align-items:center; gap:12px; margin:0; padding:10px 12px; border:0; border-radius:20px; background:var(--ps-light); }
+#sheetBody[data-tool=savings] .savings-row-coin { flex:none; width:30px; height:30px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffe39a,#f2c45a 55%,#c9962e); box-shadow:inset 0 0 0 2px #c9962e66; }
+#sheetBody[data-tool=savings] .savings-row-info { flex:1; min-width:0; }
+#sheetBody[data-tool=savings] .savings-row-amount { margin:0; color:var(--ps-ink); font:800 16px/1.2 var(--ps-font); }
+#sheetBody[data-tool=savings] .savings-row-note { margin:2px 0 0; color:var(--ps-muted); font:600 12.5px/1.3 var(--ps-font); overflow-wrap:anywhere; }
+#sheetBody[data-tool=savings] .savings-row .chipbtn { min-height:36px; margin:0; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--ps-muted); box-shadow:none; font:700 13px/1 var(--ps-font); }
+@media (max-width:360px) { #sheetBody[data-tool=savings] .savings-hero { gap:12px; padding:16px; } #sheetBody[data-tool=savings] .savings-art svg { width:96px; height:112px; } }
+#sheetBody[data-tool=savings] :is(.savings-save,.savings-log,.savings-chip) { display:flex; align-items:center; justify-content:center; text-align:center; }
