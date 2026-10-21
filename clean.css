@@ -153,3 +153,14 @@
 #sheetBody:has(.future-mail) .future-mail-heading .future-mail-badge { background:var(--fm-dark); color:var(--fm-on-dark); }
 #sheetBody:has(.future-mail) .future-mail .future-mail-subject .postcard-stamp { background:var(--fm-surface); }
 #sheetBody:has(.future-mail) .future-mail .mailwin-due .compact-date-button,#sheetBody:has(.future-mail) .future-mail .mailwin-due button { color:var(--fm-dark); }
+
+/* ---------- Tea: roomy quick timers, no duplicate label up top ---------- */
+#sheetBody[data-tool=tea] .tea-top .tea-current { display:none; }
+#sheetBody[data-tool=tea] .roomtool .tea-presets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; width:100%; max-width:380px; margin-inline:auto; }
+#sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset { display:grid; place-items:center; align-content:center; gap:3px; min-width:0; min-height:62px; margin:0; padding:8px 6px; border-radius:22px; text-align:center; }
+#sheetBody[data-tool=tea] .roomtool .tea-preset b { font:800 15px/1.15 var(--ps-font); white-space:nowrap; }
+#sheetBody[data-tool=tea] .roomtool .tea-preset small { color:var(--ps-muted); font:700 13px/1 var(--ps-font); }
+#sheetBody[data-tool=tea] .roomtool .tea-preset[aria-pressed=true] small { color:inherit; opacity:.8; }
+@media (max-height:520px) { #sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset { display:flex; justify-content:center; gap:6px; min-height:44px; padding:6px; } }
+@media (max-height:520px) { #sheetBody[data-tool=tea] .roomtool .tea-footnote { display:none; } #sheetBody[data-tool=tea] .roomtool .tea-note { margin:4px 0; } }
+@media (max-height:600px) and (min-width:540px) { #sheetBody[data-tool=tea] .tea-dial { width:min(100%,200px,46dvh); } }

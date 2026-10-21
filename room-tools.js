@@ -302,7 +302,6 @@
       root.classList.add('tea-focus');const heading=root.parentElement.querySelector(':scope > h2'),description=root.previousElementSibling;if(description?.matches('p.muted'))description.remove();
       const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);return n;};
       const top=document.createElement('div');top.className='tea-top';root.appendChild(top);
-      const tune=button(top,'♫ Tune in',()=>{toggleMusic();updateClock();},'tea-pill');tune.dataset.teaMusic='true';
       const preset=text(top,'','tea-pill tea-current');preset.dataset.teaPreset='true';const close=root.parentElement.querySelector(':scope > .sheet-close');if(close)top.appendChild(close);if(heading){heading.classList.add('tea-heading');root.appendChild(heading);}
       const dial=document.createElement('div');dial.className='tea-dial';root.appendChild(dial);
       const ring=svg('svg',{viewBox:'0 0 320 320','aria-hidden':'true'}),radius=110,circumference=2*Math.PI*radius;
@@ -316,7 +315,7 @@
       const select=n=>{teaMinutes=Math.max(1,Math.min(10,Math.round(n)));updateClock();};slider.oninput=()=>select(Number(slider.value));
       let pointer=null;const point=e=>{const b=dial.getBoundingClientRect();select(dialMinutes(e.clientX-b.left-b.width/2,e.clientY-b.top-b.height/2));};
       dial.onpointerdown=e=>{if(slider.disabled||e.button!==0)return;e.preventDefault();pointer=e.pointerId;slider.focus({preventScroll:true});dial.setPointerCapture(pointer);point(e);};dial.onpointermove=e=>{if(e.pointerId===pointer)point(e);};dial.onpointerup=dial.onpointercancel=()=>{pointer=null;};
-      const presets=document.createElement('div');presets.className='tea-presets';root.appendChild(presets);for(const p of TEA_PRESETS){const b=button(presets,`${p.name} · ${p.minutes} min`,()=>select(p.minutes),'tea-pill');b.dataset.teaMinutes=p.minutes;}
+      const presets=document.createElement('div');presets.className='tea-presets';root.appendChild(presets);for(const p of TEA_PRESETS){const b=button(presets,'',()=>select(p.minutes),'tea-pill tea-preset');b.dataset.teaMinutes=p.minutes;b.setAttribute('aria-label',`${p.name} · ${p.minutes} min`);const n=document.createElement('b'),m=document.createElement('small');n.textContent=p.name;m.textContent=`${p.minutes} min`;b.append(n,m);}
       const note=text(root,'','tea-note');note.dataset.teaNote='true';
       const actions=document.createElement('div');actions.className='tea-actions';root.appendChild(actions);
       const start=button(actions,'',()=>{const t=model.tea;if(t?.status==='brewing')model.cancelTea();else if(t?.status==='ready'){model.enjoyTea();sound.sip();}else{model.brew(teaMinutes);onBrew(anchor);}updateClock();},'tea-start');start.dataset.teaAction='true';
@@ -334,7 +333,7 @@
       active.querySelectorAll('[data-tea-minutes]').forEach(b=>{b.disabled=locked;b.setAttribute('aria-pressed',String(Number(b.dataset.teaMinutes)===d.minutes));});
       active.querySelectorAll('.tea-minute').forEach(n=>n.classList.toggle('selected',Number(n.dataset.minute)===d.minutes));
       const action=active.querySelector('[data-tea-action]');action.setAttribute('aria-label',d.label);action.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">'+(running?'<rect x="6" y="6" width="12" height="12" rx="2"/>':d.state==='ready'?'<path d="M5 11h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM16 12h2a2 2 0 0 1 0 4h-2M8 4v3M12 4v3"/>':'<path d="M7 4l13 8-13 8z"/>')+'</svg><span>'+d.label+'</span>';
-      active.querySelector('[data-tea-note]').textContent=d.note;const tune=active.querySelector('[data-tea-music]');tune.setAttribute('aria-pressed',String(music()));
+      active.querySelector('[data-tea-note]').textContent=d.note;
       const mascot=active.querySelector('.tea-mascot'),image=mascot.querySelector('img'),key=portraitKey()+':'+d.mascot;mascot.dataset.state=d.mascot;
       if(mascot.dataset.key!==key){mascot.dataset.key=key;const src=portrait(d.mascot);image.hidden=!src;if(src)image.src=src;image.alt=d.mascot==='happy'?'Your little roommate is happy the tea is ready':d.mascot==='watching'?'Your little roommate watches the tea steep':'Your little roommate keeps you company';}
     }
