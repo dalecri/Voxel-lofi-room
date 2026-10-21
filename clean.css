@@ -437,3 +437,53 @@ body.reduce-motion .radio-library.is-playing .radio-vinyl,body.reduce-motion .ra
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock button.mailwin-send { flex:1 1 auto; min-width:140px; padding:0 22px; white-space:nowrap; gap:10px; }
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock button.mailwin-send span { white-space:nowrap; }
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock .mailwin-actions { flex:1 1 260px; min-width:0; }
+
+/* ---------- Rooms: your home as a little house ---------- */
+.rooms-views .rooms-house { --roof:#c8674f; --roof-dark:#a9533f; --wall:#f3e4d2; --wall-edge:#e2cdb4; --frame:#b98458; --grass:#9cc58c; --grass-dark:#7fae70; position:relative; margin:30px 0 8px; }
+.rooms-views[data-phase=evening] .rooms-house,.rooms-views[data-phase=night] .rooms-house { --roof:#6a4f8f; --roof-dark:#55407a; --wall:#3c3a5c; --wall-edge:#4b4970; --frame:#8f7aa8; --grass:#4f7a5c; --grass-dark:#416a4d; }
+/* Roof with shingles, an attic window and a chimney. */
+.rooms-views .rooms-roof { position:relative; height:74px; margin:0; background:repeating-linear-gradient(0deg,var(--roof) 0 13px,var(--roof-dark) 13px 15px); clip-path:polygon(50% 0,100% 100%,0 100%); border-radius:4px; }
+.rooms-views .rooms-roof-window { position:absolute; left:50%; bottom:14px; width:24px; height:24px; border-radius:50%; background:radial-gradient(circle,#ffe7a6 0 55%,var(--frame) 56%); transform:translateX(-50%); }
+.rooms-views[data-phase=evening] .rooms-roof-window,.rooms-views[data-phase=night] .rooms-roof-window { box-shadow:0 0 16px #ffd36f; }
+.rooms-views .rooms-chimney { position:absolute; z-index:0; right:23%; top:-20px; width:24px; height:44px; border-radius:3px 3px 0 0; background:repeating-linear-gradient(0deg,#9a5a43 0 7px,#844b37 7px 8px); }
+.rooms-views .rooms-roof { overflow:visible; }
+.rooms-views .rooms-chimney i { position:absolute; left:2px; top:-14px; width:16px; height:16px; border-radius:50%; background:#ffffffb0; animation:rooms-smoke 3.6s ease-out infinite; opacity:0; }
+.rooms-views .rooms-chimney i:nth-child(2) { animation-delay:1.2s; } .rooms-views .rooms-chimney i:nth-child(3) { animation-delay:2.4s; }
+@keyframes rooms-smoke { 0% { transform:translate(0,0) scale(.5); opacity:0; } 20% { opacity:.8; } 100% { transform:translate(18px,-46px) scale(1.6); opacity:0; } }
+/* Walls: the floors stack inside. */
+.rooms-views .rooms-house .rooms-grid { display:grid; grid-template-columns:1fr; gap:10px; margin:0; padding:12px; border-left:6px solid var(--wall-edge); border-right:6px solid var(--wall-edge); background:var(--wall); }
+@media (min-width:600px) { .rooms-views .rooms-house .rooms-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.rooms-views .rooms-house .rooms-card { position:relative; margin:0; border:0; border-radius:18px; background:var(--panel-solid); box-shadow:0 6px 16px -12px #0006; overflow:visible; }
+.rooms-views .rooms-house .rooms-card.here { box-shadow:0 0 0 2.5px var(--accent),0 10px 22px -14px var(--accent); }
+.rooms-views .rooms-house .rooms-visit { display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:14px; width:100%; margin:0; padding:10px; border:0; border-radius:18px; background:transparent; color:var(--ink); text-align:left; box-shadow:none; }
+/* Each room's preview sits in a wooden window frame. */
+.rooms-views .rooms-house .rooms-art { position:relative; display:grid; place-items:center; width:112px; aspect-ratio:1; margin:0; overflow:hidden; border:5px solid var(--frame); border-radius:12px; background:linear-gradient(#cfe6f2,#f3ead9); }
+.rooms-views[data-phase=evening] .rooms-house .rooms-art,.rooms-views[data-phase=night] .rooms-house .rooms-art { background:linear-gradient(#2b2d56,#4a3f6e); box-shadow:0 0 18px -2px #ffd36f99; }
+.rooms-views .rooms-house .rooms-art::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent calc(50% - 1.5px),var(--frame) calc(50% - 1.5px) calc(50% + 1.5px),transparent calc(50% + 1.5px)),linear-gradient(transparent calc(50% - 1.5px),var(--frame) calc(50% - 1.5px) calc(50% + 1.5px),transparent calc(50% + 1.5px)); opacity:.55; pointer-events:none; }
+.rooms-views .rooms-house .rooms-art img { width:100%; height:100%; object-fit:cover; }
+.rooms-views .rooms-house .rooms-preview-hint { padding:6px; color:var(--ink-dim); text-align:center; font:700 10.5px/1.3 var(--font); }
+.rooms-views .rooms-house .rooms-info { display:grid; gap:4px; min-width:0; padding:0 40px 0 0; }
+.rooms-views .rooms-house .rooms-floor { color:var(--ink-dim); font:800 10.5px/1 var(--font); letter-spacing:.1em; text-transform:uppercase; }
+.rooms-views .rooms-house .rooms-name { color:var(--ink); font:600 21px/1.15 Fredoka,var(--font); overflow-wrap:anywhere; }
+.rooms-views .rooms-house .rooms-description { color:var(--ink-dim); font:600 12.5px/1.3 var(--font); }
+.rooms-views .rooms-house .rooms-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.rooms-views .rooms-house .rooms-meta span { padding:4px 9px; border-radius:999px; background:var(--chip); color:var(--ink); font:800 11px/1 var(--font); }
+.rooms-views .rooms-house .rooms-meta .rooms-here { background:var(--accent); color:#fff; }
+.rooms-views .rooms-house .rooms-bedroom { position:absolute; top:6px; right:6px; width:44px; height:44px; min-width:44px; min-height:44px; padding:0; display:grid; place-items:center; margin:0; border-radius:50%; background:var(--chip); }
+.rooms-views .rooms-house .rooms-card > :is(.rooms-manage,.rooms-delete) { margin:0 10px 10px; }
+/* The next floor, waiting under the roof. */
+.rooms-views .rooms-house .rooms-new { display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:14px; min-height:0; margin:0; padding:10px; border:2px dashed color-mix(in srgb,var(--ink) 22%,transparent); border-radius:18px; background:color-mix(in srgb,var(--panel-solid) 55%,transparent); color:var(--ink); text-align:left; box-shadow:none; }
+.rooms-views .rooms-house .rooms-new-window { display:grid; place-items:center; width:112px; aspect-ratio:1; border:5px dashed color-mix(in srgb,var(--frame) 70%,transparent); border-radius:12px; color:var(--accent); font:400 40px/1 var(--font); }
+.rooms-views .rooms-house .rooms-new-copy { display:grid; gap:4px; }
+.rooms-views .rooms-house .rooms-new-copy b { font:600 20px/1.15 Fredoka,var(--font); }
+.rooms-views .rooms-house .rooms-new-copy small { color:var(--ink-dim); font:600 12.5px/1.3 var(--font); }
+/* Garden strip with a front door and two bushes. */
+.rooms-views .rooms-ground { position:relative; height:40px; margin:0; border-radius:0 0 22px 22px; background:linear-gradient(var(--grass) 0 60%,var(--grass-dark) 60%); }
+.rooms-views .rooms-door { position:absolute; left:50%; bottom:40%; width:30px; height:38px; border-radius:16px 16px 0 0; background:var(--frame); transform:translateX(-50%); box-shadow:inset -6px 0 0 #0000001a; }
+.rooms-views .rooms-door::after { content:''; position:absolute; right:6px; top:20px; width:4px; height:4px; border-radius:50%; background:#f2c45a; }
+.rooms-views .rooms-bush { position:absolute; bottom:38%; left:16%; width:42px; height:24px; border-radius:22px 22px 6px 6px; background:#6fa15f; }
+.rooms-views .rooms-bush + .rooms-bush { left:auto; right:16%; width:34px; height:20px; }
+@media (prefers-reduced-motion:reduce) { .rooms-views .rooms-chimney i { animation:none; opacity:0; } }
+body.reduce-motion .rooms-views .rooms-chimney i { animation:none; opacity:0; }
+@media (max-width:360px) { .rooms-views .rooms-house :is(.rooms-visit,.rooms-new) { grid-template-columns:88px minmax(0,1fr); } .rooms-views .rooms-house :is(.rooms-art,.rooms-new-window) { width:88px; } }
+.rooms-views .rooms-house .rooms-art.ready::after { opacity:.28; }
