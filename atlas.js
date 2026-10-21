@@ -94,7 +94,7 @@
       }));
     }
     function openBooks(portals=[]){
-      sheet('Your bookshelf','Your ISBNs stay on this device. Covers load from Open Library when you open this shelf.',h=>{
+      sheet('Your bookshelf','',h=>{
         const saved=h('div','atlas-books');
         function draw(){saved.replaceChildren();const ids=model.savedBooks();if(!ids.length)saved.appendChild(el('p','muted','A little space for your next read.'));
           for(const id of ids){const tile=el('div','atlas-book'),title=covers.get(id)?.title || 'ISBN '+id;tile.append(image(coverURL(id),title),el('b','',title),el('small','muted',covers.get(id)?.author || id),button('Remove',()=>{model.removeBook(id);draw();}));saved.appendChild(tile);}}
@@ -108,14 +108,14 @@
       });
     }
     function openDrink(){
-      sheet('Tonight’s drink','A little recipe from TheCocktailDB. If the line is quiet, there is a local citrus spritz.',h=>{
+      sheet('Tonight’s drink','',h=>{
         const host=h('div','atlas-drink'),another=h('button','chipbtn','Another');let token=0;
         async function load(){const request=++token;another.disabled=true;host.replaceChildren(el('p','muted','Looking behind the bar…'));const d=await model.drink();if(request!==token || !host.isConnected)return;const list=el('ul');for(const i of d.ingredients)list.appendChild(el('li','',`${i.measure} ${i.ingredient}`.trim()));host.replaceChildren(el('h3','',d.name),el('p','muted',d.category),image(d.image,d.name),list,el('p','atlas-instructions',d.instructions));another.disabled=false;}
         another.onclick=load;load();
       });
     }
     function paintDetail(){if(!artDetail?.isConnected)return;const art=model.state.art || FALLBACK_ART;artDetail.replaceChildren(image(art.image,art.title),el('h3','',art.title),el('p','',art.artist),el('p','muted',art.date),el('small','muted',art.source));}
-    function openArt(){sheet('Art of the day',model.enabled()?'A little gallery, following the day.':'Enable Live extras in Settings for public-domain art. This room-made landscape is always here.',h=>{artDetail=h('div','atlas-art-detail');paintDetail();});}
+    function openArt(){sheet('Art of the day',model.enabled()?'':'Enable Live extras in Settings for public-domain art. This room-made landscape is always here.',h=>{artDetail=h('div','atlas-art-detail');paintDetail();});}
     async function catFact(id){const token=++factToken,items=room.items;const fact=await model.fact();if(token!==factToken || items!==room.items || room.get(id)?.t!=='cat')return;factId=id;factUntil=Date.now()+6500;bubble.textContent=fact;bubble.hidden=false;view.activity?.wake();}
     function dispose(entry){entry.mesh.removeFromParent();entry.mesh.geometry.dispose();entry.mesh.material.dispose();entry.texture.dispose();}
     function gallery(){

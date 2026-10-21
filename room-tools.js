@@ -201,7 +201,7 @@
       env.setAttribute('aria-label',`Your envelopes, ${waiting} unread`);env.innerHTML=svg('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>')+`<span class="future-mail-badge" aria-hidden="true">${waiting>9?'9+':waiting}</span>`;env.onclick=onEnvelopes;closeButton.before(env);
     }
     function mailboxEnvelopes(){
-      model.poll(false);shell('Your envelopes','Letters stay sealed until their delivery date.',root=>{
+      model.poll(false);shell('Your envelopes','',root=>{
         button(root,'Write a letter',mailbox);
         if(!model.state.mail.length)text(root,'No envelopes yet. A little room for a note to later.','muted');
         for(const l of model.state.mail){
@@ -235,7 +235,7 @@
         title.oninput=()=>{draft.title=title.value;persist();};pages.forEach(({input},i)=>input.oninput=()=>{draft.pages[page+i]=input.value;persist();});paint();
       });
     }
-    function groceries(){shell('On the fridge door','New groceries also go to Housekeeping when Google is connected.',root=>{
+    function groceries(){shell('On the fridge door','',root=>{
       const notebook=document.createElement('section');notebook.className='grocery-notebook';notebook.setAttribute('aria-label','Grocery notebook');root.appendChild(notebook);
       const title=document.createElement('h3');title.textContent='Groceries';notebook.appendChild(title);
       const items=document.createElement('div');items.className='grocery-items';notebook.appendChild(items);
@@ -261,7 +261,7 @@
       form.onsubmit=e=>{e.preventDefault();run(add);};button(form,'Add to list',add,'grocery-add-button');
       button(root,'Clear checked items',()=>{model.clearGroceries();groceries();});if(room().get(anchor)?.t==='minifridge')button(root,'Photo magnets',()=>onPhotos(anchor));
     });}
-    function tally(){shell('Pushup tally','One rep at a time. Just yours, on this device.',root=>{
+    function tally(){shell('Pushup tally','',root=>{
       root.classList.add('pushup-tally');text(root,'Creatine 5g · 50 pushups a day','muted small tally-habit');
       const tap=button(root,'',()=>{model.countRep(1);updateTally();try{sound.click(true);}catch(e){/* optional mechanical sound */}},'tally-clicker');tap.setAttribute('aria-label','Add one pushup');
       const count=document.createElement('output');count.className='tally-count';count.setAttribute('aria-live','polite');count.setAttribute('aria-atomic','true');tap.append(count);const plus=document.createElement('span');plus.className='tally-plus';plus.textContent='+1';tap.appendChild(plus);
@@ -269,7 +269,7 @@
       const undo=button(root,'−1 · Undo',()=>{model.countRep(-1);updateTally();},'chipbtn tally-undo');undo.setAttribute('aria-label','Undo one pushup');text(root,'','tally-note muted');updateTally();
     });}
     function updateTally(){if(!active?.classList.contains('pushup-tally'))return;const data=model.tally;active.querySelector('.tally-count').textContent=String(data.count);active.querySelector('.tally-progress').textContent=`${data.count} / ${TALLY_GOAL}`;active.querySelector('.tally-bar').value=Math.min(TALLY_GOAL,data.count);active.querySelector('.tally-undo').disabled=data.count===0;active.querySelector('.tally-note').textContent=data.count>=TALLY_GOAL?'Daily 50 reached. Nicely done.':'Every rep belongs here.';}
-    function ideas(){shell('The idea jar','Drop in a thought. Shake for a spark. All yours, on this device.',root=>{
+    function ideas(){shell('The idea jar','',root=>{
       root.classList.add('idea-jar');let frontId=null,reason='latest';
       const count=document.createElement('small');count.className='idea-count';root.parentElement.querySelector(':scope > h2')?.appendChild(count);
       const stack=document.createElement('div');stack.className='idea-stack';root.appendChild(stack);
@@ -295,7 +295,7 @@
       }
       draw();
     });}
-    function tea(){model.poll(false);const saved=model.tea;if(saved?.minutes>=1&&saved.minutes<=10)teaMinutes=saved.minutes;shell('Tea','A quiet real-time steep. You can close this sheet and leave the room.',root=>{
+    function tea(){model.poll(false);const saved=model.tea;if(saved?.minutes>=1&&saved.minutes<=10)teaMinutes=saved.minutes;shell('Tea','',root=>{
       root.classList.add('tea-focus');const heading=root.parentElement.querySelector(':scope > h2'),description=root.previousElementSibling;if(description?.matches('p.muted'))description.remove();
       const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);return n;};
       const top=document.createElement('div');top.className='tea-top';root.appendChild(top);
@@ -335,7 +335,7 @@
       const mascot=active.querySelector('.tea-mascot'),image=mascot.querySelector('img'),key=portraitKey()+':'+d.mascot;mascot.dataset.state=d.mascot;
       if(mascot.dataset.key!==key){mascot.dataset.key=key;const src=portrait(d.mascot);image.hidden=!src;if(src)image.src=src;image.alt=d.mascot==='happy'?'Your little roommate is happy the tea is ready':d.mascot==='watching'?'Your little roommate watches the tea steep':'Your little roommate keeps you company';}
     }
-    function savings(){shell('A little savings jar','A private record of what you have set aside.',root=>{
+    function savings(){shell('A little savings jar','',root=>{
       const data=model.state,goal=field(root,'Goal name','text',data.goal?.title||''),target=field(root,'Target amount','text',data.goal?amount(data.goal.target):'');target.inputMode='decimal';
       button(root,'Save goal',()=>{model.goal(goal.value,target.value);savings();});
       if(!data.goal)return;const total=model.total();text(root,`${amount(total)} of ${amount(data.goal.target)} · ${data.goal.title}`,'roomtool-title');
@@ -345,7 +345,7 @@
       for(const d of data.deposits){const row=document.createElement('div');row.className='roomtool-card';text(row,`${amount(d.cents)} · ${d.date}${d.note?' · '+d.note:''}`);removeButton(row,()=>{model.remove('deposits',d.id);savings();});root.appendChild(row);}
     });}
     function flushStroke(){model.pixels.end();}
-    function sketch(){shell('Pixel maker','Draw a little pixel picture. Kept on this device, outside room shares.',root=>{
+    function sketch(){shell('Pixel maker','',root=>{
       const ui=Pixel.createView({model:model.pixels,host:root,notice:message=>{status.textContent=message;},hang:hangPixel,reduced:()=>renderer().reducedMotion});
       resize=new ResizeObserver(()=>ui.resize());resize.observe(ui.canvas);canvas=ui.canvas;
     });}

@@ -20,9 +20,9 @@ with sync_playwright() as p:
   for(const [t,x,z] of [['letterbox',1,1],['minifridge',3,1],['ideajar',5,1],['kettle',7,1],['savingsjar',1,4],['sketchbook',4,4]])a.room.add(a.room.make(t,{x,z}));a.changed();a.roomToolsUI.frame(1);window.__decor=JSON.stringify(a.room.serialize());
   window.tapTool=t=>a.interact(a.room.items.find(i=>i.t===t).id);
  }''')
- # The typewriter's Send to future snapshots its letter and hides it until its local delivery date.
+ # The Notetaker's Send to future you snapshots its letter and hides it until its local delivery date.
  page.evaluate('''() => {__lr.letters.model.add('Tools');__lr.letters.model.update({letterhead:'PRIVATE_LETTERHEAD',body:'<b>PRIVATE_FUTURE_LETTER</b> with a little <i>hope</i>.'});__lr.letters.open()}''')
- page.locator('#letterSend').click();page.locator('#sheet.open .mailwin').wait_for();assert page.get_by_role('button',name='Use my current typewriter letter',exact=True).count()==0;page.locator('#sheet').get_by_label('Subject',exact=True).fill('<img src="https://example.com/PRIVATE_TITLE_LEAK" onerror="window.__toolUnsafe=true"> PRIVATE_ENVELOPE');page.locator('#sheet').get_by_label('Deliver on',exact=True).fill('2026-10-16')
+ page.locator('#noteMore').click();page.locator('#letterSend').click();page.locator('#sheet.open .mailwin').wait_for();assert page.get_by_role('button',name='Use my current typewriter letter',exact=True).count()==0;page.locator('#sheet').get_by_label('Subject',exact=True).fill('<img src="https://example.com/PRIVATE_TITLE_LEAK" onerror="window.__toolUnsafe=true"> PRIVATE_ENVELOPE');page.locator('#sheet').get_by_label('Deliver on',exact=True).fill('2026-10-16')
  page.get_by_role('button',name='Send',exact=True).click();assert page.get_by_role('button',name='Read letter',exact=True).count()==0
  assert 'Sealed until 2026-10-16' in page.locator('#sheetBody').inner_text();assert 'PRIVATE_FUTURE_LETTER' not in page.locator('#sheetBody').inner_text()
  page.evaluate('__lr.letters.model.update({letterhead:"Changed",body:"Changed after sealing"})')

@@ -70,7 +70,7 @@
   function createView({model,CAT,widgets,sheet,letters,room,renderer,hidden,saveScene,openScene,encodeScene,placePortal,notice,onLaunch=()=>{},close=()=>{},localDestinations=[]}) {
     const safe=fn=>async()=>{try{await fn();}catch(e){notice(e.message || 'Could not open this file.');}};
     function launch(p){onLaunch(p);window.open(p.url,'_blank','noopener,noreferrer');}
-    function launcher(){sheet('App launcher','Your destinations, together. Custom links stay on this device.',h=>{
+    function launcher(){sheet('App launcher','',h=>{
       const search=h('input','dashboard-search');search.type='search';search.placeholder='Find an app';search.setAttribute('aria-label','Find an app');
       const grid=h('div','launcher-grid'),empty=h('p','muted');
       function draw(){grid.replaceChildren();const all=destinations(CAT,widgets,model.custom).concat(typeof localDestinations==='function'?localDestinations():localDestinations),q=search.value.toLocaleLowerCase(),rows=all.filter(p=>p.label.toLocaleLowerCase().includes(q));empty.textContent=rows.length?'':'No matching destinations.';
@@ -78,13 +78,13 @@
         const add=button(grid,'',addPortal,'launcher-tile');const icon=element('span','launcher-icon','＋');icon.setAttribute('aria-hidden','true');add.append(icon,element('b','','Add your own'));
       }search.oninput=draw;draw();
     });}
-    function addPortal(){sheet('Add your own','A name and a link. Saved privately on this device.',h=>{
+    function addPortal(){sheet('Add your own','',h=>{
       const form=h('form','dashboard-form'),label=element('label','','Name'),name=element('input'),ul=element('label','','URL'),input=element('input'),status=element('p','muted');name.required=true;name.maxLength=80;input.required=true;input.type='url';input.placeholder='https://…';label.appendChild(name);ul.appendChild(input);form.append(label,ul,status);
       const b=button(form,'Add destination',()=>{});b.type='submit';form.onsubmit=e=>{e.preventDefault();try{const p=model.addPortal(name.value,input.value);sheet('Destination added','Find it on the phone whenever you like.',h=>{h('p').textContent=`${p.label} is ready. Place a portal in your room for a direct shortcut.`;const row=h('div','rowbtns');button(row,'Place a portal',()=>placePortal(p));button(row,'Back to launcher',launcher);});}catch(e){status.textContent=e.message;}};
     });}
     function portal(it,key){const p=model.bound(key);if(p){launch(p);return;}sheet('Connect this portal','Choose one of your private destinations. Add links using the phone.',h=>{const list=h('div','widget-news');model.custom.forEach(p=>button(list,p.label,()=>{model.bind(key,p.id);close();launch(p);}));if(!model.custom.length)button(list,'Add a destination',addPortal);});}
     let fileTab='Letters';
-    function files(tab=fileTab){fileTab=FILE_TABS.includes(tab)?tab:'Letters';letters.flush();sheet('Files','Letters, scenes and photos. Kept on this device, outside room shares.',h=>{
+    function files(tab=fileTab){fileTab=FILE_TABS.includes(tab)?tab:'Letters';letters.flush();sheet('Files','',h=>{
       const host=h('div'),panels=tabs(host,FILE_TABS,fileTab,n=>{fileTab=n;},'files');
       FILE_TABS.forEach(t=>{const panel=panels[t];
         if(t==='Scenes')button(panel,'Save current room as a scene',safe(async()=>{model.add('Scenes',{title:room().name,decor:saveScene()});files('Scenes');}));

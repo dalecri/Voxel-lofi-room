@@ -24,3 +24,6 @@
 .google-task-day .google-task-list { margin:0; }
 .google-task-day .google-task-row:first-child { border-top:0; }
 .google-task-empty { margin:12px 0 0; line-height:1.5; }
+/* Month arrows sit right beside the month title. */
+.calendar-nav{justify-content:center;gap:6px}
+.calendar-nav h3{min-width:0;margin:0 4px;text-align:center}
