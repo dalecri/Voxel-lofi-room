@@ -41,6 +41,23 @@
       m.part('growth3',[0,0,0]);m.box(4,7,4,5,9,5,0x7f9d62).box(3,9,3,6,11,6,LR.shade(petal,.85));
       m.part('growth4',[0,0,0]);m.box(1,10,3,7,11,5,petal).box(3,10,1,5,11,7,petal).box(3,11,3,5,12,5,0xf4db93);m.main();
     }});
+    // Habit Pots: a terracotta pot whose plant follows its habit's derived stage.
+    // growth1-4 are the lively plant; rest1-4 the same shapes muted, for a plant
+    // that is resting. An unbound pot (a shared room) shows a stage-2 plant.
+    def('habitpot',{name:'Habit pot',kind:'small',group:'plants',size:[1,1],tap:'habit',focusGrowth:true,
+      fx:{excite:true,say:['A happy little plant.','It leans toward the light.']},
+      vars:[[0x5f9a4e,0xcfe3a0],[0x6e9a58,0xef8fb1],[0x8aa178,0xd6cdf0],[0x4f9c92,0xf6c56a]],build(m,[leaf,flower]){
+      const pot=0xc0704a,soil=0x5a4030;
+      m.box(2,0,2,6,4,6,pot).box(1,4,1,7,5,7,shade(pot,1.12)).box(2,4,2,6,5,6,soil).set(3,1,2,shade(pot,.9));
+      const plant=(prefix,green,bloom)=>{const light=shade(green,1.18),dark=shade(green,.82);
+        m.part(prefix+'1',[0,0,0]);m.box(4,5,4,5,7,5,dark).set(3,6,4,light).set(5,7,4,light);
+        m.part(prefix+'2',[0,0,0]);m.box(4,7,4,5,9,5,dark).box(2,7,3,4,8,5,green).box(5,8,4,7,9,6,green).set(3,9,4,light);
+        m.part(prefix+'3',[0,0,0]);m.box(2,9,2,6,11,6,green).box(3,11,3,5,12,5,light).box(1,8,3,2,10,5,dark).box(6,9,3,7,11,5,dark);
+        m.part(prefix+'4',[0,0,0]);m.set(2,11,2,bloom).set(5,12,3,bloom).set(3,12,5,bloom).set(6,11,5,bloom).set(4,13,4,shade(bloom,1.1));};
+      plant('growth',leaf,flower);
+      const mute=c=>{const r=c>>16&255,g=c>>8&255,b=c&255,y=(r+g+b)/3;const mix=v=>Math.round(v*.45+y*.55*.92);return (mix(r)<<16)|(mix(g)<<8)|mix(b);};
+      plant('rest',mute(leaf),mute(flower));m.main();
+    }});
     // Reuse the existing cherry tree art. Its care is the ordinary watered-day
     // plant lifecycle; only the focus bloom above has a timed growth override.
     def('focuscherry',{name:'Focus cherry sapling',kind:'floor',group:'plants',size:[1,1],tap:'water',vars:[[0xf6a8c4],[0xfad0e0],[0xe8789a]],build(m,vars,state){LR.CAT.sakura.build(m,vars,state);}});
