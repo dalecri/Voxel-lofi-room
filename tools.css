@@ -2,7 +2,7 @@
    Plus Jakarta Sans with its own palette, matching the typewriter, Daily Brief,
    future letters and mood tracker. Same palette day and night. */
 #sheetBody[data-tool="captions"] { --ps-bg:#ffd0bd; --ps-surface:#edc4b3; --ps-light:#f7e5de; --ps-edge:#d7ae9d; --ps-ink:#33190f; --ps-muted:#7d5240; --ps-dark:#391e13; --ps-on-dark:#f2d5ca; }
-#sheetBody[data-tool="groceries"] { --ps-bg:#c4efcf; --ps-surface:#aee9bd; --ps-light:#d8f4df; --ps-edge:#97d5a7; --ps-ink:#0f3318; --ps-muted:#407d50; --ps-dark:#13391d; --ps-on-dark:#c7f0d1; }
+#sheetBody[data-tool="groceries"] { --ps-bg:#eff0e4; --ps-surface:#e2e6d3; --ps-light:#f7f8ef; --ps-edge:#cfd6bd; --ps-ink:#2b3023; --ps-muted:#7c846f; --ps-dark:#5d7250; --ps-on-dark:#f7f8ef; }
 #sheetBody[data-tool="ideas"] { --ps-bg:#ffdcaa; --ps-surface:#eacda3; --ps-light:#f4e5cf; --ps-edge:#d2b790; --ps-ink:#33240f; --ps-muted:#7d6440; --ps-dark:#392a13; --ps-on-dark:#f1dfc5; }
 #sheetBody[data-tool="tea"] { --ps-bg:#dcebbd; --ps-surface:#d1e4a7; --ps-light:#e6f1d1; --ps-edge:#bcd18f; --ps-ink:#27330f; --ps-muted:#697d40; --ps-dark:#2d3913; --ps-on-dark:#e2eec8; }
 #sheetBody[data-tool="tally"] { --ps-bg:#ffc6c6; --ps-surface:#efbaba; --ps-light:#f9e5e5; --ps-edge:#daa4a4; --ps-ink:#330f0f; --ps-muted:#7d4040; --ps-dark:#391313; --ps-on-dark:#f4d1d1; }
