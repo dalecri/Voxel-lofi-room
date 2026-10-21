@@ -144,8 +144,8 @@
 #sheetBody .compact-date-target:has(input:focus-visible) { outline:2px solid var(--accent); outline-offset:2px; }
 #sheetBody .calendar-date-label { display:flex; align-items:center; gap:12px; }
 /* Letters to future you, lavender edition: a floating card in Plus Jakarta Sans. Same palette day and night. */
-#sheetBody:has(.future-mail) { --fm-bg:#d4bdfb; --fm-surface:#c4aaf6; --fm-card:#bca0ef; --fm-light:#dccafd; --fm-edge:#a98ae6; --fm-ink:#22103d; --fm-muted:#6a4fa3; --fm-dark:#22103c; --fm-on-dark:#d8c4fd; --fm-font:'Plus Jakarta Sans',Nunito,sans-serif;
-  left:0; right:0; bottom:0; max-width:560px; height:min(88dvh,800px); max-height:none; margin:0 auto; padding:22px 22px calc(var(--sab,0px) + 20px); border-radius:36px 36px 0 0; background:var(--fm-bg); color:var(--fm-ink); font-family:var(--fm-font); }
+#sheetBody:has(.future-mail) { --fm-bg:#f7f2eb; --fm-surface:#efe6da; --fm-card:#efe6da; --fm-light:#fffaf3; --fm-edge:#e6dccf; --fm-ink:#211d1a; --fm-muted:#9a8f85; --fm-dark:#d2a65a; --fm-on-dark:#ffffff; --fm-font:'Plus Jakarta Sans',Nunito,sans-serif;
+  left:0; right:0; bottom:0; max-width:560px; height:min(88dvh,800px); max-height:none; margin:0 auto; padding:22px 22px calc(var(--sab,0px) + 20px); border-radius:40px 40px 0 0; background:var(--fm-bg); color:var(--fm-ink); font-family:var(--fm-font); }
 #sheetBody:has(.future-mail) > .grab { display:none; }
 #sheetBody .future-mail-heading { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:10px; margin:0 0 14px; }
 #sheetBody:has(.future-mail) .future-mail-heading h2 { grid-column:2; grid-row:1; margin:0; text-align:center; color:var(--fm-ink); font:800 clamp(18px,4.8vw,23px)/48px var(--fm-font); letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

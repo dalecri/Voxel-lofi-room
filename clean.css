@@ -147,3 +147,9 @@
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-meta { flex:none; width:100%; }
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-details { flex:none; }
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-options { left:0; right:auto; width:min(340px,calc(100vw - 40px)); }
+/* Letters to future you wears the Notetaker look: cream card, honey-gold icons. */
+#sheetBody:has(.future-mail) .future-mail-heading :is(.control-back,.future-mail-back,.future-mail-inbox,.sheet-close) { border:0; background:transparent; color:var(--fm-dark); box-shadow:none; }
+#sheetBody:has(.future-mail) .future-mail-heading :is(.control-back,.future-mail-back,.future-mail-inbox,.sheet-close):hover { background:color-mix(in srgb,var(--fm-dark) 12%,transparent); }
+#sheetBody:has(.future-mail) .future-mail-heading .future-mail-badge { background:var(--fm-dark); color:var(--fm-on-dark); }
+#sheetBody:has(.future-mail) .future-mail .future-mail-subject .postcard-stamp { background:var(--fm-surface); }
+#sheetBody:has(.future-mail) .future-mail .mailwin-due .compact-date-button,#sheetBody:has(.future-mail) .future-mail .mailwin-due button { color:var(--fm-dark); }
