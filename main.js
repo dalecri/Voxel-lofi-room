@@ -2703,10 +2703,17 @@ function startLofiRooms() {
     target.appendChild(presetCards(k => { closeSheets(); leaveThen(() => newRoom(k)); }, true));
     target = sections.Sound;
     const settingsNotes=[];
+    // Settings rows: an icon and a short line under each name.
+    const SETTING_INFO={'Music':['🎵','The lofi radio in your room'],'Sound':['🔔','Taps, chimes and little room sounds'],'Vinyl crackle':['💿','Soft hiss and pops under the music'],'Rain':['🌧','Rain on the window'],
+      'Monospace dashboard':['⌨','Typewriter-style text on the dashboard'],'Night glow':['✨','Neon, fairy lights and fire bloom after dark'],'Dream mode':['🌙','After midnight the room drifts moon-blue'],
+      'Cat mischief':['🐈','Cats sometimes knock things over'],'Visitors':['🐾','A neighbour cat drops by'],'Follow the clock':['🕰','Morning, afternoon, evening and night'],
+      'Reduced motion':['🫧','Calmer animations everywhere'],'Calm performance':['🍃','Lighter rendering at 30 fps'],
+      'Live extras':['🖼','Art of the day, aurora watch and holidays'],'Live weather':['⛅','Real weather near you, never your exact spot']};
     const toggle = (label, on, fn) => {
       const parts=label.match(/^(.*?) \((.*)\)$/),name=parts?parts[1]:label;
       if(parts)settingsNotes.push([name,parts[2]]);
-      const r = h('button', 'toggle' + (on ? ' on' : ''), `<span>${name}</span><i aria-hidden="true"></i>`);
+      const info=SETTING_INFO[name]||[],desc=info[1]||(parts?parts[2]:'');
+      const r = h('button', 'toggle' + (on ? ' on' : ''), `${info[0]?`<span class="toggle-icon" aria-hidden="true">${info[0]}</span>`:''}<span class="toggle-copy"><span class="toggle-name">${name}</span>${desc?`<small>${desc}</small>`:''}</span><i aria-hidden="true"></i>`);
       r.type='button';r.setAttribute('aria-label',label);
       if(parts)r.title=parts[2];
       r.setAttribute('role','switch'); r.setAttribute('aria-pressed',String(!!on)); r.setAttribute('aria-checked',String(!!on));
@@ -2766,29 +2773,36 @@ function startLofiRooms() {
     browseToggle.onclick=()=>{const expanded=browseToggle.getAttribute('aria-expanded')!=='true';browse.hidden=!expanded;browseToggle.setAttribute('aria-expanded',String(expanded));add.hidden=true;stationToggle.setAttribute('aria-expanded','false');};
     atlasUI.mountRadio(browse);
     target = sections.Settings;
-    const settingsPanel=target;target=h('div','settings-toggle-grid');target.setAttribute('aria-label','Settings toggles');
+    const settingsPanel=target;
+    // Grouped settings: a small heading, then full-width rows.
+    const group=(title)=>{target=settingsPanel;const sec=h('section','settings-group');sec.setAttribute('aria-label',title);const head=document.createElement('h3');head.className='settings-group-title';head.textContent=title;sec.appendChild(head);const grid=document.createElement('div');grid.className='settings-toggle-grid';grid.setAttribute('aria-label',title+' settings');sec.appendChild(grid);target=grid;return sec;};
+    group('Sound');
     toggle('Music', !!meta.music, () => setControl('music',!meta.music));
     toggle('Sound', Sound.on, () => setControl('sound',!Sound.on));
     toggle('Vinyl crackle (the soft hiss and pops under the music)', meta.crackle !== false, () => { meta.crackle = meta.crackle === false; Sound.setCrackle(meta.crackle); saveMeta(); });
     toggle('Rain', meta.weather==='rain' || meta.weather==='storm', () => setControl('rain',!(meta.weather==='rain' || meta.weather==='storm')));
-    toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
-    settingsNotes.push(['Calm performance','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.']);
-    toggle('Monospace dashboard', meta.dashboardMono===true, () => { meta.dashboardMono=meta.dashboardMono!==true;saveMeta(); });
+    const look=group('Look');
     // Tool colors: each tool's pastel, or one calm light or dark palette for all of them.
     const themeRow=document.createElement('div');themeRow.className='settings-tool-theme';themeRow.setAttribute('role','radiogroup');themeRow.setAttribute('aria-label','Tool colors');
     const themeLabel=document.createElement('span');themeLabel.className='settings-tool-theme-label';themeLabel.textContent='Tool colors';themeRow.appendChild(themeLabel);
     for(const [id,label] of [['pastel','Pastel'],['light','Light'],['dark','Dark']]){const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=label;b.setAttribute('role','radio');b.setAttribute('aria-checked',String((meta.toolTheme||'pastel')===id));b.onclick=()=>{meta.toolTheme=id;saveMeta();applyToolTheme();renderMenu();};themeRow.appendChild(b);}
-    settingsPanel.insertBefore(themeRow,target);
+    look.insertBefore(themeRow,target);
+    toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
+    toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
+    toggle('Monospace dashboard', meta.dashboardMono===true, () => { meta.dashboardMono=meta.dashboardMono!==true;saveMeta(); });
+    group('Room life');
+    toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
+    toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
+    toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
+    group('Comfort');
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
+    toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
+    settingsNotes.push(['Calm performance','Lighter rendering at 30 fps. Antialiasing and GPU preference follow this setting on the next app load.']);
+    group('Online');
     toggle('Live extras', meta.liveExtras === true, () => { atlas.setEnabled(meta.liveExtras !== true); });
     settingsNotes.push(['Live extras','Public-domain art, aurora watch and Canadian holidays. Radio browsing, book searches, recipes and cat facts connect only when tapped.']);
     toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
     settingsNotes.push(['Live weather','Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.']);
-    toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
-    toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
-    toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
-    toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
-    toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
     target=settingsPanel;
     const settingsHelp=h('details','settings-help'),helpTitle=document.createElement('summary');helpTitle.textContent='About these settings';settingsHelp.appendChild(helpTitle);
     for(const [name,description] of settingsNotes){const p=document.createElement('p'),b=document.createElement('b');b.textContent=name+': ';p.append(b,document.createTextNode(description));settingsHelp.appendChild(p);}
