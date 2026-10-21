@@ -87,21 +87,11 @@
     more:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="7.5" cy="12" r=".6" fill="currentColor"/><circle cx="12" cy="12" r=".6" fill="currentColor"/><circle cx="16.5" cy="12" r=".6" fill="currentColor"/></svg>',
     close:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',
     list:'<svg viewBox="0 0 28 24" width="28" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="3"/><path d="m3.6 6 1 1 1.9-2M12 6h13"/><circle cx="5" cy="17" r="3"/><path d="M12 17h13"/></svg>',
-    camera:'<svg viewBox="0 0 28 24" width="30" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5h5l2-3h8l2 3h5v13H3z"/><circle cx="14" cy="13.5" r="4.5"/><path d="M5.5 10h1.5"/></svg>',
-    clip:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7v9a4 4 0 0 1-8 0V6a2.6 2.6 0 0 1 5.2 0v9.5a1.2 1.2 0 0 1-2.4 0V8"/></svg>',
     compose:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13v7H4V4h7"/><path d="m17.5 3.5 3 3L12 15l-4 1 1-4z"/></svg>',
     trash:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>'
   };
   const UNTITLED=new Set(['Untitled note','Untitled letter']);
-  // Shrinks a picked photo so a note stays small enough for on-device storage.
-  function photoData(file,max=960){
-    return new Promise((resolve,reject)=>{
-      const url=URL.createObjectURL(file),img=new Image();
-      img.onload=()=>{const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.naturalWidth*k));c.height=Math.max(1,Math.round(img.naturalHeight*k));c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);resolve(c.toDataURL('image/jpeg',.74));};
-      img.onerror=()=>{URL.revokeObjectURL(url);reject(Error('That photo could not be read.'));};img.src=url;
-    });
-  }
-  // Notetaker: a plain notes app with checklists and photos, in the house's notes look.
+  // Notetaker: a plain notes app with checklists, in the house's notes look.
   function createView({store,sheet,dismiss,sound,roomName,onSaved=()=>{},onWriting=()=>{},beforeOpen=()=>{},onClose=()=>{},sender=()=>'',rememberSender=()=>{},onSendToFuture=()=>{},mailbox={count:()=>0,open:()=>{}}}) {
     const model=create({store,onSaved}),view=document.createElement('section');view.id='lettersView';view.className='notetaker';view.hidden=true;
     view.setAttribute('aria-label','Notetaker');
@@ -110,12 +100,10 @@
       <section id="letterList" class="note-list" hidden aria-label="All notes"><h3 class="note-list-title">All notes</h3><p class="note-list-sub" id="noteCount"></p><div id="letterRows" class="note-rows"></div></section>
       <div class="note-toolbar" role="toolbar" aria-label="Note tools">
         <button type="button" id="noteChecklist" aria-label="Checklist" title="Checklist">${ICON.list}</button>
-        <button type="button" id="noteCamera" aria-label="Take a photo" title="Take a photo">${ICON.camera}</button>
-        <button type="button" id="noteAttach" aria-label="Add a photo" title="Add a photo">${ICON.clip}</button>
         <button type="button" id="letterNew" aria-label="New note" title="New note">${ICON.compose}</button>
       </div>
-      <input type="file" id="notePhoto" accept="image/*" hidden><span id="letterStatus" class="note-status" role="status" aria-live="polite"></span>`;
-    const $=s=>view.querySelector(s),body=$('#letterBody'),titleInput=$('#noteTitle'),scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus'),photoInput=$('#notePhoto');
+      <span id="letterStatus" class="note-status" role="status" aria-live="polite"></span>`;
+    const $=s=>view.querySelector(s),body=$('#letterBody'),titleInput=$('#noteTitle'),scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
     // Header pieces live in the sheet's header row; built once and re-attached on open.
     const allButton=document.createElement('button');allButton.type='button';allButton.id='letterListButton';allButton.className='note-all';
     const exportButton=document.createElement('button');exportButton.type='button';exportButton.id='letterExport';exportButton.className='note-icon';exportButton.setAttribute('aria-label','Save as file');exportButton.title='Save as file';exportButton.innerHTML=ICON.share;
@@ -125,7 +113,7 @@
     const menuItem=(label,id)=>{const b=document.createElement('button');b.type='button';b.id=id;b.setAttribute('role','menuitem');b.textContent=label;moreMenu.appendChild(b);return b;};
     const sendItem=menuItem('Send to future you','letterSend'),deleteItem=menuItem('Delete note','noteDelete');
     moreWrap.append(moreButton,moreMenu);
-    let active=false,timer=null,lastRange=null,lastFocus=null,photoMode='';
+    let active=false,timer=null,lastRange=null,lastFocus=null;
     function message(text) {status.textContent=text;}
     function safe(action) {try{return action();}catch(e){message(e.message || 'Could not save on this device.');return false;}}
     const titleOf=l=>UNTITLED.has(l?.title)?'':(l?.title||'');
@@ -141,7 +129,7 @@
       const l=model.get();
       titleInput.value=titleOf(l);body.innerHTML=sanitizeHTML(l?.body || '');paintEmpty();
       body.contentEditable=l?'true':'false';titleInput.disabled=!l;
-      [exportButton,moreButton,$('#noteChecklist'),$('#noteCamera'),$('#noteAttach')].forEach(b=>b.disabled=!l);
+      [exportButton,moreButton,$('#noteChecklist')].forEach(b=>b.disabled=!l);
       lastRange=null;scroll.scrollTop=0;message(l?'Saved':'Start a new note');
     }
     function remember() {
@@ -163,7 +151,9 @@
     }
     function viewport() {if(active)requestAnimationFrame(keepCaret);}
     function format(command) {if(!model.current)return;restore();document.execCommand('styleWithCSS',false,false);document.execCommand(command,false);remember();schedule();}
-    function insert(text,html=false) {restore();document.execCommand(html?'insertHTML':'insertText',false,text);remember();paintEmpty();schedule();requestAnimationFrame(keepCaret);}
+    function insert(text,html=false) {restore();document.execCommand(html?'insertHTML':'insertText',false,text);
+      // Chrome adds inline font styles when pasting into a list item; the note never keeps them.
+      body.querySelectorAll('[style]').forEach(e=>e.removeAttribute('style'));remember();paintEmpty();schedule();requestAnimationFrame(keepCaret);}
     // The list button turns the current line into a checklist item, or back into a line.
     function checklist(){if(!model.current)return;restore();document.execCommand('insertUnorderedList',false);remember();paintEmpty();schedule();}
     function toggleItem(li){if(li.dataset.checked==='true')delete li.dataset.checked;else li.dataset.checked='true';schedule();}
@@ -200,7 +190,7 @@
           const header=document.createElement('div');header.className='note-heading';header.dataset.controlHeader='true';(title||closeButton).before(header);
           const spacer=document.createElement('span');spacer.className='note-spacer';
           closeButton.id='letterClose';closeButton.classList.add('note-icon');closeButton.innerHTML=ICON.close;closeButton.onclick=()=>close();
-          header.append(allButton,spacer,exportButton,moreWrap,closeButton);
+          header.append(allButton,spacer,closeButton);
         }
       });
       active=true;view.hidden=false;hideList();
@@ -208,16 +198,11 @@
       // Opening does not summon the mobile keyboard until the owner taps the note.
       view.closest('#sheetBody')?.querySelector('#letterClose')?.focus({preventScroll:true});
     }
+    // Share and More live in the bottom toolbar, between the checklist and new-note buttons.
+    $('#letterNew').before(exportButton,moreWrap);
     allButton.onclick=()=>list.hidden?showList():(hideList(),body.focus());
     $('#letterNew').onclick=newNote;
     $('#noteChecklist').onclick=checklist;
-    const pick=mode=>{if(!model.current)return;photoMode=mode;remember();if(mode==='camera')photoInput.setAttribute('capture','environment');else photoInput.removeAttribute('capture');photoInput.value='';photoInput.click();};
-    $('#noteCamera').onclick=()=>pick('camera');$('#noteAttach').onclick=()=>pick('library');
-    photoInput.onchange=async()=>{const file=photoInput.files?.[0];if(!file)return;message('Adding photo…');
-      try{const src=await photoData(file);restore();const li=currentItem();
-        // A photo gets its own line under the list rather than living inside a checklist item.
-        if(li){const list=li.closest('ul'),line=document.createElement('p');line.appendChild(document.createElement('br'));list.after(line);const r=document.createRange();r.setStart(line,0);r.collapse(true);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);lastRange=r.cloneRange();}
-        insert(`<p><img src="${src}" alt="Photo"></p><p><br></p>`,true);}catch(e){message(e.message||'That photo could not be added.');}};
     view.querySelectorAll('.note-toolbar button').forEach(b=>b.addEventListener('pointerdown',e=>{if(b.id!=='letterNew'){remember();e.preventDefault();}}));
     moreButton.onclick=()=>moreMenu.hidden?openMore():closeMore(true);
     moreMenu.addEventListener('keydown',e=>{const items=[sendItem,deleteItem],i=items.indexOf(document.activeElement);

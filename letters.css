@@ -73,3 +73,9 @@
 .note-toolbar button:disabled { opacity:.4; }
 .notetaker.is-listing .note-toolbar button:not(#letterNew) { visibility:hidden; }
 .note-status { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+/* Share and More sit in the toolbar; the More menu opens upward from there. */
+.note-toolbar .note-more-wrap { position:relative; display:grid; }
+.note-toolbar .note-menu { top:auto; bottom:calc(100% + 8px); right:-40px; }
+.note-toolbar .note-menu button { display:block; width:auto; height:auto; min-height:44px; padding:0 14px; color:var(--tw-ink); text-align:left; }
+.note-toolbar .note-menu #noteDelete { color:#b4452f; }
+.notetaker.is-listing .note-toolbar .note-more-wrap { visibility:hidden; }
