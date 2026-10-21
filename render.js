@@ -669,7 +669,7 @@
     for (const name in g) {
       const P = g[name];
       const holder = name === 'main' ? inner : new THREE.Group();
-      if (name !== 'main') { holder.position.set(P.pivot[0] * S, P.pivot[1] * S, P.pivot[2] * S); inner.add(holder); obj.userData.parts[name] = holder; if (name.startsWith('private')) holder.visible = false; }
+      if (name !== 'main') { holder.position.set(P.pivot[0] * S, P.pivot[1] * S, P.pivot[2] * S); inner.add(holder); obj.userData.parts[name] = holder; if (name.startsWith('private')) holder.visible = false; if (/^rest\d$/.test(name)) holder.visible = false; }
       if (P.solid) {
         const m = new THREE.Mesh(P.solid, ghost ? ghost : this.solidMat);
         m.castShadow = !ghost && C.kind !== 'rug' && !C.noShadow; m.receiveShadow = !ghost;   // noShadow: high, thin pieces like ceiling beams
@@ -1459,7 +1459,8 @@
         if (!ud.boing && C.kind !== 'pet') ud.inner.scale.set(1, 1, 1);
       }
       const cv = (this.careVis && this.careVis.get(id));
-      if (C.focusGrowth && cv) for(let stage=1;stage<=4;stage++)if(ud.parts['growth'+stage])ud.parts['growth'+stage].visible=stage<=cv.stage;
+      // Growth parts follow the derived stage; a resting plant shows its muted twin parts instead.
+      if (C.focusGrowth && cv) for(let stage=1;stage<=4;stage++){const rest=!!cv.resting&&!!ud.parts['rest'+stage];if(ud.parts['growth'+stage])ud.parts['growth'+stage].visible=stage<=cv.stage&&!rest;if(ud.parts['rest'+stage])ud.parts['rest'+stage].visible=rest&&stage<=cv.stage;}
       if (cv && cv.s !== undefined) {   // living plants: sprouts are small, forgotten ones droop
         if (!ud.boing) ud.inner.scale.set(cv.s, cv.s * cv.sag, cv.s);
         else ud.inner.scale.multiplyScalar(cv.s);

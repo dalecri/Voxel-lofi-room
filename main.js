@@ -24,6 +24,7 @@ function startLofiRooms() {
   }, onTip:n=>{catJournal.tip(meta.current);remember('tip');journalNews.edition(catJournal.entries);renderJournal();} });
   const rituals = LRRituals.create({ store });
   const focusGarden = LRFocusGarden.create({store,rituals});
+  const habits = LRHabits.create({store});
   let breathCamera = null;
   let companion = null, widgetView = null, frenchUI = null, driftPaper = null;
   const widgets = LRWidgets.create({ store });
@@ -174,7 +175,7 @@ function startLofiRooms() {
   view.fx.activity = view.glowFx.activity = activity;
   view.glowOn = meta.glow !== false;
   // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
-  const care = window.LRCare ? window.LRCare({ growthOverride:it=>focusGarden.growth(meta.current,it.id), room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), brewed:()=>remember('tea'), watered: it => { shop.earn('water', `${meta.current}:${it.id}`);remember('plant'); }, changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
+  const care = window.LRCare ? window.LRCare({ growthOverride:it=>it.t==='habitpot'?habits.growth(meta.current,it.id):focusGarden.growth(meta.current,it.id), room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), brewed:()=>remember('tea'), watered: it => { shop.earn('water', `${meta.current}:${it.id}`);remember('plant'); }, changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
   store.del('lr.mode');   // editing is a temporary session, never a startup preference
   const state = { mode: 'explore', tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
   const undo = [];
@@ -243,7 +244,7 @@ function startLofiRooms() {
       },180);if(taskPortraits.size>=12)taskPortraits.delete(taskPortraits.keys().next().value);taskPortraits.set(key,src);
     }return taskPortraits.get(key);
   }
-  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus,daily:dailyInfo(),streak:store.get('lr.dailyStreak',{}).n||0,letterDraft:!!letters.model.get()?.body,ideaCount:roomTools.homeState.ideas.length}),
+  const todayUI=LRToday.createView({model:todayTasks,habits:{list:()=>habits.list().map(h=>({id:h.id,name:h.name,c:h.c,placed:h.item!==null,checked:habits.checkedToday(h.id)})),full:()=>habits.full,checkIn:id=>habitCheckIn(id),add:()=>habitsUI.openNew(),open:id=>habitsUI.openAlmanac(id)},context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus,daily:dailyInfo(),streak:store.get('lr.dailyStreak',{}).n||0,letterDraft:!!letters.model.get()?.body,ideaCount:roomTools.homeState.ideas.length}),
     saveWidgetOrder:order=>{const previous=meta.dashboardWidgetOrder;try{meta.dashboardWidgetOrder=order;saveMeta();if(JSON.stringify(store.get('lr.meta',{}).dashboardWidgetOrder)!==JSON.stringify(order))throw Error('Could not save this layout on your device.');}catch(e){meta.dashboardWidgetOrder=previous;throw e;}},
     completeMoment:()=>dailyCheck(dailyInfo().D.id),
     openRitual:id=>{closeSheets();if(id==='garden'){const active=rituals.activeFocus.find(f=>f.kind==='garden'&&f.active),bed=room.items.find(i=>i.t==='focusgarden');gardenUI.open(active?.id || bed?.id || null);}else if(id==='letter')letters.open();else if(id==='ideas')launchTool({id:'ideas'});},
@@ -958,7 +959,9 @@ function startLofiRooms() {
     if (C.tap === 'files') { dashboard.files(); return; }
     if (C.tap === 'appportal') { dashboard.portal(it, `${meta.current}:${it.id}`); return; }
     if (C.tap !== 'arcade' && widgetAction(it)) return;   // native games take priority over outbound portals
-    const tap = C.tap;
+    // An unbound habit pot (a shared room) is just a happy plant.
+    const tap = C.tap === 'habit' && !habits.forItem(meta.current, it.id) ? 'fx' : C.tap;
+    if (tap === 'habit') { habitCheckIn(habits.forItem(meta.current, it.id).id); return; }
     const privateTool = LRRoomTools.kind(it,C);
     if (privateTool) {
       if (privateTool === 'groceries') { view.openDoor(id); Sound.fridge(true); setTimeout(() => Sound.fridge(false),2700); }
@@ -1666,6 +1669,7 @@ function startLofiRooms() {
       view.poof(id, [0xf4e6d0, 0xffffff, 0xd8c8b8]);
       const gone = room.remove(id);
       gone.filter(it=>['focusgarden','focusbloom'].includes(it.t)).forEach(it=>focusGarden.detach(meta.current,it.id));
+      gone.filter(it=>it.t==='habitpot').forEach(it=>habits.detach(meta.current,it.id));
       changed(); Sound.poof(); haptic(8);
       if (gone.length > 1) toast(`<span>Put away ${C.name.toLowerCase()} and ${gone.length - 1} thing${gone.length > 2 ? 's' : ''} on it</span>`, 1600);
     } else if (state.tool === 'paint') {
@@ -1714,6 +1718,9 @@ function startLofiRooms() {
       const paperTap=driftPaper.hit(e.clientX,e.clientY);
       const botTap = !paperTap && companion && companion.hit(e.clientX, e.clientY);
       startOrbit(e, !paperTap && !botTap && hit && !hit.behindWall ? hit.id : 0);
+      // Long-press a habit pot (550ms, like the music button) for its almanac.
+      const pot = !paperTap && !botTap && hit && !hit.behindWall && room.get(hit.id), potHabit = pot?.t === 'habitpot' ? habits.forItem(meta.current, pot.id) : null;
+      if (potHabit) { const o = orbit; o.habitTimer = setTimeout(() => { if (orbit === o && !o.moved && pointers.size === 1) { o.tapId = 0; habitsUI.openAlmanac(potHabit.id); } }, 550); }
       if(paperTap)orbit.digest=true;
       if (botTap) orbit.companion = true;
       return;
@@ -1774,6 +1781,7 @@ function startLofiRooms() {
     }
   }
   const up = e => {
+    if (orbit?.habitTimer) { clearTimeout(orbit.habitTimer); orbit.habitTimer = null; }
     pointers.delete(e.pointerId);
     if (pointers.size < 2) gesture = null;
     if (orbit && orbit.t0 && e.type === 'pointerup' && pointers.size === 0 && !orbit.moved && performance.now() - orbit.t0 < 450) {
@@ -1980,6 +1988,34 @@ function startLofiRooms() {
     if (completed) { Sound.ritualChime(); toast('<span>Ten quiet minutes. Welcome back to your room.</span>', 3200); }
   }
   const gardenPortraits=new Map();
+  // Habit Pots: check in, place, retire. Names are user text, so toasts escape them.
+  function habitCheckIn(habitId){
+    const h=habits.get(habitId);if(!h)return;
+    if(h.item===null){habitsUI.openPlace(habitId);return;}
+    let r;try{r=habits.checkIn(habitId);}catch(e){toast(`<span>${esc(e.message)}</span>`,2400,true);return;}
+    if(!r)return;
+    if(r.added){
+      remember('habit',{date:r.date,id:r.date+':'+habitId});
+      try{Sound.init();if(Sound.on)Sound.chime();}catch(e){/* quiet check-ins still count */}
+      if(h.room===meta.current&&room.get(h.item)){view.boing(h.item);view.burst(h.item,'magic',.8);}
+      if(care)care.tick(0);activity.wake();
+      toast(r.after>r.before?`<span>${esc(r.habit.name)} grew a little. ${LRHabits.STAGES[r.after]}.</span>`:`<b>${esc(r.habit.name)}</b><span>Tended today.</span>`,2200,true);
+    }else{const s=habits.stats(habitId);toast(`<b>${esc(h.name)}</b><span>${s.total} day${s.total===1?'':'s'} in all · ${s.month} this month</span>`,2200,true);}
+    todayUI.refresh();
+  }
+  function placeHabit(habitId){
+    const h=habits.get(habitId);if(!h)return false;
+    const cells=[];for(let x=0;x<room.n;x++)for(let z=0;z<room.n;z++)cells.push({x,z});const mid=(room.n-1)/2;cells.sort((a,b)=>Math.hypot(a.x-mid,a.z-mid)-Math.hypot(b.x-mid,b.z-mid));
+    const spot=cells.map(p=>room.make('habitpot',{...p,c:h.c})).find(it=>room.canPlace(it));
+    if(!spot){toast('<span>No floor space in this room right now.</span>',2200,true);todayUI.refresh();return false;}
+    const item=room.add(spot);habits.bind(habitId,meta.current,item.id);changed();save();if(care)care.tick(0);closeSheets();todayUI.refresh();
+    toast(`<b>${esc(h.name)}</b><span>Potted in ${esc(room.name)}. Tap it each day you tend it.</span>`,2400,true);return true;
+  }
+  function retireHabit(gone){
+    if(gone.item!==null){if(gone.room===meta.current){if(room.get(gone.item)){room.remove(gone.item);changed();save();}}else patchSaved(gone.room,d=>{if(Array.isArray(d.items))d.items=d.items.filter(i=>i.id!==gone.item);});}
+    todayUI.refresh();
+  }
+  const habitsUI=LRHabits.createView({model:habits,sheet:codeSheet,place:id=>placeHabit(id),retire:gone=>retireHabit(gone),undo:()=>{if(care)care.tick(0);activity.wake();todayUI.refresh();},notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
   const gardenUI=LRFocusGarden.createView({model:focusGarden,sheet:codeSheet,roomId:()=>meta.current,canPlant:bed=>room.get(bed)?.t==='focusgarden',
     preview:(stage,c)=>{const key=stage+':'+c;if(!gardenPortraits.has(key))gardenPortraits.set(key,view.thumb({t:'focusbloom',c,on:false},undefined,o=>{for(let n=1;n<=4;n++)o.userData.parts['growth'+n].visible=n<=stage;}));return gardenPortraits.get(key);},
     start:(bed,minutes)=>{
@@ -1997,6 +2033,7 @@ function startLofiRooms() {
     if(!force&&Date.now()<gardenNext)return;gardenNext=Date.now()+1000;
     focusGarden.tick();
     if(focusGarden.settle(room,meta.current,LR)){changed();save();}
+    if(habits.reconcile(meta.current,room))todayUI.refresh();
     for(const s of focusGarden.state.sessions.filter(s=>s.completed&&!s.announced)){
       remember('focus',{date:LRCalendar.day(new Date(s.end)),id:s.id});
       if(s.room===meta.current&&s.plant&&room.get(s.plant))view.burst(s.plant,'petals',2.5);
@@ -2594,6 +2631,7 @@ function startLofiRooms() {
     const r = rooms.find(x => x.id === id);
     if (!confirm(`Delete “${r ? r.name : 'this room'}”? This can’t be undone.`)) return;
     rooms = rooms.filter(x => x.id !== id);
+    habits.detachRoom(id);
     if(store.get('lr.mainBedroom',null)===id)store.del('lr.mainBedroom');
     store.del('lr.room.' + id);
     roomSnapshots.remove(id);
@@ -3138,7 +3176,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

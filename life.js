@@ -108,7 +108,8 @@
       wait -= Math.max(0, dt);
       if (wait > 0) return null;
       wait = 45 + random() * 60;
-      const choices = ['train', 'leaves'];
+      // No passing train: it drew outside the room and looked like it was floating.
+      const choices = ['leaves'];
       if (options.window && !options.rain && options.day) choices.push('butterfly');
       return choices[Math.floor(random() * choices.length)];
     } };

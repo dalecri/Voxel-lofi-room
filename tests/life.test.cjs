@@ -78,5 +78,10 @@ test('ambient events pause during blocked play and butterflies need a clear dayt
   assert.equal(a.tick(100, true, { window: true, rain: false, day: true }), 'butterfly');
   assert.equal(a.tick(110, true, { window: true, rain: true, day: true }), 'leaves');
   assert.equal(a.tick(110, true, { window: true, rain: false, day: false }), 'leaves');
-  assert.equal(ambience({ random: () => 0 }).tick(40, true, {}), 'train');
+  assert.equal(ambience({ random: () => 0 }).tick(40, true, {}), 'leaves');
+});
+test('ambience never sends a train past the room',()=>{
+  const {ambience}=require('../life.js');const a=ambience();const seen=new Set();
+  for(let i=0;i<400;i++){const k=a.tick(200,true,{window:i%2===0,rain:i%3===0,day:i%4<2});if(k)seen.add(k);}
+  assert.ok(!seen.has('train'));assert.ok(seen.has('leaves'));
 });
