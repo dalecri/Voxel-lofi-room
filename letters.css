@@ -79,3 +79,8 @@
 .note-toolbar .note-menu button { display:block; width:auto; height:auto; min-height:44px; padding:0 14px; color:var(--tw-ink); text-align:left; }
 .note-toolbar .note-menu #noteDelete { color:#b4452f; }
 .notetaker.is-listing .note-toolbar .note-more-wrap { visibility:hidden; }
+/* Header buttons match the other apps: 48px rounded squares, back on the left, close on the right. */
+#sheetBody .note-heading :is(.note-back,.control-back,.note-icon.sheet-close) { display:grid; place-items:center; width:48px; height:48px; min-width:48px; min-height:48px; margin:0; padding:0; border:1.5px solid var(--tw-edge); border-radius:16px; background:var(--tw-surface); color:var(--tw-ink); box-shadow:none; }
+#sheetBody .note-heading :is(.note-back,.control-back,.note-icon.sheet-close):hover { background:color-mix(in srgb,var(--tw-surface) 80%,var(--tw-edge)); }
+#sheetBody .note-heading.has-control-return > .note-back { display:none; }
+@media(max-width:420px) { #sheetBody .note-heading :is(.note-back,.control-back,.note-icon.sheet-close) { width:44px; height:44px; min-width:44px; min-height:44px; } }

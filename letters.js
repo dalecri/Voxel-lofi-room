@@ -105,19 +105,20 @@
       <span id="letterStatus" class="note-status" role="status" aria-live="polite"></span>`;
     const $=s=>view.querySelector(s),body=$('#letterBody'),titleInput=$('#noteTitle'),scroll=$('#letterScroll'),list=$('#letterList'),status=$('#letterStatus');
     // Header pieces live in the sheet's header row; built once and re-attached on open.
-    const allButton=document.createElement('button');allButton.type='button';allButton.id='letterListButton';allButton.className='note-all';
+    // Back looks like every other app's back; All notes lives in the More menu.
+    const backButton=document.createElement('button');backButton.type='button';backButton.className='chipbtn sheet-icon note-back';backButton.setAttribute('aria-label','Back');backButton.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>';
     const exportButton=document.createElement('button');exportButton.type='button';exportButton.id='letterExport';exportButton.className='note-icon';exportButton.setAttribute('aria-label','Save as file');exportButton.title='Save as file';exportButton.innerHTML=ICON.share;
     const moreWrap=document.createElement('div');moreWrap.className='note-more-wrap';
     const moreButton=document.createElement('button');moreButton.type='button';moreButton.id='noteMore';moreButton.className='note-icon';moreButton.setAttribute('aria-label','More');moreButton.title='More';moreButton.setAttribute('aria-haspopup','menu');moreButton.setAttribute('aria-expanded','false');moreButton.innerHTML=ICON.more;
     const moreMenu=document.createElement('div');moreMenu.className='note-menu';moreMenu.setAttribute('role','menu');moreMenu.setAttribute('aria-label','Note options');moreMenu.hidden=true;
     const menuItem=(label,id)=>{const b=document.createElement('button');b.type='button';b.id=id;b.setAttribute('role','menuitem');b.textContent=label;moreMenu.appendChild(b);return b;};
-    const sendItem=menuItem('Send to future you','letterSend'),deleteItem=menuItem('Delete note','noteDelete');
+    const allItem=menuItem('All notes','letterListButton'),sendItem=menuItem('Send to future you','letterSend'),deleteItem=menuItem('Delete note','noteDelete');
     moreWrap.append(moreButton,moreMenu);
     let active=false,timer=null,lastRange=null,lastFocus=null;
     function message(text) {status.textContent=text;}
     function safe(action) {try{return action();}catch(e){message(e.message || 'Could not save on this device.');return false;}}
     const titleOf=l=>UNTITLED.has(l?.title)?'':(l?.title||'');
-    function paintAll(){const listing=!list.hidden;allButton.innerHTML=ICON.back+`<span>${listing?'Back':'All notes'}</span>`;allButton.setAttribute('aria-label',listing?'Back to the note':'All notes');view.classList.toggle('is-listing',listing);}
+    function paintAll(){const listing=!list.hidden;backButton.setAttribute('aria-label',listing?'Back to the note':'Back');view.classList.toggle('is-listing',listing);}
     function flush() {
       clearTimeout(timer);timer=null;if(!active || !model.current)return;
       const note=model.get();if(!note)return;
@@ -172,9 +173,9 @@
         row.append(open,del);box.appendChild(row);
       }
     }
-    function showList() {flush();closeMore(false);rows();list.hidden=false;paintAll();(list.querySelector('.note-row-open')||allButton).focus({preventScroll:true});}
+    function showList() {flush();closeMore(false);rows();list.hidden=false;paintAll();(list.querySelector('.note-row-open')||backButton).focus({preventScroll:true});}
     function hideList() {list.hidden=true;paintAll();}
-    function openMore(){moreMenu.hidden=false;moreButton.setAttribute('aria-expanded','true');sendItem.focus();document.addEventListener('pointerdown',outsideMore,true);}
+    function openMore(){moreMenu.hidden=false;moreButton.setAttribute('aria-expanded','true');allItem.focus();document.addEventListener('pointerdown',outsideMore,true);}
     function closeMore(focus){if(moreMenu.hidden)return;moreMenu.hidden=true;moreButton.setAttribute('aria-expanded','false');document.removeEventListener('pointerdown',outsideMore,true);if(focus)moreButton.focus({preventScroll:true});}
     function outsideMore(e){if(!moreWrap.contains(e.target))closeMore(false);}
     function newNote(){flush();safe(()=>model.add(roomName()));load();hideList();titleInput.focus();}
@@ -190,7 +191,7 @@
           const header=document.createElement('div');header.className='note-heading';header.dataset.controlHeader='true';(title||closeButton).before(header);
           const spacer=document.createElement('span');spacer.className='note-spacer';
           closeButton.id='letterClose';closeButton.classList.add('note-icon');closeButton.innerHTML=ICON.close;closeButton.onclick=()=>close();
-          header.append(allButton,spacer,closeButton);
+          header.append(backButton,spacer,closeButton);
         }
       });
       active=true;view.hidden=false;hideList();
@@ -200,12 +201,13 @@
     }
     // Share and More live in the bottom toolbar, between the checklist and new-note buttons.
     $('#letterNew').before(exportButton,moreWrap);
-    allButton.onclick=()=>list.hidden?showList():(hideList(),body.focus());
+    backButton.onclick=()=>{if(!list.hidden){hideList();body.focus();}else close();};
+    allItem.onclick=()=>{closeMore(false);showList();};
     $('#letterNew').onclick=newNote;
     $('#noteChecklist').onclick=checklist;
     view.querySelectorAll('.note-toolbar button').forEach(b=>b.addEventListener('pointerdown',e=>{if(b.id!=='letterNew'){remember();e.preventDefault();}}));
     moreButton.onclick=()=>moreMenu.hidden?openMore():closeMore(true);
-    moreMenu.addEventListener('keydown',e=>{const items=[sendItem,deleteItem],i=items.indexOf(document.activeElement);
+    moreMenu.addEventListener('keydown',e=>{const items=[allItem,sendItem,deleteItem],i=items.indexOf(document.activeElement);
       if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[(i+(e.key==='ArrowDown'?1:items.length-1))%items.length].focus();}else if(e.key==='Tab')closeMore(false);});
     deleteItem.onclick=()=>{if(!deleteItem.dataset.confirm){deleteItem.dataset.confirm='yes';deleteItem.textContent='Delete for good?';return;}delete deleteItem.dataset.confirm;deleteItem.textContent='Delete note';closeMore(false);const id=model.current;if(id)safe(()=>model.remove(id));if(!model.current)safe(()=>model.add(roomName()));load();message('Note deleted');};
     sendItem.onclick=()=>{

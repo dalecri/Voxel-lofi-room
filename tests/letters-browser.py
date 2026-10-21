@@ -27,7 +27,7 @@ with sync_playwright() as p:
  sheet=page.locator('#sheetBody');body=page.locator('#letterBody');title=page.locator('#noteTitle')
  # Notes look: honey-gold header and toolbar, big bold title, docked to the bottom edge.
  assert page.locator('#sheetBody > h2').inner_text()=='Notetaker'
- assert page.get_by_role('button',name='All notes',exact=True).is_visible();assert page.get_by_role('button',name='Save as file',exact=True).is_visible();assert page.get_by_role('button',name='More',exact=True).is_visible()
+ assert page.locator('.note-heading .note-back').evaluate('e=>{const r=e.getBoundingClientRect();return r.width>=44&&getComputedStyle(e).borderRadius==="16px"}');assert page.get_by_role('button',name='All notes',exact=True).count()==0;assert page.get_by_role('button',name='Save as file',exact=True).is_visible();assert page.get_by_role('button',name='More',exact=True).is_visible()
  assert [b.get_attribute('aria-label') for b in page.locator('.note-toolbar > button,.note-toolbar > .note-more-wrap > button').all()]==['Checklist','Save as file','More','New note'];assert page.locator('#noteCamera,#noteAttach,#notePhoto').count()==0
  page.wait_for_function('(()=>{const r=document.querySelector("#sheetBody").getBoundingClientRect();return Math.abs(r.bottom-innerHeight)<2 && r.top>0})()')
  assert title.evaluate('e=>Number(getComputedStyle(e).fontWeight)>=700 && parseFloat(getComputedStyle(e).fontSize)>=26')
@@ -75,16 +75,16 @@ with sync_playwright() as p:
  page.evaluate('window.Capacitor=__cap')
  print('PASS: standalone HTML export in the notes look; Android file-picker bridge receives identical HTML; cancel and failure keep the note',flush=True)
  # More menu: Escape closes only the menu; arrows move between items.
- page.click('#noteMore');menu=page.locator('.note-menu');assert menu.is_visible();assert page.get_by_role('menuitem',name='Send to future you',exact=True).evaluate('e=>e===document.activeElement')
- page.keyboard.press('ArrowDown');assert page.get_by_role('menuitem',name='Delete note',exact=True).evaluate('e=>e===document.activeElement')
+ page.click('#noteMore');menu=page.locator('.note-menu');assert menu.is_visible();assert page.get_by_role('menuitem',name='All notes',exact=True).evaluate('e=>e===document.activeElement')
+ page.keyboard.press('ArrowDown');assert page.get_by_role('menuitem',name='Send to future you',exact=True).evaluate('e=>e===document.activeElement');page.keyboard.press('ArrowDown');assert page.get_by_role('menuitem',name='Delete note',exact=True).evaluate('e=>e===document.activeElement')
  page.keyboard.press('Escape');assert menu.is_hidden();assert page.evaluate('__lr.letters.active');assert page.locator('#noteMore').evaluate('e=>e===document.activeElement')
  # All notes: a second note, open, delete with a confirm.
  page.click('#letterNew');assert page.locator('#noteTitle').input_value()=='';assert page.locator('#noteTitle').evaluate('e=>e===document.activeElement')
  page.locator('#noteTitle').fill('Second note');page.locator('#letterBody').fill('Other words');page.evaluate('__lr.letters.flush()')
- page.get_by_role('button',name='All notes',exact=True).click();rows=page.locator('.note-row');assert rows.count()==2;assert page.locator('#noteCount').inner_text().startswith('2 notes')
+ page.click('#noteMore');page.get_by_role('menuitem',name='All notes',exact=True).click();rows=page.locator('.note-row');assert rows.count()==2;assert page.locator('#noteCount').inner_text().startswith('2 notes')
  assert page.locator('.note-toolbar #noteChecklist').evaluate('e=>getComputedStyle(e).visibility')=='hidden'
  page.get_by_role('button',name='Open PRIVATE_NOTE_TITLE',exact=True).click();assert page.locator('#noteTitle').input_value()=='PRIVATE_NOTE_TITLE';assert page.locator('.note-list').is_hidden()
- page.get_by_role('button',name='All notes',exact=True).click();d=page.get_by_role('button',name='Delete Second note',exact=True);d.click();assert d.inner_text()=='Delete?';d.click();assert rows.count()==1
+ page.click('#noteMore');page.get_by_role('menuitem',name='All notes',exact=True).click();d=page.get_by_role('button',name='Delete Second note',exact=True);d.click();assert d.inner_text()=='Delete?';d.click();assert rows.count()==1
  page.keyboard.press('Escape');assert page.locator('.note-list').is_hidden();assert page.evaluate('__lr.letters.active')
  # Delete from the menu asks twice and leaves a fresh note.
  page.click('#noteMore');page.get_by_role('menuitem',name='Delete note',exact=True).click();assert page.get_by_role('menuitem',name='Delete for good?',exact=True).count()==1;page.keyboard.press('Escape')
