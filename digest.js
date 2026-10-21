@@ -70,9 +70,7 @@
       let showAll=false;
       if(title&&closeButton){const header=el('div','brief-heading');header.dataset.controlHeader='true';title.before(header);header.append(title,closeButton);
         if(!header.querySelector('.control-back')){const back=el('button','chipbtn sheet-icon control-back brief-back');back.type='button';back.setAttribute('aria-label','Back');back.innerHTML=svg('<path d="M19 12H5m6-6-6 6 6 6"/>');back.onclick=()=>closeButton.click();header.prepend(back);}
-        const papers=el('button','chipbtn sheet-icon brief-papers');papers.type='button';papers.id='briefPapers';const n=model.issues.length;papers.setAttribute('aria-label',`Past briefs, ${n} saved`);
-        papers.innerHTML=svg('<rect x="3" y="4" width="15" height="16" rx="2"/><path d="M18 8h2a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H6M7 8h7M7 12h7M7 16h4"/>')+(n?`<span class="brief-badge" aria-hidden="true">${n>9?'9+':n}</span>`:'');
-        papers.onclick=()=>{showAll=true;paint(root.__value);root.querySelector('.brief-past')?.scrollIntoView({block:'nearest',behavior:'smooth'});};closeButton.before(papers);}
+      }
       function section(value){const type=value.type||'behind',label=LABEL[type]||'',cls='drift-section brief-card'+(type==='saga'?' drift-column':'')+(value.lead?' brief-lead':'')+(type==='forecast'?' brief-today':'')+(press&&type!=='closing'&&!value.lead&&press.isShrunk(type)?' is-shrunk':'');
         const block=el('section',cls);block.dataset.type=type;
         if(label&&type!=='closing'){const k=el('div','brief-kicker');k.appendChild(el('p','press-kicker',label));if(type==='forecast'){const icon=el('span','brief-kicker-icon','🏠');icon.setAttribute('aria-hidden','true');k.appendChild(icon);}block.appendChild(k);}

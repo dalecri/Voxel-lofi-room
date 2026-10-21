@@ -4,10 +4,11 @@
 
 /* ---------- Daily Brief: an editorial page, not a stack of cards ---------- */
 #sheetBody:has(.drift-reader) .drift-reader .drift-paper.brief-paper { margin:0; padding:4px 6px 0; border:0; border-radius:0; background:none; box-shadow:none; }
-#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow { display:inline-flex; margin:0 0 6px; padding:5px 12px; border-radius:999px; background:var(--db-dark); color:var(--db-on-dark); font:800 12px/1 var(--db-font); letter-spacing:.04em; text-transform:none; opacity:1; }
-#sheetBody:has(.drift-reader) .drift-reader .drift-masthead { margin:0; color:var(--db-ink); text-align:left; font:800 clamp(38px,11vw,50px)/1.02 var(--db-font); letter-spacing:-.045em; }
-#sheetBody:has(.drift-reader) .drift-reader .drift-edition { margin:6px 0 0; color:var(--db-muted); text-align:left; font:700 15px/1.4 var(--db-font); letter-spacing:0; text-transform:none; }
-#sheetBody:has(.drift-reader) .drift-reader .brief-slim { margin:26px 0 0; padding:0; border:0; background:none; color:var(--db-ink); font:700 21px/1.4 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow { display:flex; align-items:center; justify-content:center; gap:12px; margin:0 0 10px; padding:0; border-radius:0; background:none; color:var(--db-muted); font:800 12px/1 var(--db-font); letter-spacing:.2em; text-transform:uppercase; opacity:1; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow::before,#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow::after { content:''; flex:0 1 44px; height:1.5px; border-radius:2px; background:currentColor; opacity:.45; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-masthead { margin:0; color:var(--db-ink); text-align:center; font:800 clamp(38px,11vw,50px)/1.02 var(--db-font); letter-spacing:-.045em; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-edition { margin:6px 0 0; color:var(--db-muted); text-align:center; font:700 15px/1.4 var(--db-font); letter-spacing:0; text-transform:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-slim { margin:26px 0 0; text-align:center; padding:0; border:0; background:none; color:var(--db-ink); font:700 21px/1.4 var(--db-font); }
 #sheetBody:has(.drift-reader) .drift-reader .drift-columns,#sheetBody:has(.drift-reader) .drift-reader .drift-pet-grid { display:grid; grid-template-columns:1fr; gap:0; margin:0; }
 #sheetBody:has(.drift-reader) .drift-reader .brief-card { margin:30px 0 0; padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
 #sheetBody:has(.drift-reader) .drift-reader .brief-kicker { display:flex; align-items:center; gap:8px; margin:0 0 6px; }
