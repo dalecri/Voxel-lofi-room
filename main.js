@@ -2073,7 +2073,7 @@ function startLofiRooms() {
   }
   function wardrobeSheet() {
     wardrobe.sync();
-    codeSheet('A little wardrobe', 'Outfits stay on this device. Your roommate and wardrobe choices never travel in shared room codes.', h => {
+    codeSheet('A little wardrobe', '', h => {
       const names = {hood:'Hats',suit:'Tops',badge:'Badges',accessory:'Accessories'};
       const head = h('div','wardrobe-head'), shopButton = document.createElement('button');
       shopButton.className='chipbtn';shopButton.textContent='✦ Shop';shopButton.onclick=()=>openShop();head.append(shopButton,$('#sheetBody > .sheet-close'));$('#sheetBody').insertBefore(head,$('#sheetBody > h2'));
@@ -2153,7 +2153,7 @@ function startLofiRooms() {
   }
   // TwoStoryTails captions: a pixel studio sheet, from Control Center or the clapperboard.
   function captionStudio() {
-    codeSheet('Caption studio', 'TwoStoryTails clips, ready to copy.', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); }, 'captions');
+    codeSheet('Caption studio', '', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk); }, 'captions');
     captionDesk.refresh();
   }
   // Cozy moments: a floating card under the room name, with the checklist and the cats' diary.
@@ -2310,7 +2310,7 @@ function startLofiRooms() {
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
     const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
-    h('h2', '', title); h('p', 'muted', sub);
+    h('h2', '', title); if (sub && !SHEET_TOOL_SUBS[sub]) h('p', 'muted', sub);
     build(h); alignSheetHeader(body);openSheet();
   }
   function widgetLinks(panel, links, id) {
@@ -2345,7 +2345,7 @@ function startLofiRooms() {
     return true;
   }
   function newspaperSheet() {
-    codeSheet('The newspaper', 'CBC News · Top stories', h => {
+    codeSheet('The newspaper', '', h => {
       const panel = h('div', 'widget-news');
       function render() {
         const data = widgets.data('newspaper'); panel.replaceChildren();

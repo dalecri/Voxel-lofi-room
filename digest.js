@@ -66,10 +66,9 @@
     const svg=(path,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
     const MASCOT='<svg viewBox="0 0 48 32" width="44" height="30" aria-hidden="true"><circle cx="14" cy="13" r="10" fill="currentColor"/><circle cx="34" cy="13" r="10" fill="currentColor"/><path d="M19 26q5 4 10 0" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
     function chipLabel(saved,today){if(!saved.brief)return saved.week;const yesterday=day(new Date(new Date(today+'T12:00').getTime()-DAY));return saved.date===today?`Today • ${md(saved.date)}`:saved.date===yesterday?`Yesterday • ${md(saved.date)}`:md(saved.date);}
-    function open(key){try{model.ensure();const current=model.open(key);if(!current)return;onRead();try{sound.flip();}catch(e){/* optional paper rustle */}sheet('Daily brief','Your morning paper, kept on this device. Nothing leaves your room.',h=>{
-      const root=h('div','drift-reader'),host=root.closest('#sheetBody'),title=host?.querySelector(':scope > h2'),closeButton=host?.querySelector('.sheet-close'),note=host?.querySelector(':scope > .muted');
+    function open(key){try{model.ensure();const current=model.open(key);if(!current)return;onRead();try{sound.flip();}catch(e){/* optional paper rustle */}sheet('Daily brief','',h=>{
+      const root=h('div','drift-reader'),host=root.closest('#sheetBody'),title=host?.querySelector(':scope > h2'),closeButton=host?.querySelector('.sheet-close');
       let showAll=false;
-      if(note){note.classList.add('brief-note');note.innerHTML=svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',16);note.append(el('span','','Your morning paper, kept on this device. Nothing leaves your room.'));}
       if(title&&closeButton){const header=el('div','brief-heading');header.dataset.controlHeader='true';title.before(header);header.append(title,closeButton);
         if(!header.querySelector('.control-back')){const back=el('button','chipbtn sheet-icon control-back brief-back');back.type='button';back.setAttribute('aria-label','Back');back.innerHTML=svg('<path d="M19 12H5m6-6-6 6 6 6"/>');back.onclick=()=>closeButton.click();header.prepend(back);}
         const papers=el('button','chipbtn sheet-icon brief-papers');papers.type='button';papers.id='briefPapers';const n=model.issues.length;papers.setAttribute('aria-label',`Past briefs, ${n} saved`);

@@ -23,7 +23,7 @@
     const play=name=>{try{sound[name]?.();}catch(e){/* quiet cards still arrive */}};
     function open(){
       ++revision;
-      sheet('Friends’ room cards','Little invitations, kept on this device.',h=>{
+      sheet('Friends’ room cards','',h=>{
         const host=h('div','friend-cards'),intro=el('p','muted small','Keep a friend’s room here without adding it to your home. Your rooms stay yours.');host.append(intro);
         const entry=el('section','friend-code-entry'),form=el('div','friend-code-form');form.id='friendCodeForm';form.hidden=model.list().length>0;
         const toggle=button(entry,'Add a room code',()=>{form.hidden=!form.hidden;toggle.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)ta.focus();});toggle.setAttribute('aria-controls',form.id);toggle.setAttribute('aria-expanded',String(!form.hidden));
@@ -48,7 +48,7 @@
     }
     function show(card,arriving=false,prepared=null){
       const request=++revision;
-      sheet('A room from a friend','An invitation you can open whenever you like.',h=>{
+      sheet('A room from a friend','',h=>{
         const host=h('div','friend-card-view'),status=el('p','friend-card-status',arriving?'A little room card is arriving…':'Opening your card…');status.setAttribute('role','status');status.tabIndex=-1;host.append(status);
         const stage=el('div','friend-card-stage'),info=el('article','friend-card-info'),eyebrow=el('p','friend-card-eyebrow','A ROOM INVITATION'),title=el('h3','',card.title),description=el('p','muted',card.description),meta=el('p','friend-card-meta',`${card.n} × ${card.n} room · ${card.items} pieces`);
         info.append(eyebrow,title,description,meta);const envelope=el('div','friend-envelope');envelope.innerHTML=ENVELOPE;stage.append(info,envelope);host.append(stage);

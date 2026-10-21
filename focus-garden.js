@@ -42,7 +42,7 @@
   }
   function createView({model,sheet,roomId,start,end,canPlant=()=>true,preview=()=>null}){
     let bed=null,host=null,selected=25,signature='';
-    function open(id){bed=id;sheet('Focus Garden','A seed and a little time. Everything here can wait.',h=>{host=h('div','focus-garden');signature='';draw(true);});}
+    function open(id){bed=id;sheet('Focus Garden','',h=>{host=h('div','focus-garden');signature='';draw(true);});}
     function draw(force=false){if(!host?.isConnected||!force&&!host.closest('.sheet.open'))return;const active=model.active,running=!!active,session=running?active:model.state.sessions.filter(s=>s.room===roomId()&&s.bed===bed).at(-1),finished=!running&&session?.completed,standalone=running?!!active.standalone:finished?!!session.standalone:!canPlant(bed);
       const key=JSON.stringify([session?.id,running,finished,selected,standalone]);if(signature!==key){signature=key;host.replaceChildren();
         const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};

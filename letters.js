@@ -170,7 +170,7 @@
     const ago=t=>new Date(t||Date.now()).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
     function rows() {
       const box=$('#letterRows');box.replaceChildren();const notes=model.list();
-      $('#noteCount').textContent=notes.length?`${notes.length} note${notes.length===1?'':'s'}, saved on this device`:'No notes yet. Tap the pencil to start one.';
+      $('#noteCount').textContent=notes.length?`${notes.length} note${notes.length===1?'':'s'}`:'No notes yet. Tap the pencil to start one.';
       for(const l of notes) {
         const row=document.createElement('div');row.className='note-row'+(l.id===model.current?' is-current':'');row.dataset.letter=l.id;
         const name=titleOf(l)||'New note',open=document.createElement('button');open.type='button';open.className='note-row-open';open.setAttribute('aria-label','Open '+name);
