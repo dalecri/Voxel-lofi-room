@@ -37,13 +37,18 @@
     function card(r){const a=el('article','rooms-card'+(r.id===current()?' here':''));a.dataset.roomId=r.id;const b=makeButton('','rooms-visit',()=>travel(r));b.setAttribute('aria-label','Visit '+r.name);b.append(image(r),info(r));a.append(b);manage(r,a);
       if(setBedroom){const selected=bedroom()===r.id,star=makeButton('','rooms-bedroom',()=>{setBedroom(r);refresh();[...host.querySelectorAll('.rooms-card')].find(c=>c.dataset.roomId===String(r.id))?.querySelector('.rooms-bedroom')?.focus({preventScroll:true});});star.setAttribute('aria-label','Main bedroom for '+r.name);star.setAttribute('aria-pressed',String(selected));star.title=selected?'Main bedroom · Tap to clear':r.draft?'Save and set as main bedroom':'Set as main bedroom';star.innerHTML=`<svg viewBox="0 0 24 24" width="21" height="21" fill="${selected?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg>`;a.appendChild(star);}
       return a;}
-    function newCard(){return makeButton('＋ New room','rooms-new',newRoom);}
+    function newCard(){const b=makeButton('＋ New room','rooms-new',newRoom);b.setAttribute('aria-label','＋ New room');b.innerHTML='<span class="rooms-new-window" aria-hidden="true">＋</span><span class="rooms-new-copy"><b>New room</b><small>Add a floor to your home</small></span>';return b;}
     function filtered(){return rooms().filter(r=>`${r.name} ${description(r)} ${floorOf(r)}`.toLocaleLowerCase().includes(query));}
     function loadImages(){pending=null;if(stopped || !host.isConnected || !host.getClientRects().length)return;const next=observed.shift();if(!next)return;try{const url=thumb(next.r);if(url){next.img.src=url;next.hint.remove();next.wrap.classList.add('ready');}else next.hint.textContent='Visit to make a preview';}catch(e){next.hint.textContent='Preview resting. Tap to visit.';}if(observed.length)pending=setTimeout(loadImages,32);}
     function schedule(){if(pending===null && observed.length && host.getClientRects().length)pending=setTimeout(loadImages,0);}
     function draw(){if(stopped)return;if(pending!==null)clearTimeout(pending);pending=null;observed=[];content.replaceChildren();host.dataset.view='grid';host.dataset.phase=phase();const list=filtered();
       if(!list.length)content.append(el('p','muted','No rooms match your search.'));
-      const grid=el('div','rooms-grid');list.forEach(r=>grid.append(card(r)));grid.append(newCard());content.append(grid);schedule();
+      // Your home, drawn as a little house: a roof with a smoking chimney, floors stacked
+      // from the top, the next room waiting under the roof, and a strip of garden below.
+      const house=el('div','rooms-house'),roof=el('div','rooms-roof');roof.setAttribute('aria-hidden','true');roof.innerHTML='<span class="rooms-roof-window"></span>';const chimney=el('span','rooms-chimney');chimney.setAttribute('aria-hidden','true');chimney.innerHTML='<i></i><i></i><i></i>';
+      const grid=el('div','rooms-grid');grid.append(newCard());[...list].reverse().forEach(r=>grid.append(card(r)));
+      const ground=el('div','rooms-ground');ground.setAttribute('aria-hidden','true');ground.innerHTML='<span class="rooms-door"></span><span class="rooms-bush"></span><span class="rooms-bush"></span>';
+      house.append(chimney,roof,grid,ground);content.append(house);schedule();
     }
     function refresh(){const key=JSON.stringify([rooms(),current(),phase(),bedroom()]);if(key!==signature){signature=key;draw();}else{schedule();}}
     const resize=new ResizeObserver(()=>{schedule();});resize.observe(content);
