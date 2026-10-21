@@ -350,3 +350,90 @@ body.reduce-motion .radio-library.is-playing .radio-vinyl,body.reduce-motion .ra
 #sheetBody[data-tool=whiteboard] .whiteboard-eraser[data-confirm] { background:#c8463a; }
 #sheetBody[data-tool=whiteboard] .whiteboard-footer { display:flex; justify-content:space-between; margin:12px 6px 0; color:var(--ps-muted); font:700 12.5px/1 var(--ps-font); }
 #sheetBody[data-tool=whiteboard] .whiteboard-status,#sheetBody[data-tool=whiteboard] .whiteboard-count { margin:0; color:inherit; font:inherit; }
+
+/* ---------- Calendar day: a big date, the day's moments, events and a clean new-event card ---------- */
+#sheetBody[data-tool=calendar] .calendar-detail { display:grid; gap:14px; }
+#sheetBody[data-tool=calendar] .calendar-back-month { justify-self:start; min-height:36px; margin:-4px 0 0; padding:0 12px 0 8px; border:0; border-radius:999px; background:transparent; color:var(--ps-muted); box-shadow:none; font:800 14px/1 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-back-month:hover { background:var(--ps-surface); color:var(--ps-ink); }
+#sheetBody[data-tool=calendar] .calendar-day-hero { display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto auto; align-items:center; column-gap:16px; row-gap:10px; padding:20px 22px; border:0; border-radius:28px; background:radial-gradient(120% 100% at 15% 10%,var(--ps-light),var(--ps-surface)); }
+#sheetBody[data-tool=calendar] .calendar-day-hero.is-today { background:radial-gradient(120% 100% at 15% 10%,color-mix(in srgb,var(--ps-dark) 88%,#fff),var(--ps-dark)); color:var(--ps-on-dark); }
+#sheetBody[data-tool=calendar] .calendar-day-number { grid-row:1/3; color:inherit; font:800 clamp(64px,19vw,84px)/.9 var(--ps-font); letter-spacing:-.05em; }
+#sheetBody[data-tool=calendar] .calendar-day-hero:not(.is-today) .calendar-day-number { color:var(--ps-ink); }
+#sheetBody[data-tool=calendar] .calendar-day-words { display:grid; gap:3px; align-self:end; }
+#sheetBody[data-tool=calendar] .calendar-day-words b { font:800 21px/1.15 var(--ps-font); letter-spacing:-.01em; }
+#sheetBody[data-tool=calendar] .calendar-day-words span { opacity:.75; font:700 14px/1.2 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-day-hero .calendar-moon { align-self:start; justify-self:start; margin:0; padding:6px 12px; border-radius:999px; background:color-mix(in srgb,currentColor 12%,transparent); font:700 13px/1 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-memory { margin:0; color:var(--ps-muted); font:600 15px/1.45 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-memory.has-moments { display:flex; flex-wrap:wrap; gap:8px; }
+#sheetBody[data-tool=calendar] .calendar-moment { display:inline-flex; align-items:center; gap:7px; padding:8px 13px; border-radius:999px; background:var(--ps-light); color:var(--ps-ink); font:700 14px/1 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-moment::before { content:''; width:7px; height:7px; border-radius:50%; background:#f07a5a; }
+#sheetBody[data-tool=calendar] .calendar-detail > .calendar-holiday { justify-self:start; margin:0; padding:8px 13px; border-radius:999px; background:var(--ps-light); color:var(--ps-ink); font:800 14px/1 var(--ps-font); }
+/* Events: cards with an accent edge. */
+#sheetBody[data-tool=calendar] .calendar-detail .calendar-event { display:flex; align-items:center; gap:10px; margin:0; padding:14px 12px 14px 18px; border:0; border-left:5px solid #f07a5a; border-radius:18px; background:var(--ps-light); }
+#sheetBody[data-tool=calendar] .calendar-detail .calendar-event > b { flex:1; min-width:0; color:var(--ps-ink); font:800 16px/1.3 var(--ps-font); overflow-wrap:anywhere; }
+#sheetBody[data-tool=calendar] .calendar-event-actions { display:flex; gap:2px; }
+#sheetBody[data-tool=calendar] .calendar-event-actions .chipbtn { min-height:36px; margin:0; padding:0 10px; border:0; border-radius:999px; background:transparent; color:var(--ps-muted); box-shadow:none; font:700 13px/1 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-event-actions .chipbtn:hover { background:var(--ps-surface); color:var(--ps-ink); }
+/* New event: one card, a big friendly field, the date, one button. */
+#sheetBody[data-tool=calendar] .calendar-detail section.calendar-new { display:grid; gap:12px; margin:4px 0 0; padding:18px; border:0; border-radius:26px; background:var(--ps-light); }
+#sheetBody[data-tool=calendar] .calendar-new h3 { margin:0; color:var(--ps-ink); font:800 18px/1.2 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-form { display:grid; gap:10px; margin:0; }
+#sheetBody[data-tool=calendar] .calendar-form > label:first-child { display:grid; gap:0; margin:0; font-size:0; }
+#sheetBody[data-tool=calendar] .calendar-form input[type=text] { min-height:52px; padding:0 18px; border:0; border-radius:999px; background:var(--ps-surface); color:var(--ps-ink); box-shadow:none; font:700 17px/1 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-form input[type=text]::placeholder { color:var(--ps-muted); opacity:.8; }
+#sheetBody[data-tool=calendar] .calendar-form input[type=text]:focus { outline:2px solid var(--ps-dark); outline-offset:0; }
+#sheetBody[data-tool=calendar] .calendar-form .calendar-date-label { display:flex; align-items:center; gap:10px; margin:0; color:var(--ps-muted); font:800 12px/1 var(--ps-font); letter-spacing:.08em; text-transform:uppercase; }
+#sheetBody[data-tool=calendar] .calendar-form .compact-date-value { color:var(--ps-ink); font:800 15px/1 var(--ps-font); letter-spacing:0; text-transform:none; }
+#sheetBody[data-tool=calendar] .calendar-form button[type=submit] { min-height:52px; margin:2px 0 0; border:0; border-radius:999px; background:var(--ps-dark); color:var(--ps-on-dark); box-shadow:none; font:800 16px/1 var(--ps-font); }
+#sheetBody[data-tool=calendar] .calendar-event .calendar-form { flex:1; }
+#sheetBody[data-tool=calendar] .calendar-detail .calendar-form button[type=submit] { display:flex; align-items:center; justify-content:center; box-shadow:none; }
+
+/* ---------- To-Do: a sunrise-to-dusk path, soft task cards, one pill to add ---------- */
+#menu-todo .todo-heading h2 { font:800 clamp(30px,8vw,38px)/1 var(--font); letter-spacing:-.04em; }
+#menu-todo .task-notebook[data-tab=todo] .task-notebook-heading { justify-content:flex-end; margin:0 0 6px; }
+#menu-todo .task-notebook[data-tab=todo] .task-counter { padding:6px 12px; border-radius:999px; background:var(--chip); color:var(--ink); font:800 12px/1 var(--font); letter-spacing:.02em; }
+/* The day path as a soft card. */
+#menu-todo .task-journey { margin:0 0 18px; padding:14px 18px 12px; border:0; border-radius:26px; background:linear-gradient(100deg,color-mix(in srgb,#ffd99a 45%,var(--panel-solid)) 0%,color-mix(in srgb,#ffc2a8 35%,var(--panel-solid)) 50%,color-mix(in srgb,#c9b8ef 45%,var(--panel-solid)) 100%); }
+#menu-todo .task-journey-summary { margin:0 0 4px; color:var(--ink); font:800 15px/1.3 var(--font); }
+#menu-todo .task-day-path::before { height:4px !important; border:0 !important; border-radius:4px; background:linear-gradient(90deg,#f2b84f,#f07a5a 50%,#8b74c9) !important; opacity:.55; }
+#menu-todo .task-path-stop i { border:0 !important; background:var(--panel-solid) !important; box-shadow:0 2px 6px #0000001a; }
+#menu-todo .task-path-stop small { color:var(--ink); opacity:.7; font-weight:700; }
+/* Tasks: separate soft cards, round checks, emoji in a tile. */
+#menu-todo .task-notebook .today-task-list { display:grid !important; gap:8px; margin:0; padding:0; border:0 !important; background:none !important; box-shadow:none !important; }
+#menu-todo .task-notebook .today-task,#menu-todo .task-notebook .today-task.done { min-height:60px; margin:0; padding:8px 8px 8px 14px; border:0 !important; border-radius:20px !important; background:color-mix(in srgb,var(--chip) 80%,var(--panel-solid)) !important; box-shadow:none !important; backdrop-filter:none !important; }
+#menu-todo .task-notebook .today-task.done { opacity:.75; }
+#menu-todo .task-notebook .task-checkmark { width:26px !important; height:26px !important; border:2px solid var(--ink) !important; border-radius:50% !important; background:transparent !important; }
+#menu-todo .task-notebook .today-task-check[aria-checked=true] .task-checkmark { background:var(--ink) !important; color:var(--panel-solid) !important; }
+#menu-todo .task-notebook .today-task-text { font:600 16.5px/1.35 var(--font) !important; }
+#menu-todo .task-notebook .today-task.done .today-task-text { text-decoration:line-through; text-decoration-thickness:1.5px; color:var(--ink-dim) !important; }
+#menu-todo .task-notebook .today-task-icon { display:grid; place-items:center; width:34px; height:34px; min-width:0; min-height:34px; padding:0; border-radius:12px; justify-self:center; background:var(--panel-solid); font-size:20px; }
+#menu-todo .task-notebook .today-task-remove { color:var(--ink-dim); }
+/* Add: a pill field with the button inside. */
+#menu-todo .task-notebook[data-tab=todo] .today-task-form { display:flex; align-items:center; gap:0; margin:16px 0 0; padding:4px 4px 4px 18px; border:0; border-radius:999px; background:var(--chip); }
+#menu-todo .task-notebook .today-task-form input { flex:1; min-width:0; min-height:48px; padding:0; border:0 !important; border-radius:0; background:transparent !important; color:var(--ink); font:600 16px/1 var(--font); box-shadow:none; }
+#menu-todo .task-notebook .today-task-form input:focus { outline:none; }
+#menu-todo .task-notebook .today-task-form .primary { flex:none; min-height:46px; margin:0; padding:0 18px; border:0; border-radius:999px; background:var(--ink) !important; color:var(--panel-solid) !important; box-shadow:none; font:800 15px/1 var(--font); }
+
+/* ---------- Settings: grouped rows with an icon, a name, a line and a switch ---------- */
+#menu-settings .settings-group { display:grid; gap:8px; margin:0 0 20px; }
+#menu-settings .settings-group-title { margin:0 4px 2px; color:var(--ink-dim); font:800 12px/1 var(--font); letter-spacing:.1em; text-transform:uppercase; }
+#menu-settings .settings-group .settings-toggle-grid { display:grid; grid-template-columns:1fr; gap:6px; margin:0; }
+#menu-settings .settings-group .toggle { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px; width:100%; min-height:66px; margin:0; padding:10px 14px 10px 10px; border:0; border-radius:22px; background:var(--chip); color:var(--ink); box-shadow:none; text-align:left; }
+#menu-settings .settings-group .toggle:hover { background:color-mix(in srgb,var(--chip) 70%,var(--line)); }
+#menu-settings .toggle .toggle-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:14px; background:var(--panel-solid); font-size:20px; line-height:1; }
+#menu-settings .toggle .toggle-copy { display:grid; gap:3px; min-width:0; text-align:left; }
+#menu-settings .toggle .toggle-name { color:var(--ink); font:800 15.5px/1.2 var(--font); text-align:left; }
+#menu-settings .toggle .toggle-copy small { color:var(--ink-dim); font:600 12.5px/1.35 var(--font); text-align:left; }
+#menu-settings .toggle.on .toggle-icon { background:color-mix(in srgb,var(--accent) 18%,var(--panel-solid)); }
+/* Tool colors: a segmented control inside the Look group. */
+#menu-settings .settings-group .settings-tool-theme { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; margin:0 0 4px; padding:4px; border-radius:999px; background:var(--chip); }
+#menu-settings .settings-group .settings-tool-theme-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+#menu-settings .settings-group .settings-tool-theme .chipbtn { min-height:42px; margin:0; border:0; border-radius:999px; background:transparent; color:var(--ink-dim); box-shadow:none; font:800 14px/1 var(--font); }
+#menu-settings .settings-group .settings-tool-theme .chipbtn[aria-checked=true] { background:var(--panel-solid); color:var(--ink); box-shadow:0 2px 8px #0000001a; }
+#menu-settings .settings-help { margin:4px 0 0; padding:14px 16px; border-radius:20px; background:var(--chip); }
+#menu-settings .settings-help > summary { color:var(--ink); font:800 14px/1 var(--font); cursor:pointer; }
+#menu-settings .settings-phase { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:12px 0 0; padding:12px 16px; border-radius:20px; background:var(--chip); color:var(--ink); font:800 15px/1 var(--font); }
+/* Letters: Send never wraps; the label and arrow sit on one line. */
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock button.mailwin-send { flex:1 1 auto; min-width:140px; padding:0 22px; white-space:nowrap; gap:10px; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock button.mailwin-send span { white-space:nowrap; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock .mailwin-actions { flex:1 1 260px; min-width:0; }

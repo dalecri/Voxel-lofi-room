@@ -26,7 +26,7 @@ with sync_playwright() as p:
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
-   page.set_viewport_size({'width':width,'height':844});fit();assert tasks.locator('.today-task-list').evaluate('e=>getComputedStyle(e).gap')=='1px';assert tasks.locator('.task-checkmark').first.evaluate('e=>getComputedStyle(e).width')=='18px';tasks.screenshot(path=f'/tmp/notepad-todo-{phase}-{width}.png')
+   page.set_viewport_size({'width':width,'height':844});fit();assert tasks.locator('.today-task-list').evaluate('e=>getComputedStyle(e).gap')=='8px';assert tasks.locator('.task-checkmark').first.evaluate('e=>getComputedStyle(e).width')=='26px';tasks.screenshot(path=f'/tmp/notepad-todo-{phase}-{width}.png')
  page.get_by_role('button',name='Icon for task: Workout',exact=True).click();page.get_by_role('button',name='Use 🌙',exact=True).click();assert page.get_by_role('button',name='Icon for task: Workout',exact=True).inner_text()=='🌙'
  page.get_by_role('button',name='Remove task: One important thing',exact=True).click();assert tasks.locator('.today-task').count()==5
  page.keyboard.press('Escape');page.evaluate("__lr.roomToolsUI.open('groceries')");groceries=page.locator('.grocery-notebook')
