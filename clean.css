@@ -144,3 +144,6 @@
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-quick button.future-mail-preset[aria-pressed=true] { border-color:var(--fm-dark); background:var(--fm-dark); color:var(--fm-on-dark); }
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-details { margin:0; padding:0; }
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-details > summary { padding:0; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-meta { flex:none; width:100%; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-details { position:relative; flex:none; }
+#sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-options { left:0; right:auto; width:min(340px,calc(100vw - 40px)); }
