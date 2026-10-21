@@ -84,14 +84,39 @@
   }
   // Sheets: a new habit (name + variant) and the almanac (stats, heatmap, undo/rename/retire).
   // Every user-provided name is written with textContent.
-  function createView({model,sheet,place=()=>{},retire=()=>{},undo=()=>{},notice=()=>{},swatches=['#7fae6a','#e89ab4','#a3b58d','#6fb3a8']}){
+  function createView({model,sheet,place=()=>{},retire=()=>{},undo=()=>{},notice=()=>{},checkIn=()=>{},swatches=['#7fae6a','#e89ab4','#a3b58d','#6fb3a8']}){
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const button=(parent,label,cls,fn)=>{const b=el('button',cls,label);b.type='button';b.onclick=fn;parent.appendChild(b);return b;};
+    let home=null;
+    // Control Centre's Habit Pots: one row per habit. Tap to tend, the arrow opens its almanac.
+    function openHome(){
+      sheet('Habit Pots','',h=>{home=h('div','habit-home');paintHome();},'habits');
+    }
+    function paintHome(){
+      if(!home?.isConnected)return;const list=model.list();home.replaceChildren();
+      const intro=el('p','habit-note',list.length?'Tap a plant on the days you tend it. Missed days just stay empty.':'Pick something small. Each habit gets a little pot in your room that grows as you tend it.');home.appendChild(intro);
+      if(list.length){const rows=el('ul','habit-rows');rows.setAttribute('aria-label','Your habits');
+        for(const h of list){
+          const checked=model.checkedToday(h.id),placed=h.item!==null,st=stage(h),rest=resting(h,new Date());
+          const li=el('li','habit-row'+(checked?' is-checked':'')+(placed?'':' is-unplaced'));li.dataset.habit=h.id;li.style.setProperty('--swatch',swatches[h.c]);
+          const tend=el('button','habit-tend');tend.type='button';tend.setAttribute('aria-pressed',String(checked));
+          const dot=el('span','habit-dot');dot.setAttribute('aria-hidden','true');const text=el('span','habit-row-text');
+          const status=!placed?'No home yet · tap to place':checked?'Tended today':'Not yet today';
+          text.append(el('b','',h.name),el('small','',status+' · '+STAGES[Math.max(0,st-(rest?1:0))]));tend.append(dot,text);
+          tend.setAttribute('aria-label',`${h.name}. ${status}.`);tend.onclick=()=>checkIn(h.id);
+          const more=el('button','habit-more');more.type='button';more.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';more.setAttribute('aria-label',`Open the almanac for ${h.name}`);more.onclick=()=>openAlmanac(h.id);
+          li.append(tend,more);rows.appendChild(li);
+        }
+        home.appendChild(rows);}
+      if(model.full)home.appendChild(el('p','habit-status',FULL));
+      else button(home,'Add a habit','habit-place habit-add',()=>openNew());
+    }
+    const back=host=>button(host,'‹ All habits','habit-back',()=>openHome());
     function openNew(){
       if(model.full){notice(FULL);return;}
       let choice=0;
       sheet('A new habit','',h=>{
-        const host=h('div','habit-new');
+        const host=h('div','habit-new');back(host);
         const label=el('label','habit-field');label.append(el('span','','What will you tend?'));const input=el('input');input.type='text';input.maxLength=NAME_MAX;input.placeholder='Stretch, read, water myself…';input.setAttribute('aria-label','Habit name');label.appendChild(input);host.appendChild(label);
         const group=el('div','habit-swatches');group.setAttribute('role','radiogroup');group.setAttribute('aria-label','Plant');host.appendChild(group);
         const paint=()=>{for(const b of group.children)b.setAttribute('aria-checked',String(Number(b.dataset.c)===choice));};
@@ -106,7 +131,7 @@
     function openPlace(id){
       const habit=model.get(id);if(!habit)return;
       sheet('Habit Pots','',h=>{
-        const host=h('div','habit-place-offer');const head=el('div','habit-head');head.style.setProperty('--swatch',swatches[habit.c]);head.append(el('span','habit-head-dot'),el('h3','habit-name',habit.name),el('p','habit-stage','No home yet'));host.appendChild(head);
+        const host=h('div','habit-place-offer');back(host);const head=el('div','habit-head');head.style.setProperty('--swatch',swatches[habit.c]);head.append(el('span','habit-head-dot'),el('h3','habit-name',habit.name),el('p','habit-stage','No home yet'));host.appendChild(head);
         host.appendChild(el('p','habit-note','Give it a pot in this room. Its days so far come along.'));
         const status=el('p','habit-status');status.setAttribute('role','status');
         button(host,'Place it here','habit-place',()=>{if(!place(id))status.textContent='No floor space in this room right now.';});
@@ -120,8 +145,8 @@
       },'habits');
     }
     function draw(host,id){
-      const habit=model.get(id);if(!habit){host.replaceChildren(el('p','habit-status','This habit has been retired.'));return;}
-      const s=model.stats(id),st=stage(habit),rest=resting(habit,new Date()),checked=model.checkedToday(id);host.replaceChildren();
+      const habit=model.get(id);if(!habit){host.replaceChildren();back(host);host.appendChild(el('p','habit-status','This habit has been retired.'));return;}
+      const s=model.stats(id),st=stage(habit),rest=resting(habit,new Date()),checked=model.checkedToday(id);host.replaceChildren();back(host);
       const head=el('div','habit-head');head.style.setProperty('--swatch',swatches[habit.c]);const title=el('h3','habit-name',habit.name);const stageLine=el('p','habit-stage',STAGES[Math.max(0,st-(rest?1:0))]+(rest?' · resting':''));head.append(el('span','habit-head-dot'),title,stageLine);host.appendChild(head);
       const nums=el('div','habit-stats');for(const [v,l] of [[s.total,'days in all'],[s.month,'this month'],[s.bestMonth,'best month']]){const box=el('div','habit-stat');box.append(el('b','',String(v)),el('small','',l));nums.appendChild(box);}host.appendChild(nums);
       const weeks=model.heatmap(id),grid=el('div','habit-heatmap');grid.setAttribute('role','img');grid.setAttribute('aria-label',`Last 15 weeks: ${weeks.flat().filter(c=>c.checked).length} days tended`);grid.style.setProperty('--swatch',swatches[habit.c]);
@@ -134,9 +159,9 @@
         const form=el('form','habit-rename-form'),input=el('input');input.type='text';input.maxLength=NAME_MAX;input.value=habit.name;input.setAttribute('aria-label','Habit name');const save=el('button','chipbtn habit-save','Save');save.type='submit';form.append(input,save);
         const status=el('p','habit-status');form.onsubmit=e=>{e.preventDefault();try{model.rename(id,input.value);draw(host,id);}catch(err){status.textContent=err.message;}};actions.replaceWith(form,status);input.focus();input.select();
       });
-      const retireButton=button(actions,'Retire habit','chipbtn habit-retire',()=>{if(!retireButton.dataset.confirm){retireButton.dataset.confirm='yes';retireButton.textContent='Retire for good?';return;}const gone=model.retire(id);if(gone)retire(gone);host.replaceChildren(el('p','habit-status','Retired. Its days stay in your calendar memories.'));});
+      const retireButton=button(actions,'Retire habit','chipbtn habit-retire',()=>{if(!retireButton.dataset.confirm){retireButton.dataset.confirm='yes';retireButton.textContent='Retire for good?';return;}const gone=model.retire(id);if(gone)retire(gone);host.replaceChildren();back(host);host.appendChild(el('p','habit-status','Retired. Its days stay in your calendar memories.'));});
     }
-    return {openNew,openAlmanac,openPlace};
+    return {openHome,openNew,openAlmanac,openPlace,refresh:paintHome};
   }
   const api={KEY,MAX,NAME_MAX,STAGES,VARIANT_NAMES,FULL,day,cleanName,total,stage,resting,displayStage,heatmap,stats,parse,create,createView};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRHabits=api;

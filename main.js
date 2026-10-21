@@ -244,7 +244,7 @@ function startLofiRooms() {
       },180);if(taskPortraits.size>=12)taskPortraits.delete(taskPortraits.keys().next().value);taskPortraits.set(key,src);
     }return taskPortraits.get(key);
   }
-  const todayUI=LRToday.createView({model:todayTasks,habits:{list:()=>habits.list().map(h=>({id:h.id,name:h.name,c:h.c,placed:h.item!==null,checked:habits.checkedToday(h.id)})),full:()=>habits.full,checkIn:id=>habitCheckIn(id),add:()=>habitsUI.openNew(),open:id=>habitsUI.openAlmanac(id)},context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus,daily:dailyInfo(),streak:store.get('lr.dailyStreak',{}).n||0,letterDraft:!!letters.model.get()?.body,ideaCount:roomTools.homeState.ideas.length}),
+  const todayUI=LRToday.createView({model:todayTasks,context:()=>({meta,tea:roomTools.tea,focus:rituals.activeFocus,daily:dailyInfo(),streak:store.get('lr.dailyStreak',{}).n||0,letterDraft:!!letters.model.get()?.body,ideaCount:roomTools.homeState.ideas.length}),
     saveWidgetOrder:order=>{const previous=meta.dashboardWidgetOrder;try{meta.dashboardWidgetOrder=order;saveMeta();if(JSON.stringify(store.get('lr.meta',{}).dashboardWidgetOrder)!==JSON.stringify(order))throw Error('Could not save this layout on your device.');}catch(e){meta.dashboardWidgetOrder=previous;throw e;}},
     completeMoment:()=>dailyCheck(dailyInfo().D.id),
     openRitual:id=>{closeSheets();if(id==='garden'){const active=rituals.activeFocus.find(f=>f.kind==='garden'&&f.active),bed=room.items.find(i=>i.t==='focusgarden');gardenUI.open(active?.id || bed?.id || null);}else if(id==='letter')letters.open();else if(id==='ideas')launchTool({id:'ideas'});},
@@ -420,6 +420,7 @@ function startLofiRooms() {
     else if(p.id==='camera')$('#bPhoto').click();
     else if(p.id==='newspaper')newspaperSheet();
     else if(p.id==='calendar')calendar.open();
+    else if(p.id==='habits')habitsUI.openHome();
     else if(p.id==='tst')widgetAction(find('tstcorkboard') || {t:'tstcorkboard',id:null});
     else if(p.id==='moments'){closeSheets();openCozyMoments();}
     else if(['todo','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id==='todo'?'To-Do':p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
@@ -2001,21 +2002,20 @@ function startLofiRooms() {
       if(care)care.tick(0);activity.wake();
       toast(r.after>r.before?`<span>${esc(r.habit.name)} grew a little. ${LRHabits.STAGES[r.after]}.</span>`:`<b>${esc(r.habit.name)}</b><span>Tended today.</span>`,2200,true);
     }else{const s=habits.stats(habitId);toast(`<b>${esc(h.name)}</b><span>${s.total} day${s.total===1?'':'s'} in all · ${s.month} this month</span>`,2200,true);}
-    todayUI.refresh();
+    habitsUI.refresh();
   }
   function placeHabit(habitId){
     const h=habits.get(habitId);if(!h)return false;
     const cells=[];for(let x=0;x<room.n;x++)for(let z=0;z<room.n;z++)cells.push({x,z});const mid=(room.n-1)/2;cells.sort((a,b)=>Math.hypot(a.x-mid,a.z-mid)-Math.hypot(b.x-mid,b.z-mid));
     const spot=cells.map(p=>room.make('habitpot',{...p,c:h.c})).find(it=>room.canPlace(it));
-    if(!spot){toast('<span>No floor space in this room right now.</span>',2200,true);todayUI.refresh();return false;}
-    const item=room.add(spot);habits.bind(habitId,meta.current,item.id);changed();save();if(care)care.tick(0);closeSheets();todayUI.refresh();
+    if(!spot){toast('<span>No floor space in this room right now.</span>',2200,true);return false;}
+    const item=room.add(spot);habits.bind(habitId,meta.current,item.id);changed();save();if(care)care.tick(0);closeSheets();
     toast(`<b>${esc(h.name)}</b><span>Potted in ${esc(room.name)}. Tap it each day you tend it.</span>`,2400,true);return true;
   }
   function retireHabit(gone){
     if(gone.item!==null){if(gone.room===meta.current){if(room.get(gone.item)){room.remove(gone.item);changed();save();}}else patchSaved(gone.room,d=>{if(Array.isArray(d.items))d.items=d.items.filter(i=>i.id!==gone.item);});}
-    todayUI.refresh();
   }
-  const habitsUI=LRHabits.createView({model:habits,sheet:codeSheet,place:id=>placeHabit(id),retire:gone=>retireHabit(gone),undo:()=>{if(care)care.tick(0);activity.wake();todayUI.refresh();},notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
+  const habitsUI=LRHabits.createView({model:habits,sheet:codeSheet,place:id=>placeHabit(id),retire:gone=>retireHabit(gone),undo:()=>{if(care)care.tick(0);activity.wake();},checkIn:id=>habitCheckIn(id),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
   const gardenUI=LRFocusGarden.createView({model:focusGarden,sheet:codeSheet,roomId:()=>meta.current,canPlant:bed=>room.get(bed)?.t==='focusgarden',
     preview:(stage,c)=>{const key=stage+':'+c;if(!gardenPortraits.has(key))gardenPortraits.set(key,view.thumb({t:'focusbloom',c,on:false},undefined,o=>{for(let n=1;n<=4;n++)o.userData.parts['growth'+n].visible=n<=stage;}));return gardenPortraits.get(key);},
     start:(bed,minutes)=>{
@@ -2033,7 +2033,7 @@ function startLofiRooms() {
     if(!force&&Date.now()<gardenNext)return;gardenNext=Date.now()+1000;
     focusGarden.tick();
     if(focusGarden.settle(room,meta.current,LR)){changed();save();}
-    if(habits.reconcile(meta.current,room))todayUI.refresh();
+    if(habits.reconcile(meta.current,room))habitsUI.refresh();
     for(const s of focusGarden.state.sessions.filter(s=>s.completed&&!s.announced)){
       remember('focus',{date:LRCalendar.day(new Date(s.end)),id:s.id});
       if(s.room===meta.current&&s.plant&&room.get(s.plant))view.burst(s.plant,'petals',2.5);
@@ -2679,7 +2679,7 @@ function startLofiRooms() {
     todayUI.mount(target,{openDay:date=>calendar.openDay(date),captions:host=>{LRCaptions.renderDaily(host,captionDesk);},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
-    h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
+    const roomsHeading=h('div','rooms-heading');h('h2','','Rooms',roomsHeading);h('span','rooms-count',`${rooms.length} room${rooms.length === 1 ? '' : 's'}`,roomsHeading);
     roomVillage(target);
     h('p','muted small','Rooms in your home save automatically. New rooms ask before you leave. Tap a star to choose your main bedroom.');
     const pending=store.get('lr.pendingDraft',null);

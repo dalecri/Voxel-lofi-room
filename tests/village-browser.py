@@ -51,7 +51,7 @@ with sync_playwright() as p:
    page.set_viewport_size({'width':width,'height':844})
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    assert page.locator('.rooms-content').evaluate('e=>e.scrollWidth<=e.clientWidth+1')
-   if width<600:assert page.locator('.rooms-grid').evaluate('e=>getComputedStyle(e).gridTemplateColumns.split(" ").length')==1
+   if width<600:assert page.locator('.rooms-grid').evaluate('e=>getComputedStyle(e).gridTemplateColumns.split(" ").length')==2
    if width==390:page.locator('.rooms-views').scroll_into_view_if_needed();page.screenshot(path=f'/tmp/rooms-grid-{phase}.png')
  page.keyboard.press('Escape');menu();page.locator('.rooms-new').click();assert page.locator('details').count()>0
  # Snapshot caches are private; room serialization is unchanged.
