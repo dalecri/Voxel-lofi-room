@@ -12,7 +12,7 @@
 #sheetBody[data-tool="whiteboard"] { --ps-bg:#dfe5ee; --ps-surface:#cdd6e4; --ps-light:#eef1f6; --ps-edge:#b0bfd5; --ps-ink:#171f2b; --ps-muted:#41597b; --ps-dark:#1b2432; --ps-on-dark:#dfe5ee; }
 #sheetBody[data-tool="wardrobe"] { --ps-bg:#d8cffd; --ps-surface:#c9c0f0; --ps-light:#edeafa; --ps-edge:#b3a9dc; --ps-ink:#160f33; --ps-muted:#4c407d; --ps-dark:#1b1339; --ps-on-dark:#ddd6f6; }
 #sheetBody[data-tool="merchant"] { --ps-bg:#f2d8b2; --ps-surface:#e9cb9f; --ps-light:#f3e2cb; --ps-edge:#d0b58c; --ps-ink:#33250f; --ps-muted:#7d6440; --ps-dark:#392a13; --ps-on-dark:#f1dfc5; }
-#sheetBody[data-tool="files"] { --ps-bg:#cfe9f6; --ps-surface:#baddef; --ps-light:#e5f3f9; --ps-edge:#a4c8da; --ps-ink:#0f2733; --ps-muted:#40687d; --ps-dark:#132d39; --ps-on-dark:#d1e8f4; }
+#sheetBody[data-tool="files"] { --ps-bg:#f1e9df; --ps-surface:#e6dbcd; --ps-light:#faf6f0; --ps-edge:#d8cbb9; --ps-ink:#2f261e; --ps-muted:#85776a; --ps-dark:#3d3129; --ps-on-dark:#f6efe6; }
 #sheetBody[data-tool="calendar"] { --ps-bg:#f7e0d2; --ps-surface:#f0d0bd; --ps-light:#faefe9; --ps-edge:#dbbaa7; --ps-ink:#331d0f; --ps-muted:#7d5740; --ps-dark:#392213; --ps-on-dark:#f5e1d4; }
 #sheetBody[data-tool="newspaper"] { --ps-bg:#ebe5d8; --ps-surface:#e1d9c5; --ps-light:#f4f0e9; --ps-edge:#d3c6a9; --ps-ink:#2c2516; --ps-muted:#7d6940; --ps-dark:#332b1a; --ps-on-dark:#ebe5d8; }
 #sheetBody[data-tool="tst"] { --ps-bg:#ffcde4; --ps-surface:#f0c0d6; --ps-light:#faeaf2; --ps-edge:#dca9c0; --ps-ink:#330f20; --ps-muted:#7d405c; --ps-dark:#391325; --ps-on-dark:#f6d6e5; }

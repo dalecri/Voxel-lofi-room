@@ -87,11 +87,16 @@
     function files(tab=fileTab){fileTab=FILE_TABS.includes(tab)?tab:'Letters';letters.flush();sheet('Files','',h=>{
       const host=h('div'),panels=tabs(host,FILE_TABS,fileTab,n=>{fileTab=n;},'files');
       FILE_TABS.forEach(t=>{const panel=panels[t];
-        if(t==='Scenes')button(panel,'Save current room as a scene',safe(async()=>{model.add('Scenes',{title:room().name,decor:saveScene()});files('Scenes');}));
-        const rows=model.list(t);if(!rows.length)panel.appendChild(element('p','muted files-empty',EMPTY[t]));
-        rows.forEach(f=>{const row=element('div','file-row'),info=element('div','file-info');button(info,f.title || 'Untitled',safe(()=>open(t,f)),'file-title');const date=new Date(f.updatedAt || f.createdAt || 0).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});info.appendChild(element('small','muted',date+(t==='Letters'?` · ${f.words} word${f.words===1?'':'s'}`:'')));row.appendChild(info);
+        // A memory shelf: paper cards for letters, framed snapshots for scenes, a polaroid wall for photos.
+        const grid=element('div','file-grid file-grid-'+t.toLowerCase());
+        if(t==='Scenes'){const add=button(grid,'',safe(async()=>{model.add('Scenes',{title:room().name,decor:saveScene()});files('Scenes');}),'file-add');add.setAttribute('aria-label','Save current room as a scene');add.innerHTML='<span aria-hidden="true">+</span><b>Save this room</b>';}
+        const rows=model.list(t);if(!rows.length)panel.appendChild(element('p','muted files-empty',EMPTY[t]));panel.appendChild(grid);
+        rows.forEach((f,i)=>{const row=element('div','file-row file-card'),info=element('div','file-info');row.style.setProperty('--tilt',['-1.6deg','1.2deg','-.7deg','1.8deg','-1.1deg'][i%5]);
+          if(t==='Letters'){const words=String(f.body||'').replace(/<br\s*\/?\s*>|<\/(?:p|div|li)>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();row.appendChild(element('p','file-preview',words?words.slice(0,140):'An empty page.'));}
+          else{const src=t==='Photos'?(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(f.data||'')?f.data:''):(()=>{try{return f.decor?renderer()?.roomThumb?.({...f.decor,id:f.id})||'':'';}catch(e){return '';}})();
+            const frame=element('button','file-frame');frame.type='button';frame.setAttribute('aria-label','Open '+(f.title||'Untitled'));frame.onclick=safe(()=>open(t,f));if(src){const img=element('img');img.src=src;img.alt='';img.loading='lazy';frame.appendChild(img);}else frame.appendChild(element('span','file-frame-empty',t==='Photos'?'◎':'▧'));row.appendChild(frame);}button(info,f.title || 'Untitled',safe(()=>open(t,f)),'file-title');const date=new Date(f.updatedAt || f.createdAt || 0).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});info.appendChild(element('small','muted',date+(t==='Letters'?` · ${f.words} word${f.words===1?'':'s'}`:'')));row.appendChild(info);
           const more=element('details','file-more'),summary=element('summary','','•••');summary.setAttribute('aria-label','Actions for '+(f.title || 'Untitled'));more.appendChild(summary);const actions=element('div','file-actions');
-          for(const [label,fn] of [['Open',()=>open(t,f)],['Rename',()=>rename(t,f)],['Download',()=>download(t,f)],['Share',()=>share(t,f)],['Delete',()=>remove(t,f)]])button(actions,label,safe(fn));more.appendChild(actions);row.appendChild(more);panel.appendChild(row);
+          for(const [label,fn] of [['Open',()=>open(t,f)],['Rename',()=>rename(t,f)],['Download',()=>download(t,f)],['Share',()=>share(t,f)],['Delete',()=>remove(t,f)]])button(actions,label,safe(fn));more.appendChild(actions);row.appendChild(more);grid.appendChild(row);
         });
       });
     });}
