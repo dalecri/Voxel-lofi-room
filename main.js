@@ -2679,7 +2679,7 @@ function startLofiRooms() {
     todayUI.mount(target,{openDay:date=>calendar.openDay(date),captions:host=>{LRCaptions.renderDaily(host,captionDesk);},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
-    h('h2', '', `Your home <small>· ${rooms.length} room${rooms.length === 1 ? '' : 's'}</small>`);
+    const roomsHeading=h('div','rooms-heading');h('h2','','Rooms',roomsHeading);h('span','rooms-count',`${rooms.length} room${rooms.length === 1 ? '' : 's'}`,roomsHeading);
     roomVillage(target);
     h('p','muted small','Rooms in your home save automatically. New rooms ask before you leave. Tap a star to choose your main bedroom.');
     const pending=store.get('lr.pendingDraft',null);
