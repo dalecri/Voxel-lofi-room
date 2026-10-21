@@ -4,10 +4,11 @@
 
 /* ---------- Daily Brief: an editorial page, not a stack of cards ---------- */
 #sheetBody:has(.drift-reader) .drift-reader .drift-paper.brief-paper { margin:0; padding:4px 6px 0; border:0; border-radius:0; background:none; box-shadow:none; }
-#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow { display:inline-flex; margin:0 0 6px; padding:5px 12px; border-radius:999px; background:var(--db-dark); color:var(--db-on-dark); font:800 12px/1 var(--db-font); letter-spacing:.04em; text-transform:none; opacity:1; }
-#sheetBody:has(.drift-reader) .drift-reader .drift-masthead { margin:0; color:var(--db-ink); text-align:left; font:800 clamp(38px,11vw,50px)/1.02 var(--db-font); letter-spacing:-.045em; }
-#sheetBody:has(.drift-reader) .drift-reader .drift-edition { margin:6px 0 0; color:var(--db-muted); text-align:left; font:700 15px/1.4 var(--db-font); letter-spacing:0; text-transform:none; }
-#sheetBody:has(.drift-reader) .drift-reader .brief-slim { margin:26px 0 0; padding:0; border:0; background:none; color:var(--db-ink); font:700 21px/1.4 var(--db-font); }
+#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow { display:flex; align-items:center; justify-content:center; gap:12px; margin:0 0 10px; padding:0; border-radius:0; background:none; color:var(--db-muted); font:800 12px/1 var(--db-font); letter-spacing:.2em; text-transform:uppercase; opacity:1; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow::before,#sheetBody:has(.drift-reader) .drift-reader .drift-eyebrow::after { content:''; flex:0 1 44px; height:1.5px; border-radius:2px; background:currentColor; opacity:.45; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-masthead { margin:0; color:var(--db-ink); text-align:center; font:800 clamp(38px,11vw,50px)/1.02 var(--db-font); letter-spacing:-.045em; }
+#sheetBody:has(.drift-reader) .drift-reader .drift-edition { margin:6px 0 0; color:var(--db-muted); text-align:center; font:700 15px/1.4 var(--db-font); letter-spacing:0; text-transform:none; }
+#sheetBody:has(.drift-reader) .drift-reader .brief-slim { margin:26px 0 0; text-align:center; padding:0; border:0; background:none; color:var(--db-ink); font:700 21px/1.4 var(--db-font); }
 #sheetBody:has(.drift-reader) .drift-reader .drift-columns,#sheetBody:has(.drift-reader) .drift-reader .drift-pet-grid { display:grid; grid-template-columns:1fr; gap:0; margin:0; }
 #sheetBody:has(.drift-reader) .drift-reader .brief-card { margin:30px 0 0; padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
 #sheetBody:has(.drift-reader) .drift-reader .brief-kicker { display:flex; align-items:center; gap:8px; margin:0 0 6px; }
@@ -156,12 +157,16 @@
 
 /* ---------- Tea: roomy quick timers, no duplicate label up top ---------- */
 #sheetBody[data-tool=tea] .tea-top .tea-current { display:none; }
-#sheetBody[data-tool=tea] .roomtool .tea-presets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; width:100%; max-width:380px; margin-inline:auto; }
-#sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset { display:grid; place-items:center; align-content:center; gap:3px; min-width:0; min-height:62px; margin:0; padding:8px 6px; border-radius:22px; text-align:center; }
-#sheetBody[data-tool=tea] .roomtool .tea-preset b { font:800 15px/1.15 var(--ps-font); white-space:nowrap; }
-#sheetBody[data-tool=tea] .roomtool .tea-preset small { color:var(--ps-muted); font:700 13px/1 var(--ps-font); }
-#sheetBody[data-tool=tea] .roomtool .tea-preset[aria-pressed=true] small { color:inherit; opacity:.8; }
-@media (max-height:520px) { #sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset { display:flex; justify-content:center; gap:6px; min-height:44px; padding:6px; } }
+/* Quick timers: one slim segmented control, light on the page. */
+#sheetBody[data-tool=tea] .roomtool .tea-presets { display:flex; gap:4px; width:100%; max-width:340px; box-sizing:border-box; margin:22px auto 16px; padding:4px; border-radius:999px; background:var(--ps-surface); }
+#sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset { display:flex; flex:1; align-items:center; justify-content:center; gap:5px; min-width:0; min-height:44px; margin:0; padding:0 8px; border:0; border-radius:999px; background:transparent; color:var(--ps-muted); box-shadow:none; text-align:center; transition:background .2s ease,color .2s ease; }
+#sheetBody[data-tool=tea] .roomtool .tea-preset b { align-self:center; font:800 14px/1 var(--ps-font); white-space:nowrap; }
+#sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset small { position:static; display:inline; align-self:center; margin:0; color:inherit; opacity:.75; font:700 12px/1 var(--ps-font); white-space:nowrap; }
+#sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset[aria-pressed=true] { background:color-mix(in srgb,#fff 72%,var(--ps-light)); color:var(--ps-ink); box-shadow:0 2px 8px -4px #0003; }
+#sheetBody[data-tool=tea] .roomtool .tea-presets .tea-preset:focus-visible { outline:2px solid var(--ps-dark); outline-offset:2px; }
+#sheetBody[data-tool=tea] .roomtool .tea-note { margin:0 0 18px; }
+@media (max-height:700px) { #sheetBody[data-tool=tea] .roomtool .tea-presets { margin:12px auto 10px; } #sheetBody[data-tool=tea] .roomtool .tea-note { margin:0 0 10px; } }
+@media (max-height:520px) { #sheetBody[data-tool=tea] .roomtool .tea-presets { margin:0 auto; padding:2px; } #sheetBody[data-tool=tea] .roomtool .tea-note { margin:4px 0; } }
 @media (max-height:520px) { #sheetBody[data-tool=tea] .roomtool .tea-footnote { display:none; } #sheetBody[data-tool=tea] .roomtool .tea-note { margin:4px 0; } }
 @media (max-height:600px) and (min-width:540px) { #sheetBody[data-tool=tea] .tea-dial { width:min(100%,200px,46dvh); } }
 
