@@ -37,7 +37,7 @@
 .brief-weekly{text-align:center;font:italic 700 22px Georgia,'Times New Roman',serif;margin:6px 0 12px;padding-top:10px;border-top:2px solid var(--paper-ink)}
 @media(max-width:560px){.brief-front{grid-template-columns:1fr}}
 /* Daily Brief, sunny edition: a floating yellow card in Plus Jakarta Sans. Same palette day and night. */
-#sheetBody:has(.drift-reader) { --db-bg:#fbe57a; --db-surface:#ecd565; --db-raise:#f8e27a; --db-light:#fdf0a8; --db-edge:#ddc256; --db-ink:#2c2406; --db-muted:#8a7428; --db-dark:#2e2506; --db-on-dark:#fbe57a; --db-font:'Plus Jakarta Sans',Nunito,sans-serif;
+#sheetBody:has(.drift-reader) { --db-bg:#f2e8d3; --db-surface:#e8dbc0; --db-raise:#f7f0e1; --db-light:#faf5ea; --db-edge:#d9c8a6; --db-ink:#3b2f22; --db-muted:#8a7559; --db-dark:#4a3a29; --db-on-dark:#f5ecda; --db-font:'Plus Jakarta Sans',Nunito,sans-serif;
   left:0; right:0; bottom:0; max-width:560px; max-height:min(90dvh,860px); margin:0 auto; padding:22px 22px calc(var(--sab,0px) + 20px); border-radius:36px 36px 0 0; background:var(--db-bg); color:var(--db-ink); font-family:var(--db-font); }
 #sheetBody:has(.drift-reader) > .grab { display:none; }
 .brief-heading { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:10px; margin:0 0 14px; }
