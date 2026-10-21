@@ -110,7 +110,14 @@
         const status=element('p','Saved');status.id='whiteboardStatus';status.className='whiteboard-status';status.setAttribute('role','status');
         const count=element('span');count.className='whiteboard-count';count.setAttribute('aria-label','Characters used');
         const updateCount=()=>{count.textContent=`${input.value.length} / ${input.maxLength}`;};updateCount();
-        footer.append(status,count);panel.append(label,input,footer);
+        // A metal ledge under the board: three markers to look at and an eraser that wipes (tap twice).
+        const tray=element('div');tray.className='whiteboard-tray';
+        for(const ink of ['#24324a','#c8463a','#3f8a5a']){const m=element('span');m.className='whiteboard-marker';m.style.setProperty('--ink',ink);m.setAttribute('aria-hidden','true');tray.appendChild(m);}
+        const wipe=element('button');wipe.type='button';wipe.className='whiteboard-eraser';wipe.textContent='Wipe';wipe.setAttribute('aria-label','Wipe the board');
+        wipe.onclick=()=>{if(!wipe.dataset.confirm){wipe.dataset.confirm='yes';wipe.textContent='Wipe it?';return;}delete wipe.dataset.confirm;wipe.textContent='Wipe';input.value='';input.dispatchEvent(new Event('input'));input.focus();};
+        input.addEventListener('focus',()=>{if(wipe.dataset.confirm){delete wipe.dataset.confirm;wipe.textContent='Wipe';}});
+        tray.appendChild(wipe);
+        footer.append(status,count);panel.append(label,input,tray,footer);
         input.oninput=()=>{updateCount();try{model.write(key,id,input.value);status.textContent='Saved';scanAt=0;}catch(e){status.textContent=e.message;}};
       });
     }
