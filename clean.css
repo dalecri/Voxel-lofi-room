@@ -387,3 +387,29 @@ body.reduce-motion .radio-library.is-playing .radio-vinyl,body.reduce-motion .ra
 #sheetBody[data-tool=calendar] .calendar-form button[type=submit] { min-height:52px; margin:2px 0 0; border:0; border-radius:999px; background:var(--ps-dark); color:var(--ps-on-dark); box-shadow:none; font:800 16px/1 var(--ps-font); }
 #sheetBody[data-tool=calendar] .calendar-event .calendar-form { flex:1; }
 #sheetBody[data-tool=calendar] .calendar-detail .calendar-form button[type=submit] { display:flex; align-items:center; justify-content:center; box-shadow:none; }
+
+/* ---------- To-Do: a sunrise-to-dusk path, soft task cards, one pill to add ---------- */
+#menu-todo .todo-heading h2 { font:800 clamp(30px,8vw,38px)/1 var(--font); letter-spacing:-.04em; }
+#menu-todo .task-notebook[data-tab=todo] .task-notebook-heading { justify-content:flex-end; margin:0 0 6px; }
+#menu-todo .task-notebook[data-tab=todo] .task-counter { padding:6px 12px; border-radius:999px; background:var(--chip); color:var(--ink); font:800 12px/1 var(--font); letter-spacing:.02em; }
+/* The day path as a soft card. */
+#menu-todo .task-journey { margin:0 0 18px; padding:14px 18px 12px; border:0; border-radius:26px; background:linear-gradient(100deg,color-mix(in srgb,#ffd99a 45%,var(--panel-solid)) 0%,color-mix(in srgb,#ffc2a8 35%,var(--panel-solid)) 50%,color-mix(in srgb,#c9b8ef 45%,var(--panel-solid)) 100%); }
+#menu-todo .task-journey-summary { margin:0 0 4px; color:var(--ink); font:800 15px/1.3 var(--font); }
+#menu-todo .task-day-path::before { height:4px !important; border:0 !important; border-radius:4px; background:linear-gradient(90deg,#f2b84f,#f07a5a 50%,#8b74c9) !important; opacity:.55; }
+#menu-todo .task-path-stop i { border:0 !important; background:var(--panel-solid) !important; box-shadow:0 2px 6px #0000001a; }
+#menu-todo .task-path-stop small { color:var(--ink); opacity:.7; font-weight:700; }
+/* Tasks: separate soft cards, round checks, emoji in a tile. */
+#menu-todo .task-notebook .today-task-list { display:grid !important; gap:8px; margin:0; padding:0; border:0 !important; background:none !important; box-shadow:none !important; }
+#menu-todo .task-notebook .today-task,#menu-todo .task-notebook .today-task.done { min-height:60px; margin:0; padding:8px 8px 8px 14px; border:0 !important; border-radius:20px !important; background:color-mix(in srgb,var(--chip) 80%,var(--panel-solid)) !important; box-shadow:none !important; backdrop-filter:none !important; }
+#menu-todo .task-notebook .today-task.done { opacity:.75; }
+#menu-todo .task-notebook .task-checkmark { width:26px !important; height:26px !important; border:2px solid var(--ink) !important; border-radius:50% !important; background:transparent !important; }
+#menu-todo .task-notebook .today-task-check[aria-checked=true] .task-checkmark { background:var(--ink) !important; color:var(--panel-solid) !important; }
+#menu-todo .task-notebook .today-task-text { font:600 16.5px/1.35 var(--font) !important; }
+#menu-todo .task-notebook .today-task.done .today-task-text { text-decoration:line-through; text-decoration-thickness:1.5px; color:var(--ink-dim) !important; }
+#menu-todo .task-notebook .today-task-icon { display:grid; place-items:center; width:34px; height:34px; min-width:0; min-height:34px; padding:0; border-radius:12px; justify-self:center; background:var(--panel-solid); font-size:20px; }
+#menu-todo .task-notebook .today-task-remove { color:var(--ink-dim); }
+/* Add: a pill field with the button inside. */
+#menu-todo .task-notebook[data-tab=todo] .today-task-form { display:flex; align-items:center; gap:0; margin:16px 0 0; padding:4px 4px 4px 18px; border:0; border-radius:999px; background:var(--chip); }
+#menu-todo .task-notebook .today-task-form input { flex:1; min-width:0; min-height:48px; padding:0; border:0 !important; border-radius:0; background:transparent !important; color:var(--ink); font:600 16px/1 var(--font); box-shadow:none; }
+#menu-todo .task-notebook .today-task-form input:focus { outline:none; }
+#menu-todo .task-notebook .today-task-form .primary { flex:none; min-height:46px; margin:0; padding:0 18px; border:0; border-radius:999px; background:var(--ink) !important; color:var(--panel-solid) !important; box-shadow:none; font:800 15px/1 var(--font); }
