@@ -1958,6 +1958,7 @@ function startLofiRooms() {
     roomToolsUI.close();
     const open = sheet.classList.contains('open');
     const returnFocus = sheet.contains(document.activeElement);
+    sheetScreen = '';
     sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
     $('#bMenu').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;
     if (returnFocus) $('#bMenu').focus({preventScroll:true});
@@ -2334,10 +2335,25 @@ function startLofiRooms() {
     const history=body.querySelector('.mood-history');
     if(history){header.classList.add('mood-heading');header.append(title,history,close);}else header.append(title,close);
   }
+  // Screen changes inside an open sheet glide instead of snapping: the new screen
+  // rises in and the sheet eases to its new height. A repaint of the same screen stays still.
+  let sheetScreen='';
+  const screenKey=body=>{const main=body.querySelector(':scope > :not(.grab):not(.sheet-close):not(h2):not(p):not(.app-sheet-heading):not(.menu-actions)');return [body.dataset.tool||'',body.querySelector(':scope > h2, .app-sheet-heading > h2')?.textContent||'',main?.id||'',(main?.className||'').split(' ')[0]].join('|');};
+  function glideSheet(run){
+    const body=$('#sheetBody'),open=sheet.classList.contains('open'),from=open?body.getBoundingClientRect().height:0;
+    run();
+    const key=screenKey(body),same=key===sheetScreen;sheetScreen=key;
+    if(!open||same||view.reducedMotion||!body.animate)return;
+    const to=body.getBoundingClientRect().height,ease='cubic-bezier(.2,.8,.2,1)';
+    body.classList.add('is-gliding');clearTimeout(glideSheet.done);glideSheet.done=setTimeout(()=>body.classList.remove('is-gliding'),360);
+    if(Math.abs(to-from)>2)body.animate([{height:from+'px',overflow:'hidden'},{height:to+'px',overflow:'hidden'}],{duration:320,easing:ease});
+    for(const child of body.children)child.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{duration:280,easing:ease});
+  }
   // tool tags the sheet so the shared pastel tool styles (tools.css) can theme it.
   const SHEET_TOOLS = { 'Caption studio':'captions', 'Groceries':'groceries', 'On the fridge door':'groceries', 'Pushup tally':'tally', 'The idea jar':'ideas', 'Tea':'tea', 'A little savings jar':'savings', 'Pixel maker':'sketch', 'French corner':'french', 'A little whiteboard':'whiteboard', 'A little wardrobe':'wardrobe', 'Files':'files', 'Rename file':'files', 'Delete this file?':'files', 'Calendar':'calendar', 'The newspaper':'newspaper', 'Book':'book' };
   const SHEET_TOOL_SUBS = { 'TwoStoryTails posting plan':'tst', 'Your day, remembered gently.':'calendar' };
-  function codeSheet(title, sub, build, tool = '') {
+  function codeSheet(title, sub, build, tool = '') { glideSheet(() => buildSheet(title, sub, build, tool)); }
+  function buildSheet(title, sub, build, tool) {
     frenchUI?.close(false);
     letters.close(false);
     releaseRoomQR();
@@ -2616,6 +2632,11 @@ function startLofiRooms() {
     list.appendChild(nb);
     openSheet();
   }
+  // Travelling from a menu dims the room for a breath, the same as walking through a door.
+  function fadeTravel(go){
+    const fade=$('#fade');if(view.reducedMotion||fade.classList.contains('on')){go();return;}
+    fade.classList.add('on');setTimeout(()=>{try{go();}finally{requestAnimationFrame(()=>fade.classList.remove('on'));}},360);
+  }
   function switchRoom(id, asked) {
     if (id === meta.current) return;
     if (!asked) { leaveThen(() => switchRoom(id, true)); return; }
@@ -2645,7 +2666,7 @@ function startLofiRooms() {
         const list=rooms.slice().sort((a,b)=>a.id-b.id).map(r=>({...r,...((r.id===meta.current?room.serialize():store.get('lr.room.'+r.id,null)) || {items:[]}),id:r.id,name:r.id===meta.current?room.name:r.name}));
         if(!isSaved())list.push({...room.serialize(),id:meta.current,draft:true});
         return list;
-      },thumb:d=>d.id===meta.current?captureRoomSnapshot(true):roomSnapshots.get(d.id,meta.phase)?.url,travel:r=>{closeSheets();if(r.id!==meta.current)switchRoom(r.id);},
+      },thumb:d=>d.id===meta.current?captureRoomSnapshot(true):roomSnapshots.get(d.id,meta.phase)?.url,travel:r=>{closeSheets();if(r.id!==meta.current)fadeTravel(()=>switchRoom(r.id));},
       save:()=>{commit();renderMenu();},remove:deleteRoom,newRoom:newFlow,
       bedroom:()=>store.get('lr.mainBedroom',null),setBedroom:r=>{
         const selected=store.get('lr.mainBedroom',null)===r.id;
@@ -2656,7 +2677,8 @@ function startLofiRooms() {
       }});
   }
   function homeSearch(toggleHost) { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace,toggleHost}); }
-  function renderMenu() {
+  function renderMenu() { glideSheet(renderMenuNow); }
+  function renderMenuNow() {
     frenchUI?.close(false);
     letters.close(false);
     releaseRoomQR();

@@ -48,7 +48,9 @@
       const b=button(bar,name,()=>select(name));b.id=id+'-tab';b.setAttribute('role','tab');b.setAttribute('aria-controls',id);
     });
     Object.values(panels).forEach(p=>parent.appendChild(p));
-    function select(name){names.forEach(n=>{const on=n===name,b=bar.querySelector('[aria-controls="'+panels[n].id+'"]');b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;panels[n].hidden=!on;});change(name);parent.closest('#sheetBody')?.scrollTo({top:0});}
+    function select(name){names.forEach(n=>{const on=n===name,b=bar.querySelector('[aria-controls="'+panels[n].id+'"]'),showing=on&&panels[n].hidden;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;panels[n].hidden=!on;
+      // A newly chosen tab drifts in rather than snapping into place.
+      if(showing&&panels[n].animate&&!document.body.classList.contains('reduce-motion'))panels[n].animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'});});change(name);parent.closest('#sheetBody')?.scrollTo({top:0});}
     select(names.includes(selected)?selected:names[0]);return panels;
   }
   function tabKey(e){const list=e.target.closest?.('[role=tablist]');if(!list || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const b=[...list.querySelectorAll('[role=tab]')],i=b.indexOf(e.target);if(i<0)return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?b.length-1:(i+(e.key==='ArrowRight'?1:b.length-1))%b.length;b[next].click();b[next].focus();}
