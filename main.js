@@ -2586,8 +2586,21 @@ function startLofiRooms() {
   }
   let shareLogo = null;   // the app icon for the card's sign-off; the card still paints without it
   const shareLogoImage = () => shareLogo || (shareLogo = new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = 'assets/icon.png'; }));
+  // The card's QR wears the same theme as the voxel QR. It's read back once; if the
+  // colours don't scan, the card keeps the classic black QR.
+  const qrTheme = () => { const t = store.get('lr.qrTheme', 'blossom'); return LRRoomQR.THEMES[t] ? t : 'blossom'; };
   function roomCardImage(url, format = 'post', shot = roomSnapshotImage()) {
-    return Promise.all([shot, shareLogoImage()]).then(([img, logo]) => LRShareLinks.drawCard(document.createElement('canvas'), { room: img, title: room.name, url, format, logo, night: meta.phase === 'night' || meta.phase === 'evening' }).toDataURL('image/png'));
+    return Promise.all([shot, shareLogoImage()]).then(([img, logo]) => {
+      const opts = { room: img, title: room.name, url, format, logo, night: meta.phase === 'night' || meta.phase === 'evening' }, theme = qrTheme();
+      let canvas = LRShareLinks.drawCard(document.createElement('canvas'), { ...opts, qrColours: m => LRRoomQR.colours(m, theme, url) });
+      const box = canvas.qrBox;
+      if (box) {
+        const pad = 12, x = Math.max(0, box.x - pad), y = Math.max(0, box.y - pad), w = Math.min(canvas.width - x, box.size + pad * 2), h = Math.min(canvas.height - y, box.size + pad * 2);
+        const px = canvas.getContext('2d').getImageData(x, y, w, h);
+        if (LRRoomQR.decode(px.data, w, h) !== url) canvas = LRShareLinks.drawCard(document.createElement('canvas'), opts);
+      }
+      return canvas.toDataURL('image/png');
+    });
   }
   async function shareCard(png, url, format = 'post') {
     const text = LRShareLinks.shareText(room.name, url), name = `lofi-room-${format === 'story' ? 'story-' : ''}${Date.now()}.png`;
@@ -2612,7 +2625,8 @@ function startLofiRooms() {
     codeSheet(`Share “${room.name}”`, 'Send a picture with a link. Friends tap it to step inside your room.', h => {
       // Post or story: one snapshot of the room, a card painted for each shape on demand.
       let format = SHARE_FORMATS.some(f => f[0] === store.get('lr.shareFormat', 'post')) ? store.get('lr.shareFormat', 'post') : 'post';
-      const shot = roomSnapshotImage(), cards = {};
+      const shot = roomSnapshotImage();
+      let cards = {};
       const shape = h('div', 'share-format'); shape.setAttribute('role', 'radiogroup'); shape.setAttribute('aria-label', 'Picture shape');
       shape.innerHTML = SHARE_FORMATS.map(([id, label, ratio]) => `<button type="button" role="radio" data-format="${id}" aria-label="${label} ${ratio}"><b>${label}</b><small>${ratio}</small></button>`).join('');
       const card = h('figure', 'share-card');
@@ -2649,7 +2663,7 @@ function startLofiRooms() {
       const send = codeRow.querySelector('#bSendCode');
       if (send) send.onclick = () => shareTextOut('My Lofi Room', `Come see my Lofi Room! Open this link: ${url}\n\nOr paste this code in the app: ${code}`);
       ta.onclick = () => ta.select();
-      shareQR=LRRoomQR.createView({host:more,code,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
+      shareQR=LRRoomQR.createView({host:more,code,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),onTheme:()=>{cards={};paint(format);}});
     });
   }
   const friendCards=LRFriendCards.create({store});

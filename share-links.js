@@ -40,7 +40,7 @@
   // clear of the top and bottom bars Instagram and TikTok draw over a story.
   const FORMATS={post:{W:1080,H:1350,eyebrow:98,top:130,room:820,bottom:56},story:{W:1080,H:1920,eyebrow:300,top:350,room:960,bottom:330}};
   // Draws the card on a canvas and returns it. room: an Image of the room snapshot.
-  function drawCard(canvas,{room,title,url,night=false,format='post',logo=null,qrcode=root.qrcode}){
+  function drawCard(canvas,{room,title,url,night=false,format='post',logo=null,qrColours=null,qrcode=root.qrcode}){
     const F=FORMATS[format]||FORMATS.post,W=F.W,H=F.H,base=H-F.bottom;canvas.width=W;canvas.height=H;const g=canvas.getContext('2d');
     const sky=night?['#2a2550','#433a74','#6b5592']:['#ffe6c7','#f8c9b3','#dcc9f0'],ink=night?'#fff6ea':'#3a2a26',soft=night?'#d9cff5':'#7d6158';
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,sky[0]);bg.addColorStop(.55,sky[1]);bg.addColorStop(1,sky[2]);g.fillStyle=bg;g.fillRect(0,0,W,H);
@@ -55,8 +55,12 @@
     if(matrix){
       // Whole-pixel cells and a white moat keep it easy for a phone camera to read.
       const n=matrix.length,x=W-56-size,y=base-size;
-      g.fillStyle='#ffffff';rounded(g,x,y,size,size,26);g.fill();g.fillStyle='#16131f';
-      for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c])g.fillRect(x+(c+quiet)*cell,y+(r+quiet)*cell,cell,cell);
+      g.fillStyle='#ffffff';rounded(g,x,y,size,size,26);g.fill();canvas.qrBox={x,y,size};
+      // Themed: qrColours(matrix) gives [row,col,hex,finder] per dark module, like the voxel QR.
+      // Blocks get a hairline gap when cells are big enough; finders always stay solid.
+      const painted=qrColours?qrColours(matrix):null,gap=cell>=6?Math.max(1,Math.round(cell*.08)):0;
+      if(painted)for(const [r,c,hex,finder] of painted){const k=finder?0:gap;g.fillStyle='#'+hex.toString(16).padStart(6,'0');g.fillRect(x+(c+quiet)*cell+k/2,y+(r+quiet)*cell+k/2,cell-k,cell-k);}
+      else{g.fillStyle='#16131f';for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c])g.fillRect(x+(c+quiet)*cell,y+(r+quiet)*cell,cell,cell);}
       const left=W-56-size-40-60;fit(g,name,left,72,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,60,base-180);
       g.font='800 36px Nunito, sans-serif';g.fillText('Scan to step inside',60,base-114);
       g.fillStyle=soft;g.font='600 28px Nunito, sans-serif';g.fillText(format==='story'?'or tap the link on my story':'or tap the link in my message',60,base-70);

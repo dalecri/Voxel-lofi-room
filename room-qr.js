@@ -88,7 +88,7 @@
     if(cap?.isNativePlatform?.())return cap.registerPlugin('RoomQrFiles').save({filename:'lofi-room-qr.png',base64:data.split(',')[1]});
     const a=document.createElement('a');a.href=data;a.download='lofi-room-qr.png';document.body.appendChild(a);a.click();a.remove();
   }
-  function createView({host,code,renderer,phase,notice=()=>{}}){
+  function createView({host,code,renderer,phase,notice=()=>{},onTheme=()=>{}}){
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const section=el('section','room-qr'),heading=el('h3','','QR code'),note=el('p','muted small','A little voxel QR to scan. Pick its colours, or Plain for a simpler code.');let encoded;
     try{encoded=encode(code);}catch(e){note.textContent='This room is too big for a QR. Copy or send the code above instead.';note.classList.add('qr-unavailable');host.appendChild(note);return {destroy(){}};}
@@ -98,7 +98,7 @@
     // Themes, as in the generator. The pick is remembered on this device only.
     let theme='blossom';try{const saved=JSON.parse(root.localStorage.getItem('lr.qrTheme'));if(THEMES[saved])theme=saved;}catch(e){/* first time, or private mode */}
     const themes=el('div','room-qr-themes');themes.setAttribute('role','radiogroup');themes.setAttribute('aria-label','QR colours');
-    for(const [id,t] of Object.entries(THEMES)){const b=el('button','room-qr-theme',t.icon);b.type='button';b.dataset.theme=id;b.setAttribute('role','radio');b.setAttribute('aria-label',t.label);b.title=t.label;b.onclick=()=>{theme=id;try{root.localStorage.setItem('lr.qrTheme',JSON.stringify(id));}catch(e){/* private mode */}isPlain=false;render();};themes.appendChild(b);}
+    for(const [id,t] of Object.entries(THEMES)){const b=el('button','room-qr-theme',t.icon);b.type='button';b.dataset.theme=id;b.setAttribute('role','radio');b.setAttribute('aria-label',t.label);b.title=t.label;b.onclick=()=>{const changed=theme!==id;theme=id;try{root.localStorage.setItem('lr.qrTheme',JSON.stringify(id));}catch(e){/* private mode */}isPlain=false;render();if(changed)onTheme(id);};themes.appendChild(b);}
     let isPlain=false,image;
     const render=()=>{canvas.getContext('2d').clearRect(0,0,PIXELS,PIXELS);if(isPlain)plain(canvas,encoded.matrix);else if(renderCode(canvas,encoded,code,renderer,phase==='night',theme)==='plain'){isPlain=true;note.textContent='Plain keeps this room easy to scan. The code above works too.';}
       petals.hidden=isPlain;toggle.setAttribute('aria-pressed',String(isPlain));frame.style.setProperty('--qr-petal',THEMES[theme].petal);frame.style.setProperty('--qr-bg','#'+THEMES[theme].bg.toString(16).padStart(6,'0'));frame.classList.toggle('plain',isPlain);

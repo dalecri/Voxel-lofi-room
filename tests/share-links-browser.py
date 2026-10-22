@@ -36,6 +36,12 @@ with sync_playwright() as p:
  # The sign-off carries the app icon (its warm red block), not just the sky.
  px=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);ok([...g.getImageData(60+20,1294-48+20,1,1).data]);};i.src=document.querySelector('.share-card-img').src;})''')
  assert px[0]>150 and px[1]<120,px
+ # The card's QR wears the voxel QR theme (blossom greens and pinks), and repaints when the theme changes.
+ tint='''t=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);const d=g.getImageData(700,950,360,360).data;let green=0,blue=0;for(let k=0;k<d.length;k+=4){if(d[k+1]>d[k]+40&&d[k+1]>d[k+2])green++;if(d[k+2]>d[k]+60&&d[k+2]>d[k+1]+20)blue++;}ok([green,blue]);};i.src=document.querySelector('.share-card-img').src;})'''
+ green,blue=page.evaluate(tint,0);assert green>2000 and blue<200,(green,blue)
+ page.click('.share-more summary');page.click('.room-qr-theme[data-theme=frost]');until(page,'!!document.querySelector(".share-card-img")?.src && !document.querySelector("#bShareCard").disabled')
+ green,blue=page.evaluate(tint,0);assert blue>2000 and green<200,(green,blue)
+ page.click('.room-qr-theme[data-theme=blossom]');until(page,'!!document.querySelector(".share-card-img")?.src && !document.querySelector("#bShareCard").disabled');page.click('.share-more summary')
  # The code and QR wait, folded, under the main share.
  assert page.locator('.share-more').get_attribute('open') is None and page.locator('.room-qr-canvas').is_hidden()
  # Story: a 9:16 card with the same scannable link, and the choice is remembered.
