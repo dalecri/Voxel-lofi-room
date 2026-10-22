@@ -18,6 +18,7 @@ cpSync(join(root, 'packs'), join(out, 'packs'), { recursive: true });
 cpSync(join(root, 'games'), join(out, 'games'), { recursive: true });
 copyFileSync(join(root, 'assets', 'mailbox-access.png'), join(out, 'assets', 'mailbox-access.png'));
 copyFileSync(join(root, 'assets', 'icon.png'), join(out, 'assets', 'icon.png'));
+copyFileSync(join(root, 'assets', 'og-card.jpg'), join(out, 'assets', 'og-card.jpg'));
 copyFileSync(join(root, 'assets', 'library-pixel.ttf'), join(out, 'assets', 'library-pixel.ttf'));
 copyFileSync(join(root, 'assets', 'french.json'), join(out, 'assets', 'french.json'));
 mkdirSync(join(out, 'vendor', 'three', 'build'), { recursive: true });
