@@ -20,3 +20,13 @@ test('unsupported file sharing falls back to text, while cancellation stays canc
  const cancelled=Object.assign(Error('cancelled'),{name:'AbortError'});calls.length=0;nav.share=async options=>{calls.push(options);throw cancelled;};await assert.rejects(()=>QR.shareImage({file:{},code:'LR1.exact',cap:null,nav}),{name:'AbortError'});assert.equal(calls.length,1);
  const cap={isNativePlatform:()=>true,registerPlugin:name=>name==='Filesystem'?{writeFile:async()=>{throw unsupported;}}:{share:async options=>calls.push(options)}};calls.length=0;await QR.shareImage({data:'data:image/png;base64,AAA',file:{},code:'LR1.exact',cap});assert.deepEqual(calls,[{title:'My Lofi Room',text:'LR1.exact'}]);
 });
+test('voxel colours follow the generator: theme colours in the middle, edge colours on the finders, same code same colours',()=>{
+ const qr=QR.encode('LR1.'+'Abc_123-'.repeat(40)),n=qr.matrix.length,dark=qr.matrix.flat().filter(Boolean).length;
+ for(const [id,t] of Object.entries(QR.THEMES)){
+  const out=QR.colours(qr.matrix,id,'seed');assert.equal(out.length,dark);
+  for(const [r,c,hex,finder] of out){assert.ok(qr.matrix[r][c]);if(finder)assert.ok(t.edge.includes(hex),id);else assert.ok(t.qr.includes(hex)||t.edge.includes(hex),id);}
+  const middle=out.filter(([r,c])=>Math.abs(r-n/2)<n/8&&Math.abs(c-n/2)<n/8);assert.ok(middle.filter(([,,hex])=>t.qr.includes(hex)).length>middle.length*.8,id);
+ }
+ assert.deepEqual(QR.colours(qr.matrix,'blossom','a'),QR.colours(qr.matrix,'blossom','a'));
+ assert.deepEqual(QR.colours(qr.matrix,'nope','a'),QR.colours(qr.matrix,'blossom','a'));
+});

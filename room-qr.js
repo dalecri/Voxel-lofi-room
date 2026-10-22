@@ -20,46 +20,56 @@
     for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c])g.fillRect(offset+c*cell,offset+r*cell,cell,cell);
     return canvas;
   }
-  // A shallow, gapless QR slab. Top faces retain the exact matrix; the white
-  // four-module moat, tree, petals and lighting never cross into its modules.
+  // Voxel QR themes, matching the Voxel QR Tree generator: a white plate, the code in
+  // coloured blocks (theme colours in the middle, the edge colours round the rim and on
+  // the three finder squares), on a deep background.
+  const THEMES={
+    blossom:{label:'Cherry blossom',icon:'🌸',bg:0x160d16,qr:[0xf0a0c4,0xe07eaa,0xd4508b,0xcc4488,0xec407a],edge:[0x1b5e20,0x2e7d32,0x388e3c],petal:'#f5c0d8'},
+    maple:{label:'Autumn maple',icon:'🍁',bg:0x180e08,qr:[0xe65100,0xef6c00,0xf57c00,0xd84315,0xff9800],edge:[0x1b5e20,0x2e7d32,0x388e3c],petal:'#ffb74d'},
+    pine:{label:'Alpine pine',icon:'🌲',bg:0x09150f,qr:[0x2e7d32,0x388e3c,0x43a047,0x4caf50],edge:[0x1b5e20,0x003300],petal:'#a5d6a7'},
+    frost:{label:'Winter frost',icon:'❄️',bg:0x08111a,qr:[0x0277bd,0x1565c0,0x0288d1,0x039be5],edge:[0x0d47a1,0x01579b],petal:'#e1f5fe'}
+  };
+  // Seeded, so the same code always paints the same colours.
+  function seeded(text){let s=0;for(let i=0;i<text.length;i++)s=((s<<5)-s+text.charCodeAt(i))|0;return ()=>{s=(s*16807)%2147483647;if(s<0)s+=2147483647;return s/2147483647;};}
+  function colours(matrix,theme,seed='room'){
+    const t=THEMES[theme]||THEMES.blossom,n=matrix.length,rng=seeded(seed),out=[];
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+      if(!matrix[r][c])continue;
+      const finder=(r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7),dist=Math.hypot(c-n/2,r-n/2)/(n/2),noise=rng()*.4-.2;
+      const pool=!finder&&dist+noise<.65?t.qr:t.edge;out.push([r,c,pool[Math.floor(rng()*pool.length)],finder]);
+    }
+    return out;
+  }
+  // Seen from straight above and turned into a diamond, like the generator's scan view.
+  // Blocks keep a small gap (finders aside); the white quiet zone stays four modules wide.
   // Uses the app's existing Three.js and offscreen thumbnail renderer, no new GL context.
-  function scene(T,matrix,night=false,height=180){
-    const scene=new T.Scene(),n=matrix.length,span=n+QUIET*2,resources=[];
-    scene.background=new T.Color(night?0x24203f:0xf8edda);
+  function scene(T,matrix,night=false,height=180,theme='blossom',seed='room'){
+    const t=THEMES[theme]||THEMES.blossom,scene=new T.Scene(),n=matrix.length,span=n+QUIET*2,resources=[];
+    scene.background=new T.Color(t.bg);
     const geometry=new T.BoxGeometry(1,1,1);resources.push(geometry);
     const material=color=>{const m=new T.MeshBasicMaterial({color});resources.push(m);return m;};
-    const lit=color=>{const m=new T.MeshLambertMaterial({color});resources.push(m);return m;};
-    scene.add(new T.AmbientLight(0xffffff,1.5));const light=new T.DirectionalLight(0xfff2e1,2);light.position.set(-20,80,40);scene.add(light);
-    const dark=material(0x171923),white=material(0xffffff),wood=lit(0x9b6848),leaf=lit(night?0xb577a4:0xd294ac),pink=lit(0xf0c0d4),edge=lit(night?0x6e586d:0xc0a58b);
-    const box=(x,y,z,w,h,d,mat)=>{const m=new T.Mesh(geometry,mat);m.position.set(x,y,z);m.scale.set(w,h,d);scene.add(m);return m;};
-    box(0,-.11,0,span,.18,span,edge);box(0,-.01,0,span,.04,span,white);
-    const count=matrix.reduce((s,row)=>s+row.filter(Boolean).length,0),blocks=new T.InstancedMesh(geometry,dark,count),transform=new T.Object3D();let i=0;
-    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c]){transform.position.set(c-(n-1)/2,.08,r-(n-1)/2);transform.scale.set(1,.12,1);transform.updateMatrix();blocks.setMatrixAt(i++,transform.matrix);}scene.add(blocks);
-    // A little sakura beside (never on) the quiet zone, built as chunky voxels.
-    const tx=span/2+9,tz=-span/2-7;
-    box(tx,.25,tz,7,.5,7,wood);box(tx,10,tz,1.5,20,1.5,wood);box(tx+1.8,18,tz,4,1,1,wood);
-    for(const [x,y,z,w,h,d] of [[0,22,0,8,4,7],[-2,21,1,5,3,5],[3,21,-1,5,4,5],[0,25,0,5,2,4]])box(tx+x,y,tz+z,w,h,d,leaf);
-    box(tx+1,25.7,tz+1,3,.7,2,pink);
-    for(let p=0;p<7;p++)box(tx-3+(p%4)*2,6+(p*2.9)%18,tz+5+(p%3),.6,.15,.7,pink).rotation.y=p*.8;
-    scene.updateMatrixWorld(true);
-    const camera=new T.OrthographicCamera(-1,1,1,-1,.1,600);
-    // Same diagonal convention as room thumbnails, lifted slightly for dense codes.
-    camera.position.set(80,height,80);camera.lookAt(0,0,0);camera.updateMatrixWorld(true);
-    const bounds=new T.Box3().setFromObject(scene),points=[];
-    for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z])points.push(new T.Vector3(x,y,z).applyMatrix4(camera.matrixWorldInverse));
-    const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x)),minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y)),cx=(minX+maxX)/2,cy=(minY+maxY)/2,radius=Math.max(maxX-minX,maxY-minY)*.53;
-    camera.left=cx-radius;camera.right=cx+radius;camera.top=cy+radius;camera.bottom=cy-radius;camera.updateProjectionMatrix();
+    const plate=new T.Mesh(geometry,material(0xffffff));plate.scale.set(span,.08,span);plate.position.y=-.04;scene.add(plate);
+    const dark=colours(matrix,theme,seed),blocks=new T.InstancedMesh(geometry,material(0xffffff),dark.length),transform=new T.Object3D(),colour=new T.Color();
+    // The three finder squares stay solid: scanners find a diamond-turned code by its
+    // finders, and gaps across them break the dark runs they look for.
+    dark.forEach(([r,c,hex,finder],i)=>{const k=finder?1:.92;transform.position.set(c-(n-1)/2,.25,r-(n-1)/2);transform.scale.set(k,.5,k);transform.updateMatrix();blocks.setMatrixAt(i,transform.matrix);blocks.setColorAt(i,colour.setHex(hex));});
+    scene.add(blocks);scene.updateMatrixWorld(true);
+    // Top-left finder points up, so the three finders sit top, left and right.
+    const camera=new T.OrthographicCamera(-1,1,1,-1,.1,600),radius=span*Math.SQRT1_2*1.06;
+    camera.up.set(-1,0,-1).normalize();camera.position.set(0,100,0);camera.lookAt(0,0,0);
+    camera.left=-radius;camera.right=radius;camera.top=radius;camera.bottom=-radius;camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
     return {scene,camera,dispose(){geometry.dispose();blocks.dispose();for(const r of resources)if(r!==geometry)r.dispose();}};
   }
-  function voxel(canvas,matrix,renderer,night,height=180){
-    renderer.ensureThumbs();const qr=scene(root.THREE,matrix,night,height),r=renderer.thumbR,oldSize=r.getSize(new root.THREE.Vector2()),ratio=r.getPixelRatio(),tone=r.toneMapping;
+  function voxel(canvas,matrix,renderer,night,height=180,theme='blossom',seed='room'){
+    renderer.ensureThumbs();const qr=scene(root.THREE,matrix,night,height,theme,seed),r=renderer.thumbR,oldSize=r.getSize(new root.THREE.Vector2()),ratio=r.getPixelRatio(),tone=r.toneMapping;
     try{r.setPixelRatio(1);r.setSize(canvas.width,canvas.height,false);r.toneMapping=root.THREE.NoToneMapping;r.render(qr.scene,qr.camera);canvas.getContext('2d').drawImage(r.domElement,0,0);}
     finally{r.toneMapping=tone;r.setPixelRatio(ratio);r.setSize(oldSize.x,oldSize.y,false);qr.dispose();}
   }
-  function renderCode(canvas,encoded,code,renderer,night){
-    // Verify the rendered pixels once, not just the matrix. Dense rooms may
-    // need a steeper angle; if neither view decodes, use the truthful Plain QR.
-    for(const height of [180,250]){voxel(canvas,encoded.matrix,renderer,night,height);const p=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);if(decode(p.data,canvas.width,canvas.height)===code)return 'voxel';}
+  function renderCode(canvas,encoded,code,renderer,night,theme='blossom'){
+    // Verify the rendered pixels once, not just the matrix. If the coloured
+    // blocks don't read back, use the truthful Plain QR instead.
+    voxel(canvas,encoded.matrix,renderer,night,180,theme,code);const p=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
+    if(decode(p.data,canvas.width,canvas.height)===code)return 'voxel';
     plain(canvas,encoded.matrix);return 'plain';
   }
   function pngFile(canvas){const data=canvas.toDataURL('image/png'),bytes=Uint8Array.from(atob(data.split(',')[1]),c=>c.charCodeAt(0));return {data,file:new File([bytes],'lofi-room-qr.png',{type:'image/png'})};}
@@ -78,19 +88,25 @@
     if(cap?.isNativePlatform?.())return cap.registerPlugin('RoomQrFiles').save({filename:'lofi-room-qr.png',base64:data.split(',')[1]});
     const a=document.createElement('a');a.href=data;a.download='lofi-room-qr.png';document.body.appendChild(a);a.click();a.remove();
   }
-  function createView({host,code,renderer,phase,notice=()=>{}}){
+  function createView({host,code,renderer,phase,notice=()=>{},onTheme=()=>{}}){
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-    const section=el('section','room-qr'),heading=el('h3','','QR code'),note=el('p','muted small','A tiny room to scan. Choose Plain for a simpler code.');let encoded;
+    const section=el('section','room-qr'),heading=el('h3','','QR code'),note=el('p','muted small','A little voxel QR to scan. Pick its colours, or Plain for a simpler code.');let encoded;
     try{encoded=encode(code);}catch(e){note.textContent='This room is too big for a QR. Copy or send the code above instead.';note.classList.add('qr-unavailable');host.appendChild(note);return {destroy(){}};}
     const canvas=el('canvas','room-qr-canvas');canvas.width=canvas.height=PIXELS;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Scannable QR code for this room');
     const frame=el('div','room-qr-frame'),petals=el('div','room-qr-petals');petals.setAttribute('aria-hidden','true');for(let i=0;i<4;i++)petals.appendChild(el('i'));frame.append(canvas,petals);
     const controls=el('div','rowbtns'),toggle=el('button','chipbtn room-qr-plain','Plain'),download=el('button','chipbtn','Download PNG'),share=el('button','chipbtn','Share image');for(const b of [toggle,download,share])b.type='button';toggle.setAttribute('aria-pressed','false');
+    // Themes, as in the generator. The pick is remembered on this device only.
+    let theme='blossom';try{const saved=JSON.parse(root.localStorage.getItem('lr.qrTheme'));if(THEMES[saved])theme=saved;}catch(e){/* first time, or private mode */}
+    const themes=el('div','room-qr-themes');themes.setAttribute('role','radiogroup');themes.setAttribute('aria-label','QR colours');
+    for(const [id,t] of Object.entries(THEMES)){const b=el('button','room-qr-theme',t.icon);b.type='button';b.dataset.theme=id;b.setAttribute('role','radio');b.setAttribute('aria-label',t.label);b.title=t.label;b.onclick=()=>{const changed=theme!==id;theme=id;try{root.localStorage.setItem('lr.qrTheme',JSON.stringify(id));}catch(e){/* private mode */}isPlain=false;render();if(changed)onTheme(id);};themes.appendChild(b);}
     let isPlain=false,image;
-    const render=()=>{canvas.getContext('2d').clearRect(0,0,PIXELS,PIXELS);if(isPlain)plain(canvas,encoded.matrix);else if(renderCode(canvas,encoded,code,renderer,phase==='night')==='plain'){isPlain=true;note.textContent='Plain keeps this room easy to scan. The code above works too.';}petals.hidden=isPlain;toggle.setAttribute('aria-pressed',String(isPlain));image=pngFile(canvas);};
+    const render=()=>{canvas.getContext('2d').clearRect(0,0,PIXELS,PIXELS);if(isPlain)plain(canvas,encoded.matrix);else if(renderCode(canvas,encoded,code,renderer,phase==='night',theme)==='plain'){isPlain=true;note.textContent='Plain keeps this room easy to scan. The code above works too.';}
+      petals.hidden=isPlain;toggle.setAttribute('aria-pressed',String(isPlain));frame.style.setProperty('--qr-petal',THEMES[theme].petal);frame.style.setProperty('--qr-bg','#'+THEMES[theme].bg.toString(16).padStart(6,'0'));frame.classList.toggle('plain',isPlain);
+      themes.querySelectorAll('button').forEach(b=>b.setAttribute('aria-checked',String(!isPlain&&b.dataset.theme===theme)));image=pngFile(canvas);};
     toggle.onclick=()=>{isPlain=!isPlain;render();};
     download.onclick=async()=>{try{await downloadPNG(image.data);}catch(e){if(!/cancel/i.test(e.message||''))notice('Could not save the picture. Copy the room code instead.');}};
     share.onclick=async()=>{try{if(await shareImage({...image,code})==='copied')notice('Room code copied');}catch(e){if(e.name!=='AbortError'&&!/cancel/i.test(e.message||''))notice('Could not share the picture. Copy the room code instead.');}};
-    controls.append(download,share,toggle);section.append(heading,note,frame,controls);host.appendChild(section);
+    controls.append(download,share,toggle);section.append(heading,note,frame,themes,controls);host.appendChild(section);
     try{render();}catch(e){isPlain=true;render();note.textContent='Here is the plain QR. The room code above works too.';toggle.disabled=true;}
     // Pause decorative CSS when the sheet is closed or the QR scrolls offscreen.
     const visible=new IntersectionObserver(rows=>{petals.classList.toggle('paused',!rows[0].isIntersecting);});visible.observe(frame);
@@ -110,5 +126,5 @@
     const visibility=()=>{if(document.hidden)stop();};document.addEventListener('visibilitychange',visibility);
     return {start,stop,destroy(){destroyed=true;stop();document.removeEventListener('visibilitychange',visibility);panel.remove();}};
   }
-  const api={QUIET,PIXELS,encode,decode,plain,scene,voxel,renderCode,shareImage,downloadPNG,createView,scanner};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRRoomQR=api;
+  const api={QUIET,PIXELS,THEMES,colours,encode,decode,plain,scene,voxel,renderCode,shareImage,downloadPNG,createView,scanner};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRRoomQR=api;
 })(typeof window!=='undefined'?window:globalThis);
