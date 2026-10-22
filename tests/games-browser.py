@@ -23,11 +23,15 @@ with sync_playwright() as p:
  cart=lib.locator('a.games-cart[data-game="gnomeboy"]');assert cart.count()==1
  assert cart.get_attribute('href')=='https://heycristobal.com/gnomeboy/' and cart.get_attribute('target')=='_blank' and cart.get_attribute('rel')=='noopener noreferrer'
  assert 'Gnomeboy' in cart.inner_text() and cart.get_attribute('aria-label')=='Play Gnomeboy (opens in a new tab)'
+ assert lib.locator('a.games-cart').count()==9
+ for a in lib.locator('a.games-cart').all():assert a.get_attribute('href').startswith('https://') and a.get_attribute('target')=='_blank' and a.get_attribute('rel')=='noopener noreferrer'
+ assert lib.locator('a.games-cart[data-game="lastlight"]').get_attribute('href')=='https://dalecri.github.io/lastlight/lastlight.html'
+ assert lib.locator('.games-all').get_attribute('href')=='https://heycristobal.com/my-collection/'
  with context.expect_page() as opened:cart.click()
  tab=opened.value;tab.wait_for_load_state();assert tab.url=='https://heycristobal.com/gnomeboy/';assert tab.evaluate('window.opener===null');tab.close()
  # The App launcher sends HTML games to the library too.
  page.evaluate('__lr.dashboard.launcher()');page.locator('.launcher-tile',has_text='HTML games').first.click();assert page.locator('.games-library').is_visible();assert page.evaluate('window.__opened')==[]
  # Other portals still open their own link.
  page.evaluate('__lr.dashboard.launcher()');page.locator('.launcher-tile',has_text='Voxel Worlds').first.click();assert page.evaluate('window.__opened')==['https://heycristobal.com/voxel-worlds/']
- assert not errors,errors;print('PASS game library: Control Centre and launcher open it, Gnomeboy cartridge links directly in an isolated tab, other portals unchanged')
+ assert not errors,errors;print('PASS game library: Control Centre and launcher open it, nine cartridges link directly in an isolated tab, other portals unchanged')
  browser.close()
