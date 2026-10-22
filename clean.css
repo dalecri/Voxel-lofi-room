@@ -645,6 +645,7 @@ body.reduce-motion #sheetBody[data-tool=games] .games-cart:hover { transform:non
 
 /* ---------- Share: picture card, link first, code below ---------- */
 .share-card { position:relative; display:grid; place-items:center; width:min(100%,320px); aspect-ratio:4/5; margin:4px auto 14px; border-radius:24px; background:var(--chip); overflow:hidden; box-shadow:0 18px 34px -24px #0006; }
+.share-card[data-format=story] { width:min(100%,236px); aspect-ratio:9/16; }
 .share-card-img { display:block; width:100%; height:100%; object-fit:cover; }
 .share-card-img:not([src]) { display:none; }
 .share-card-wait { position:absolute; inset:auto 0 50%; transform:translateY(50%); color:var(--ink-dim); font:700 13px/1.4 var(--font); text-align:center; }
@@ -652,7 +653,25 @@ body.reduce-motion #sheetBody[data-tool=games] .games-cart:hover { transform:non
 .share-link-row .chipbtn { min-height:46px; padding:0 18px; border-radius:999px; font-weight:800; }
 .share-link-row .chipbtn.primary { background:var(--accent); color:var(--accent-ink,#fff); }
 .share-link-row .chipbtn:disabled { opacity:.55; }
-.share-code-label { margin:18px 0 6px; text-align:center; }
+.share-code-label { margin:12px 0 6px; }
+/* Post or story: a small two-way switch above the card. */
+.share-format { display:flex; width:max-content; max-width:100%; margin:0 auto 12px; padding:4px; gap:4px; border-radius:999px; background:var(--chip); }
+.share-format button { display:flex; align-items:center; gap:6px; min-height:40px; margin:0; padding:0 16px; border:0; border-radius:999px; background:transparent; color:var(--ink-dim); box-shadow:none; font:800 14px/1 var(--font); }
+.share-format button small { font-size:11px; font-weight:700; opacity:.75; }
+.share-format button[aria-checked=true] { background:var(--ink); color:var(--panel-solid,#fff); box-shadow:0 4px 12px -6px #0005; }
+/* The code and QR, folded away under the main share. */
+.share-more { margin:18px 0 4px; padding:0 14px; border-radius:18px; background:var(--chip); }
+.share-more > summary { display:flex; flex-direction:column; gap:2px; margin:0 -14px; padding:14px 44px 14px 16px; position:relative; cursor:pointer; list-style:none; }
+.share-more > summary::-webkit-details-marker { display:none; }
+.share-more > summary::after { content:''; position:absolute; right:18px; top:50%; width:8px; height:8px; border:solid currentColor; border-width:0 2px 2px 0; transform:translateY(-70%) rotate(45deg); opacity:.6; transition:transform .2s; }
+.share-more[open] > summary::after { transform:translateY(-30%) rotate(-135deg); }
+.share-more > summary b { font:800 15px/1.2 var(--font); color:var(--ink); }
+.share-more > summary small { font:600 12.5px/1.3 var(--font); color:var(--ink-dim); }
+.share-more > .room-qr { padding-bottom:14px; }
+/* Rooms tab: sharing sits right under the heading. */
+.rowbtns.rooms-share { margin:0 0 14px; }
+.rooms-share .chipbtn { display:inline-flex; align-items:center; gap:8px; min-height:44px; border-radius:999px; font-weight:800; }
+.rooms-share .chipbtn svg { width:18px; height:18px; flex:none; }
 /* Android browser: a slim bar offering the installed app. */
 .app-open-banner { position:fixed; z-index:70; left:12px; right:12px; top:calc(var(--sat,0px) + 10px); display:flex; align-items:center; gap:8px; padding:6px 6px 6px 16px; border-radius:999px; background:#2b2238; color:#fff; box-shadow:0 12px 30px -12px #0008; }
 .app-open-banner a { flex:1; color:#fff; font:800 14px/1.2 Nunito,sans-serif; text-decoration:none; }
