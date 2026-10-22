@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
+"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story), every way in, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
 import functools
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -33,6 +33,21 @@ with sync_playwright() as p:
  decoded=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);const x=640,y=880,w=440,h=470,d=g.getImageData(x,y,w,h);ok(jsQR(d.data,w,h)?.data||null);};i.src=document.querySelector('.share-card-img').src;})''')
  assert decoded==link,decoded
  assert page.evaluate('document.querySelector(".share-card-img").naturalWidth')==1080
+ # The code and QR wait, folded, under the main share.
+ assert page.locator('.share-more').get_attribute('open') is None and page.locator('.room-qr-canvas').is_hidden()
+ # Story: a 9:16 card with the same scannable link, and the choice is remembered.
+ page.get_by_role('radio',name='Story 9:16').click();until(page,'document.querySelector(".share-card-img")?.naturalHeight===1920')
+ assert page.locator('.share-card').get_attribute('data-format')=='story' and page.locator('#bShareCard').is_enabled()
+ decoded=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);const x=640,y=1150,w=440,h=500,d=g.getImageData(x,y,w,h);ok(jsQR(d.data,w,h)?.data||null);};i.src=document.querySelector('.share-card-img').src;})''')
+ assert decoded==link,decoded
+ assert page.evaluate('JSON.parse(localStorage.getItem("lr.shareFormat"))')=='story'
+ page.get_by_role('radio',name='Post 4:5').click();until(page,'document.querySelector(".share-card-img")?.naturalHeight===1350')
+ # Every way in: the top-bar chip, the photo overlay, and the top of the Rooms tab.
+ page.keyboard.press('Escape');page.click('#bShare');page.wait_for_selector('.share-card-img[src]');page.keyboard.press('Escape')
+ page.click('#bPhoto');page.wait_for_selector('#photo.open');page.click('#photoShareLink');page.wait_for_selector('.share-card-img[src]');assert page.locator('#photo.open').count()==0
+ page.keyboard.press('Escape');page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click()
+ assert page.evaluate('(()=>{const s=document.querySelector("#bShareCode"),v=document.querySelector("#menu-rooms .roomstack, #menu-rooms .village, #menu-rooms .hroom");return !v||!!(s.compareDocumentPosition(v)&Node.DOCUMENT_POSITION_FOLLOWING);})()')
+ page.click('#bShareCode');page.wait_for_selector('.share-card-img[src]')
  assert not errors,errors
  # A pasted whole link works in the code box too.
  page.keyboard.press('Escape');page.evaluate('__lr.openSharedCode(null)');page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.click('#bImportCode')

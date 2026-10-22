@@ -416,10 +416,12 @@
   #photo img { max-width: 100%; max-height: 70vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.4); -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; }
   #photo .row2 { display: flex; gap: 10px; }
   #photo a, #photo button { background: #fffaf3; color: #4a3530; border-radius: 16px; padding: 12px 22px; font-weight: 800; text-decoration: none; font-size: 15px; }
+  #photo .photo-invite { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: min(100%, 360px); padding: 14px 22px; border-radius: 999px; background: var(--accent, #f07a4f); color: #fff; font-size: 16px; box-shadow: 0 14px 30px -14px rgba(0,0,0,.6); }
+  #photo .photo-invite svg { width: 20px; height: 20px; flex: none; }
   #photo p { color: #fff; opacity: .8; font-size: 12.5px; margin: 0; }
   #photo video { display: none; max-width: 100%; max-height: 70vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
   #photo.video video { display: block; }
-  #photo.video img, #photo.video p, #photo.video #photoFilm { display: none; }
+  #photo.video img, #photo.video p, #photo.video #photoFilm, #photo.video #photoShareLink { display: none; }
   #filming { position: fixed; inset: 0; z-index: 31; background: rgba(30,15,15,.86); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #fff; padding: 0 24px; text-align: center; }
   #filming.open { display: flex; }
   #filming .filmtrack { width: min(320px, 80vw); height: 8px; border-radius: 8px; background: rgba(255,255,255,.18); overflow: hidden; }
@@ -443,9 +445,12 @@
     #tray.open { transform: translate(-50%, 0); }
     .cards { grid-template-columns: repeat(3, 1fr); }
   }
-  @media (max-width: 380px) {
+  /* Seven top-bar chips: slim them on phones so the room name keeps its room. */
+  @media (max-width: 440px) {
     .chip { width: 31px; }
     .brand { padding: 8px 10px 9px; }
+  }
+  @media (max-width: 380px) {
     .tips { grid-template-columns: 1fr; }
   }
   .widget-private { position: fixed; z-index: 4; pointer-events: none; transform: translate(-50%, -100%); border: 1px solid var(--line); border-radius: 7px; padding: 2px 6px; background: var(--panel-solid); color: var(--ink); font: 700 10px var(--font); }
@@ -490,6 +495,7 @@
     <button class="chip" id="bMusic" aria-label="Lofi radio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6l11-2.5v11.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><ellipse cx="6.5" cy="17.5" rx="3" ry="2.5"/><ellipse cx="17.5" cy="15" rx="3" ry="2.5"/></svg></button>
     <button class="chip" id="bUndo" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L5 11l4 4"/><path d="M5 11h9a5 5 0 0 1 0 10h-2"/></svg></button>
     <button class="chip" id="bPhoto" aria-label="Photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+    <button class="chip" id="bShare" aria-label="Share this room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/></svg></button>
     <button class="chip" id="bHome" aria-label="Control Centre" title="Control Centre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 7V4h6v3M3 7h18v14H3zM3 12h18M10 11v3h4v-3"/></svg></button>
     <button class="chip" id="bMenu" aria-label="Menu" aria-controls="sheet" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2" opacity=".45"/></svg></button>
   </div>
@@ -552,6 +558,7 @@
   <img id="photoImg" alt="Snapshot of your room">
   <video id="photoVid" loop muted playsinline></video>
   <p>Long-press the picture to save it, or</p>
+  <button id="photoShareLink" class="photo-invite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/></svg><span>Share with link</span></button>
   <div class="row2"><a id="photoSave" download="lofi-room.png">Download</a><button id="photoFilm">Film a day</button><button id="photoClose">Back to room</button></div>
 </div>
 <div id="filming"><b id="filmPct">Getting the camera ready…</b><div class="filmtrack"><i id="filmBar"></i></div><button id="filmCancel">Cancel</button></div>

@@ -18,7 +18,7 @@ with sync_playwright() as p:
  def rooms():
   page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click()
  def share():
-  rooms();page.click('#bShareCode');page.locator('.room-qr-canvas').wait_for()
+  rooms();page.click('#bShareCode');page.click('.share-more summary');page.locator('.room-qr-canvas').wait_for()
  def esc():page.keyboard.press('Escape')
  def decoded():return page.evaluate("""()=>{const c=document.querySelector('.room-qr-canvas'),p=c.getContext('2d').getImageData(0,0,c.width,c.height);return LRRoomQR.decode(p.data,c.width,c.height);}""")
  share();code=page.locator('textarea.code').input_value();expected=page.evaluate('code=>__lr.readCode(code)',code);assert code==page.evaluate('__lr.roomCode()');assert code.startswith('LR1.');assert 'PRIVATE_QR_TEST' not in json.dumps(expected);assert page.get_by_text(f'{len(code)} characters',exact=True).is_visible();assert page.get_by_role('button',name='Copy code',exact=True).is_visible();assert page.get_by_role('button',name='Send code…',exact=True).is_visible();assert page.get_by_role('button',name='Copy link',exact=True).is_visible()

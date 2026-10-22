@@ -68,7 +68,7 @@ with sync_playwright() as p:
         page.set_viewport_size({'width':width,'height':844})
         for action in ['button','Escape']:
             page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.click('#bShareCode')
-            page.locator('textarea.code').wait_for()
+            page.click('.share-more summary');page.locator('textarea.code').wait_for()
             assert page.locator('textarea.code').input_value().startswith('LR1.')
             if action=='button':page.get_by_role('button',name='Close dialog',exact=True).click()
             else:

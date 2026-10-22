@@ -1,7 +1,7 @@
 // Share links and the picture card. A link carries the room (or guest-book note)
 // code after the #, so it never reaches any server: the web version reads it
-// straight from the address bar. The card is a 4:5 picture with the room, its
-// name and a QR code of the same link.
+// straight from the address bar. The card (a 4:5 post or a 9:16 story) shows the
+// room, its name and a QR code of the same link.
 (function(root){
   'use strict';
   const BASE='https://heycristobal.com/Voxel-lofi-room/';
@@ -36,35 +36,39 @@
   }
   function rounded(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
   function fit(g,text,max,size,weight,family){let s=size;do{g.font=`${weight} ${s}px ${family}`;if(g.measureText(text).width<=max)break;s-=2;}while(s>24);return s;}
+  // Card shapes: a 4:5 feed post, and a 9:16 story that keeps the words and QR
+  // clear of the top and bottom bars Instagram and TikTok draw over a story.
+  const FORMATS={post:{W:1080,H:1350,eyebrow:98,top:130,room:820,bottom:56},story:{W:1080,H:1920,eyebrow:300,top:350,room:960,bottom:330}};
   // Draws the card on a canvas and returns it. room: an Image of the room snapshot.
-  function drawCard(canvas,{room,title,url,night=false,qrcode=root.qrcode}){
-    const W=1080,H=1350;canvas.width=W;canvas.height=H;const g=canvas.getContext('2d');
+  function drawCard(canvas,{room,title,url,night=false,format='post',qrcode=root.qrcode}){
+    const F=FORMATS[format]||FORMATS.post,W=F.W,H=F.H,base=H-F.bottom;canvas.width=W;canvas.height=H;const g=canvas.getContext('2d');
     const sky=night?['#2a2550','#433a74','#6b5592']:['#ffe6c7','#f8c9b3','#dcc9f0'],ink=night?'#fff6ea':'#3a2a26',soft=night?'#d9cff5':'#7d6158';
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,sky[0]);bg.addColorStop(.55,sky[1]);bg.addColorStop(1,sky[2]);g.fillStyle=bg;g.fillRect(0,0,W,H);
     if(night){g.fillStyle='#ffffffb0';for(let i=0;i<46;i++){const x=(i*197)%W,y=(i*331)%(H*.55),r=i%5===0?3:1.6;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();}}
+    const matrix=url?qrMatrix(url,qrcode):null,name=String(title||'My room').slice(0,40),quiet=4;
+    const cell=matrix?Math.max(2,Math.floor(320/(matrix.length+quiet*2))):0,size=matrix?cell*(matrix.length+quiet*2):0;
     // The room, cropped to what's drawn and centred in the upper part.
-    if(room&&room.width){const crop=bounds(room),box={x:70,y:130,w:W-140,h:820},s=Math.min(box.w/crop.w,box.h/crop.h),w=crop.w*s,h=crop.h*s;
+    if(room&&room.width){const crop=bounds(room),box={x:70,y:F.top,w:W-140,h:Math.min(F.room,(matrix?base-size-24:base-280)-F.top)},s=Math.min(box.w/crop.w,box.h/crop.h),w=crop.w*s,h=crop.h*s;
       g.drawImage(room,crop.x,crop.y,crop.w,crop.h,box.x+(box.w-w)/2,box.y+(box.h-h)/2,w,h);}
     // Eyebrow up top; the room's name and a QR code share the bottom strip.
-    g.fillStyle=soft;g.font='700 34px Nunito, sans-serif';g.textAlign='center';g.fillText('COME VISIT MY LOFI ROOM',W/2,98);g.textAlign='left';
-    const matrix=url?qrMatrix(url,qrcode):null,name=String(title||'My room').slice(0,40);
+    g.fillStyle=soft;g.font='700 34px Nunito, sans-serif';g.textAlign='center';g.fillText('COME VISIT MY LOFI ROOM',W/2,F.eyebrow);g.textAlign='left';
     if(matrix){
       // Whole-pixel cells and a white moat keep it easy for a phone camera to read.
-      const n=matrix.length,quiet=4,cell=Math.max(2,Math.floor(320/(n+quiet*2))),size=cell*(n+quiet*2),x=W-56-size,y=H-56-size;
+      const n=matrix.length,x=W-56-size,y=base-size;
       g.fillStyle='#ffffff';rounded(g,x,y,size,size,26);g.fill();g.fillStyle='#16131f';
       for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c])g.fillRect(x+(c+quiet)*cell,y+(r+quiet)*cell,cell,cell);
-      const left=W-56-size-40-60;fit(g,name,left,72,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,60,H-236);
-      g.font='800 36px Nunito, sans-serif';g.fillText('Scan to step inside',60,H-170);
-      g.fillStyle=soft;g.font='600 28px Nunito, sans-serif';g.fillText('or tap the link in my message',60,H-126);
+      const left=W-56-size-40-60;fit(g,name,left,72,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,60,base-180);
+      g.font='800 36px Nunito, sans-serif';g.fillText('Scan to step inside',60,base-114);
+      g.fillStyle=soft;g.font='600 28px Nunito, sans-serif';g.fillText(format==='story'?'or tap the link on my story':'or tap the link in my message',60,base-70);
     }else{
-      g.textAlign='center';fit(g,name,W-140,84,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,W/2,H-210);
-      g.font='800 38px Nunito, sans-serif';g.fillText('Tap the link to step inside',W/2,H-140);g.textAlign='left';
+      g.textAlign='center';fit(g,name,W-140,84,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,W/2,base-154);
+      g.font='800 38px Nunito, sans-serif';g.fillText('Tap the link to step inside',W/2,base-84);g.textAlign='left';
     }
-    g.fillStyle=soft;g.font='700 24px Nunito, sans-serif';g.fillText('Lofi Rooms · heycristobal.com',60,H-70);
+    g.fillStyle=soft;g.font='700 24px Nunito, sans-serif';g.fillText('Lofi Rooms · heycristobal.com',60,base-14);
     return canvas;
   }
   const shareText=(title,url)=>`Come see my Lofi Room “${String(title||'My room').slice(0,40)}” 🏠✨ ${url}`;
   const noteText=url=>`I signed your guest book in Lofi Rooms 💌 ${url}`;
-  const api={BASE,SCHEME,link,codeFrom,intentLink,isNote,qrMatrix,QR_LIMIT,bounds,drawCard,shareText,noteText};
+  const api={BASE,SCHEME,FORMATS,link,codeFrom,intentLink,isNote,qrMatrix,QR_LIMIT,bounds,drawCard,shareText,noteText};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRShareLinks=api;
 })(typeof window!=='undefined'?window:globalThis);
