@@ -40,6 +40,12 @@ with sync_playwright() as p:
  page.evaluate("Object.defineProperty(navigator,'canShare',{value:()=>false})");page.get_by_role('button',name='Share image',exact=True).click();page.wait_for_function('shares.length===2');assert page.evaluate('shares[1].text')==code
  page.get_by_role('button',name='Send code…',exact=True).click();page.wait_for_function('shares.length===3');assert code in page.evaluate('shares[2].text') and 'https://heycristobal.com/Voxel-lofi-room/#'+code in page.evaluate('shares[2].text')
  page.get_by_role('button',name='Plain',exact=True).click();assert decoded()==code;assert page.locator('.room-qr-plain').get_attribute('aria-pressed')=='true';assert page.locator('.room-qr-petals').is_hidden()
+ # Each generator theme paints a scannable voxel QR on its own background, and the pick is remembered.
+ for theme,bg in [('maple',[24,14,8]),('pine',[9,21,15]),('frost',[8,17,26]),('blossom',[22,13,22])]:
+  page.click(f'.room-qr-theme[data-theme={theme}]');assert page.locator(f'.room-qr-theme[data-theme={theme}]').get_attribute('aria-checked')=='true'
+  assert page.locator('.room-qr-plain').get_attribute('aria-pressed')=='false' and decoded()==code,theme
+  assert page.evaluate("[...document.querySelector('.room-qr-canvas').getContext('2d').getImageData(4,4,1,1).data].slice(0,3)")==bg,theme
+ page.click('.room-qr-theme[data-theme=frost]');assert page.evaluate("JSON.parse(localStorage.getItem('lr.qrTheme'))")=='frost';page.click('.room-qr-theme[data-theme=blossom]')
  # Denser real room encodings must still decode, using a verified Plain fallback if needed.
  assert page.evaluate("""async()=>{const base=__lr.room.serialize(),canvas=document.createElement('canvas');canvas.width=canvas.height=LRRoomQR.PIXELS;for(const count of [5,30,80,160]){const source={...base,name:'QR '+count,items:Array.from({length:count},(_,i)=>({...base.items[i%base.items.length],id:i+1,x:i*7%10,z:i*3%10,c:i%3,r:i%4}))},code=await __lr.roomCode(source),qr=LRRoomQR.encode(code);LRRoomQR.renderCode(canvas,qr,code,__lr.view,false);const p=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height),decoded=LRRoomQR.decode(p.data,canvas.width,canvas.height);if(decoded!==code || JSON.stringify(await __lr.readCode(decoded))!==JSON.stringify(await __lr.readCode(code)))return false;}return true;}""")
  # Save a real video stream of the exported voxel image for getUserMedia below.
