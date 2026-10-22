@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story), every way in, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
+"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story) and the app icon, every way in, visitor guest book pill, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
 import functools
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -33,6 +33,9 @@ with sync_playwright() as p:
  decoded=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);const x=640,y=880,w=440,h=470,d=g.getImageData(x,y,w,h);ok(jsQR(d.data,w,h)?.data||null);};i.src=document.querySelector('.share-card-img').src;})''')
  assert decoded==link,decoded
  assert page.evaluate('document.querySelector(".share-card-img").naturalWidth')==1080
+ # The sign-off carries the app icon (its warm red block), not just the sky.
+ px=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);ok([...g.getImageData(60+20,1294-48+20,1,1).data]);};i.src=document.querySelector('.share-card-img').src;})''')
+ assert px[0]>150 and px[1]<120,px
  # The code and QR wait, folded, under the main share.
  assert page.locator('.share-more').get_attribute('open') is None and page.locator('.room-qr-canvas').is_hidden()
  # Story: a 9:16 card with the same scannable link, and the choice is remembered.
@@ -62,6 +65,13 @@ with sync_playwright() as p:
  until(fp,'!!document.querySelector(".friend-card-view")');until(fp,'document.querySelector(".friend-card-info h3")?.textContent==="Share Den"')
  assert fp.evaluate('location.hash')=='';assert fp.locator('.app-open-banner').count()==0
  fp.evaluate('document.querySelector(".friend-card-visit").click()');until(fp,'__lr.room.name==="Share Den"')
+ # The visitor's guest book pill stands out and pulses until they sign, then calms down.
+ until(fp,'!document.querySelector("#bGuest").hidden');g=fp.locator('#bGuest')
+ assert 'nudge' in g.get_attribute('class') and g.inner_text().strip()=='✍ Sign guest book',g.inner_text()
+ g.click();fp.wait_for_selector('#gbSign');assert 'reply link' in fp.locator('#gbSign').inner_text()
+ fp.fill('input.gbname','Tyler');fp.click('#gbSign');fp.wait_for_selector('#gbCopyLink')
+ until(fp,'document.querySelector("#bGuest").classList.contains("signed")');assert 'nudge' not in g.get_attribute('class') and g.inner_text().strip()=='✓ Signed'
+ fp.keyboard.press('Escape');fp.reload(wait_until='networkidle');until(fp,'!!window.__lr?.dashboard');until(fp,'document.querySelector("#bGuest").classList.contains("signed")')
  assert not ferr,ferr;friend.close()
  # Android browser: the room opens and a slim bar offers the installed app.
  droid=browser.new_context(reduced_motion='reduce',viewport={'width':390,'height':844},user_agent='Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36');droid.add_init_script(INTRO)
