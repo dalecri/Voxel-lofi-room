@@ -629,3 +629,5 @@ body.hand-drawn #paperGrain { opacity:.5; }
 #sheetBody[data-tool=games] .games-soon-plus { font:400 28px/1 var(--ps-font); }
 @media (prefers-reduced-motion:reduce) { #sheetBody[data-tool=games] .games-cart { transition:none; } }
 body.reduce-motion #sheetBody[data-tool=games] .games-cart:hover { transform:none; }
+#sheetBody[data-tool=games] .games-all { display:block; width:max-content; margin:16px auto 4px; padding:10px 16px; border-radius:999px; color:var(--ps-muted); font:700 13px/1 var(--ps-font); text-decoration:none; }
+#sheetBody[data-tool=games] .games-all:hover { background:var(--ps-surface); color:var(--ps-ink); }
