@@ -2527,21 +2527,64 @@ function startLofiRooms() {
       render(); widgets.refresh(['newspaper']).then(() => { if (panel.isConnected) render(); });
     });
   }
+  // Share: a picture card with a link that opens the room, plus the classic code and QR.
+  const nativeApp = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const canShareNative = () => nativeApp() || !!navigator.share;
+  async function copyText(text, done) {
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (err) { /* nothing more to try */ } t.remove(); }
+    toast(`<span>${esc(done)}</span>`, 1400, true); try { Sound.chime(); } catch (e) { /* optional sound */ }
+  }
+  async function shareTextOut(title, text) {
+    try {
+      if (nativeApp()) await window.Capacitor.registerPlugin('Share').share({ title, text });
+      else await navigator.share({ title, text });
+    } catch (e) { /* cancelled */ }
+  }
+  function roomCardImage(url) {
+    return new Promise((ok, no) => {
+      const img = new Image();
+      img.onload = () => { try { ok(LRShareLinks.drawCard(document.createElement('canvas'), { room: img, title: room.name, url, night: meta.phase === 'night' || meta.phase === 'evening' }).toDataURL('image/png')); } catch (e) { no(e); } };
+      img.onerror = no; img.src = view.snapshot();
+    });
+  }
+  async function shareCard(png, url) {
+    const text = LRShareLinks.shareText(room.name, url), name = `lofi-room-${Date.now()}.png`;
+    try {
+      if (nativeApp()) {
+        const fsys = window.Capacitor.registerPlugin('Filesystem'), share = window.Capacitor.registerPlugin('Share');
+        const file = await fsys.writeFile({ path: name, data: png.split(',')[1], directory: 'CACHE' });
+        await share.share({ title: 'My Lofi Room', text, files: [file.uri], dialogTitle: 'Share your room' });
+        return;
+      }
+      const blob = await (await fetch(png)).blob(), file = new File([blob], name, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ title: 'My Lofi Room', text, files: [file] }); return; }
+      // No file sharing here: save the picture and copy the link instead.
+      const a = document.createElement('a'); a.href = png; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      try { await navigator.clipboard.writeText(text); } catch (e) { /* the picture still saved */ }
+      toast('<b>Picture saved</b><span>The link is copied too, ready to paste with it.</span>', 2600, true);
+    } catch (e) { if (!/cancel|abort/i.test(String(e && (e.name + e.message)))) toast('<span>Couldn’t share that. Try Copy link.</span>', 2200, true); }
+  }
   async function shareSheet() {
-    const code = await roomCode();
-    codeSheet(`Share “${room.name}”`, 'Send this code to a friend. They tap “Open a friend’s code” in their menu and paste it.', h => {
-      const ta = h('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 4;
+    const code = await roomCode(), url = LRShareLinks.link(code);
+    codeSheet(`Share “${room.name}”`, 'Send a picture with a link. Friends tap it to step inside your room.', h => {
+      const card = h('figure', 'share-card');
+      const pic = document.createElement('img'); pic.alt = `A picture card of ${room.name} with a QR code`; pic.className = 'share-card-img'; card.appendChild(pic);
+      const wait = document.createElement('figcaption'); wait.className = 'share-card-wait'; wait.textContent = 'Painting your card…'; card.appendChild(wait);
+      const row = h('div', 'rowbtns share-link-row');
+      row.innerHTML = '<button class="chipbtn primary" id="bShareCard" disabled>Share picture & link</button><button class="chipbtn" id="bCopyLink">Copy link</button>';
+      const shareBtn = row.querySelector('#bShareCard');
+      row.querySelector('#bCopyLink').onclick = () => copyText(url, 'Link copied');
+      roomCardImage(url).then(png => { if (!pic.isConnected) return; pic.src = png; wait.remove(); shareBtn.disabled = false; shareBtn.onclick = () => shareCard(png, url); })
+        .catch(() => { wait.textContent = 'The picture is resting. The link still works.'; shareBtn.disabled = false; shareBtn.textContent = 'Send the link…'; shareBtn.onclick = () => shareTextOut('My Lofi Room', LRShareLinks.shareText(room.name, url)); });
+      h('p', 'muted small share-code-label', 'Or send the code');
+      const ta = h('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 3;
       h('p', 'muted small', `${code.length} characters`);
-      const row = h('div', 'rowbtns');
-      row.innerHTML = '<button class="chipbtn" id="bCopyCode">Copy</button>' + (cap && cap.isNativePlatform && cap.isNativePlatform() || navigator.share ? '<button class="chipbtn" id="bSendCode">Send…</button>' : '');
-      row.querySelector('#bCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(code); } catch (e) { ta.select(); document.execCommand('copy'); } toast('<span>Code copied</span>', 1200); Sound.chime(); };
-      const send = row.querySelector('#bSendCode');
-      if (send) send.onclick = async () => {
-        try {
-          if (cap && cap.isNativePlatform && cap.isNativePlatform()) await cap.registerPlugin('Share').share({ title: 'My Lofi Room', text: `Come see my Lofi Room! Paste this code in the app: ${code}` });
-          else await navigator.share({ title: 'My Lofi Room', text: code });
-        } catch (e) { /* cancelled */ }
-      };
+      const codeRow = h('div', 'rowbtns');
+      codeRow.innerHTML = '<button class="chipbtn" id="bCopyCode">Copy code</button>' + (canShareNative() ? '<button class="chipbtn" id="bSendCode">Send code…</button>' : '');
+      codeRow.querySelector('#bCopyCode').onclick = () => copyText(code, 'Code copied');
+      const send = codeRow.querySelector('#bSendCode');
+      if (send) send.onclick = () => shareTextOut('My Lofi Room', `Come see my Lofi Room! Open this link: ${url}\n\nOr paste this code in the app: ${code}`);
       ta.onclick = () => ta.select();
       shareQR=LRRoomQR.createView({host:$('#sheetBody'),code,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
     });
@@ -2569,6 +2612,33 @@ function startLofiRooms() {
     receiveNote:async code=>{await receiveNote(code);closeSheets();},
     scan:({host,onCode})=>{roomScanner=LRRoomQR.scanner({host,onCode,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});return ()=>roomScanner?.start();}});
   function importSheet() { friendCardsUI.open(); }
+  // A share link arrived: on the web its code sits after the #; in the app it comes as lofirooms://open?c=…
+  function openSharedCode(code) {
+    if (!code) return;
+    closeSheets();
+    friendCardsUI.accept(code);
+  }
+  function appBanner(code) {
+    // Android browsers: offer the installed app. Stays out of the way otherwise.
+    if (nativeApp() || !/Android/i.test(navigator.userAgent)) return;
+    const bar = document.createElement('div'); bar.className = 'app-open-banner'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Open in the app');
+    const a = document.createElement('a'); a.href = LRShareLinks.intentLink(code); a.textContent = 'Open in the Lofi Rooms app';
+    const x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '×'; x.onclick = () => bar.remove();
+    bar.append(a, x); document.body.appendChild(bar); setTimeout(() => bar.remove(), 20000);
+  }
+  function takeHashCode() {
+    const code = LRShareLinks.codeFrom(location.hash);
+    if (!code) return null;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
+    return code;
+  }
+  { const first = takeHashCode(); if (first) setTimeout(() => { appBanner(first); openSharedCode(first); }, 700); }
+  window.addEventListener('hashchange', () => { const code = takeHashCode(); if (code) openSharedCode(code); });
+  if (nativeApp()) {
+    const appPlugin = window.Capacitor.registerPlugin('App');
+    appPlugin.addListener('appUrlOpen', e => openSharedCode(LRShareLinks.codeFrom(e && e.url)));
+    appPlugin.getLaunchUrl?.().then(r => { const code = LRShareLinks.codeFrom(r && r.url); if (code) setTimeout(() => openSharedCode(code), 700); }).catch(() => {});
+  }
   // the guest book: a friend visiting your shared room signs it and gets a reply code; when you paste it,
   // their note is pinned in that room. No server: the codes carry everything.
   const STICKER_GLYPHS = ['♥', '★', '🐾', '✿', '☕', '♪', '☾', '✦'];
@@ -2597,18 +2667,18 @@ function startLofiRooms() {
         const name = nm.value.trim().slice(0, 20) || 'A friend'; store.set('lr.guestName', name);
         const code = await noteCode({ g: v.gid || null, r: v.host || room.name, n: name, t: tx.value.trim().slice(0, 80), s: pick, d: today() });
         Sound.chime(); discover('signed');
-        codeSheet('Signed! ' + STICKER_GLYPHS[pick], 'Send this code back to your friend. They paste it in “Open a friend’s code” and your note appears in their room.', h2 => {
-          const ta = h2('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 3; ta.onclick = () => ta.select();
-          const r2 = h2('div', 'rowbtns');
-          r2.innerHTML = '<button class="chipbtn" id="gbCopy">Copy</button>' + (cap && cap.isNativePlatform && cap.isNativePlatform() || navigator.share ? '<button class="chipbtn" id="gbSend">Send…</button>' : '');
-          r2.querySelector('#gbCopy').onclick = async () => { try { await navigator.clipboard.writeText(code); } catch (e) { ta.select(); document.execCommand('copy'); } toast('<span>Note code copied</span>', 1200); Sound.chime(); };
+        const url = LRShareLinks.link(code);
+        codeSheet('Signed! ' + STICKER_GLYPHS[pick], 'Send this link back to your friend. When they open it, your note appears in their room.', h2 => {
+          const r2 = h2('div', 'rowbtns share-link-row');
+          r2.innerHTML = (canShareNative() ? '<button class="chipbtn primary" id="gbSend">Send the link…</button>' : '') + '<button class="chipbtn" id="gbCopyLink">Copy link</button>';
+          r2.querySelector('#gbCopyLink').onclick = () => copyText(url, 'Link copied');
           const send = r2.querySelector('#gbSend');
-          if (send) send.onclick = async () => {
-            try {
-              if (cap && cap.isNativePlatform && cap.isNativePlatform()) await cap.registerPlugin('Share').share({ title: 'I signed your guest book', text: `I left you a note in Lofi Rooms! Paste this in “Open a friend’s code”: ${code}` });
-              else await navigator.share({ title: 'I signed your guest book', text: code });
-            } catch (e) { /* cancelled */ }
-          };
+          if (send) send.onclick = () => shareTextOut('I signed your guest book', LRShareLinks.noteText(url));
+          h2('p', 'muted small share-code-label', 'Or send the code');
+          const ta = h2('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 3; ta.onclick = () => ta.select();
+          const r3 = h2('div', 'rowbtns');
+          r3.innerHTML = '<button class="chipbtn" id="gbCopy">Copy code</button>';
+          r3.querySelector('#gbCopy').onclick = () => copyText(code, 'Note code copied');
         });
       };
     });
@@ -3317,7 +3387,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
