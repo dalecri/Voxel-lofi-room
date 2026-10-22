@@ -15,7 +15,7 @@ with sync_playwright() as p:
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  def ready():page.wait_for_function('!!window.__lr?.roomToolsUI');page.evaluate('__lr.renderLoop.stop()')
- def open_mail():page.click('#bHome');page.locator('[data-app=mailbox]').click();page.get_by_role('textbox',name='Message',exact=True).wait_for()
+ def open_mail():page.click('#bHome');page.locator('#homeView .home-search').fill('future');page.locator('[data-app=mailbox]').click();page.get_by_role('textbox',name='Message',exact=True).wait_for()
  def fit():
   assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth && e.scrollHeight<=e.clientHeight+1')
   for name in ['Subject','Message','Deliver on']:

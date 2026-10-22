@@ -39,10 +39,10 @@ with sync_playwright() as p:
  counts=page.evaluate('''() => {const v=__lr.view;v.weatherIntensity=.3;v.updateWeather(.01,v.t);const low=v.wx.rain.count;v.weatherIntensity=1.3;v.updateWeather(.01,v.t);return [low,v.wx.rain.count];}''');assert counts[0]<counts[1]
  failure=True;page.evaluate('__lr.liveWeather.refresh(true)');assert page.evaluate('__lr.meta.weatherDetails.probability')==75;assert '75%' in panel.locator('.today-chance').inner_text();esc()
  # Same voxel thumbnail/variant as the normal picker. Only the absent asset is gray.
- page.click('#bHome');tile=home.locator('[data-app=typewriter]');img=tile.locator('img.home-furniture');assert img.is_visible();assert img.evaluate('e=>getComputedStyle(e).filter')=='grayscale(1)';assert tile.is_enabled();tile.click();page.locator('#letterBody').fill('PRIVATE_CUTE_LETTER');page.click('#letterClose')
+ page.click('#bHome');tile=home.locator('[data-app=notebook]');img=tile.locator('img.home-furniture');assert img.is_visible();assert img.evaluate('e=>getComputedStyle(e).filter')=='grayscale(1)';assert tile.is_enabled();tile.click();page.locator('#letterBody').fill('PRIVATE_CUTE_LETTER');page.click('#letterClose')
  page.evaluate('''() => {const a=__lr;window.typewriter=a.room.add(a.room.make('typewriter',{x:3,z:3,c:1}));a.changed();}''');page.click('#bHome');assert not img.evaluate("e=>e.classList.contains('absent')");assert img.evaluate('e=>getComputedStyle(e).filter')=='none';assert 'In your room' in tile.inner_text()
- before=img.get_attribute('src');page.evaluate('typewriter.c=2;__lr.changed()');page.wait_for_function('old=>document.querySelector("[data-app=typewriter] img").src!==old',arg=before)
- page.evaluate('__lr.room.remove(typewriter.id);__lr.changed()');page.wait_for_function('document.querySelector("[data-app=typewriter] img").classList.contains("absent")');assert tile.is_enabled();esc()
+ before=img.get_attribute('src');page.evaluate('typewriter.c=2;__lr.changed()');page.wait_for_function('old=>document.querySelector("[data-app=notebook] img").src!==old',arg=before)
+ page.evaluate('__lr.room.remove(typewriter.id);__lr.changed()');page.wait_for_function('document.querySelector("[data-app=notebook] img").classList.contains("absent")');assert tile.is_enabled();esc()
  # Timers stay visible across Home/menu, count down in real time, and navigate to
  # the tea timer.
  page.evaluate("__lr.roomTools.brew(3)");page.wait_for_function('!document.querySelector("#timerBadges").hidden');badges=page.locator('#timerBadges');assert badges.locator('button').count()==1;value=badges.locator('[data-timer=tea] .timer-value').inner_text();page.wait_for_function('old=>document.querySelector("[data-timer=tea] .timer-value").textContent!==old',arg=value)

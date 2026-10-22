@@ -278,7 +278,7 @@ function startLofiRooms() {
     }
   }
 
-  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','todo','moments','settings','breathing'].includes(p.id));
+  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','todo','moments','settings','breathing'].includes(p.id)).map(p=>['typewriter','ideas','whiteboard','mailbox'].includes(p.id)?{...p,inNotebook:true}:p);   // the four writing tools live in Notebook; search still finds them
   // A device-private destination ID, resolved from the same directory as Control Centre.
   const APP_SHORTCUT_KEY='lr.appShortcut';
   const shortcutApp=()=>{const id=store.get(APP_SHORTCUT_KEY,null);return controlApps().find(p=>p.id===id);};
@@ -427,6 +427,7 @@ function startLofiRooms() {
     else if(p.id==='newspaper')newspaperSheet();
     else if(p.id==='calendar')calendar.open();
     else if(p.id==='habits')habitsUI.openHome();
+    else if(p.id==='notebook')openNotebook();
     else if(p.id==='tst')widgetAction(find('tstcorkboard') || {t:'tstcorkboard',id:null});
     else if(p.id==='moments'){closeSheets();openCozyMoments();}
     else if(['todo','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id==='todo'?'To-Do':p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
@@ -1966,6 +1967,7 @@ function startLofiRooms() {
     const open = sheet.classList.contains('open');
     const returnFocus = sheet.contains(document.activeElement);
     sheetScreen = '';
+    if (!notebookOpening) notebookTab = null;
     sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
     $('#bMenu').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;
     if (returnFocus) $('#bMenu').focus({preventScroll:true});
@@ -2201,6 +2203,37 @@ function startLofiRooms() {
   function captionStudio() {
     codeSheet('Caption studio', '', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk, { publish: publishClip }); }, 'captions');
     captionDesk.refresh();
+  }
+  // Notebook: Notes, Ideas, Whiteboard and Future me under one roof. Each tab is the full
+  // tool; the room's typewriter, idea jar, whiteboard and mailbox still open their own.
+  const NOTEBOOK = [['notes','Notes','📝'],['ideas','Ideas','💡'],['board','Whiteboard','▤'],['future','Future me','✉']];
+  const NOTEBOOK_TITLES = { 'Notetaker':'notes', 'The idea jar':'ideas', 'A little whiteboard':'board', 'Letters to future you':'future' };
+  let notebookTab = null, notebookOpening = false;
+  function openNotebook(tab = store.get('lr.notebookTab', 'notes')) {
+    if (!NOTEBOOK.some(([id]) => id === tab)) tab = 'notes';
+    const find = (...types) => room.items.find(i => types.includes(i.t))?.id || null;
+    notebookOpening = true; notebookTab = tab; store.set('lr.notebookTab', tab);
+    try {
+      if (tab === 'notes') letters.open();
+      else if (tab === 'ideas') roomToolsUI.open('ideas', find('ideajar'));
+      else if (tab === 'board') cozy.whiteboard(find('whiteboard') || 'control-center-whiteboard');
+      else roomToolsUI.open('mailbox', find('mailbox', 'letterbox'));
+    } finally { notebookOpening = false; }
+    notebookTab = tab; mountNotebookTabs();
+  }
+  function mountNotebookTabs() {
+    const body = $('#sheetBody'); body.querySelector(':scope > .notebook-tabs, .notebook-tabs')?.remove();
+    if (!notebookTab || !sheet.classList.contains('open')) return;
+    const nav = document.createElement('nav'); nav.className = 'notebook-tabs'; nav.setAttribute('aria-label', 'Notebook');
+    for (const [id, label, icon] of NOTEBOOK) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'notebook-tab'; b.dataset.tab = id;
+      const i = document.createElement('span'); i.className = 'notebook-tab-icon'; i.setAttribute('aria-hidden', 'true'); i.textContent = icon;
+      b.append(i, document.createTextNode(label)); b.setAttribute('aria-current', id === notebookTab ? 'page' : 'false');
+      b.onclick = () => { if (id !== notebookTab) openNotebook(id); };
+      nav.appendChild(b);
+    }
+    const header = body.querySelector('[data-control-header]');
+    if (header) header.after(nav); else body.prepend(nav);
   }
   // Backup: one JSON file with everything saved on this device (sign-in tokens and caches left out).
   function backupAge(at) {
@@ -2482,6 +2515,8 @@ function startLofiRooms() {
     const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
     h('h2', '', title); if (sub && !SHEET_TOOL_SUBS[sub]) h('p', 'muted', sub);
     build(h); alignSheetHeader(body);openSheet();
+    // Notebook tabs ride along while one of its four tools is showing, even as it redraws.
+    if (notebookTab && !notebookOpening) { if (NOTEBOOK_TITLES[title] === notebookTab) mountNotebookTabs(); else notebookTab = null; }
   }
   function widgetLinks(panel, links, id) {
     links.forEach(row => {
@@ -3387,7 +3422,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { openNotebook,shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
