@@ -27,6 +27,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="lofirooms" android:host="open" />
             </intent-filter>
+            <!-- App Links: share links on heycristobal.com open straight in the app when it's installed.
+                 Android checks heycristobal.com/.well-known/assetlinks.json (served by the
+                 dalecri.github.io repo) against this app's signing key before trusting them. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="heycristobal.com" android:pathPrefix="/Voxel-lofi-room" />
+            </intent-filter>
         </activity>
 
         <provider

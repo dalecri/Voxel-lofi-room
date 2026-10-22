@@ -40,7 +40,7 @@
   // clear of the top and bottom bars Instagram and TikTok draw over a story.
   const FORMATS={post:{W:1080,H:1350,eyebrow:98,top:130,room:820,bottom:56},story:{W:1080,H:1920,eyebrow:300,top:350,room:960,bottom:330}};
   // Draws the card on a canvas and returns it. room: an Image of the room snapshot.
-  function drawCard(canvas,{room,title,url,night=false,format='post',logo=null,qrColours=null,qrcode=root.qrcode}){
+  function drawCard(canvas,{room,title,url,night=false,format='post',logo=null,qrColours=null,mine=true,qrcode=root.qrcode}){
     const F=FORMATS[format]||FORMATS.post,W=F.W,H=F.H,base=H-F.bottom;canvas.width=W;canvas.height=H;const g=canvas.getContext('2d');
     const sky=night?['#2a2550','#433a74','#6b5592']:['#ffe6c7','#f8c9b3','#dcc9f0'],ink=night?'#fff6ea':'#3a2a26',soft=night?'#d9cff5':'#7d6158';
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,sky[0]);bg.addColorStop(.55,sky[1]);bg.addColorStop(1,sky[2]);g.fillStyle=bg;g.fillRect(0,0,W,H);
@@ -51,7 +51,7 @@
     if(room&&room.width){const crop=bounds(room),box={x:70,y:F.top,w:W-140,h:Math.min(F.room,(matrix?base-size-24:base-280)-F.top)},s=Math.min(box.w/crop.w,box.h/crop.h),w=crop.w*s,h=crop.h*s;
       g.drawImage(room,crop.x,crop.y,crop.w,crop.h,box.x+(box.w-w)/2,box.y+(box.h-h)/2,w,h);}
     // Eyebrow up top; the room's name and a QR code share the bottom strip.
-    g.fillStyle=soft;g.font='700 34px Nunito, sans-serif';g.textAlign='center';g.fillText('COME VISIT MY LOFI ROOM',W/2,F.eyebrow);g.textAlign='left';
+    g.fillStyle=soft;g.font='700 34px Nunito, sans-serif';g.textAlign='center';g.fillText(mine?'COME VISIT MY LOFI ROOM':'COME SEE THIS LOFI ROOM',W/2,F.eyebrow);g.textAlign='left';
     if(matrix){
       // Whole-pixel cells and a white moat keep it easy for a phone camera to read.
       const n=matrix.length,x=W-56-size,y=base-size;
@@ -75,7 +75,8 @@
     g.fillStyle=soft;g.font='700 24px Nunito, sans-serif';g.fillText(' · heycristobal.com',fx,base-14);
     return canvas;
   }
-  const shareText=(title,url)=>`Come see my Lofi Room “${String(title||'My room').slice(0,40)}” 🏠✨ ${url}`;
+  // mine=false when passing on a friend's room you're visiting: it isn't yours to call "my room".
+  const shareText=(title,url,mine=true)=>`Come see ${mine?'my':'this'} Lofi Room “${String(title||'My room').slice(0,40)}” 🏠✨ ${url}`;
   const noteText=url=>`I signed your guest book in Lofi Rooms 💌 ${url}`;
   const api={BASE,SCHEME,FORMATS,link,codeFrom,intentLink,isNote,qrMatrix,QR_LIMIT,bounds,drawCard,shareText,noteText};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRShareLinks=api;

@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story) and the app icon, every way in, visitor guest book pill, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
+"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story) and the app icon, every way in, visitor guest book pill, sharing a friend's room, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
 import functools
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -78,6 +78,13 @@ with sync_playwright() as p:
  fp.fill('input.gbname','Tyler');fp.click('#gbSign');fp.wait_for_selector('#gbCopyLink')
  until(fp,'document.querySelector("#bGuest").classList.contains("signed")');assert 'nudge' not in g.get_attribute('class') and g.inner_text().strip()=='✓ Signed'
  fp.keyboard.press('Escape');fp.reload(wait_until='networkidle');until(fp,'!!window.__lr?.dashboard');until(fp,'document.querySelector("#bGuest").classList.contains("signed")')
+ # Sharing while visiting passes the friend's room on as "this room", and offers your own instead.
+ fp.evaluate('__lr.shareSheet()');fp.wait_for_selector('.share-card-img[src]')
+ assert 'visiting a friend' in fp.locator('#sheetBody > p.muted').first.inner_text() and fp.locator('#bShareOwn').is_visible()
+ fp.click('#bShareOwn')
+ if fp.locator('#lvDrop').count():fp.click('#lvDrop')
+ until(fp,'__lr.room.name!=="Share Den"');fp.wait_for_selector('.share-card-img[src]');assert fp.locator('#bShareOwn').count()==0
+ assert 'visiting a friend' not in fp.locator('#sheetBody > p.muted').first.inner_text()
  assert not ferr,ferr;friend.close()
  # Android browser: the room opens and a slim bar offers the installed app.
  droid=browser.new_context(reduced_motion='reduce',viewport={'width':390,'height':844},user_agent='Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36');droid.add_init_script(INTRO)

@@ -655,6 +655,8 @@ body.reduce-motion #sheetBody[data-tool=games] .games-cart:hover { transform:non
 .share-link-row .chipbtn:disabled { opacity:.55; }
 .share-code-label { margin:12px 0 6px; }
 /* Post or story: a small two-way switch above the card. */
+.share-own { justify-content:center; margin:0 0 12px; }
+.share-own .chipbtn { min-height:40px; border-radius:999px; font-weight:800; }
 .share-format { display:flex; width:max-content; max-width:100%; margin:0 auto 12px; padding:4px; gap:4px; border-radius:999px; background:var(--chip); }
 .share-format button { display:flex; align-items:center; gap:6px; min-height:40px; margin:0; padding:0 16px; border:0; border-radius:999px; background:transparent; color:var(--ink-dim); box-shadow:none; font:800 14px/1 var(--font); }
 .share-format button small { font-size:11px; font-weight:700; opacity:.75; }
