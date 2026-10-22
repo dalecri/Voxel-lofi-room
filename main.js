@@ -232,10 +232,9 @@ function startLofiRooms() {
   function applyMotion() {
     motionPreference = store.get(LRHome.MOTION_KEY,null);
     document.body.classList.toggle('reduce-motion', view.reducedMotion);
-    handDrawn?.refresh();
   }
-  // Hand-drawn wobble: an inked, gently boiling sketch look on the room (Settings › Look).
-  const handDrawn = LRHandDrawn.create({ canvas: $('#c'), reduced: () => view.reducedMotion });
+  // Hand-drawn wobble: a still, inked sketch look on the room (Settings › Look).
+  const handDrawn = LRHandDrawn.create({ canvas: $('#c') });
   handDrawn.set(meta.handDrawn === true);
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
   const todayTasks=LRToday.create({store,earn:(source,id)=>shop.earn(source,id),onChecked:t=>remember('tasks',{id:t.id})});
