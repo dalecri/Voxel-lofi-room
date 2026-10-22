@@ -6,14 +6,17 @@ function startLofiRooms() {
   const { HC, CAT, GROUPS, WALLS, FLOORS, WALL_COLORS, PRESETS, CATS, fp } = LR;
   const Sound = window.LofiSound;
   const $ = s => document.querySelector(s);
+  // While a backup is being restored the running app must not write over it.
+  let restoring = false;
   const put = (k, v) => {
+    if (restoring) return;
     if (window.Store) window.Store.set(k, v);
     else try { localStorage.setItem(k, v); } catch (e) { /* private mode */ }
   };
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { put(k, JSON.stringify(v)); },
-    del(k) { if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
+    del(k) { if (restoring) return; if (window.Store) window.Store.del(k); else try { localStorage.removeItem(k); } catch (e) {} },
   };
   const calendarModel=LRCalendar.create({store});
   const googleCalendar=LRCalendar.createGoogle({scope:LRCalendar.TASKS_EDIT_SCOPES});
@@ -2199,6 +2202,65 @@ function startLofiRooms() {
     codeSheet('Caption studio', '', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk, { publish: publishClip }); }, 'captions');
     captionDesk.refresh();
   }
+  // Backup: one JSON file with everything saved on this device (sign-in tokens and caches left out).
+  function backupAge(at) {
+    const days = Math.floor((new Date().setHours(0,0,0,0) - new Date(at).setHours(0,0,0,0)) / 86400000);
+    return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days < 30 ? `${days} days ago` : 'on ' + new Date(at).toLocaleDateString();
+  }
+  async function exportBackup() {
+    try { save(); await window.Store?.flush?.(); } catch (e) { /* the WebView copy is current */ }
+    const backup = LRBackup.build(localStorage), text = JSON.stringify(backup), name = LRBackup.fileName();
+    const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    try {
+      if (native) {
+        // Android: hand the file to the share sheet, so it can go to Drive, Files or email.
+        const fsys = window.Capacitor.registerPlugin('Filesystem'), share = window.Capacitor.registerPlugin('Share');
+        const file = await fsys.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8' });
+        await share.share({ title: 'Lofi Rooms backup', text: 'My Lofi Rooms backup', files: [file.uri], dialogTitle: 'Save your backup somewhere safe' });
+      } else {
+        const url = URL.createObjectURL(new Blob([text], { type: 'application/json' })), a = document.createElement('a');
+        a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }
+      store.set(LRBackup.LAST, Date.now());
+      toast(`<b>Backed up</b><span>${backup.count} saved items in ${esc(name)}. Keep it somewhere safe, like Google Drive.</span>`, 3600, true);
+      if ($('#menu-settings') && !$('#menu-settings').hidden) renderMenu();
+    } catch (err) {
+      if (!/cancel/i.test(String(err && err.message))) toast('<span>Couldn’t make the backup. Try again.</span>', 2400, true);
+    }
+  }
+  function pickBackup() {
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json'; input.hidden = true;
+    input.onchange = async () => {
+      const file = input.files && input.files[0]; input.remove(); if (!file) return;
+      let parsed;
+      try { if (file.size > 20e6) throw Error('That file is too big to be a Lofi Rooms backup.'); parsed = LRBackup.parse(await file.text()); }
+      catch (err) { toast(`<span>${esc(err.message)}</span>`, 3000, true); return; }
+      confirmRestore(parsed);
+    };
+    document.body.appendChild(input); input.click();
+  }
+  function confirmRestore(parsed) {
+    codeSheet('Restore a backup', '', h => {
+      const box = h('div', 'backup-restore');
+      const when = parsed.createdAt ? new Date(parsed.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'an unknown date';
+      const p = document.createElement('p'); p.className = 'backup-summary'; p.textContent = `From ${when} · ${parsed.rooms} room${parsed.rooms === 1 ? '' : 's'} · ${parsed.count} saved items`; box.appendChild(p);
+      const warn = document.createElement('p'); warn.className = 'backup-warn'; warn.textContent = 'This replaces everything on this phone with the backup. Anything made since then will be gone. The app restarts when it’s done.'; box.appendChild(warn);
+      const row = document.createElement('div'); row.className = 'backup-actions'; box.appendChild(row);
+      const go = document.createElement('button'); go.type = 'button'; go.className = 'backup-go'; go.textContent = 'Restore and restart';
+      const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'backup-cancel'; cancel.textContent = 'Cancel'; cancel.onclick = closeSheets;
+      go.onclick = () => restoreBackup(parsed, go); row.append(cancel, go);
+    });
+  }
+  async function restoreBackup(parsed, button) {
+    if (button) { button.disabled = true; button.textContent = 'Restoring…'; }
+    restoring = true;   // the running app stops saving, so nothing it does can overwrite the backup
+    const S = window.Store;
+    LRBackup.apply(parsed, localStorage, { set: (k, v) => S ? S.set(k, v) : localStorage.setItem(k, v), del: k => S ? S.del(k) : localStorage.removeItem(k) });
+    try { await S?.flush?.(); } catch (e) { /* the WebView copy already holds the backup */ }
+    try { sessionStorage.setItem('lr.restored', String(parsed.count)); } catch (e) { /* the toast is optional */ }
+    location.reload();
+  }
+  try { const restored = sessionStorage.getItem('lr.restored'); if (restored) { sessionStorage.removeItem('lr.restored'); setTimeout(() => toast(`<b>Welcome back</b><span>Your backup is restored · ${Number(restored)} saved items.</span>`, 3200, true), 600); } } catch (e) { /* storage unavailable */ }
   // Game library: the owner's HTML games as cartridges, each a direct link.
   function gameLibrary() {
     codeSheet('Game library', '', h => LRGames.render(h('section', 'games-library'), { onOpen: () => { try { Sound.coin(); } catch (e) { /* optional interface sound */ } } }), 'games');
@@ -2914,6 +2976,12 @@ function startLofiRooms() {
     settingsNotes.push(['Live extras','Public-domain art, aurora watch and Canadian holidays. Radio browsing, book searches, recipes and cat facts connect only when tapped.']);
     toggle('Live weather', meta.liveWeather === true, () => { liveWeather.setEnabled(meta.liveWeather !== true); });
     settingsNotes.push(['Live weather','Uses approximate location with Open-Meteo. Your exact location is never saved or sent. Updates every 30 minutes.']);
+    // Your data: one file with everything, and a way to bring it back.
+    group('Your data');
+    const action=(icon,name,desc,fn)=>{const b=h('button','toggle settings-action',`<span class="toggle-icon" aria-hidden="true">${icon}</span><span class="toggle-copy"><span class="toggle-name">${name}</span><small></small></span><span class="settings-action-go" aria-hidden="true">›</span>`);b.type='button';b.querySelector('small').textContent=desc;b.onclick=fn;return b;};
+    const lastBackup=store.get(LRBackup.LAST,null);
+    action('💾','Back up my home',lastBackup?`Last backup ${backupAge(lastBackup)} · saves one file you keep`:'Save your rooms, notes and everything else to one file you keep',exportBackup).id='bBackup';
+    action('📥','Restore from a backup','Bring a backup file back onto this phone',pickBackup).id='bRestore';
     target=settingsPanel;
     const settingsHelp=h('details','settings-help'),helpTitle=document.createElement('summary');helpTitle.textContent='About these settings';settingsHelp.appendChild(helpTitle);
     for(const [name,description] of settingsNotes){const p=document.createElement('p'),b=document.createElement('b');b.textContent=name+': ';p.append(b,document.createTextNode(description));settingsHelp.appendChild(p);}
@@ -3249,7 +3317,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { gameLibrary,handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

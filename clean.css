@@ -631,3 +631,14 @@ body.hand-drawn #paperGrain { opacity:.5; }
 body.reduce-motion #sheetBody[data-tool=games] .games-cart:hover { transform:none; }
 #sheetBody[data-tool=games] .games-all { display:block; width:max-content; margin:16px auto 4px; padding:10px 16px; border-radius:999px; color:var(--ps-muted); font:700 13px/1 var(--ps-font); text-decoration:none; }
 #sheetBody[data-tool=games] .games-all:hover { background:var(--ps-surface); color:var(--ps-ink); }
+
+/* ---------- Your data: backup and restore ---------- */
+#menu-settings .settings-group .settings-action .settings-action-go { color:var(--ink-dim); font:600 24px/1 var(--font); }
+.backup-restore { display:grid; gap:14px; }
+.backup-summary { margin:0; padding:14px 16px; border-radius:18px; background:var(--chip); color:var(--ink); font:800 15px/1.4 var(--font); }
+.backup-warn { margin:0; color:var(--ink-dim); font:600 14px/1.5 var(--font); }
+.backup-actions { display:flex; justify-content:flex-end; gap:8px; }
+.backup-actions button { min-height:48px; margin:0; padding:0 18px; border:0; border-radius:999px; box-shadow:none; font:800 14px/1 var(--font); }
+.backup-cancel { background:var(--chip); color:var(--ink); }
+.backup-go { background:var(--accent); color:var(--accent-ink,#fff); }
+.backup-go:disabled { opacity:.6; }
