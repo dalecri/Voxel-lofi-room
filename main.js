@@ -589,7 +589,12 @@ function startLofiRooms() {
   function updateSaveChip() {
     const saved = isSaved(), edited = isEdited(), b = $('#bSave');
     b.hidden = saved && !edited;
-    const g = $('#bGuest'); g.hidden = !(meta.visit && meta.visit.id === meta.current);
+    const g = $('#bGuest'), visiting = !!(meta.visit && meta.visit.id === meta.current), signed = visiting && !!meta.visit.signed;
+    g.hidden = !visiting;
+    // Visitors: a warm pill that pulses gently until they've signed; afterwards it calms down.
+    g.classList.toggle('nudge', visiting && !signed); g.classList.toggle('signed', signed);
+    g.querySelector('span').textContent = signed ? '✓ Signed' : '✍ Sign guest book';
+    g.setAttribute('aria-label', signed ? 'You signed this guest book. Sign again' : 'Sign this room’s guest book');
     document.body.classList.toggle('unsaved', !b.hidden || !g.hidden);
     b.classList.toggle('new', !saved);
     b.setAttribute('aria-label', saved ? 'Save changes' : 'Save this room to your home');
@@ -2579,8 +2584,10 @@ function startLofiRooms() {
   function roomSnapshotImage() {
     return new Promise((ok, no) => { const img = new Image(); img.onload = () => ok(img); img.onerror = no; img.src = view.snapshot(); });
   }
+  let shareLogo = null;   // the app icon for the card's sign-off; the card still paints without it
+  const shareLogoImage = () => shareLogo || (shareLogo = new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = 'assets/icon.png'; }));
   function roomCardImage(url, format = 'post', shot = roomSnapshotImage()) {
-    return shot.then(img => LRShareLinks.drawCard(document.createElement('canvas'), { room: img, title: room.name, url, format, night: meta.phase === 'night' || meta.phase === 'evening' }).toDataURL('image/png'));
+    return Promise.all([shot, shareLogoImage()]).then(([img, logo]) => LRShareLinks.drawCard(document.createElement('canvas'), { room: img, title: room.name, url, format, logo, night: meta.phase === 'night' || meta.phase === 'evening' }).toDataURL('image/png'));
   }
   async function shareCard(png, url, format = 'post') {
     const text = LRShareLinks.shareText(room.name, url), name = `lofi-room-${format === 'story' ? 'story-' : ''}${Date.now()}.png`;
@@ -2660,7 +2667,7 @@ function startLofiRooms() {
       room.load(data.room);meta.current=id;undo.length=0;baseSig=sig();
       meta.visit={id,gid:data.gid,host:room.name};
       view.panGoal.set(0,0,0);view.zoomGoal=1;changed();save();saveMeta();updateHeader();
-      toast(`<b>${esc(room.name)}</b><span>Visiting a friend’s room. Sign their guest book, or tap Save to keep it.</span>`,3000);Sound.stamp();setTimeout(()=>Sound.arpeggio(),250);
+      toast(`<b>${esc(room.name)}</b><span>Visiting a friend’s room. Tap ✍ Sign guest book up top to leave them a note.</span>`,3000);Sound.stamp();setTimeout(()=>Sound.arpeggio(),250);
     });
   }
   const friendCardsUI=LRFriendCards.createView({model:friendCards,sheet:codeSheet,prepare:prepareFriendCard,visit:visitFriendCard,thumb:decor=>view.roomThumb(decor),sound:Sound,reduced:()=>view.reducedMotion,
@@ -2695,7 +2702,7 @@ function startLofiRooms() {
     appPlugin.addListener('appUrlOpen', e => openSharedCode(LRShareLinks.codeFrom(e && e.url)));
     appPlugin.getLaunchUrl?.().then(r => { const code = LRShareLinks.codeFrom(r && r.url); if (code) setTimeout(() => openSharedCode(code), 700); }).catch(() => {});
   }
-  // the guest book: a friend visiting your shared room signs it and gets a reply code; when you paste it,
+  // the guest book: a friend visiting your shared room signs it and gets a reply link; when you open it,
   // their note is pinned in that room. No server: the codes carry everything.
   const STICKER_GLYPHS = ['♥', '★', '🐾', '✿', '☕', '♪', '☾', '✦'];
   async function noteCode(n) {
@@ -2713,16 +2720,17 @@ function startLofiRooms() {
   function signSheet() {
     const v = meta.visit || {};
     let pick = 0;
-    codeSheet('Sign the guest book', `Leave a little note in “${esc(v.host || room.name)}”. You’ll get a reply code to send back to your friend.`, h => {
+    codeSheet('Sign the guest book', `Leave a little note in “${esc(v.host || room.name)}”. You’ll get a link to send back to your friend.`, h => {
       const row = h('div', 'stickers');
       STICKER_GLYPHS.forEach((g, i) => { const b = document.createElement('button'); b.className = 'stk' + (i === 0 ? ' on' : ''); b.textContent = g; b.setAttribute('aria-label', 'Sticker ' + (i + 1)); b.onclick = () => { pick = i; row.querySelectorAll('.stk').forEach((x, j) => x.classList.toggle('on', j === i)); Sound.blip(); }; row.appendChild(b); });
       const nm = h('input', 'gbname'); nm.placeholder = 'Your name'; nm.maxLength = 20; nm.value = store.get('lr.guestName', '');
       const tx = h('textarea', 'code gbnote'); tx.placeholder = 'A tiny note (optional)'; tx.maxLength = 80; tx.rows = 2;
-      const go = h('div', 'rowbtns'); go.innerHTML = '<button class="chipbtn primary" id="gbSign">Sign &amp; get reply code</button>';
+      const go = h('div', 'rowbtns'); go.innerHTML = '<button class="chipbtn primary" id="gbSign">Sign &amp; get reply link</button>';
       go.querySelector('#gbSign').onclick = async () => {
         const name = nm.value.trim().slice(0, 20) || 'A friend'; store.set('lr.guestName', name);
         const code = await noteCode({ g: v.gid || null, r: v.host || room.name, n: name, t: tx.value.trim().slice(0, 80), s: pick, d: today() });
         Sound.chime(); discover('signed');
+        if (meta.visit && meta.visit.id === meta.current) { meta.visit.signed = true; saveMeta(); updateSaveChip(); }
         const url = LRShareLinks.link(code);
         codeSheet('Signed! ' + STICKER_GLYPHS[pick], 'Send this link back to your friend. When they open it, your note appears in their room.', h2 => {
           const r2 = h2('div', 'rowbtns share-link-row');

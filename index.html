@@ -123,6 +123,12 @@
   #pills { position: absolute; left: 16px; top: calc(var(--sat) + 84px); display: flex; gap: 8px; pointer-events: none; }
   .guestchip { pointer-events: auto; padding: 7px 13px; border-radius: 14px; font-weight: 800; font-size: 13px; color: var(--ink); box-shadow: var(--shadow); }
   .guestchip[hidden] { display: none; }
+  .guestchip.nudge { background: #fff1d9; color: #6a3a1c; animation: savein .35s cubic-bezier(.2,1.4,.4,1), guestpulse 2.4s ease-out .6s 5; }
+  body.night .guestchip.nudge { background: #ffe2b8; color: #4a2a14; }
+  .guestchip.signed { color: var(--ink-dim); }
+  @keyframes guestpulse { 0% { box-shadow: var(--shadow), 0 0 0 0 rgba(255,190,120,.7); } 70%, 100% { box-shadow: var(--shadow), 0 0 0 12px rgba(255,190,120,0); } }
+  @media (prefers-reduced-motion: reduce) { .guestchip.nudge { animation: none; } }
+  body.reduce-motion .guestchip.nudge { animation: none; }
   .savechip { pointer-events: auto; display: flex; align-items: center; gap: 6px; padding: 7px 13px 7px 10px; border-radius: 14px; color: #fff; background: var(--accent); font-weight: 800; font-size: 13px; box-shadow: var(--shadow); animation: savein .35s cubic-bezier(.2,1.4,.4,1); }
   .savechip[hidden] { display: none; }
   .savechip svg { width: 17px; height: 17px; }
@@ -486,7 +492,7 @@
 
 <header>
   <div class="brand panel"><button id="brand" aria-label="Rename this room"><b id="roomName">Lofi Rooms</b></button><button type="button" id="disc" aria-haspopup="dialog" aria-controls="cozyMoments" aria-expanded="false">0 cozy moments</button></div>
-  <div id="pills"><button class="panel savechip" id="bSave" aria-label="Save" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg><span>Save</span></button><button class="panel guestchip" id="bGuest" aria-label="Sign the guest book" hidden><span>✍ Guest book</span></button></div>
+  <div id="pills"><button class="panel savechip" id="bSave" aria-label="Save" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg><span>Save</span></button><button class="panel guestchip" id="bGuest" aria-label="Sign this room’s guest book" hidden><span>✍ Sign guest book</span></button></div>
   <div class="chips panel">
     <button class="chip" id="bTime" aria-label="Time of day">
       <svg class="sunI" viewBox="0 0 24 24" fill="currentColor"><rect x="8" y="8" width="8" height="8" rx="1.5"/><rect x="11" y="2" width="2" height="3" rx="1"/><rect x="11" y="19" width="2" height="3" rx="1"/><rect x="2" y="11" width="3" height="2" rx="1"/><rect x="19" y="11" width="3" height="2" rx="1"/><rect x="4.5" y="4.5" width="2.5" height="2.5" rx="1"/><rect x="17" y="17" width="2.5" height="2.5" rx="1"/><rect x="17" y="4.5" width="2.5" height="2.5" rx="1"/><rect x="4.5" y="17" width="2.5" height="2.5" rx="1"/></svg>

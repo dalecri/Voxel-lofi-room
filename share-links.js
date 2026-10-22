@@ -40,7 +40,7 @@
   // clear of the top and bottom bars Instagram and TikTok draw over a story.
   const FORMATS={post:{W:1080,H:1350,eyebrow:98,top:130,room:820,bottom:56},story:{W:1080,H:1920,eyebrow:300,top:350,room:960,bottom:330}};
   // Draws the card on a canvas and returns it. room: an Image of the room snapshot.
-  function drawCard(canvas,{room,title,url,night=false,format='post',qrcode=root.qrcode}){
+  function drawCard(canvas,{room,title,url,night=false,format='post',logo=null,qrcode=root.qrcode}){
     const F=FORMATS[format]||FORMATS.post,W=F.W,H=F.H,base=H-F.bottom;canvas.width=W;canvas.height=H;const g=canvas.getContext('2d');
     const sky=night?['#2a2550','#433a74','#6b5592']:['#ffe6c7','#f8c9b3','#dcc9f0'],ink=night?'#fff6ea':'#3a2a26',soft=night?'#d9cff5':'#7d6158';
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,sky[0]);bg.addColorStop(.55,sky[1]);bg.addColorStop(1,sky[2]);g.fillStyle=bg;g.fillRect(0,0,W,H);
@@ -64,7 +64,11 @@
       g.textAlign='center';fit(g,name,W-140,84,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,W/2,base-154);
       g.font='800 38px Nunito, sans-serif';g.fillText('Tap the link to step inside',W/2,base-84);g.textAlign='left';
     }
-    g.fillStyle=soft;g.font='700 24px Nunito, sans-serif';g.fillText('Lofi Rooms · heycristobal.com',60,base-14);
+    // Sign-off: the app icon beside the name, so a reposted card is still recognisably ours.
+    let fx=60;
+    if(logo&&logo.width){const s=52,y=base-14-34;g.save();rounded(g,fx,y,s,s,13);g.clip();g.drawImage(logo,fx,y,s,s);g.restore();fx+=s+14;}
+    g.fillStyle=ink;g.font='800 26px Nunito, sans-serif';g.fillText('Lofi Rooms',fx,base-14);fx+=g.measureText('Lofi Rooms').width;
+    g.fillStyle=soft;g.font='700 24px Nunito, sans-serif';g.fillText(' · heycristobal.com',fx,base-14);
     return canvas;
   }
   const shareText=(title,url)=>`Come see my Lofi Room “${String(title||'My room').slice(0,40)}” 🏠✨ ${url}`;
