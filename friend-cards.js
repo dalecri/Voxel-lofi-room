@@ -31,10 +31,7 @@
         const actions=el('div','rowbtns');let busy=false;
         const go=button(actions,'Open card',async()=>{
           if(busy)return;busy=true;go.disabled=true;
-          if(/^\s*LRG[01]\./.test(ta.value)){try{await receiveNote(ta.value);}catch(e){notice('That note code doesn’t look right');}finally{busy=false;go.disabled=false;}return;}
-          let data;try{data=await prepare(ta.value);}catch(e){notice('That room code doesn’t look right');busy=false;go.disabled=false;return;}
-          if(!visible(host))return;
-          try{const result=model.receive(ta.value,data);show(result.card,result.newlySaved,data);}catch(e){notice(e.message);busy=false;go.disabled=false;}
+          const ok=await accept(ta.value,()=>visible(host));if(!ok){busy=false;go.disabled=false;}
         },'chipbtn primary');go.id='bOpenCode';
         const camera=button(actions,'Scan with camera',()=>startScan());camera.id='bScanRoom';
         form.append(label,ta,actions);entry.append(form);host.append(entry);
@@ -45,6 +42,14 @@
           }
         }rows();const startScan=scan({host,onCode:code=>{if(!visible(host))return;ta.value=code;go.click();}});
       });
+    }
+    // Opens a room or guest-book code: pasted, scanned, or arriving in a share link.
+    async function accept(code,still=()=>true){
+      const found=String(code||'').match(/LRG?[01]\.[A-Za-z0-9_-]+/);if(found)code=found[0];   // a whole share link works too
+      if(/^\s*LRG[01]\./.test(code)){try{await receiveNote(code);return true;}catch(e){notice('That note code doesn’t look right');return false;}}
+      let data;try{data=await prepare(code);}catch(e){notice('That room code doesn’t look right');return false;}
+      if(!still())return true;
+      try{const result=model.receive(code,data);show(result.card,result.newlySaved,data);return true;}catch(e){notice(e.message);return false;}
     }
     function show(card,arriving=false,prepared=null){
       const request=++revision;
@@ -65,7 +70,7 @@
         };Promise.resolve().then(ready);
       });
     }
-    return {open,show};
+    return {open,show,accept};
   }
   const api={KEY,create,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRFriendCards=api;
 })(typeof window!=='undefined'?window:globalThis);
