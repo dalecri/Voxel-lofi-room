@@ -232,7 +232,11 @@ function startLofiRooms() {
   function applyMotion() {
     motionPreference = store.get(LRHome.MOTION_KEY,null);
     document.body.classList.toggle('reduce-motion', view.reducedMotion);
+    handDrawn?.refresh();
   }
+  // Hand-drawn wobble: an inked, gently boiling sketch look on the room (Settings › Look).
+  const handDrawn = LRHandDrawn.create({ canvas: $('#c'), reduced: () => view.reducedMotion });
+  handDrawn.set(meta.handDrawn === true);
   applyMotion(); motionMedia.addEventListener('change', applyMotion);
   const todayTasks=LRToday.create({store,earn:(source,id)=>shop.earn(source,id),onChecked:t=>remember('tasks',{id:t.id})});
   const taskPortraits=new Map();
@@ -2808,7 +2812,7 @@ function startLofiRooms() {
     const settingsNotes=[];
     // Settings rows: an icon and a short line under each name.
     const SETTING_INFO={'Music':['🎵','The lofi radio in your room'],'Sound':['🔔','Taps, chimes and little room sounds'],'Vinyl crackle':['💿','Soft hiss and pops under the music'],'Rain':['🌧','Rain on the window'],
-      'Monospace dashboard':['⌨','Typewriter-style text on the dashboard'],'Night glow':['✨','Neon, fairy lights and fire bloom after dark'],'Dream mode':['🌙','After midnight the room drifts moon-blue'],
+      'Monospace dashboard':['⌨','Typewriter-style text on the dashboard'],'Hand-drawn wobble':['✏️','An inked, sketchy wobble on your room'],'Night glow':['✨','Neon, fairy lights and fire bloom after dark'],'Dream mode':['🌙','After midnight the room drifts moon-blue'],
       'Cat mischief':['🐈','Cats sometimes knock things over'],'Visitors':['🐾','A neighbour cat drops by'],'Follow the clock':['🕰','Morning, afternoon, evening and night'],
       'Reduced motion':['🫧','Calmer animations everywhere'],'Calm performance':['🍃','Lighter rendering at 30 fps'],
       'Live extras':['🖼','Art of the day, aurora watch and holidays'],'Live weather':['⛅','Real weather near you, never your exact spot']};
@@ -2892,6 +2896,7 @@ function startLofiRooms() {
     look.insertBefore(themeRow,target);
     toggle('Night glow (neon, fairy lights and the fire bloom after dark)', meta.glow !== false, () => { meta.glow = meta.glow === false; view.glowOn = meta.glow; saveMeta(); });
     toggle('Dream mode (after midnight the room drifts moon-blue and the music slows)', meta.dreamy !== false, () => { meta.dreamy = meta.dreamy === false; saveMeta(); checkDrift(true); });
+    toggle('Hand-drawn wobble', meta.handDrawn===true, () => { meta.handDrawn=meta.handDrawn!==true; handDrawn.set(meta.handDrawn); saveMeta(); });
     toggle('Monospace dashboard', meta.dashboardMono===true, () => { meta.dashboardMono=meta.dashboardMono!==true;saveMeta(); });
     group('Room life');
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
@@ -3241,7 +3246,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

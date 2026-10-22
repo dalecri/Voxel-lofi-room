@@ -605,3 +605,7 @@ body.reduce-motion :is(#frenchView,#barnabyView,.cozy-pop,#photo,#crate) { anima
 .caption-studio .caption-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:12px; }
 .caption-studio .caption-actions > .caption-copy { float:none; margin:0; }
 .caption-studio .caption-publish { min-height:44px; margin:0; padding:0 16px; border:1.5px solid currentColor; border-radius:999px; background:transparent; color:inherit; box-shadow:none; font:800 13px/1 var(--ps-font,inherit); }
+
+/* ---------- Hand-drawn wobble: paper grain over the room, under the interface ---------- */
+#paperGrain { position:fixed; inset:0; pointer-events:none; opacity:0; background-size:180px 180px; mix-blend-mode:multiply; transition:opacity .4s ease; }
+body.hand-drawn #paperGrain { opacity:.5; }
