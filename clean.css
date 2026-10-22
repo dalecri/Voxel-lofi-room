@@ -657,3 +657,11 @@ body.reduce-motion #sheetBody[data-tool=games] .games-cart:hover { transform:non
 .app-open-banner { position:fixed; z-index:70; left:12px; right:12px; top:calc(var(--sat,0px) + 10px); display:flex; align-items:center; gap:8px; padding:6px 6px 6px 16px; border-radius:999px; background:#2b2238; color:#fff; box-shadow:0 12px 30px -12px #0008; }
 .app-open-banner a { flex:1; color:#fff; font:800 14px/1.2 Nunito,sans-serif; text-decoration:none; }
 .app-open-banner button { width:40px; height:40px; min-height:40px; margin:0; padding:0; border:0; border-radius:50%; background:#ffffff1f; color:#fff; font:600 20px/1 sans-serif; }
+
+/* ---------- Notebook: one tab strip across Notes, Ideas, Whiteboard and Future me ---------- */
+#sheetBody .notebook-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; flex:none; margin:0 0 14px; padding:4px; border-radius:20px; background:color-mix(in srgb,currentColor 7%,transparent); }
+#sheetBody .notebook-tab { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; min-height:52px; margin:0; padding:4px 2px; border:0; border-radius:16px; background:transparent; color:inherit; opacity:.66; box-shadow:none; font:800 11.5px/1.15 'Plus Jakarta Sans',Nunito,sans-serif; text-align:center; transition:background .2s ease,opacity .2s ease; }
+#sheetBody .notebook-tab-icon { font-size:18px; line-height:1; }
+#sheetBody .notebook-tab[aria-current=page] { background:color-mix(in srgb,#fff 78%,transparent); opacity:1; box-shadow:0 2px 8px -4px #0003; }
+#sheetBody .notebook-tab:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+body[data-tool-theme=dark] #sheetBody .notebook-tab[aria-current=page] { background:color-mix(in srgb,#fff 16%,transparent); }

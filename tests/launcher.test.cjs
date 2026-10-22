@@ -15,7 +15,7 @@ test('Home directory derives actual portal/widget destinations and reflects priv
  assert.equal(apps.find(p=>p.label==='Private bank').url,'https://example.com/my-bank');assert.ok(data.has('lr.portals'));
  const portalApps=apps.filter(p=>p.url);assert.equal(new Set(portalApps.map(p=>p.url)).size,portalApps.length);
  // Returned rows are disposable views, not mutable application config or room data.
- apps[0].label='Changed';assert.equal(L.TOOLS[0].label,'Notetaker');
+ apps[0].label='Changed';assert.equal(L.TOOLS[0].label,'Notebook');
  const decor=W.shareDecor({...new LR.Room().serialize(),apps,portals:model.custom});assert.ok(!JSON.stringify(decor).includes('my-bank'));
 });
 
