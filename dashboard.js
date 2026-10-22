@@ -18,7 +18,7 @@
     const rows=[];
     for(const [id,C] of Object.entries(CAT)) {
       if(C.tap==='portal' && url(C.link || C.url)) rows.push({furnitureId:id,label:C.name,url:url(C.link || C.url),icon:C.icon || '↗'});
-      for(const p of widgets?.destinations(id) || []) rows.push({furnitureId:id,label:p.label || C.name,url:url(p.url),icon:C.icon || ({terrarium:'🫙',pomodorocandle:'🕯',arcade:'🎮',crt:'📺',libcase:'📚',gamingdesk:'⌨',tstcorkboard:'📌'})[id] || '↗'});
+      for(const p of widgets?.destinations(id) || []) rows.push({furnitureId:id,label:p.label || C.name,url:url(p.url),...(id==='arcade'?{inApp:true}:{}),icon:C.icon || ({terrarium:'🫙',pomodorocandle:'🕯',arcade:'🎮',crt:'📺',libcase:'📚',gamingdesk:'⌨',tstcorkboard:'📌'})[id] || '↗'});
     }
     rows.push(...custom.map(p=>({...p,url:url(p.url),icon:'☆',custom:true})));
     const seen=new Set();return rows.filter(p=>p.url && !seen.has(p.url) && seen.add(p.url));
@@ -69,9 +69,10 @@
     closeButton.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
     return panels;
   }
-  function createView({model,CAT,widgets,sheet,letters,room,renderer,hidden,saveScene,openScene,encodeScene,placePortal,notice,onLaunch=()=>{},close=()=>{},localDestinations=[]}) {
+  function createView({model,CAT,widgets,sheet,letters,room,renderer,hidden,saveScene,openScene,encodeScene,placePortal,notice,onLaunch=()=>{},close=()=>{},localDestinations=[],games=null}) {
     const safe=fn=>async()=>{try{await fn();}catch(e){notice(e.message || 'Could not open this file.');}};
-    function launch(p){onLaunch(p);window.open(p.url,'_blank','noopener,noreferrer');}
+    // HTML games open the in-app game library; every other destination opens its link.
+    function launch(p){onLaunch(p);if(games&&p.furnitureId==='arcade'){games();return;}window.open(p.url,'_blank','noopener,noreferrer');}
     function launcher(){sheet('App launcher','',h=>{
       const search=h('input','dashboard-search');search.type='search';search.placeholder='Find an app';search.setAttribute('aria-label','Find an app');
       const grid=h('div','launcher-grid'),empty=h('p','muted');

@@ -16,7 +16,7 @@
   // Add another row with the same furnitureId to get a destination picker.
   const PORTALS = [
     { furnitureId: 'terrarium', label: 'Voxel Worlds', url: 'https://heycristobal.com/voxel-worlds/' },
-    { furnitureId: 'arcade', label: 'HTML games', url: 'https://heycristobal.com/my-collection/' }, // Owner: verify exact games index URL; collection page used until confirmed.
+    { furnitureId: 'arcade', label: 'HTML games', url: 'https://heycristobal.com/my-collection/' }, // Opens the in-app Game library (games.js); this URL is only the fallback.
     { furnitureId: 'crt', label: 'TwoStoryTails on YouTube', url: 'https://www.youtube.com/@twostorytails' }, // Owner: verify channel URL.
     { furnitureId: 'libcase', label: 'Portfolio', url: 'https://heycristobal.com/' }, // Owner: verify portfolio URL when editing; confirmed as heycristobal.com.
     { furnitureId: 'gamingdesk', label: 'QR Code generator', url: 'https://heycristobal.com/QR-Code-generator/' }, // Owner: verify QR app URL when editing; confirmed with this capitalization.
