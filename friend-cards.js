@@ -15,7 +15,7 @@
   }
   // Original pixel envelope art, rendered locally rather than fetched as an image.
   const ENVELOPE=`<svg viewBox="0 0 96 70" fill="none" shape-rendering="crispEdges" aria-hidden="true"><path d="M4 24H92V66H4Z" fill="#f5eedc" stroke="#635044" stroke-width="3"/><path class="friend-flap" d="M4 24H92L48 49Z" fill="#ece0c7" stroke="#635044" stroke-width="3"/><path d="M5 25L48 51L91 25V65H5Z" fill="#fff8e8"/><path d="M5 65L32 45M91 65L64 45M5 25L48 51L91 25" stroke="#c1b29b" stroke-width="2"/><path d="M4 24V66H92V24" stroke="#635044" stroke-width="3"/><path class="friend-seal" d="M41 36H55V40H59V54H55V58H41V54H37V40H41Z" fill="#c95b43" stroke="#8e392c" stroke-width="2"/><path class="friend-seal" d="M45 43H51V49H45Z" fill="#ef9470"/></svg>`;
-  function createView({model,sheet,prepare,visit,thumb=()=>null,sound={},notice=()=>{},scan=()=>()=>{},receiveNote=async()=>{},reduced=()=>false}){
+  function createView({model,sheet,prepare,visit,thumb=()=>null,sound={},notice=()=>{},scan=()=>()=>{},receiveNote=async()=>{},reduced=()=>false,resolve=async text=>text}){
     let revision=0;
     const el=(tag,cls,text)=>{const n=root.document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const button=(parent,label,fn,cls='chipbtn')=>{const b=el('button',cls,label);b.type='button';b.onclick=fn;parent.append(b);return b;};
@@ -45,6 +45,7 @@
     }
     // Opens a room or guest-book code: pasted, scanned, or arriving in a share link.
     async function accept(code,still=()=>true){
+      try{code=await resolve(code);}catch(e){notice(e.message);return false;}   // short links are looked up first
       const found=String(code||'').match(/LRG?[01]\.[A-Za-z0-9_-]+/);if(found)code=found[0];   // a whole share link works too
       if(/^\s*LRG[01]\./.test(code)){try{await receiveNote(code);return true;}catch(e){notice('That note code doesn’t look right');return false;}}
       let data;try{data=await prepare(code);}catch(e){notice('That room code doesn’t look right');return false;}

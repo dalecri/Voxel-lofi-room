@@ -2622,9 +2622,34 @@ function startLofiRooms() {
       toast('<b>Picture saved</b><span>The link is copied too, ready to paste with it.</span>', 2600, true);
     } catch (e) { if (!/cancel|abort/i.test(String(e && (e.name + e.message)))) toast('<span>Couldn’t share that. Try Copy link.</span>', 2200, true); }
   }
+  // Short links (on by default): the code is stored once in Supabase under an 8-character id.
+  // Off, or when the shortener can't be reached, the whole code travels in the link as before.
+  const shortLinksOn = () => store.get('lr.shortLinks', true) !== false;
+  const shortIds = new Map();
+  async function shareUrl(code) {
+    const long = LRShareLinks.link(code);
+    if (!shortLinksOn()) return { url: long, short: false };
+    try {
+      if (!shortIds.has(code)) shortIds.set(code, LRShareLinks.shorten(code));
+      return { url: LRShareLinks.shortLink(await shortIds.get(code)), short: true };
+    } catch (e) { shortIds.delete(code); return { url: long, short: false, failed: true }; }
+  }
+  // A pasted, scanned or opened link: a full code, or a short id to look up first.
+  async function resolveShared(text) {
+    const s = String(text || ''), found = LRShareLinks.codeFrom(s) || (s.match(/LRG?[01]\.[A-Za-z0-9_-]+/) || [])[0];
+    if (found) return found;
+    const id = LRShareLinks.shortFrom(s);
+    if (!id) return s;   // not a link at all: let the card view say so
+    let code;
+    try { code = await LRShareLinks.expand(id); } catch (e) { throw Error('Couldn’t reach that short link. Check your connection and try again.'); }
+    if (!code) throw Error('That short link doesn’t lead to a room.');
+    return code;
+  }
+  const isShareLink = text => !!(LRShareLinks.codeFrom(text) || LRShareLinks.shortFrom(text));
   const SHARE_FORMATS = [['post', 'Post', '4:5'], ['story', 'Story', '9:16']];
-  async function shareSheet() {
-    const code = await roomCode(), url = LRShareLinks.link(code), friend = visitingFriend(), mine = !friend;
+  async function shareSheet(refresh = false) {
+    const code = await roomCode(), { url, short, failed } = await shareUrl(code), friend = visitingFriend(), mine = !friend;
+    if (refresh && !$('#sheet').classList.contains('open')) return;   // closed while the link was being made
     codeSheet(`Share “${room.name}”`, friend ? 'You’re visiting a friend’s room. Pass it on with a picture and a link, or share one of yours.' : 'Send a picture with a link. Friends tap it to step inside your room.', h => {
       if (friend && ownRoomId() != null) {
         const own = h('div', 'rowbtns share-own');
@@ -2644,6 +2669,9 @@ function startLofiRooms() {
       row.innerHTML = '<button class="chipbtn primary" id="bShareCard" disabled>Share picture & link</button><button class="chipbtn" id="bCopyLink">Copy link</button>';
       const shareBtn = row.querySelector('#bShareCard');
       row.querySelector('#bCopyLink').onclick = () => copyText(url, 'Link copied');
+      const shortRow = h('label', 'share-short');
+      shortRow.innerHTML = `<input type="checkbox" id="bShortLink"${shortLinksOn() ? ' checked' : ''}><span><b>Short link</b><small>${failed ? 'Couldn’t reach the link shortener, so this is the full link.' : short ? 'Saved online so the link and QR stay small.' : 'The whole room travels inside the link. Nothing is stored online.'}</small></span>`;
+      shortRow.querySelector('input').onchange = e => { e.target.disabled = true; store.set('lr.shortLinks', e.target.checked); shareSheet(true); };
       function paint(next) {
         format = next; store.set('lr.shareFormat', next); card.dataset.format = next;
         shape.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.format === next)));
@@ -2695,7 +2723,8 @@ function startLofiRooms() {
   const friendCardsUI=LRFriendCards.createView({model:friendCards,sheet:codeSheet,prepare:prepareFriendCard,visit:visitFriendCard,thumb:decor=>view.roomThumb(decor),sound:Sound,reduced:()=>view.reducedMotion,
     notice:text=>{Sound.nope();toast(`<span>${esc(text)}</span>`,2200,true);},
     receiveNote:async code=>{await receiveNote(code);closeSheets();},
-    scan:({host,onCode})=>{roomScanner=LRRoomQR.scanner({host,onCode,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});return ()=>roomScanner?.start();}});
+    resolve:resolveShared,
+    scan:({host,onCode})=>{roomScanner=LRRoomQR.scanner({host,onCode,accept:text=>/^LR[01]\.[A-Za-z0-9_-]+$/.test(text)||isShareLink(text),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});return ()=>roomScanner?.start();}});
   function importSheet() { friendCardsUI.open(); }
   // A share link arrived: on the web its code sits after the #; in the app it comes as lofirooms://open?c=…
   function openSharedCode(code) {
@@ -2711,18 +2740,20 @@ function startLofiRooms() {
     const x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '×'; x.onclick = () => bar.remove();
     bar.append(a, x); document.body.appendChild(bar); setTimeout(() => bar.remove(), 20000);
   }
+  // Returns the link's code or short id (both open the same way), tidying the address bar.
   function takeHashCode() {
-    const code = LRShareLinks.codeFrom(location.hash);
-    if (!code) return null;
+    const hash = location.hash, ref = LRShareLinks.codeFrom(hash) || LRShareLinks.shortFrom(hash);
+    if (!ref) return null;
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
-    return code;
+    return LRShareLinks.codeFrom(hash) ? ref : hash;
   }
-  { const first = takeHashCode(); if (first) setTimeout(() => { appBanner(first); openSharedCode(first); }, 700); }
+  const refOf = text => LRShareLinks.codeFrom(text) || LRShareLinks.shortFrom(text);
+  { const first = takeHashCode(); if (first) setTimeout(() => { appBanner(refOf(first)); openSharedCode(first); }, 700); }
   window.addEventListener('hashchange', () => { const code = takeHashCode(); if (code) openSharedCode(code); });
   if (nativeApp()) {
     const appPlugin = window.Capacitor.registerPlugin('App');
-    appPlugin.addListener('appUrlOpen', e => openSharedCode(LRShareLinks.codeFrom(e && e.url)));
-    appPlugin.getLaunchUrl?.().then(r => { const code = LRShareLinks.codeFrom(r && r.url); if (code) setTimeout(() => openSharedCode(code), 700); }).catch(() => {});
+    appPlugin.addListener('appUrlOpen', e => { const url = e && e.url; if (isShareLink(url)) openSharedCode(url); });
+    appPlugin.getLaunchUrl?.().then(r => { const url = r && r.url; if (isShareLink(url)) setTimeout(() => openSharedCode(url), 700); }).catch(() => {});
   }
   // the guest book: a friend visiting your shared room signs it and gets a reply link; when you open it,
   // their note is pinned in that room. No server: the codes carry everything.
@@ -2753,7 +2784,7 @@ function startLofiRooms() {
         const code = await noteCode({ g: v.gid || null, r: v.host || room.name, n: name, t: tx.value.trim().slice(0, 80), s: pick, d: today() });
         Sound.chime(); discover('signed');
         if (meta.visit && meta.visit.id === meta.current) { meta.visit.signed = true; saveMeta(); updateSaveChip(); }
-        const url = LRShareLinks.link(code);
+        const { url } = await shareUrl(code);
         codeSheet('Signed! ' + STICKER_GLYPHS[pick], 'Send this link back to your friend. When they open it, your note appears in their room.', h2 => {
           const r2 = h2('div', 'rowbtns share-link-row');
           r2.innerHTML = (canShareNative() ? '<button class="chipbtn primary" id="gbSend">Send the link…</button>' : '') + '<button class="chipbtn" id="gbCopyLink">Copy link</button>';

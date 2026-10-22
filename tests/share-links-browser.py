@@ -17,7 +17,8 @@ def until(pg,expr,timeout=20):
   if pg.evaluate(expr):return
   pg.wait_for_timeout(150)
  raise AssertionError('timed out: '+expr)
-INTRO="if(!sessionStorage.fx){sessionStorage.fx='1';localStorage.setItem('lr.intro','true');}"
+# Full links, fully offline (short links have their own test with a stand-in shortener).
+INTRO="if(!sessionStorage.fx){sessionStorage.fx='1';localStorage.setItem('lr.intro','true');localStorage.setItem('lr.shortLinks','false');}"
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  ctx=browser.new_context(reduced_motion='reduce',viewport={'width':390,'height':844},permissions=['clipboard-read','clipboard-write']);ctx.add_init_script(INTRO)

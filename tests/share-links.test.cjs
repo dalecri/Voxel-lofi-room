@@ -36,3 +36,22 @@ test('Android opens heycristobal.com share links in the app (verified App Links)
   assert.match(xml,/<intent-filter android:autoVerify="true">[\s\S]*?android:scheme="https" android:host="heycristobal\.com" android:pathPrefix="\/Voxel-lofi-room"/);
   assert.equal(L.codeFrom('https://heycristobal.com/Voxel-lofi-room/#LR1.abc'),'LR1.abc');
 });
+test('short links: #r/<id> and lofirooms://open?r=<id> read back; the app intent carries r=',()=>{
+  assert.equal(L.shortLink('ab12cd34'),'https://heycristobal.com/Voxel-lofi-room/#r/ab12cd34');
+  for(const t of ['https://heycristobal.com/Voxel-lofi-room/#r/ab12cd34','#r/AB12CD34','lofirooms://open?r=ab12cd34',`Come see my room ${L.shortLink('ab12cd34')}`])assert.equal(L.shortFrom(t),'ab12cd34',t);
+  for(const t of ['','#r/ab12','#r/ab12cd34x','https://heycristobal.com/Voxel-lofi-room/#LR1.abc',null])assert.equal(L.shortFrom(t),null,String(t));
+  assert.equal(L.codeFrom(L.shortLink('ab12cd34')),null);assert.throws(()=>L.shortLink('nope'));
+  assert.match(L.intentLink('ab12cd34'),/^intent:\/\/open\?r=ab12cd34#Intent;scheme=lofirooms;package=com\.lofirooms\.app;end$/);
+});
+test('shorten and expand talk to the two Supabase functions and check what comes back',async()=>{
+  const calls=[],store=new Map(),fetcher=async(url,opts)=>{calls.push({url,opts});const body=JSON.parse(opts.body),name=url.split('/').pop();
+    if(name==='shorten_room_link'){const id='ab12cd34';store.set(id,body.p_code);return {ok:true,json:async()=>id};}
+    if(name==='room_link')return {ok:true,json:async()=>store.get(body.p_id)??null};return {ok:false,status:404};};
+  assert.equal(await L.shorten('LR1.abc',fetcher),'ab12cd34');
+  assert.equal(calls[0].url,L.SHORTENER.url+'shorten_room_link');assert.equal(calls[0].opts.method,'POST');assert.equal(calls[0].opts.headers.apikey,L.SHORTENER.key);
+  assert.equal(await L.expand('ab12cd34',fetcher),'LR1.abc');assert.equal(await L.expand('zzzzzzzz',fetcher),null);
+  await assert.rejects(()=>L.shorten('not a code',fetcher));await assert.rejects(()=>L.expand('bad',fetcher));
+  await assert.rejects(()=>L.shorten('LR1.abc',async()=>({ok:false,status:503})),/resting/);
+  await assert.rejects(()=>L.expand('ab12cd34',async()=>({ok:true,json:async()=>'<script>'})),/Unexpected/);
+  await assert.rejects(()=>L.shorten('LR1.abc',async()=>({ok:true,json:async()=>'../x'})),/Unexpected/);
+});
