@@ -1,0 +1,53 @@
+<!doctype html><meta charset="utf-8"><title>Lofi Rooms logo</title>
+<!-- The Lofi Rooms logo: one lit window at night, a cat on the sill. Rendered by scripts/make-logo.py. -->
+<style>@font-face{font-family:Fredoka;src:url(../node_modules/@fontsource/fredoka/files/fredoka-latin-600-normal.woff2);font-weight:600}body{margin:0;background:#1b1530}</style>
+<script type="module">
+import * as T from '../node_modules/three/build/three.module.js';
+const R=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});R.setPixelRatio(1);R.setSize(1024,1024);R.setClearColor(0,0);
+R.outputColorSpace=T.SRGBColorSpace;
+function scene(build){
+  const s=new T.Scene(),geo=new T.BoxGeometry(1,1,1);
+  const box=(x,y,z,w,h,d,color,glow=0)=>{const m=new T.Mesh(geo,new T.MeshLambertMaterial({color,emissive:glow?color:0x000000,emissiveIntensity:glow}));m.scale.set(w,h,d);m.position.set(x+w/2,y+h/2,z+d/2);s.add(m);return m;};
+  s.add(new T.HemisphereLight(0xcfc4ff,0x2a2040,1.4));
+  const key=new T.DirectionalLight(0xffe2c4,1.6);key.position.set(6,10,9);s.add(key);
+  build(box,s);return s;
+}
+function shoot(s,center,size){
+  const cam=new T.OrthographicCamera(-size,size,size,-size,-100,200);
+  cam.position.set(center.x+20,center.y+16.5,center.z+20);cam.lookAt(center.x,center.y,center.z);
+  R.render(s,cam);const c=document.createElement('canvas');c.width=c.height=1024;c.getContext('2d').drawImage(R.domElement,0,0);return c;
+}
+// #2: one lit window at night in a chunky wall, a cat on the sill.
+function litWindow(){
+  const s=scene((box,s)=>{
+    box(0,0,0,9,9,2,0x4b3b72);                                                   // wall chunk
+    box(0,9,0,9,.5,2,0x6b5592);box(0,-.5,0,9,.5,2,0x2e2450);
+    box(2,2.5,1.6,5,4.6,.5,0xfff1d6);                                            // frame
+    box(2.4,2.9,1.75,2,1.8,.4,0xffc978,1.25);box(4.6,2.9,1.75,2,1.8,.4,0xffc978,1.25);
+    box(2.4,4.9,1.75,2,1.8,.4,0xffd99a,1.25);box(4.6,4.9,1.75,2,1.8,.4,0xffd99a,1.25);
+    box(1.6,2.1,1.5,5.8,.45,1.6,0xfff1d6);                                       // sill
+    const cat=0x1d1530;box(4.9,2.55,2.15,1.5,1.5,.9,cat);box(5.05,4.05,2.2,1.2,1,.8,cat);   // body, head
+    box(5.05,5.05,2.25,.35,.4,.5,cat);box(5.9,5.05,2.25,.35,.4,.5,cat);          // ears
+    box(6.4,2.55,2.3,.35,.3,.6,cat);box(6.6,2.55,2.6,.3,1.2,.3,cat);             // tail
+    box(5.25,4.5,3.0,.18,.18,.05,0xffe08a,1);box(5.85,4.5,3.0,.18,.18,.05,0xffe08a,1);   // eyes
+    const glow=new T.PointLight(0xffb86b,26,12,1.6);glow.position.set(4.5,4.8,4);s.add(glow);
+  });
+  return shoot(s,new T.Vector3(4.5,4.5,1),7.9);
+}
+// Night sky: the dusk gradient, scattered stars and the window's warm halo.
+function sky(g,{stars=true,halo=true}={}){
+  const bg=g.createLinearGradient(0,0,0,1024);bg.addColorStop(0,'#2a2550');bg.addColorStop(.6,'#433a74');bg.addColorStop(1,'#6b5592');g.fillStyle=bg;g.fillRect(0,0,1024,1024);
+  if(stars){let q=7;const rnd=()=>(q=(q*16807)%2147483647)/2147483647;g.fillStyle='#ffffffb0';for(let i=0;i<30;i++){const x=rnd()*1024,y=rnd()*420+20,r=i%6===0?5:2.4;g.beginPath();g.arc(x,y,r,0,7);g.fill();}}
+  if(halo){const h=g.createRadialGradient(560,470,20,560,470,420);h.addColorStop(0,'#ffb86b55');h.addColorStop(1,'#ffb86b00');g.fillStyle=h;g.fillRect(0,0,1024,1024);}
+}
+const canvas=()=>{const c=document.createElement('canvas');c.width=c.height=1024;return c;};
+function icon({rounded=true}={}){const c=canvas(),g=c.getContext('2d');g.save();if(rounded){g.beginPath();g.roundRect(0,0,1024,1024,230);g.clip();}sky(g);g.drawImage(litWindow(),0,0);g.restore();return c;}
+// Android adaptive icon: the sky is the background layer, the wall and cat float on top.
+function background(){const c=canvas();sky(c.getContext('2d'));return c;}
+function foreground(){return litWindow();}
+function splash(){const W=2732,c=document.createElement('canvas');c.width=c.height=W;const g=c.getContext('2d');
+  const bg=g.createLinearGradient(0,0,0,W);bg.addColorStop(0,'#2a2550');bg.addColorStop(1,'#1b1530');g.fillStyle=bg;g.fillRect(0,0,W,W);
+  const s=640;g.drawImage(icon(),(W-s)/2,(W-s)/2,s,s);return c;}
+window.make=()=>({icon:icon().toDataURL(),full:icon({rounded:false}).toDataURL(),fg:foreground().toDataURL(),bg:background().toDataURL(),splash:splash().toDataURL()});
+window.ready=true;
+</script>
