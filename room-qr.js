@@ -31,16 +31,26 @@
   };
   // Seeded, so the same code always paints the same colours.
   function seeded(text){let s=0;for(let i=0;i<text.length;i++)s=((s<<5)-s+text.charCodeAt(i))|0;return ()=>{s=(s*16807)%2147483647;if(s<0)s+=2147483647;return s/2147483647;};}
+  // Pale shades (light pink, light orange) blur into the white plate for cameras, so any colour
+  // brighter than a 3.2:1 contrast with white is deepened just enough. Darker shades stay as-is.
+  function scanSafe(hex){
+    const lin=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;},srgb=v=>Math.round(255*(v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055));
+    const rgb=[hex>>16&255,hex>>8&255,hex&255].map(lin),L=.2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2],max=1.05/3.2-.05;
+    if(L<=max)return hex;const k=max/L;const [r,g,b]=rgb.map(v=>Math.min(255,srgb(v*k)));return r<<16|g<<8|b;
+  }
+  const luminance=hex=>{const lin=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;};return .2126*lin(hex>>16&255)+.7152*lin(hex>>8&255)+.0722*lin(hex&255);};
+  const darkest=list=>list.reduce((a,b)=>luminance(b)<luminance(a)?b:a);
   function colours(matrix,theme,seed='room'){
     const t=THEMES[theme]||THEMES.blossom,n=matrix.length,rng=seeded(seed),out=[];
     for(let r=0;r<n;r++)for(let c=0;c<n;c++){
       if(!matrix[r][c])continue;
       const finder=(r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7),dist=Math.hypot(c-n/2,r-n/2)/(n/2),noise=rng()*.4-.2;
-      const pool=!finder&&dist+noise<.65?t.qr:t.edge;out.push([r,c,pool[Math.floor(rng()*pool.length)],finder]);
+      // Finders are one even shade (the darkest edge colour): scanners lock on to them first.
+      const pool=!finder&&dist+noise<.65?t.qr:t.edge,pick=pool[Math.floor(rng()*pool.length)];out.push([r,c,finder?darkest(t.edge):scanSafe(pick),finder]);
     }
     return out;
   }
-  // Seen from straight above and turned into a diamond, like the generator's scan view.
+  // Seen from straight above as an upright square, with the generator's colours.
   // Blocks keep a small gap (finders aside); the white quiet zone stays four modules wide.
   // Uses the app's existing Three.js and offscreen thumbnail renderer, no new GL context.
   function scene(T,matrix,night=false,height=180,theme='blossom',seed='room'){
@@ -50,13 +60,14 @@
     const material=color=>{const m=new T.MeshBasicMaterial({color});resources.push(m);return m;};
     const plate=new T.Mesh(geometry,material(0xffffff));plate.scale.set(span,.08,span);plate.position.y=-.04;scene.add(plate);
     const dark=colours(matrix,theme,seed),blocks=new T.InstancedMesh(geometry,material(0xffffff),dark.length),transform=new T.Object3D(),colour=new T.Color();
-    // The three finder squares stay solid: scanners find a diamond-turned code by its
+    // The three finder squares stay solid: scanners find a code by its
     // finders, and gaps across them break the dark runs they look for.
     dark.forEach(([r,c,hex,finder],i)=>{const k=finder?1:.92;transform.position.set(c-(n-1)/2,.25,r-(n-1)/2);transform.scale.set(k,.5,k);transform.updateMatrix();blocks.setMatrixAt(i,transform.matrix);blocks.setColorAt(i,colour.setHex(hex));});
     scene.add(blocks);scene.updateMatrixWorld(true);
-    // Top-left finder points up, so the three finders sit top, left and right.
-    const camera=new T.OrthographicCamera(-1,1,1,-1,.1,600),radius=span*Math.SQRT1_2*1.06;
-    camera.up.set(-1,0,-1).normalize();camera.position.set(0,100,0);camera.lookAt(0,0,0);
+    // Row 0 at the top, column 0 on the left: the code reads like any printed QR.
+    // Whole-pixel blocks keep every edge crisp; a thin dark margin frames the plate.
+    const px=Math.floor(PIXELS/(span*1.06)),radius=PIXELS/px/2,camera=new T.OrthographicCamera(-1,1,1,-1,.1,600);
+    camera.up.set(0,0,-1);camera.position.set(0,100,0);camera.lookAt(0,0,0);
     camera.left=-radius;camera.right=radius;camera.top=radius;camera.bottom=-radius;camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
     return {scene,camera,dispose(){geometry.dispose();blocks.dispose();for(const r of resources)if(r!==geometry)r.dispose();}};
   }
@@ -126,5 +137,5 @@
     const visibility=()=>{if(document.hidden)stop();};document.addEventListener('visibilitychange',visibility);
     return {start,stop,destroy(){destroyed=true;stop();document.removeEventListener('visibilitychange',visibility);panel.remove();}};
   }
-  const api={QUIET,PIXELS,THEMES,colours,encode,decode,plain,scene,voxel,renderCode,shareImage,downloadPNG,createView,scanner};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRRoomQR=api;
+  const api={QUIET,PIXELS,THEMES,colours,scanSafe,encode,decode,plain,scene,voxel,renderCode,shareImage,downloadPNG,createView,scanner};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRRoomQR=api;
 })(typeof window!=='undefined'?window:globalThis);
