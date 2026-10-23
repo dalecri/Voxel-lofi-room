@@ -46,9 +46,9 @@ with sync_playwright() as p:
  decoded=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);const x=640,y=880,w=440,h=470,d=g.getImageData(x,y,w,h);ok(jsQR(d.data,w,h)?.data||null);};i.src=document.querySelector('.share-card-img').src;})''')
  assert decoded==link,decoded
  assert page.evaluate('document.querySelector(".share-card-img").naturalWidth')==1080
- # The sign-off carries the app icon (its warm red block), not just the sky.
+ # The sign-off carries the app icon (its glowing window), not just the sky.
  px=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);ok([...g.getImageData(60+20,1294-48+20,1,1).data]);};i.src=document.querySelector('.share-card-img').src;})''')
- assert px[0]>150 and px[1]<120,px
+ assert px[0]>200 and px[1]>200 and px[2]<px[0]-30,px   # warm window light, never the purple sky
  # The card's QR wears the voxel QR theme (blossom greens and pinks), and repaints when the theme changes.
  tint='''t=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);const d=g.getImageData(700,950,360,360).data;let green=0,blue=0;for(let k=0;k<d.length;k+=4){if(d[k+1]>d[k]+40&&d[k+1]>d[k+2])green++;if(d[k+2]>d[k]+60&&d[k+2]>d[k+1]+20)blue++;}ok([green,blue]);};i.src=document.querySelector('.share-card-img').src;})'''
  green,blue=page.evaluate(tint,0);assert green>2000 and blue<200,(green,blue)
