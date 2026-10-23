@@ -2717,7 +2717,7 @@ function startLofiRooms() {
       const send = codeRow.querySelector('#bSendCode');
       if (send) send.onclick = () => shareTextOut(mine ? 'My Lofi Room' : 'A Lofi Room', `Come see ${mine ? 'my' : 'this'} Lofi Room! Open this link: ${url}\n\nOr paste this code in the app: ${code}`).then(ok => { if (ok) shared(); });
       ta.onclick = () => ta.select();
-      shareQR=LRRoomQR.createView({host:more,code,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),onTheme:()=>{cards={};paint(format);}});
+      shareQR=LRRoomQR.createView({host:more,code,link:short?url:null,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),onTheme:()=>{cards={};paint(format);}});
     });
   }
   const friendCards=LRFriendCards.create({store});

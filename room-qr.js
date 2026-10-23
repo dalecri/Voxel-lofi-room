@@ -13,6 +13,12 @@
     const n=qr.getModuleCount(),matrix=Array.from({length:n},(_,r)=>Array.from({length:n},(_,c)=>qr.isDark(r,c)));
     return {matrix,level};
   }
+  // A short share link (https://…#r/<id>) fits a much smaller, chunkier QR than the whole room.
+  function encodeLink(link){
+    if(!/^https:\/\/[^\s]{1,300}$/.test(link))throw Error('Not a share link');
+    const qr=encoder(0,'M');qr.addData(link,'Byte');qr.make();
+    const n=qr.getModuleCount();return {matrix:Array.from({length:n},(_,r)=>Array.from({length:n},(_,c)=>qr.isDark(r,c))),level:'M'};
+  }
   function decode(pixels,width,height){return decoder(pixels,width,height,{inversionAttempts:'attemptBoth'})?.data || null;}
   function plain(canvas,matrix){
     const g=canvas.getContext('2d'),n=matrix.length,cell=Math.floor(canvas.width/(n+QUIET*2)),offset=Math.floor((canvas.width-n*cell)/2);
@@ -99,10 +105,21 @@
     if(cap?.isNativePlatform?.())return cap.registerPlugin('RoomQrFiles').save({filename:'lofi-room-qr.png',base64:data.split(',')[1]});
     const a=document.createElement('a');a.href=data;a.download='lofi-room-qr.png';document.body.appendChild(a);a.click();a.remove();
   }
-  function createView({host,code,renderer,phase,notice=()=>{},onTheme=()=>{}}){
+  // link: the room's short share link, when there is one. The QR can hold it (small, any phone
+  // camera opens it) or the whole room code (dense, works offline in Lofi Rooms).
+  function createView({host,code,link=null,renderer,phase,notice=()=>{},onTheme=()=>{}}){
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-    const section=el('section','room-qr'),heading=el('h3','','QR code'),note=el('p','muted small','A little voxel QR to scan. Pick its colours, or Plain for a simpler code.');let encoded;
-    try{encoded=encode(code);}catch(e){note.textContent='This room is too big for a QR. Copy or send the code above instead.';note.classList.add('qr-unavailable');host.appendChild(note);return {destroy(){}};}
+    const section=el('section','room-qr'),heading=el('h3','','QR code'),note=el('p','muted small','');
+    const options={};try{options.code=encode(code);}catch(e){/* too big for a QR */}
+    if(link)try{options.link=encodeLink(link);}catch(e){/* not a link we can encode */}
+    let source=options.link?'link':'code';
+    if(!options[source]){note.textContent='This room is too big for a QR. Copy or send the code above instead.';note.classList.add('qr-unavailable');section.append(heading,note);host.appendChild(section);return {destroy(){}};}
+    let encoded=options[source],payload=source==='link'?link:code;
+    const NOTES={link:'Holds your short link, so any phone camera can open it. Pick its colours, or Plain for a simpler code.',code:'Holds the whole room, no internet needed: scan it in Lofi Rooms. Pick its colours, or Plain for a simpler code.'};
+    note.textContent=NOTES[source];
+    const sources=el('div','room-qr-source');sources.setAttribute('role','radiogroup');sources.setAttribute('aria-label','What the QR holds');
+    for(const [id,label] of [['link','Short link'],['code','Full room code']]){if(!options[id])continue;const b=el('button','',label);b.type='button';b.dataset.source=id;b.setAttribute('role','radio');
+      b.onclick=()=>{if(source===id)return;source=id;encoded=options[id];payload=id==='link'?link:code;note.textContent=NOTES[id];isPlain=false;render();};sources.appendChild(b);}
     const canvas=el('canvas','room-qr-canvas');canvas.width=canvas.height=PIXELS;canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Scannable QR code for this room');
     const frame=el('div','room-qr-frame'),petals=el('div','room-qr-petals');petals.setAttribute('aria-hidden','true');for(let i=0;i<4;i++)petals.appendChild(el('i'));frame.append(canvas,petals);
     const controls=el('div','rowbtns'),toggle=el('button','chipbtn room-qr-plain','Plain'),download=el('button','chipbtn','Download PNG'),share=el('button','chipbtn','Share image');for(const b of [toggle,download,share])b.type='button';toggle.setAttribute('aria-pressed','false');
@@ -111,13 +128,14 @@
     const themes=el('div','room-qr-themes');themes.setAttribute('role','radiogroup');themes.setAttribute('aria-label','QR colours');
     for(const [id,t] of Object.entries(THEMES)){const b=el('button','room-qr-theme',t.icon);b.type='button';b.dataset.theme=id;b.setAttribute('role','radio');b.setAttribute('aria-label',t.label);b.title=t.label;b.onclick=()=>{const changed=theme!==id;theme=id;try{root.localStorage.setItem('lr.qrTheme',JSON.stringify(id));}catch(e){/* private mode */}isPlain=false;render();if(changed)onTheme(id);};themes.appendChild(b);}
     let isPlain=false,image;
-    const render=()=>{canvas.getContext('2d').clearRect(0,0,PIXELS,PIXELS);if(isPlain)plain(canvas,encoded.matrix);else if(renderCode(canvas,encoded,code,renderer,phase==='night',theme)==='plain'){isPlain=true;note.textContent='Plain keeps this room easy to scan. The code above works too.';}
+    const render=()=>{canvas.getContext('2d').clearRect(0,0,PIXELS,PIXELS);if(isPlain)plain(canvas,encoded.matrix);else if(renderCode(canvas,encoded,payload,renderer,phase==='night',theme)==='plain'){isPlain=true;note.textContent='Plain keeps this room easy to scan. The code above works too.';}
       petals.hidden=isPlain;toggle.setAttribute('aria-pressed',String(isPlain));frame.style.setProperty('--qr-petal',THEMES[theme].petal);frame.style.setProperty('--qr-bg','#'+THEMES[theme].bg.toString(16).padStart(6,'0'));frame.classList.toggle('plain',isPlain);
-      themes.querySelectorAll('button').forEach(b=>b.setAttribute('aria-checked',String(!isPlain&&b.dataset.theme===theme)));image=pngFile(canvas);};
+      themes.querySelectorAll('button').forEach(b=>b.setAttribute('aria-checked',String(!isPlain&&b.dataset.theme===theme)));
+      sources.querySelectorAll('button').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.source===source)));canvas.dataset.holds=source;image=pngFile(canvas);};
     toggle.onclick=()=>{isPlain=!isPlain;render();};
     download.onclick=async()=>{try{await downloadPNG(image.data);}catch(e){if(!/cancel/i.test(e.message||''))notice('Could not save the picture. Copy the room code instead.');}};
-    share.onclick=async()=>{try{if(await shareImage({...image,code})==='copied')notice('Room code copied');}catch(e){if(e.name!=='AbortError'&&!/cancel/i.test(e.message||''))notice('Could not share the picture. Copy the room code instead.');}};
-    controls.append(download,share,toggle);section.append(heading,note,frame,themes,controls);host.appendChild(section);
+    share.onclick=async()=>{try{if(await shareImage({...image,code:payload})==='copied')notice(source==='link'?'Link copied':'Room code copied');}catch(e){if(e.name!=='AbortError'&&!/cancel/i.test(e.message||''))notice('Could not share the picture. Copy the room code instead.');}};
+    controls.append(download,share,toggle);section.append(heading,...(sources.children.length>1?[sources]:[]),note,frame,themes,controls);host.appendChild(section);
     try{render();}catch(e){isPlain=true;render();note.textContent='Here is the plain QR. The room code above works too.';toggle.disabled=true;}
     // Pause decorative CSS when the sheet is closed or the QR scrolls offscreen.
     const visible=new IntersectionObserver(rows=>{petals.classList.toggle('paused',!rows[0].isIntersecting);});visible.observe(frame);
@@ -137,5 +155,5 @@
     const visibility=()=>{if(document.hidden)stop();};document.addEventListener('visibilitychange',visibility);
     return {start,stop,destroy(){destroyed=true;stop();document.removeEventListener('visibilitychange',visibility);panel.remove();}};
   }
-  const api={QUIET,PIXELS,THEMES,colours,scanSafe,encode,decode,plain,scene,voxel,renderCode,shareImage,downloadPNG,createView,scanner};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRRoomQR=api;
+  const api={QUIET,PIXELS,THEMES,colours,scanSafe,encode,encodeLink,decode,plain,scene,voxel,renderCode,shareImage,downloadPNG,createView,scanner};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRRoomQR=api;
 })(typeof window!=='undefined'?window:globalThis);
