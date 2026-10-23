@@ -112,7 +112,7 @@
     const visible=new IntersectionObserver(rows=>{petals.classList.toggle('paused',!rows[0].isIntersecting);});visible.observe(frame);
     return {destroy(){visible.disconnect();petals.classList.add('paused');},canvas};
   }
-  function scanner({host,onCode,notice=()=>{},media=root.navigator?.mediaDevices,read=decode,interval=250}){
+  function scanner({host,onCode,notice=()=>{},media=root.navigator?.mediaDevices,read=decode,interval=250,accept=text=>/^LR[01]\.[A-Za-z0-9_-]+$/.test(text)}){
     const panel=document.createElement('div');panel.className='room-qr-scanner';panel.hidden=true;
     const video=document.createElement('video');video.muted=true;video.playsInline=true;video.setAttribute('aria-label','Camera preview for room QR');
     const status=document.createElement('p');status.className='muted small';status.setAttribute('role','status');
@@ -120,7 +120,7 @@
     const canvas=document.createElement('canvas'),g=canvas.getContext('2d',{willReadFrequently:true});let stream=null,timer=null,generation=0,destroyed=false;
     function stop(){generation++;clearTimeout(timer);timer=null;stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;panel.hidden=true;}
     function fail(){stop();notice('Camera unavailable, paste the code instead');}
-    function frame(){if(!stream||destroyed)return;try{if(video.readyState>=2&&video.videoWidth){const scale=Math.min(1,1920/Math.max(video.videoWidth,video.videoHeight));canvas.width=Math.round(video.videoWidth*scale);canvas.height=Math.round(video.videoHeight*scale);g.drawImage(video,0,0,canvas.width,canvas.height);const pixels=g.getImageData(0,0,canvas.width,canvas.height),code=read(pixels.data,canvas.width,canvas.height);if(code){if(/^LR[01]\.[A-Za-z0-9_-]+$/.test(code)){stop();onCode(code);return;}status.textContent='That is not a room QR. Try another, or paste a room code.';}}}catch(e){fail();return;}timer=setTimeout(frame,interval);}
+    function frame(){if(!stream||destroyed)return;try{if(video.readyState>=2&&video.videoWidth){const scale=Math.min(1,1920/Math.max(video.videoWidth,video.videoHeight));canvas.width=Math.round(video.videoWidth*scale);canvas.height=Math.round(video.videoHeight*scale);g.drawImage(video,0,0,canvas.width,canvas.height);const pixels=g.getImageData(0,0,canvas.width,canvas.height),code=read(pixels.data,canvas.width,canvas.height);if(code){if(accept(code)){stop();onCode(code);return;}status.textContent='That is not a room QR. Try another, or paste a room code.';}}}catch(e){fail();return;}timer=setTimeout(frame,interval);}
     async function start(){stop();const token=generation;if(!media?.getUserMedia){fail();return;}try{const next=await media.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});if(destroyed||token!==generation){next.getTracks().forEach(t=>t.stop());return;}stream=next;video.srcObject=stream;panel.hidden=false;status.textContent='Point the camera at a room QR. Everything stays on this device.';await video.play();if(token!==generation)return;frame();}catch(e){if(token===generation&&!destroyed)fail();}}
     stopButton.onclick=stop;
     const visibility=()=>{if(document.hidden)stop();};document.addEventListener('visibilitychange',visibility);

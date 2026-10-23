@@ -13,7 +13,7 @@ Thread(target=server.serve_forever,daemon=True).start()
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
     context=browser.new_context(viewport={'width':390,'height':844})
-    context.add_init_script("localStorage.setItem('lr.intro','true')")
+    context.add_init_script("localStorage.setItem('lr.intro','true');localStorage.setItem('lr.shortLinks','false')")
     requests=[];errors=[]
     def outbound(route):
         request=route.request

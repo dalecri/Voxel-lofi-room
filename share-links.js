@@ -15,8 +15,40 @@
     const q=s.match(/[?&]c=(LRG?[01]\.[A-Za-z0-9_-]+)/);if(q)return q[1];
     return null;
   }
+  // Short links: heycristobal.com/Voxel-lofi-room/#r/ab12cd34. The 8-character id is looked
+  // up in the lofi-rooms Supabase project, which keeps only id -> code. Clients can shorten a
+  // code or look up one id; they can't list or change the table.
+  const SHORTENER={url:'https://smomqbsnesomcbdzjzsx.supabase.co/rest/v1/rpc/',key:'sb_publishable_8aheKvc-sYfXvn9dHf-RBA_FFHBuK78'};
+  const SHORT=/^[a-z0-9]{8}$/;
+  const shortLink=id=>{if(!SHORT.test(id))throw Error('Not a short id');return BASE+'#r/'+id;};
+  function shortFrom(text){
+    const s=String(text||'').trim();
+    const m=s.match(/#r\/([A-Za-z0-9]{8})\s*$/)||s.match(/[?&]r=([A-Za-z0-9]{8})(?:[&#]|\s*$)/);
+    return m?m[1].toLowerCase():null;
+  }
+  async function rpc(name,body,fetcher=root.fetch,ms=6000){
+    const ctl=typeof AbortController!=='undefined'?new AbortController():null,timer=ctl&&setTimeout(()=>ctl.abort(),ms);
+    try{
+      const res=await fetcher(SHORTENER.url+name,{method:'POST',headers:{apikey:SHORTENER.key,Authorization:'Bearer '+SHORTENER.key,'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl?.signal});
+      if(!res.ok)throw Error('Short links are resting ('+res.status+')');
+      return await res.json();
+    }finally{if(timer)clearTimeout(timer);}
+  }
+  async function shorten(code,fetcher){
+    if(!CODE.test(code))throw Error('Not a share code');
+    const id=await rpc('shorten_room_link',{p_code:code},fetcher);
+    if(typeof id!=='string'||!SHORT.test(id))throw Error('Unexpected short link');
+    return id;
+  }
+  async function expand(id,fetcher){
+    if(!SHORT.test(String(id||'')))throw Error('Not a short id');
+    const code=await rpc('room_link',{p_id:id},fetcher);
+    if(code==null)return null;   // no such link
+    if(typeof code!=='string'||!CODE.test(code))throw Error('Unexpected room code');
+    return code;
+  }
   // Android Chrome: open the installed app, or stay on the web page if it isn't installed.
-  const intentLink=code=>`intent://open?c=${code}#Intent;scheme=${SCHEME};package=com.lofirooms.app;end`;
+  const intentLink=code=>SHORT.test(code)?`intent://open?r=${code}#Intent;scheme=${SCHEME};package=com.lofirooms.app;end`:`intent://open?c=${code}#Intent;scheme=${SCHEME};package=com.lofirooms.app;end`;
   const isNote=code=>/^LRG/.test(code);
   // The QR holds the whole link. Very full rooms can outgrow a phone-scannable QR;
   // then the card just says the link is in the message.
@@ -78,6 +110,6 @@
   // mine=false when passing on a friend's room you're visiting: it isn't yours to call "my room".
   const shareText=(title,url,mine=true)=>`Come see ${mine?'my':'this'} Lofi Room “${String(title||'My room').slice(0,40)}” 🏠✨ ${url}`;
   const noteText=url=>`I signed your guest book in Lofi Rooms 💌 ${url}`;
-  const api={BASE,SCHEME,FORMATS,link,codeFrom,intentLink,isNote,qrMatrix,QR_LIMIT,bounds,drawCard,shareText,noteText};
+  const api={BASE,SCHEME,FORMATS,SHORTENER,link,shortLink,shortFrom,shorten,expand,codeFrom,intentLink,isNote,qrMatrix,QR_LIMIT,bounds,drawCard,shareText,noteText};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRShareLinks=api;
 })(typeof window!=='undefined'?window:globalThis);
