@@ -93,6 +93,7 @@ function startLofiRooms() {
     ['cozyhome', 'Cozy home', 'Cared for a room until it glowed'],
     ['digger', 'Crate digger', 'Flipped through every record in the crate'],
     ['signed', 'Good guest', 'Signed a friend’s guest book'],
+    ['shared', 'Open door', 'Shared a room with a friend'],
     ['guestbook', 'Guest book', 'A friend left a note in your room'],
   ].concat(LR.MOMENTS || []);   // theme packs can add their own with LR.MOMENTS.push([key, name, description])
   const found = new Set(store.get('lr.found', []));
@@ -2579,7 +2580,8 @@ function startLofiRooms() {
     try {
       if (nativeApp()) await window.Capacitor.registerPlugin('Share').share({ title, text });
       else await navigator.share({ title, text });
-    } catch (e) { /* cancelled */ }
+      return true;
+    } catch (e) { return false; /* cancelled */ }
   }
   function roomSnapshotImage() {
     return new Promise((ok, no) => { const img = new Image(); img.onload = () => ok(img); img.onerror = no; img.src = view.snapshot(); });
@@ -2605,6 +2607,21 @@ function startLofiRooms() {
       return canvas.toDataURL('image/png');
     });
   }
+  // Each card you send also lands in Files › Photos (as a lighter JPEG), once per card.
+  const keptCards = new Set();
+  function keepCard(png, format) {
+    if (keptCards.has(png)) return; keptCards.add(png);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0);
+        dashboard.addPhoto(c.toDataURL('image/jpeg', .9), `${room.name} · ${format === 'story' ? 'story' : 'post'} card · ${new Date().toLocaleDateString()}`);
+      } catch (e) { keptCards.delete(png); }
+    };
+    img.src = png;
+  }
+  // Sent: keep the card and mark the moment. Cancelling a share sheet counts as neither.
+  function shared(png, format) { if (png) keepCard(png, format); discover('shared'); }
   async function shareCard(png, url, format = 'post') {
     const mine = !visitingFriend(), title = mine ? 'My Lofi Room' : 'A Lofi Room', text = LRShareLinks.shareText(room.name, url, mine), name = `lofi-room-${format === 'story' ? 'story-' : ''}${Date.now()}.png`;
     try {
@@ -2612,14 +2629,15 @@ function startLofiRooms() {
         const fsys = window.Capacitor.registerPlugin('Filesystem'), share = window.Capacitor.registerPlugin('Share');
         const file = await fsys.writeFile({ path: name, data: png.split(',')[1], directory: 'CACHE' });
         await share.share({ title, text, files: [file.uri], dialogTitle: mine ? 'Share your room' : 'Share this room' });
-        return;
+        shared(png, format); return;
       }
       const blob = await (await fetch(png)).blob(), file = new File([blob], name, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ title, text, files: [file] }); return; }
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ title, text, files: [file] }); shared(png, format); return; }
       // No file sharing here: save the picture and copy the link instead.
       const a = document.createElement('a'); a.href = png; a.download = name; document.body.appendChild(a); a.click(); a.remove();
       try { await navigator.clipboard.writeText(text); } catch (e) { /* the picture still saved */ }
-      toast('<b>Picture saved</b><span>The link is copied too, ready to paste with it.</span>', 2600, true);
+      shared(png, format);
+      toast('<b>Picture saved</b><span>The link is copied too, ready to paste with it. A copy is in Files › Photos.</span>', 2600, true);
     } catch (e) { if (!/cancel|abort/i.test(String(e && (e.name + e.message)))) toast('<span>Couldn’t share that. Try Copy link.</span>', 2200, true); }
   }
   // Short links (on by default): the code is stored once in Supabase under an 8-character id.
@@ -2668,7 +2686,7 @@ function startLofiRooms() {
       const row = h('div', 'rowbtns share-link-row');
       row.innerHTML = '<button class="chipbtn primary" id="bShareCard" disabled>Share picture & link</button><button class="chipbtn" id="bCopyLink">Copy link</button>';
       const shareBtn = row.querySelector('#bShareCard');
-      row.querySelector('#bCopyLink').onclick = () => copyText(url, 'Link copied');
+      row.querySelector('#bCopyLink').onclick = () => { copyText(url, 'Link copied'); shared(); };
       const shortRow = h('label', 'share-short');
       shortRow.innerHTML = `<input type="checkbox" id="bShortLink"${shortLinksOn() ? ' checked' : ''}><span><b>Short link</b><small>${failed ? 'Couldn’t reach the link shortener, so this is the full link.' : short ? 'Saved online so the link and QR stay small.' : 'The whole room travels inside the link. Nothing is stored online.'}</small></span>`;
       shortRow.querySelector('input').onchange = e => { e.target.disabled = true; store.set('lr.shortLinks', e.target.checked); shareSheet(true); };
@@ -2681,7 +2699,7 @@ function startLofiRooms() {
           pic.src = png; wait.remove(); shareBtn.disabled = false; shareBtn.textContent = 'Share picture & link'; shareBtn.onclick = () => shareCard(png, url, next);
         }).catch(() => {
           if (!pic.isConnected || format !== next) return;
-          wait.textContent = 'The picture is resting. The link still works.'; shareBtn.disabled = false; shareBtn.textContent = 'Send the link…'; shareBtn.onclick = () => shareTextOut(mine ? 'My Lofi Room' : 'A Lofi Room', LRShareLinks.shareText(room.name, url, mine));
+          wait.textContent = 'The picture is resting. The link still works.'; shareBtn.disabled = false; shareBtn.textContent = 'Send the link…'; shareBtn.onclick = () => shareTextOut(mine ? 'My Lofi Room' : 'A Lofi Room', LRShareLinks.shareText(room.name, url, mine)).then(ok => { if (ok) shared(); });
         });
       }
       shape.querySelectorAll('button').forEach(b => { b.onclick = () => { if (b.dataset.format !== format) paint(b.dataset.format); }; });
@@ -2695,9 +2713,9 @@ function startLofiRooms() {
       el('p', 'muted small', `${code.length} characters`);
       const codeRow = el('div', 'rowbtns');
       codeRow.innerHTML = '<button class="chipbtn" id="bCopyCode">Copy code</button>' + (canShareNative() ? '<button class="chipbtn" id="bSendCode">Send code…</button>' : '');
-      codeRow.querySelector('#bCopyCode').onclick = () => copyText(code, 'Code copied');
+      codeRow.querySelector('#bCopyCode').onclick = () => { copyText(code, 'Code copied'); shared(); };
       const send = codeRow.querySelector('#bSendCode');
-      if (send) send.onclick = () => shareTextOut(mine ? 'My Lofi Room' : 'A Lofi Room', `Come see ${mine ? 'my' : 'this'} Lofi Room! Open this link: ${url}\n\nOr paste this code in the app: ${code}`);
+      if (send) send.onclick = () => shareTextOut(mine ? 'My Lofi Room' : 'A Lofi Room', `Come see ${mine ? 'my' : 'this'} Lofi Room! Open this link: ${url}\n\nOr paste this code in the app: ${code}`).then(ok => { if (ok) shared(); });
       ta.onclick = () => ta.select();
       shareQR=LRRoomQR.createView({host:more,code,renderer:view,phase:meta.phase,notice:text=>toast(`<span>${esc(text)}</span>`,2400,true),onTheme:()=>{cards={};paint(format);}});
     });

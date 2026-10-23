@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story) and the app icon, every way in, visitor guest book pill, sharing a friend's room, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
+"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story) and the app icon, every way in, visitor guest book pill, sharing a friend's room, shared cards kept in Photos and the Open door moment, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
 import functools
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -29,6 +29,18 @@ with sync_playwright() as p:
  page.evaluate('__lr.shareSheet()');page.wait_for_selector('.share-card-img[src]')
  code=page.evaluate('__lr.roomCode()');link='https://heycristobal.com/Voxel-lofi-room/#'+code
  assert page.locator('textarea.code').input_value()==code and page.locator('#bShareCard').is_enabled()
+ # Cancelling the share sheet keeps nothing and unlocks nothing.
+ page.evaluate('''()=>{Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});window.sent=[];window.cancelShare=true;
+  Object.defineProperty(navigator,'share',{configurable:true,value:async o=>{if(window.cancelShare)throw new DOMException('cancelled','AbortError');window.sent.push(o);}});}''')
+ photos=lambda:page.evaluate('__lr.files.list("Photos").length')
+ before=photos();page.click('#bShareCard');page.wait_for_timeout(600)
+ assert photos()==before and 'shared' not in page.evaluate('JSON.parse(localStorage.getItem("lr.found")||"[]")')
+ # Sending the card keeps a JPEG copy in Files › Photos (once) and unlocks the Open door moment.
+ page.evaluate('window.cancelShare=false');page.click('#bShareCard');until(page,'window.sent.length===1')
+ until(page,f'__lr.files.list("Photos").length==={before+1}')
+ kept=page.evaluate('__lr.files.list("Photos")[0]');assert kept['data'].startswith('data:image/jpeg') and 'post card' in kept['title'],kept['title']
+ until(page,'JSON.parse(localStorage.getItem("lr.found")||"[]").includes("shared")')
+ page.click('#bShareCard');until(page,'window.sent.length===2');page.wait_for_timeout(600);assert photos()==before+1
  page.click('#bCopyLink');assert page.evaluate('navigator.clipboard.readText()')==link
  # The QR on the card is the same link.
  decoded=page.evaluate('''()=>new Promise(ok=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);const x=640,y=880,w=440,h=470,d=g.getImageData(x,y,w,h);ok(jsQR(d.data,w,h)?.data||null);};i.src=document.querySelector('.share-card-img').src;})''')
