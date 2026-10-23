@@ -24,9 +24,15 @@ test('voxel colours follow the generator: theme colours in the middle, edge colo
  const qr=QR.encode('LR1.'+'Abc_123-'.repeat(40)),n=qr.matrix.length,dark=qr.matrix.flat().filter(Boolean).length;
  for(const [id,t] of Object.entries(QR.THEMES)){
   const out=QR.colours(qr.matrix,id,'seed');assert.equal(out.length,dark);
-  for(const [r,c,hex,finder] of out){assert.ok(qr.matrix[r][c]);if(finder)assert.ok(t.edge.includes(hex),id);else assert.ok(t.qr.includes(hex)||t.edge.includes(hex),id);}
-  const middle=out.filter(([r,c])=>Math.abs(r-n/2)<n/8&&Math.abs(c-n/2)<n/8);assert.ok(middle.filter(([,,hex])=>t.qr.includes(hex)).length>middle.length*.8,id);
+  const qr2=t.qr.map(QR.scanSafe),edge2=t.edge.map(QR.scanSafe),finders=new Set();
+  for(const [r,c,hex,finder] of out){assert.ok(qr.matrix[r][c]);if(finder)finders.add(hex);else assert.ok(qr2.includes(hex)||edge2.includes(hex),id);}
+  assert.equal(finders.size,1,id);assert.ok(t.edge.includes([...finders][0]),id);   // one even, dark shade on all three finders
+  const middle=out.filter(([r,c])=>Math.abs(r-n/2)<n/8&&Math.abs(c-n/2)<n/8);assert.ok(middle.filter(([,,hex])=>qr2.includes(hex)).length>middle.length*.8,id);
  }
  assert.deepEqual(QR.colours(qr.matrix,'blossom','a'),QR.colours(qr.matrix,'blossom','a'));
  assert.deepEqual(QR.colours(qr.matrix,'nope','a'),QR.colours(qr.matrix,'blossom','a'));
+});
+test('pale theme shades are deepened to at least 3.2:1 against white; dark ones are untouched',()=>{
+ const lum=h=>{const l=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;};return .2126*l(h>>16&255)+.7152*l(h>>8&255)+.0722*l(h&255);};
+ for(const t of Object.values(QR.THEMES))for(const h of [...t.qr,...t.edge]){const safe=QR.scanSafe(h);assert.ok(1.05/(lum(safe)+.05)>=3.15,h.toString(16));if(1.05/(lum(h)+.05)>=3.2)assert.equal(safe,h);}
 });
