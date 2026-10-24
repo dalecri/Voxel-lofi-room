@@ -2600,7 +2600,7 @@ function startLofiRooms() {
   const ownRoomId = () => { const main = store.get('lr.mainBedroom', null); if (main != null && main !== meta.current && rooms.some(r => r.id === main)) return main; return rooms.find(r => r.id !== meta.current)?.id ?? null; };
   function roomCardImage(url, format = 'post', shot = roomSnapshotImage()) {
     return Promise.all([shot, shareLogoImage()]).then(([img, logo]) => {
-      const opts = { room: img, title: room.name, url, format, logo, mine: !visitingFriend(), night: meta.phase === 'night' || meta.phase === 'evening' }, theme = qrTheme();
+      const opts = { room: img, title: room.name, url, format, logo, mine: !visitingFriend(), by: visitingFriend() ? '' : senderName(), night: meta.phase === 'night' || meta.phase === 'evening' }, theme = qrTheme();
       let canvas = LRShareLinks.drawCard(document.createElement('canvas'), { ...opts, qrColours: m => LRRoomQR.colours(m, theme, url) });
       const box = canvas.qrBox;
       if (box) {
