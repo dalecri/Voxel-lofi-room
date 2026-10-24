@@ -47,7 +47,7 @@ with sync_playwright() as p:
  # Short by default: the link, Copy link and the card's QR all carry #r/<id>.
  page.evaluate('__lr.shareSheet()');page.wait_for_selector('.share-card-img[src]')
  code=page.evaluate('__lr.roomCode()');sid=next(k for k,v in links.items() if v==code);short=SITE+'#r/'+sid
- assert page.locator('#bShortLink').is_checked() and 'Saved online' in page.locator('.share-short small').inner_text()
+ assert page.locator('#bShortLink').is_checked() and 'Saved online' in page.locator('.share-short small').text_content()
  page.click('#bCopyLink');assert page.evaluate('navigator.clipboard.readText()')==short
  got,cell=page.evaluate(QR,short);assert got==short,(got,short);assert cell>=8,cell   # short links get chunky, easy-to-scan squares
  # The QR under More ways to share holds the short link by default, or the whole room on request.
@@ -61,13 +61,15 @@ with sync_playwright() as p:
  # Sharing again reuses the id; nothing piles up.
  page.keyboard.press('Escape');page.evaluate('__lr.shareSheet()');page.wait_for_selector('.share-card-img[src]');assert len(links)==1
  # Short link off: the full link, and the shortener isn't asked.
- before=len(calls);page.click('#bShortLink');until(page,'!document.querySelector("#bShortLink")?.checked && !document.querySelector("#bShortLink")?.disabled && !!document.querySelector(".share-card-img")?.src')
+ # Short link now lives under More ways to share, and switching it keeps that section open.
+ page.click('.share-more summary');assert page.locator('#bShortLink').is_visible()
+ before=len(calls);page.click('#bShortLink');until(page,'!document.querySelector("#bShortLink")?.checked && !document.querySelector("#bShortLink")?.disabled && !!document.querySelector(".share-card-img")?.src');assert page.locator('.share-more').get_attribute('open') is not None and page.locator('#bShortLink').is_visible()
  page.click('#bCopyLink');assert page.evaluate('navigator.clipboard.readText()')==SITE+'#'+code and len(calls)==before
- assert 'Nothing is stored online' in page.locator('.share-short small').inner_text()
+ assert 'Nothing is stored online' in page.locator('.share-short small').text_content()
  page.click('#bShortLink');until(page,'document.querySelector("#bShortLink")?.checked && !document.querySelector("#bShortLink")?.disabled && !!document.querySelector(".share-card-img")?.src')
  page.keyboard.press('Escape');until(page,'!document.querySelector("#sheet.open")')
  # Closing while the link is being remade keeps it closed.
- page.evaluate('__lr.shareSheet()');page.wait_for_selector('#bShortLink');page.click('#bShortLink');page.keyboard.press('Escape');page.wait_for_timeout(800);assert page.locator('#sheet.open').count()==0
+ page.evaluate('__lr.shareSheet()');page.wait_for_selector('.share-card-img[src]');page.click('.share-more summary');page.click('#bShortLink');page.keyboard.press('Escape');page.wait_for_timeout(800);assert page.locator('#sheet.open').count()==0
  page.evaluate("localStorage.setItem('lr.shortLinks','true')")
  # A pasted short link works in the code box.
  page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.click('#bImportCode')
@@ -87,7 +89,7 @@ with sync_playwright() as p:
  # Offline: the shortener can't be reached, so the share sheet uses the full link and says why.
  off=context(browser,online=False,permissions=['clipboard-read','clipboard-write']);op,oerr=page_of(off)
  op.goto(BASE,wait_until='networkidle');op.wait_for_function('!!window.__lr?.dashboard');op.evaluate('__lr.shareSheet()');op.wait_for_selector('.share-card-img[src]')
- assert 'Couldn’t reach' in op.locator('.share-short small').inner_text();op.click('#bCopyLink');assert '#LR' in op.evaluate('navigator.clipboard.readText()')
+ assert 'Couldn’t reach' in op.locator('.share-short small').text_content();op.click('#bCopyLink');assert '#LR' in op.evaluate('navigator.clipboard.readText()')
  # No short link, so the QR holds the full room and offers no switch.
  op.click('.share-more summary');op.locator('.room-qr-canvas').wait_for();assert op.locator('.room-qr-source').count()==0 and op.evaluate("document.querySelector('.room-qr-canvas').dataset.holds")=='code'
  # Opening a short link offline explains instead of failing silently.

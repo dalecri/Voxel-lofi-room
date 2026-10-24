@@ -108,8 +108,9 @@
   .craterow button { background: #fffaf3; color: #4a3530; border-radius: 16px; padding: 10px 18px; font-weight: 800; font-size: 14px; }
   @media (prefers-reduced-motion: reduce) { .sleeve, .sleeve .disc { transition: none; } }
   /* guest book */
-  .stickers { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
-  .stk { width: 44px; height: 44px; border-radius: 14px; background: var(--chip); font-size: 22px; }
+  /* All eight stickers on one row, shrinking a little on narrow phones. */
+  .stickers { display: grid; grid-template-columns: repeat(8, minmax(0, 44px)); justify-content: space-between; gap: 6px; margin: 4px 0 10px; }
+  .stk { width: 100%; height: auto; aspect-ratio: 1; min-height: 0; padding: 0; border-radius: 14px; background: var(--chip); font-size: 22px; }
   .stk.on { background: var(--accent); color: #fff; box-shadow: 0 0 0 3px rgba(240,122,90,.25); }
   .gbname { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--ink); font: inherit; margin-bottom: 8px; }
   .guestbook { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }

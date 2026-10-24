@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story) and the app icon, every way in, visitor guest book pill, sharing a friend's room, shared cards kept in Photos and the Open door moment, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
+"""npm run build && python3 tests/share-links-browser.py. Share links and the picture card: card renders with a QR of the link (post and story) and the app icon, every way in, visitor guest book pill, sharing a friend's room, shared cards kept in Photos and the Open door moment, From name on the friend's card, Copy link, opening a link in a fresh browser lands on the friend card, Android banner."""
 import functools
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -27,6 +27,12 @@ with sync_playwright() as p:
  page.goto(BASE,wait_until='networkidle');page.wait_for_function('!!window.__lr?.dashboard')
  page.evaluate('__lr.room.name="Share Den";__lr.changed()')
  page.evaluate('__lr.shareSheet()');page.wait_for_selector('.share-card-img[src]')
+ # No name yet: a quiet invite to add one. Adding it puts "From Cris" under the buttons and in the link.
+ assert page.locator('.share-from').inner_text().startswith('Add your name')
+ page.click('#bFromEdit');page.fill('#fromName','Cris');page.click('#bFromSave');until(page,'document.querySelector(".share-from b")?.textContent==="Cris" && !!document.querySelector(".share-card-img")?.src')
+ assert page.evaluate('JSON.parse(localStorage.getItem("lr.guestName"))')=='Cris'
+ # The Short link setting sits folded under More ways to share, not under the main buttons.
+ assert page.locator('#bShortLink').count()==1 and not page.locator('#bShortLink').is_visible()
  code=page.evaluate('__lr.roomCode()');link='https://heycristobal.com/Voxel-lofi-room/#'+code
  assert page.locator('textarea.code').input_value()==code and page.locator('#bShareCard').is_enabled()
  # Cancelling the share sheet keeps nothing and unlocks nothing.
@@ -82,13 +88,20 @@ with sync_playwright() as p:
  fp.on('console',lambda m:ferr.append(m.text) if m.type=='error' else None);fp.goto(BASE+'#'+code,wait_until='networkidle')
  until(fp,'!!window.__lr?.dashboard')
  until(fp,'!!document.querySelector(".friend-card-view")');until(fp,'document.querySelector(".friend-card-info h3")?.textContent==="Share Den"')
+ # The friend sees who it's from, warm words, and a card tucked in its envelope.
+ assert fp.locator('#sheetBody h2').first.inner_text()=='A room from Cris' and fp.locator('.friend-card-eyebrow').inner_text()=='AN INVITATION FROM CRIS'
+ until(fp,'document.querySelector(".friend-card-status")?.textContent.startsWith("Step inside")');assert fp.locator('.friend-envelope-front').count()==1
  assert fp.evaluate('location.hash')=='';assert fp.locator('.app-open-banner').count()==0
  fp.evaluate('document.querySelector(".friend-card-visit").click()');until(fp,'__lr.room.name==="Share Den"')
  # The visitor's guest book pill stands out and pulses until they sign, then calms down.
  until(fp,'!document.querySelector("#bGuest").hidden');g=fp.locator('#bGuest')
  assert 'nudge' in g.get_attribute('class') and g.inner_text().strip()=='✍ Sign guest book',g.inner_text()
  g.click();fp.wait_for_selector('#gbSign');assert 'reply link' in fp.locator('#gbSign').inner_text()
+ # All eight stickers sit on one row, even on a 390px phone.
+ assert fp.evaluate('new Set([...document.querySelectorAll(".stickers .stk")].map(b=>b.offsetTop)).size')==1 and fp.locator('.stickers .stk').count()==8
  fp.fill('input.gbname','Tyler');fp.click('#gbSign');fp.wait_for_selector('#gbCopyLink')
+ # The long note code is folded away under "Send the code instead".
+ assert fp.locator('#sheetBody textarea.code').is_hidden() and fp.locator('.share-more summary').inner_text().startswith('Send the code instead')
  until(fp,'document.querySelector("#bGuest").classList.contains("signed")');assert 'nudge' not in g.get_attribute('class') and g.inner_text().strip()=='✓ Signed'
  fp.keyboard.press('Escape');fp.reload(wait_until='networkidle');until(fp,'!!window.__lr?.dashboard');until(fp,'document.querySelector("#bGuest").classList.contains("signed")')
  # Sharing while visiting passes the friend's room on as "this room", and offers your own instead.

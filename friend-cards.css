@@ -20,7 +20,7 @@
 .friend-card-remove { min-width:44px; min-height:44px; border:0; border-radius:14px; padding:8px; background:transparent; color:var(--ink-dim); font:700 15px Nunito,sans-serif; }
 .friend-card-view { padding:0 0 8px; }
 .friend-card-status { min-height:20px; margin:6px 0 14px; text-align:center; color:var(--ink-dim); font-size:13px; }
-.friend-card-stage { position:relative; isolation:isolate; max-width:420px; margin:0 auto; padding:0 12px 110px; }
+.friend-card-stage { position:relative; isolation:isolate; max-width:420px; margin:0 auto; padding:0 12px 66px; }
 .friend-card-info { position:relative; z-index:2; max-width:340px; margin:0 auto; padding:20px; border:2px solid #b29a78; border-radius:4px; background:#fff6e4; color:#514237; box-shadow:4px 5px 0 #bfa78744,0 16px 30px #0001; text-align:center; overflow-wrap:anywhere; }
 .friend-card-info h3 { margin:10px 0; font:600 clamp(23px,6vw,30px)/1.1 Fredoka,sans-serif; color:#514237; }
 .friend-card-info .muted { color:#87745d; margin:8px 0; font-size:14px; }
@@ -43,3 +43,8 @@
 @keyframes friend-seal-away { from{opacity:1}to{opacity:0} }
 @keyframes friend-unfold { from{opacity:0;transform:translateY(70px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)} }
 @media(prefers-reduced-motion:reduce) { .is-arriving .friend-envelope,.is-arriving .friend-flap,.is-arriving .friend-seal,.is-arriving .friend-card-info { animation:none; } }
+
+/* The front pocket sits over the card's bottom edge; it arrives with the envelope. */
+.friend-envelope-front { z-index:3; pointer-events:none; filter:none; }
+.is-arriving .friend-envelope-front { animation:friend-arrive .45s ease-out both; }
+@media(prefers-reduced-motion:reduce) { .is-arriving .friend-envelope-front { animation:none; } }

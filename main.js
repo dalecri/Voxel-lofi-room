@@ -2464,11 +2464,15 @@ function startLofiRooms() {
   async function roomCode(source = room.serialize()) {
     const d = LRWidgets.shareDecor(source);
     if (arguments.length === 0 && isSaved()) d.gid = meta.current;                            // so a guest's note finds its way back to this room
+    if (arguments.length === 0 && senderName() && !visitingFriend()) d.by = senderName();      // "A room from Cris" on the friend's card
     d.items = d.items.map(i => { const o = Object.assign({}, i); if (!o.c) delete o.c; if (!o.r) delete o.r; if (!o.on) delete o.on; return o; });   // drop the defaults
     const raw = new TextEncoder().encode(JSON.stringify(d));
     if (typeof CompressionStream === 'undefined') return 'LR0.' + b64u(raw);
     return 'LR1.' + b64u(await squeeze(raw, 'in'));
   }
+  // Your name, shared with the guest book. "A friend" is the guest book's blank default, not a name.
+  const senderName = () => { const n = String(store.get('lr.guestName', '') || '').trim().slice(0, 20); return n && n !== 'A friend' ? n : ''; };
+  const cleanName = v => typeof v === 'string' ? v.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 20) : '';
   async function readCode(code) {
     const m = String(code).trim().match(/^LR([01])\.([A-Za-z0-9_-]+)$/);
     if (!m) throw new Error('not a room code');
@@ -2665,9 +2669,10 @@ function startLofiRooms() {
   }
   const isShareLink = text => !!(LRShareLinks.codeFrom(text) || LRShareLinks.shortFrom(text));
   const SHARE_FORMATS = [['post', 'Post', '4:5'], ['story', 'Story', '9:16']];
+  let reopenMore = false;   // keep More ways to share open after switching Short link inside it
   async function shareSheet(refresh = false) {
     const code = await roomCode(), { url, short, failed } = await shareUrl(code), friend = visitingFriend(), mine = !friend;
-    if (refresh && !$('#sheet').classList.contains('open')) return;   // closed while the link was being made
+    if (refresh && !$('#sheet').classList.contains('open')) { reopenMore = false; return; }   // closed while the link was being made
     codeSheet(`Share “${room.name}”`, friend ? 'You’re visiting a friend’s room. Pass it on with a picture and a link, or share one of yours.' : 'Send a picture with a link. Friends tap it to step inside your room.', h => {
       if (friend && ownRoomId() != null) {
         const own = h('div', 'rowbtns share-own');
@@ -2687,9 +2692,24 @@ function startLofiRooms() {
       row.innerHTML = '<button class="chipbtn primary" id="bShareCard" disabled>Share picture & link</button><button class="chipbtn" id="bCopyLink">Copy link</button>';
       const shareBtn = row.querySelector('#bShareCard');
       row.querySelector('#bCopyLink').onclick = () => { copyText(url, 'Link copied'); shared(); };
-      const shortRow = h('label', 'share-short');
+      // Who it's from: one quiet line under the buttons. The name rides inside the link.
+      if (mine) {
+        const from = h('div', 'share-from');
+        const draw = () => {
+          const name = senderName();
+          from.innerHTML = name ? `<span>From <b>${esc(name)}</b></span><button type="button" class="linkbtn" id="bFromEdit">Change</button>` : `<button type="button" class="linkbtn" id="bFromEdit">Add your name</button><span>so friends know it’s you</span>`;
+          from.querySelector('#bFromEdit').onclick = () => {
+            from.innerHTML = '<input id="fromName" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="button" class="chipbtn" id="bFromSave">Save</button>';
+            const input = from.querySelector('#fromName'); input.value = senderName(); input.focus();
+            const saveName = () => { const v = cleanName(input.value); if (v === senderName()) { draw(); return; } store.set('lr.guestName', v); shareSheet(true); };
+            from.querySelector('#bFromSave').onclick = saveName; input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); saveName(); } };
+          };
+        };
+        draw();
+      }
+      const shortRow = document.createElement('label'); shortRow.className = 'share-short';
       shortRow.innerHTML = `<input type="checkbox" id="bShortLink"${shortLinksOn() ? ' checked' : ''}><span><b>Short link</b><small>${failed ? 'Couldn’t reach the link shortener, so this is the full link.' : short ? 'Saved online so the link and QR stay small.' : 'The whole room travels inside the link. Nothing is stored online.'}</small></span>`;
-      shortRow.querySelector('input').onchange = e => { e.target.disabled = true; store.set('lr.shortLinks', e.target.checked); shareSheet(true); };
+      shortRow.querySelector('input').onchange = e => { e.target.disabled = true; store.set('lr.shortLinks', e.target.checked); reopenMore = true; shareSheet(true); };
       function paint(next) {
         format = next; store.set('lr.shareFormat', next); card.dataset.format = next;
         shape.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.format === next)));
@@ -2707,7 +2727,9 @@ function startLofiRooms() {
       // The code and the scannable QR stay one tap away, folded under the main way to share.
       const more = h('details', 'share-more');
       const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; more.appendChild(n); return n; };
-      const summary = el('summary'); summary.innerHTML = '<b>More ways to share</b><small>Room code and QR code</small>';
+      const summary = el('summary'); summary.innerHTML = '<b>More ways to share</b><small>Short link setting, room code and QR code</small>';
+      more.appendChild(shortRow);
+      if (reopenMore) { reopenMore = false; more.open = true; requestAnimationFrame(() => shortRow.scrollIntoView({ block: 'center' })); }
       el('p', 'muted small share-code-label', 'Friends can paste it in “Friends’ room cards”.');
       const ta = el('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 3;
       el('p', 'muted small', `${code.length} characters`);
@@ -2726,7 +2748,7 @@ function startLofiRooms() {
     if(!probe.load(d))throw Error('bad room');
     const decor=LRWidgets.shareDecor(probe.serialize());
     const gid=typeof d.gid==='number'&&Number.isFinite(d.gid)?d.gid:null;
-    return {room:decor,gid,title:probe.name,description:LRRoomViews.description(decor),n:probe.n,items:probe.items.length,identity:gid?'room:'+gid:JSON.stringify(decor)};
+    return {room:decor,gid,by:cleanName(d.by),title:probe.name,description:LRRoomViews.description(decor),n:probe.n,items:probe.items.length,identity:gid?'room:'+gid:JSON.stringify(decor)};
   }
   function visitFriendCard(data) {
     closeSheets();
@@ -2805,15 +2827,19 @@ function startLofiRooms() {
         const { url } = await shareUrl(code);
         codeSheet('Signed! ' + STICKER_GLYPHS[pick], 'Send this link back to your friend. When they open it, your note appears in their room.', h2 => {
           const r2 = h2('div', 'rowbtns share-link-row');
-          r2.innerHTML = (canShareNative() ? '<button class="chipbtn primary" id="gbSend">Send the link…</button>' : '') + '<button class="chipbtn" id="gbCopyLink">Copy link</button>';
+          const native = canShareNative();
+          r2.innerHTML = (native ? '<button class="chipbtn primary" id="gbSend">Send the link…</button>' : '') + `<button class="chipbtn${native ? '' : ' primary'}" id="gbCopyLink">Copy link</button>`;
           r2.querySelector('#gbCopyLink').onclick = () => copyText(url, 'Link copied');
           const send = r2.querySelector('#gbSend');
           if (send) send.onclick = () => shareTextOut('I signed your guest book', LRShareLinks.noteText(url));
-          h2('p', 'muted small share-code-label', 'Or send the code');
-          const ta = h2('textarea', 'code'); ta.readOnly = true; ta.value = code; ta.rows = 3; ta.onclick = () => ta.select();
-          const r3 = h2('div', 'rowbtns');
+          // The raw note code stays one tap away, folded like the share sheet's.
+          const more = h2('details', 'share-more');
+          more.innerHTML = '<summary><b>Send the code instead</b><small>For pasting in Friends’ room cards</small></summary>';
+          const ta = document.createElement('textarea'); ta.className = 'code'; ta.readOnly = true; ta.value = code; ta.rows = 3; ta.onclick = () => ta.select();
+          const r3 = document.createElement('div'); r3.className = 'rowbtns';
           r3.innerHTML = '<button class="chipbtn" id="gbCopy">Copy code</button>';
           r3.querySelector('#gbCopy').onclick = () => copyText(code, 'Note code copied');
+          more.append(ta, r3);
         });
       };
     });
