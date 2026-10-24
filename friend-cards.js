@@ -8,11 +8,13 @@
       code=String(code).trim();if(!/^LR[01]\.[A-Za-z0-9_-]+$/.test(code))throw Error('Not a room code');
       const cards=list(),identity=String(details.identity||code),old=cards.find(c=>c.identity===identity||c.code===code),time=now();
       let id=old?.id||'card-'+time.toString(36);while(!old&&cards.some(c=>c.id===id))id+='x';
-      const card={id,code,identity,title:String(details.title||'A friend’s room').slice(0,80),description:String(details.description||'').slice(0,200),n:details.n,items:details.items,savedAt:old?.savedAt??time,updatedAt:time};
+      const card={id,code,identity,by:String(details.by||'').slice(0,20),title:String(details.title||'A friend’s room').slice(0,80),description:String(details.description||'').slice(0,200),n:details.n,items:details.items,savedAt:old?.savedAt??time,updatedAt:time};
       save([card,...cards.filter(c=>c!==old)]);return {card:copy(card),newlySaved:!old};
     }
     return {list,receive,get:id=>list().find(c=>c.id===id)||null,remove(id){const cards=list();save(cards.filter(c=>c.id!==id));}};
   }
+  // The envelope's front pocket, drawn over the card's bottom edge so the card reads as tucked inside.
+  const POCKET=`<svg viewBox="0 0 96 70" fill="none" shape-rendering="crispEdges" aria-hidden="true"><path d="M4 30L48 51L92 30V66H4Z" fill="#f5eedc" stroke="#635044" stroke-width="3" stroke-linejoin="round"/><path d="M4 66L40 46M92 66L56 46" stroke="#635044" stroke-width="2" opacity=".45"/></svg>`;
   // Original pixel envelope art, rendered locally rather than fetched as an image.
   const ENVELOPE=`<svg viewBox="0 0 96 70" fill="none" shape-rendering="crispEdges" aria-hidden="true"><path d="M4 24H92V66H4Z" fill="#f5eedc" stroke="#635044" stroke-width="3"/><path class="friend-flap" d="M4 24H92L48 49Z" fill="#ece0c7" stroke="#635044" stroke-width="3"/><path d="M5 25L48 51L91 25V65H5Z" fill="#fff8e8"/><path d="M5 65L32 45M91 65L64 45M5 25L48 51L91 25" stroke="#c1b29b" stroke-width="2"/><path d="M4 24V66H92V24" stroke="#635044" stroke-width="3"/><path class="friend-seal" d="M41 36H55V40H59V54H55V58H41V54H37V40H41Z" fill="#c95b43" stroke="#8e392c" stroke-width="2"/><path class="friend-seal" d="M45 43H51V49H45Z" fill="#ef9470"/></svg>`;
   function createView({model,sheet,prepare,visit,thumb=()=>null,sound={},notice=()=>{},scan=()=>()=>{},receiveNote=async()=>{},reduced=()=>false,resolve=async text=>text}){
@@ -54,10 +56,12 @@
     }
     function show(card,arriving=false,prepared=null){
       const request=++revision;
-      sheet('A room from a friend','',h=>{
-        const host=h('div','friend-card-view'),status=el('p','friend-card-status',arriving?'A little room card is arriving…':'Opening your card…');status.setAttribute('role','status');status.tabIndex=-1;host.append(status);
-        const stage=el('div','friend-card-stage'),info=el('article','friend-card-info'),eyebrow=el('p','friend-card-eyebrow','A ROOM INVITATION'),title=el('h3','',card.title),description=el('p','muted',card.description),meta=el('p','friend-card-meta',`${card.n} × ${card.n} room · ${card.items} pieces`);
-        info.append(eyebrow,title,description,meta);const envelope=el('div','friend-envelope');envelope.innerHTML=ENVELOPE;stage.append(info,envelope);host.append(stage);
+      const by=card.by||prepared?.by||'';
+      sheet(by?`A room from ${by}`:'A room from a friend','',h=>{
+        const host=h('div','friend-card-view'),status=el('p','friend-card-status',arriving?(by?`${by} sent you a little room…`:'A little room is arriving…'):'Opening your card…');status.setAttribute('role','status');status.tabIndex=-1;host.append(status);
+        const stage=el('div','friend-card-stage'),info=el('article','friend-card-info'),eyebrow=el('p','friend-card-eyebrow',by?`AN INVITATION FROM ${by.toUpperCase()}`:'A ROOM INVITATION'),title=el('h3','',card.title),description=el('p','muted',card.description),meta=el('p','friend-card-meta',`${card.n} × ${card.n} room · ${card.items} pieces`);
+        // The card sits tucked in its envelope: the back behind it, the front pocket over its bottom edge.
+        info.append(eyebrow,title,description,meta);const envelope=el('div','friend-envelope');envelope.innerHTML=ENVELOPE;const pocket=el('div','friend-envelope friend-envelope-front');pocket.innerHTML=POCKET;stage.append(envelope,info,pocket);host.append(stage);
         const actions=el('div','friend-card-actions');host.append(actions);const go=button(actions,'Visit this room',()=>{if(data)visit(data);},'chipbtn primary friend-card-visit');go.disabled=true;button(actions,'Saved cards',open);let data=null;
         status.focus({preventScroll:true});
         const ready=async()=>{
@@ -65,7 +69,7 @@
             title.textContent=data.title;description.textContent=data.description;meta.textContent=`${data.n} × ${data.n} room · ${data.items} pieces`;
             try{const src=thumb(data.room);if(src){const image=el('img','friend-room-preview');image.src=src;image.alt='';info.insertBefore(image,title);}}catch(e){/* The invitation works without a preview. */}
             const animate=arriving&&!reduced();if(animate){stage.classList.add('is-arriving');info.setAttribute('aria-hidden','true');host.setAttribute('aria-busy','true');play('plop');setTimeout(()=>{if(visible(host))play('flip');},500);}else play('flip');
-            const finish=()=>{if(request!==revision||!visible(host))return;stage.classList.remove('is-arriving');info.removeAttribute('aria-hidden');host.removeAttribute('aria-busy');go.disabled=false;status.textContent='Saved on this device. Ready when you are.';if(root.document.activeElement===status)go.focus({preventScroll:true});};
+            const finish=()=>{if(request!==revision||!visible(host))return;stage.classList.remove('is-arriving');info.removeAttribute('aria-hidden');host.removeAttribute('aria-busy');go.disabled=false;status.textContent='Step inside whenever you like. It’s kept in Saved cards.';if(root.document.activeElement===status)go.focus({preventScroll:true});};
             if(animate)setTimeout(finish,1200);else finish();
           }catch(e){if(request===revision&&visible(host)){status.textContent='This card couldn’t be opened. Try pasting the code again.';notice('That saved room code couldn’t be opened');}}
         };Promise.resolve().then(ready);

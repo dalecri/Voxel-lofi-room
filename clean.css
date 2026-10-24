@@ -655,7 +655,13 @@ body.reduce-motion #sheetBody[data-tool=games] .games-cart:hover { transform:non
 .share-link-row .chipbtn:disabled { opacity:.55; }
 .share-code-label { margin:12px 0 6px; }
 /* Post or story: a small two-way switch above the card. */
-.share-short { display:flex; align-items:flex-start; gap:10px; max-width:340px; margin:4px auto 0; padding:10px 12px; border-radius:14px; cursor:pointer; }
+.share-short { display:flex; align-items:flex-start; gap:10px; margin:2px 0 6px; padding:6px 0; cursor:pointer; }
+/* "From Cris · Change": who the card is from, one quiet line under the share buttons. */
+.share-from { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 10px; margin:6px auto 0; max-width:340px; color:var(--ink-dim); font:600 13.5px/1.3 var(--font); }
+.share-from b { color:var(--ink); font-weight:800; }
+.share-from .linkbtn { margin:0; padding:4px 2px; min-height:32px; border:0; background:none; box-shadow:none; color:var(--accent); font:800 13.5px/1 var(--font); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.share-from input { flex:1; min-width:0; max-width:200px; min-height:40px; padding:0 12px; border:1px solid var(--line); border-radius:12px; background:var(--panel-solid); color:var(--ink); font:600 15px var(--font); }
+.share-from .chipbtn { min-height:40px; margin:0; }
 .share-short input { flex:none; width:20px; height:20px; margin:2px 0 0; accent-color:var(--accent); }
 .share-short span { display:flex; flex-direction:column; gap:2px; }
 .share-short b { font:800 14px/1.2 var(--font); color:var(--ink); }

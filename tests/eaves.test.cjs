@@ -29,6 +29,6 @@ test('rendered trim is shell-anchored, resizes its cache, and follows every wall
 });
 test('eaves survive the actual room-code helpers and decor projection',async()=>{
  const main=fs.readFileSync(require.resolve('../main.js'),'utf8'),chunk=main.slice(main.indexOf('  const b64u ='),main.indexOf('  function codeSheet(')),room=new L.Room();room.n=24;room.add(room.make('eaves',{x:20,z:12,c:3}));
- const context={btoa,atob,TextEncoder,TextDecoder,LRWidgets:Widgets,room,isSaved:()=>false};vm.runInNewContext(chunk+';globalThis.code=roomCode;globalThis.read=readCode;',context);
+ const context={btoa,atob,TextEncoder,TextDecoder,LRWidgets:Widgets,room,isSaved:()=>false,store:{get:(k,d)=>d},visitingFriend:()=>false};vm.runInNewContext(chunk+';globalThis.code=roomCode;globalThis.read=readCode;',context);
  const code=await context.code();assert.ok(code.startsWith('LR0.'));const data=await context.read(code),restored=new L.Room();assert.ok(restored.load(data));assert.equal(restored.n,24);assert.equal(restored.items.length,1);assert.equal(restored.items[0].t,'eaves');assert.equal(restored.items[0].c,3);assert.deepEqual(restored.items[0].x,20);
 });
