@@ -72,7 +72,7 @@
   // clear of the top and bottom bars Instagram and TikTok draw over a story.
   const FORMATS={post:{W:1080,H:1350,eyebrow:98,top:130,room:820,bottom:56},story:{W:1080,H:1920,eyebrow:300,top:350,room:960,bottom:330}};
   // Draws the card on a canvas and returns it. room: an Image of the room snapshot.
-  function drawCard(canvas,{room,title,url,night=false,format='post',logo=null,qrColours=null,mine=true,qrcode=root.qrcode}){
+  function drawCard(canvas,{room,title,url,night=false,format='post',logo=null,qrColours=null,mine=true,by='',qrcode=root.qrcode}){
     const F=FORMATS[format]||FORMATS.post,W=F.W,H=F.H,base=H-F.bottom;canvas.width=W;canvas.height=H;const g=canvas.getContext('2d');
     const sky=night?['#2a2550','#433a74','#6b5592']:['#ffe6c7','#f8c9b3','#dcc9f0'],ink=night?'#fff6ea':'#3a2a26',soft=night?'#d9cff5':'#7d6158';
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,sky[0]);bg.addColorStop(.55,sky[1]);bg.addColorStop(1,sky[2]);g.fillStyle=bg;g.fillRect(0,0,W,H);
@@ -83,7 +83,9 @@
     if(room&&room.width){const crop=bounds(room),box={x:70,y:F.top,w:W-140,h:Math.min(F.room,(matrix?base-size-24:base-280)-F.top)},s=Math.min(box.w/crop.w,box.h/crop.h),w=crop.w*s,h=crop.h*s;
       g.drawImage(room,crop.x,crop.y,crop.w,crop.h,box.x+(box.w-w)/2,box.y+(box.h-h)/2,w,h);}
     // Eyebrow up top; the room's name and a QR code share the bottom strip.
-    g.fillStyle=soft;g.font='700 34px Nunito, sans-serif';g.textAlign='center';g.fillText(mine?'COME VISIT MY LOFI ROOM':'COME SEE THIS LOFI ROOM',W/2,F.eyebrow);g.textAlign='left';
+    // Sized to stay readable once a feed or chat shrinks the card to a thumbnail.
+    const who=String(by||'').trim().slice(0,20),eyebrow=!mine?'COME SEE THIS LOFI ROOM':who?`COME VISIT ${who.toUpperCase()}’S LOFI ROOM`:'COME VISIT MY LOFI ROOM';
+    g.fillStyle=soft;g.textAlign='center';fit(g,eyebrow,W-120,42,'800','Nunito, sans-serif');g.fillText(eyebrow,W/2,F.eyebrow);g.textAlign='left';
     if(matrix){
       // Whole-pixel cells and a white moat keep it easy for a phone camera to read.
       const n=matrix.length,x=W-56-size,y=base-size;
@@ -93,18 +95,17 @@
       const painted=qrColours?qrColours(matrix):null,gap=cell>=6?Math.max(1,Math.round(cell*.08)):0;
       if(painted)for(const [r,c,hex,finder] of painted){const k=finder?0:gap;g.fillStyle='#'+hex.toString(16).padStart(6,'0');g.fillRect(x+(c+quiet)*cell+k/2,y+(r+quiet)*cell+k/2,cell-k,cell-k);}
       else{g.fillStyle='#16131f';for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c])g.fillRect(x+(c+quiet)*cell,y+(r+quiet)*cell,cell,cell);}
-      const left=W-56-size-40-60;fit(g,name,left,72,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,60,base-180);
-      g.font='800 36px Nunito, sans-serif';g.fillText('Scan to step inside',60,base-114);
-      g.fillStyle=soft;g.font='600 28px Nunito, sans-serif';g.fillText(format==='story'?'or tap the link on my story':'or tap the link in my message',60,base-70);
+      const left=W-56-size-40-60;fit(g,name,left,84,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,60,base-178);
+      fit(g,'Scan to step inside',left,44,'800','Nunito, sans-serif');g.fillText('Scan to step inside',60,base-104);
     }else{
-      g.textAlign='center';fit(g,name,W-140,84,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,W/2,base-154);
-      g.font='800 38px Nunito, sans-serif';g.fillText('Tap the link to step inside',W/2,base-84);g.textAlign='left';
+      g.textAlign='center';fit(g,name,W-140,92,'600','Fredoka, Nunito, sans-serif');g.fillStyle=ink;g.fillText(name,W/2,base-160);
+      g.font='800 46px Nunito, sans-serif';g.fillText('Tap the link to step inside',W/2,base-88);g.textAlign='left';
     }
     // Sign-off: the app icon beside the name, so a reposted card is still recognisably ours.
     let fx=60;
-    if(logo&&logo.width){const s=52,y=base-14-34;g.save();rounded(g,fx,y,s,s,13);g.clip();g.drawImage(logo,fx,y,s,s);g.restore();fx+=s+14;}
-    g.fillStyle=ink;g.font='800 26px Nunito, sans-serif';g.fillText('Lofi Rooms',fx,base-14);fx+=g.measureText('Lofi Rooms').width;
-    g.fillStyle=soft;g.font='700 24px Nunito, sans-serif';g.fillText(' · heycristobal.com',fx,base-14);
+    if(logo&&logo.width){const s=60,y=base-14-42;g.save();rounded(g,fx,y,s,s,15);g.clip();g.drawImage(logo,fx,y,s,s);g.restore();fx+=s+16;}
+    g.fillStyle=ink;g.font='800 32px Nunito, sans-serif';g.fillText('Lofi Rooms',fx,base-14);fx+=g.measureText('Lofi Rooms').width;
+    g.fillStyle=soft;g.font='700 28px Nunito, sans-serif';g.fillText(' · heycristobal.com',fx,base-14);
     return canvas;
   }
   // mine=false when passing on a friend's room you're visiting: it isn't yours to call "my room".

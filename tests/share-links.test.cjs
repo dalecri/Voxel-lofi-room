@@ -55,3 +55,14 @@ test('shorten and expand talk to the two Supabase functions and check what comes
   await assert.rejects(()=>L.expand('ab12cd34',async()=>({ok:true,json:async()=>'<script>'})),/Unexpected/);
   await assert.rejects(()=>L.shorten('LR1.abc',async()=>({ok:true,json:async()=>'../x'})),/Unexpected/);
 });
+test('the card says whose room it is, in feed-sized type, with one call to action',()=>{
+  const qrcode=require('../vendor/qrcode-generator/qrcode.js');
+  const draw=opts=>{const texts=[],fonts=[];let font='';const g=new Proxy({},{get:(t,k)=>k==='measureText'?s=>({width:String(s).length*(parseInt(font.split(' ')[1])||10)*.5}):k==='fillText'?(s,x,y)=>{texts.push(String(s));fonts.push(font);}:k==='createLinearGradient'?()=>({addColorStop(){}}):()=>{},set:(t,k,v)=>{if(k==='font')font=v;return true;}});
+    L.drawCard({getContext:()=>g},{title:'Den',url:L.shortLink('ab12cd34'),qrcode,...opts});return {texts,fonts};};
+  let {texts,fonts}=draw({by:'Cris'});
+  assert.ok(texts.includes('COME VISIT CRIS’S LOFI ROOM'),texts);assert.ok(texts.includes('Scan to step inside'));
+  assert.ok(!texts.some(t=>/tap the link in my message|tap the link on my story/.test(t)),'one call to action, not two');
+  assert.ok(parseInt(fonts[texts.indexOf('Scan to step inside')].split(' ')[1])>=40,'big enough to read in a feed');
+  assert.ok(draw({}).texts.includes('COME VISIT MY LOFI ROOM'));
+  assert.ok(draw({by:'Cris',mine:false}).texts.includes('COME SEE THIS LOFI ROOM'),'passing a friend’s room on never names you');
+});
