@@ -2,22 +2,11 @@
 (function (root) {
   // OWNER CONFIG: Pomodoro Terrarium session URL (confirmed by the owner).
   const POMODORO_URL = 'https://heycristobal.com/pomodoro-terrarium/';
-  // OWNER CONFIG: edit the posting plan and both profile links here, in one place.
-  const TST_CONTENT = {
-    account: '@twostorytails', cadence: 'twice weekly',
-    pillars: ['Nature-documentary deadpan', 'Corporate-CEO satire'],
-    nextPost: 'A very serious field report on a cat investigating a leaf.',
-    links: [
-      { label: 'Instagram', url: 'https://www.instagram.com/twostorytails' },
-      { label: 'TikTok', url: 'https://www.tiktok.com/@twostorytails' },
-    ],
-  };
   // OWNER CONFIG: each row marks confirmed links or defaults still needing verification.
   // Add another row with the same furnitureId to get a destination picker.
   const PORTALS = [
     { furnitureId: 'terrarium', label: 'Voxel Worlds', url: 'https://heycristobal.com/voxel-worlds/' },
     { furnitureId: 'arcade', label: 'HTML games', url: 'https://heycristobal.com/my-collection/' }, // Opens the in-app Game library (games.js); this URL is only the fallback.
-    { furnitureId: 'crt', label: 'TwoStoryTails on YouTube', url: 'https://www.youtube.com/@twostorytails' }, // Owner: verify channel URL.
     { furnitureId: 'libcase', label: 'Portfolio', url: 'https://heycristobal.com/' }, // Owner: verify portfolio URL when editing; confirmed as heycristobal.com.
     { furnitureId: 'gamingdesk', label: 'QR Code generator', url: 'https://heycristobal.com/QR-Code-generator/' }, // Owner: verify QR app URL when editing; confirmed with this capitalization.
   ];
@@ -68,8 +57,6 @@
         const rows = headlines(data.headlines), cached = !!data.fetchedAt && (data.failed || now - data.fetchedAt >= HOUR);
         return { headlines: rows, cached, fetchedAt: data.fetchedAt || 0, title: 'CBC NEWS', paper: '#eee6d7', lines: [rows[0]?.title || 'A quiet moment for the news.', cached ? 'cached' : 'Top stories', 'Tap to read'] };
       } },
-    'tst-corkboard': { id: 'tst-corkboard', furnitureId: 'tstcorkboard', dataSource: 'local:tst-content', refreshCadence: 'static', surface: 'board',
-      render: data => ({ ...data, title: data.account || TST_CONTENT.account, paper: '#f2ddb1', lines: [data.cadence || TST_CONTENT.cadence, ...(data.pillars || TST_CONTENT.pillars), data.nextPost || TST_CONTENT.nextPost] }) },
     'pomodoro-candle': { id: 'pomodoro-candle', furnitureId: 'pomodorocandle', dataSource: 'local:pomodoro-url', refreshCadence: 'static', surface: 'flame',
       render: data => ({ label: 'Pomodoro Terrarium', url: articleURL(data.url || POMODORO_URL) }) },
     'app-portals': { id: 'app-portals', get furnitureId() { return [...new Set(PORTALS.map(p => p.furnitureId))]; }, dataSource: 'local:portals', refreshCadence: 'static', surface: 'portal',
@@ -89,7 +76,7 @@
     async function refresh(types) {
       const d = now(), time = d.getTime();
       if (types.includes('frenchdesk') && state['fridge-note']?.date !== dateKey(d)) { state['fridge-note'] = wordOfDay(d); save(); }
-      const configs = { 'tst-corkboard': TST_CONTENT, 'pomodoro-candle': { url: POMODORO_URL }, 'app-portals': { portals: PORTALS } };
+      const configs = { 'pomodoro-candle': { url: POMODORO_URL }, 'app-portals': { portals: PORTALS } };
       for (const [id, config] of Object.entries(configs)) if (types.some(t => matches(WIDGETS[id], t)) && JSON.stringify(state[id]) !== JSON.stringify(config)) {
         state[id] = JSON.parse(JSON.stringify(config)); save();
       }
@@ -113,7 +100,7 @@
     function destinations(type) {
       const def = attached(type); if (!def) return [];
       const value = data(def.id);
-      const rows = def.id === 'tst-corkboard' ? (value.links || TST_CONTENT.links) : def.id === 'pomodoro-candle' ? [value] : def.id === 'app-portals' ? value.portals.filter(p => p.furnitureId === type) : [];
+      const rows = def.id === 'pomodoro-candle' ? [value] : def.id === 'app-portals' ? value.portals.filter(p => p.furnitureId === type) : [];
       return rows.map(p => ({ label: p.label, url: articleURL(p.url) })).filter(p => p.url);
     }
     return { refresh, data, destinations, get state() { return state; } };
@@ -192,13 +179,6 @@
     return { frame, feedback(id) { const entry = entries.get(id); if (entry) { entry.feedbackUntil = performance.now() + 900; frame(); } } };
   }
   function register(L) {
-    L.def('tstcorkboard', {
-      name: 'TwoStoryTails corkboard', kind: 'wall', group: 'wall', size: [2, 2], tap: 'widget', vars: [[]],
-      build(m) {
-        m.box(0, 0, 0, 16, 16, 2, 0x8c6445).box(1, 1, 2, 15, 15, 3, 0xc79860);
-        m.box(2, 3, 3, 14, 14, 4, 0xf2ddb1).set(3, 13, 4, 0xbe6556).set(12, 13, 4, 0x739b8b);
-      },
-    });
     L.def('pomodorocandle', {
       name: 'Pomodoro portal candle', kind: 'small', group: 'lights', size: [1, 1], tap: 'widget', on: true, anim: 'flame', vars: [[0xb7ccb2]],
       build(m, [wax]) {
@@ -208,7 +188,7 @@
     });
     for (const p of PORTALS) if (L.CAT[p.furnitureId] && !L.CAT[p.furnitureId].tap) L.CAT[p.furnitureId].tap = 'widget';
   }
-  const api = { POMODORO_URL, TST_CONTENT, PORTALS, attached, register, WIDGETS, WORDS, RSS, HOUR, wordOfDay, articleURL, parseRSS, create, createView, shareDecor };
+  const api = { POMODORO_URL, PORTALS, attached, register, WIDGETS, WORDS, RSS, HOUR, wordOfDay, articleURL, parseRSS, create, createView, shareDecor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else { root.LRWidgets = api; register(root.LR); }
 })(typeof window !== 'undefined' ? window : globalThis);
