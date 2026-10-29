@@ -17,7 +17,7 @@ with sync_playwright() as p:
  def menu():page.click('#bMenu');page.get_by_role('tab',name='To-Do',exact=True).click()
  def fit():assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();menu();tasks=page.locator('.task-notebook')
- for text in ['Take daily supplements','Scoop cat litter','Daily home chore','Workout','One important thing','TwoStoryTails Post']:
+ for text in ['Take daily supplements','Scoop cat litter','Daily home chore','Workout','One important thing']:
   page.get_by_role('textbox',name='A little task',exact=True).fill(text);page.get_by_role('button',name='＋ Add',exact=True).click()
  first=page.get_by_role('checkbox',name='Take daily supplements',exact=True);first.focus();page.keyboard.press('Space');assert first.is_checked();assert tasks.locator('.task-counter').inner_text()=='1 of 6'
  # Checkboxes precede their text; rows use a shared vellum surface and the companion/form stay in the paper.

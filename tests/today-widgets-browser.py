@@ -42,7 +42,8 @@ with sync_playwright() as p:
  page.emulate_media(reduced_motion='no-preference');page.wait_for_function('getComputedStyle(document.querySelector("[data-widget=feature]")).animationName==="today-widget-wiggle"')
  page.emulate_media(reduced_motion='reduce');page.wait_for_function('getComputedStyle(document.querySelector("[data-widget=feature]")).animationName==="none"')
  page.mouse.up();assert page.locator('.calendar-detail').count()==0;assert page.locator('.today-widget-drag-preview').count()==0;done()
- page.get_by_role('button',name='TwoStoryCaption',exact=True).click();desk=page.locator('.today-caption-desk');desk.locator('.today-caption-text').wait_for();caption=desk.locator('.today-caption-text').inner_text()
+ # Content continuity: the French word card's text survives being moved around.
+ card=page.locator('.today-feature .french-today-card');card.wait_for();word=card.inner_text()
  edit();assert page.locator('.today-widget-body').evaluate_all('es=>es.every(e=>e.inert)');assert page.locator('.today-widget-controls:visible').count()==5
  assert page.get_by_role('button',name='Move This week widget up',exact=True).is_disabled()
  for _ in range(4):up('Weather')
@@ -64,8 +65,7 @@ with sync_playwright() as p:
   page.wait_for_timeout(100);cdp.send('Input.dispatchTouchEvent',{'type':'touchCancel' if cancel else 'touchEnd','touchPoints':[]})
  touch_drag(True);assert order()==before and stored()==before;done()
  touch_drag();assert order()[:2]==['week','weather'] and stored()==order()
- done();assert page.locator('.today-widget-body').evaluate_all('es=>es.every(e=>!e.inert)');assert desk.locator('.today-caption-text').inner_text()==caption
- desk.get_by_role('button',name='Copy caption',exact=True).click();assert page.evaluate('window.copied')==caption
+ done();assert page.locator('.today-widget-body').evaluate_all('es=>es.every(e=>!e.inert)');assert card.inner_text()==word
  saved=order();page.keyboard.press('Escape');open_today();assert order()==saved
  page.reload(wait_until='networkidle');ready();open_today();assert order()==saved;assert not page.locator('.today-widget-stack').evaluate('e=>e.classList.contains("is-arranging")')
  # A quick touch swipe keeps normal scrolling and never enters jiggle mode.
