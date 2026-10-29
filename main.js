@@ -2981,10 +2981,11 @@ function startLofiRooms() {
         if(r.draft){if(r.id!==meta.current)return;commit(true);if(!store.get('lr.room.'+r.id,null)){toast('<span>Save this room first, then choose its star.</span>',2400,true);return;}}
         if(selected)store.del('lr.mainBedroom');else store.set('lr.mainBedroom',r.id);
         Sound.click(!selected);toast(`<span>${selected?'Main bedroom cleared · Open the last room visited':'Main bedroom set · '+esc(r.name)}</span>`,2000,true);
-        if(r.draft){renderMenu();[...$('#menu-rooms').querySelectorAll('.rooms-card')].find(card=>card.dataset.roomId===String(r.id))?.querySelector('.rooms-bedroom')?.focus({preventScroll:true});}
+        if(r.draft){renderMenu();[...$('#menu-lane').querySelectorAll('.rooms-card')].find(card=>card.dataset.roomId===String(r.id))?.querySelector('.rooms-bedroom')?.focus({preventScroll:true});}
       }});
   }
   function homeSearch(toggleHost) { return LRHome.createSearch({sources:spaceSources,navigate:navigateSpace,toggleHost}); }
+  let laneModel = null, laneUI = null, laneAway;   // set up once the places' systems exist (below)
   function renderMenu() { glideSheet(renderMenuNow); }
   function renderMenuNow() {
     frenchUI?.close(false);
@@ -3008,8 +3009,14 @@ function startLofiRooms() {
     const todoHeading=h('div','todo-heading','',todoTab);h('h2','','To-Do',todoHeading);
     todayUI.mount(target,{openDay:date=>calendar.openDay(date),googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
-    target = sections.Rooms;
-    const roomsHeading=h('div','rooms-heading');h('h2','','Rooms',roomsHeading);h('span','rooms-count',`${rooms.length} room${rooms.length === 1 ? '' : 's'}`,roomsHeading);
+    // The Lane: your house and a few places on the street. The house panel holds what the
+    // Rooms tab always did (gallery, share, house map, guest book, new rooms), unchanged.
+    target = sections.Lane;
+    if (laneUI) {
+      if (laneAway === undefined) laneAway = laneModel.visit(digest.issues.filter(i => i.brief && !i.read).length);
+      target = laneUI.mount(sections.Lane, { awayNote: laneAway }).house;
+    }
+    const roomsHeading=h('div','rooms-heading');h('h2','','Your house',roomsHeading);h('span','rooms-count',`${rooms.length} room${rooms.length === 1 ? '' : 's'}`,roomsHeading);
     const shareRow = h('div', 'rowbtns rooms-share');
     shareRow.innerHTML = '<button class="chipbtn primary" id="bShareCode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/></svg><span>Share this room</span></button><button class="chipbtn" id="bImportCode">Friends’ room cards</button>';
     shareRow.querySelector('#bShareCode').onclick = () => shareSheet();
@@ -3498,6 +3505,19 @@ function startLofiRooms() {
   });
   const calendar=LRCalendar.createView({model:calendarModel,google:googleCalendar,sheet:codeSheet,atlas,meta,scenes:()=>files.list('Scenes'),seasons:LR.SEASONS || [],thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s)});
   const digest=LRDigest.create({store,sources:()=>({...pressSources(),scenes:files.list('Scenes'),ideas:roomTools.state.ideas,streak:store.get('lr.dailyStreak',{}),guestbook:store.get('lr.guestbook',[]),catLog:catJournal.entries,events:calendarModel.events()}),brief:src=>press.brief(src),magazine:(issue,src)=>press.magazine(issue,src),arrange:sections=>press.arrange(sections)});
+  // The Lane's places, wired to the systems that already exist: Mallow's shop and Fireflies,
+  // the Daily Brief archive, the future-self mailbox and the calendar.
+  laneModel = LRLane.create({ store, today });
+  laneUI = LRLane.createView({ model: laneModel, today, phase: () => meta.phase, reducedMotion: () => view.reducedMotion, sound: Sound,
+    notice: text => toast(`<span>${esc(text)}</span>`, 2600, true),
+    catalog: LRShop.allCatalog, shop, thumb: item => item.costume ? costumeThumb(item.costume) : item.piece ? thumbOf(item.piece) : '',
+    onBuy: () => { renderTray(); try { discover('market'); } catch (e) { /* optional */ } },
+    digest: { ensure: () => digest.ensure(), issues: () => digest.issues, open: key => digestUI.open(key) },
+    mailbox: { unread: () => roomTools.state.mail.filter(l => l.status === 'arrived' && !l.read).length, open: () => roomToolsUI.open('mailbox') },
+    openLetter: letter => codeSheet(letter.subject, `From ${letter.from} · ${new Date(letter.date + 'T12:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`, h => { for (const para of letter.body.split('\n\n')) h('p', 'lane-letter', esc(para).replace(/\n/g, '<br>')); }),
+    calendar: { moon: LRCalendar.moon, events: () => calendarModel.events(), open: () => calendar.open(),
+      holidays: () => { const y = new Date().getFullYear(); return meta.liveExtras ? [...atlas.holidaysFor(y), ...atlas.holidaysFor(y + 1)] : []; },
+      seasonal: key => (LR.SEASONS || []).filter(x => Array.isArray(x.from) && +key.slice(5, 7) - 1 === x.from[0] && +key.slice(8, 10) === x.from[1]).map(x => x.label.split('!')[0] + ' begins on the lane') } });
   const digestUI=LRDigest.createView({model:digest,press,sheet:codeSheet,sound:Sound,scenes:()=>files.list('Scenes'),thumb:d=>view.roomThumb(d),openScene:s=>dashboard.openFile('Scenes',s),onRead:()=>driftPaper.update(),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
   driftPaper=LRDigest.createPaper({view,room,model:digest,open:()=>digestUI.open(),hidden:()=>state.mode!=='explore'||home.active||library.active||letters.active||barnaby.active||frenchUI?.active||rituals.breath.active||filming||view.capturing||document.hidden||!!view.fp||$('#intro').classList.contains('open')||$('#photo').classList.contains('open'),notice:text=>toast(`<span>${esc(text)}</span>`,2400,true)});
   driftPaper.update();

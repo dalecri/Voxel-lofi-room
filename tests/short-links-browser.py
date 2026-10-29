@@ -72,7 +72,7 @@ with sync_playwright() as p:
  page.evaluate('__lr.shareSheet()');page.wait_for_selector('.share-card-img[src]');page.click('.share-more summary');page.click('#bShortLink');page.keyboard.press('Escape');page.wait_for_timeout(800);assert page.locator('#sheet.open').count()==0
  page.evaluate("localStorage.setItem('lr.shortLinks','true')")
  # A pasted short link works in the code box.
- page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.click('#bImportCode')
+ page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click();page.click('#bImportCode')
  page.locator('textarea.code').fill('Come see my room! '+short);page.click('#bOpenCode');page.wait_for_selector('.friend-card-view')
  assert not errors,errors;ctx.close()
  # A friend opens the short link in a fresh browser: looked up, then the room card arrives.

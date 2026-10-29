@@ -3,7 +3,7 @@ const D=require('../dashboard.js'),W=require('../widgets.js'),Letters=require('.
 require('../furniture.js');require('../packs/library.js');W.register(LR);
 function fixture(initial={}){const values=structuredClone(initial),store={get:(k,d)=>structuredClone(values[k]??d),set:(k,v)=>{values[k]=structuredClone(v);}};const letters=Letters.create({store,clean:v=>v});const reload=()=>D.create({store,letters,now:()=>1792100000000});return {values,store,letters,model:reload(),reload};}
 test('five menu tabs and three file categories have stable order and namespaces',()=>{
- assert.deepEqual(D.MENU_TABS,['Today','Rooms','To-Do','Sound','Settings']);assert.deepEqual(D.FILE_TABS,['Letters','Scenes','Photos']);
+ assert.deepEqual(D.MENU_TABS,['Today','Lane','To-Do','Sound','Settings']);assert.deepEqual(D.FILE_TABS,['Letters','Scenes','Photos']);
  assert.deepEqual(D.KEYS,{portals:'lr.portals',Letters:'lr.letters',Scenes:'lr.scenes',Photos:'lr.photos'});
 });
 test('launcher derives live catalog portal URLs and every widget destination without including travel doors',()=>{

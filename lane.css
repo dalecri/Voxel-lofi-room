@@ -1,0 +1,68 @@
+/* The Lane: a street of four fronts on top, the place you're at below. */
+.lane-heading { display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:4px 0 10px; }
+.lane-heading h2 { margin:0; font:800 clamp(30px,8vw,38px)/1 var(--font); letter-spacing:-.04em; }
+.lane-when { margin:0; }
+.lane-away { display:flex; align-items:center; gap:10px; margin:0 0 12px; padding:12px 14px; border-radius:18px; background:color-mix(in srgb,var(--accent) 14%,var(--chip)); }
+.lane-away p { flex:1; margin:0; font:600 14px/1.4 var(--font); color:var(--ink); }
+.lane-away .chipbtn { flex:none; margin:0; }
+
+/* The street: four fronts on one row, a soft pavement under them. */
+.lane-street { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:0 0 16px; padding:12px 10px 8px; border-radius:22px;
+  background:linear-gradient(180deg,#cfe3f4 0 62%,#d9cbb8 62% 100%); }
+.lane[data-phase=evening] .lane-street { background:linear-gradient(180deg,#f2b98f 0 62%,#cdb9a4 62% 100%); }
+.lane[data-phase=night] .lane-street { background:linear-gradient(180deg,#2f2a55 0 62%,#4a4058 62% 100%); }
+.lane-front { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; margin:0; padding:6px 2px 8px; border:0; border-radius:16px; background:transparent; color:#3a2a26; box-shadow:none; cursor:pointer;
+  transition:transform var(--motion-fast,.22s) var(--motion-ease,ease), background-color var(--motion-fast,.22s) var(--motion-ease,ease); }
+.lane[data-phase=night] .lane-front { color:#fff3e4; }
+.lane-front svg { display:block; width:100%; max-width:76px; height:auto; }
+.lane-front span { font:800 11.5px/1.15 var(--font); text-align:center; }
+.lane-front:hover { transform:translateY(-2px); }
+.lane-front[aria-selected=true] { background:#ffffff8c; transform:translateY(-3px); }
+.lane[data-phase=night] .lane-front[aria-selected=true] { background:#ffffff26; }
+.lane-front:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.lane-window { fill:#a8c8e0; }
+.lane:is([data-phase=evening],[data-phase=night]) .lane-window { fill:#ffd27a; }
+.lane-place[hidden] { display:none; }
+.lane-place h3 { margin:18px 0 8px; font:800 15px/1.2 var(--font); color:var(--ink); }
+body.reduce-motion .lane-front { transition:none; }
+
+/* The Shop */
+.lane-keeper { display:flex; align-items:flex-start; gap:12px; margin:2px 0 10px; }
+.lane-keeper-face { display:grid; place-items:center; flex:none; width:52px; height:52px; border-radius:50%; background:var(--chip); font-size:28px; }
+.lane-keeper-words { padding:10px 14px; border-radius:4px 18px 18px 18px; background:var(--chip); }
+.lane-keeper-words b { display:block; font:800 13px/1.2 var(--font); color:var(--accent); }
+.lane-keeper-words p { margin:4px 0 0; font:600 14px/1.4 var(--font); color:var(--ink); }
+.lane-purse { margin:12px 0 2px; font:800 18px/1.2 var(--font); color:var(--ink); }
+.lane-earn { margin-top:0; }
+.lane-shelf { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin:10px 0; }
+.lane-item { position:relative; display:flex; flex-direction:column; gap:6px; padding:12px; border-radius:20px; background:var(--chip); }
+.lane-item img { display:block; width:100%; max-width:120px; aspect-ratio:1; margin:0 auto; object-fit:contain; }
+.lane-item-icon { display:grid; place-items:center; height:96px; font-size:44px; }
+.lane-item b { font:800 14px/1.25 var(--font); color:var(--ink); }
+.lane-item p { margin:0; flex:1; }
+.lane-item .chipbtn { margin:4px 0 0; min-height:42px; border-radius:999px; }
+.lane-item .chipbtn:disabled { opacity:.55; }
+.lane-special { box-shadow:inset 0 0 0 2px var(--accent); }
+.lane-tag { position:absolute; top:10px; left:10px; padding:4px 8px; border-radius:999px; background:var(--accent); color:#fff; font:800 11px/1 var(--font); }
+.lane-empty { padding:18px; border-radius:18px; background:var(--chip); font:600 14px/1.45 var(--font); }
+
+/* The Mail Room */
+.lane-list { display:grid; gap:6px; }
+.lane-row { display:flex; align-items:center; gap:12px; width:100%; min-height:56px; margin:0; padding:10px 14px; border:0; border-radius:16px; background:var(--chip); color:var(--ink); text-align:left; box-shadow:none; cursor:pointer; }
+.lane-row > span:last-child { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.lane-row b { font:800 14px/1.25 var(--font); }
+.lane-row small { color:var(--ink-dim); font:600 12.5px/1.3 var(--font); }
+.lane-row-icon { flex:none; font-size:22px; }
+.lane-row.unread b::after { content:''; display:inline-block; width:8px; height:8px; margin-left:8px; border-radius:50%; background:var(--accent); vertical-align:middle; }
+
+/* The Notice Board */
+.lane-sky { margin:2px 0 10px; color:var(--ink-dim); font:600 13.5px/1.4 var(--font); }
+.lane-pin { padding:14px 16px; border-radius:6px; background:#fff6dc; color:#4a3a22; box-shadow:0 8px 18px -12px #0006; transform:rotate(-.6deg); }
+.lane-pin b { display:block; font:800 13px/1.2 var(--font); }
+.lane-pin p { margin:6px 0 0; font:600 15px/1.4 var(--font); }
+.lane-week { display:grid; gap:8px; }
+.lane-day { padding:10px 14px; border-radius:16px; background:var(--chip); }
+.lane-day b { font:800 13px/1.2 var(--font); color:var(--ink); }
+.lane-day ul { margin:6px 0 0; padding-left:18px; color:var(--ink); font:600 14px/1.45 var(--font); }
+.lane-holiday, .lane-season { color:var(--ink-dim); }
+.lane-place > .chipbtn { margin-top:14px; }

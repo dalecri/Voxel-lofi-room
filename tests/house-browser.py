@@ -20,13 +20,13 @@ with sync_playwright() as p:
   page.click('#bMenu');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
  def esc():page.keyboard.press('Escape')
  def template():
-  menu('Rooms');page.locator('#menu-rooms .preset-group').first.locator('summary').click();page.locator('.card').filter(has_text='Lofi Study').click()
+  menu('Rooms');page.locator('#menu-lane .preset-group').first.locator('summary').click();page.locator('.card').filter(has_text='Lofi Study').click()
  context.add_init_script("HTMLMediaElement.prototype.play=function(){return Promise.resolve()};HTMLMediaElement.prototype.pause=function(){}")
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  assert page.evaluate('__lr.meta.current')==101;assert page.evaluate('JSON.parse(localStorage.getItem("lr.room.102")).name')=='Living draft restored'
- menu('Rooms');assert page.locator('#menu-rooms .preset-group').count()==2;assert page.locator('#menu-rooms .preset-group[open]').count()==0
+ menu('Rooms');assert page.locator('#menu-lane .preset-group').count()==2;assert page.locator('#menu-lane .preset-group[open]').count()==0
  assert not page.locator('.card').filter(has_text='Lofi Study').is_visible()
- for group in page.locator('#menu-rooms .preset-group').all():group.locator('summary').click();assert group.locator('.card').first.is_visible();group.locator('summary').click()
+ for group in page.locator('#menu-lane .preset-group').all():group.locator('summary').click();assert group.locator('.card').first.is_visible();group.locator('summary').click()
  page.locator('[data-room-id="102"] .rooms-bedroom').click();assert page.evaluate('JSON.parse(localStorage.getItem("lr.mainBedroom"))')==102;esc();page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.meta.current')==102
  menu('Rooms');page.locator('[data-room-id="101"] .rooms-bedroom').click();esc()
  page.evaluate('__lr.room.name="AUTO_SAVED_LIVING";__lr.changed()');page.wait_for_function('JSON.parse(localStorage.getItem("lr.room.102")).name==="AUTO_SAVED_LIVING"')

@@ -444,9 +444,9 @@ body.reduce-motion .radio-library.is-playing .radio-vinyl,body.reduce-motion .ra
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock .mailwin-actions { flex:1 1 260px; min-width:0; }
 
 /* ---------- Rooms: a gallery, the room you're in leading ---------- */
-#menu-rooms .rooms-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:4px 0 16px; }
-#menu-rooms .rooms-heading h2 { margin:0; font:800 clamp(30px,8vw,38px)/1 var(--font); letter-spacing:-.04em; }
-#menu-rooms .rooms-count { padding:6px 12px; border-radius:999px; background:var(--chip); color:var(--ink); font:800 12px/1 var(--font); letter-spacing:.02em; white-space:nowrap; }
+#menu-lane .rooms-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:4px 0 16px; }
+#menu-lane .rooms-heading h2 { margin:0; font:800 clamp(30px,8vw,38px)/1 var(--font); letter-spacing:-.04em; }
+#menu-lane .rooms-count { padding:6px 12px; border-radius:999px; background:var(--chip); color:var(--ink); font:800 12px/1 var(--font); letter-spacing:.02em; white-space:nowrap; }
 .rooms-views { --sky-a:#ffe3c2; --sky-b:#f9c9b8; --sky-c:#d9d0f3; }
 .rooms-views[data-phase=evening] { --sky-a:#ffc59e; --sky-b:#e79bb0; --sky-c:#8f7fc9; }
 .rooms-views[data-phase=night] { --sky-a:#3b3f78; --sky-b:#2c2f5e; --sky-c:#1f2147; }

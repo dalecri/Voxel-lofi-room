@@ -21,7 +21,7 @@ with sync_playwright() as p:
  # that happened to be on the canvas just before a room switch.
  page.evaluate('''()=>{const a=__lr;for(const [id,type] of [[101,'bed'],[102,'armchair'],[103,'floorlamp']]){const r=new LR.Room();r.load(JSON.parse(localStorage.getItem('lr.room.'+id)));r.add(r.make(type,{x:3,z:3,on:true}));localStorage.setItem('lr.room.'+id,JSON.stringify(r.serialize()));}a.room.load(JSON.parse(localStorage.getItem('lr.room.101')));a.changed();}''')
  def menu():
-  page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click()
+  page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click()
  def travel(id):
   page.locator(f'.rooms-grid [data-room-id="{id}"] .rooms-visit').click();page.wait_for_function('id=>__lr.meta.current===id',arg=id)
  menu();assert page.locator('.rooms-card').count()==3;assert page.locator('.village-map').count()==0
