@@ -550,11 +550,11 @@ body.reduce-motion .rooms-views .rooms-card.here .rooms-floor::before { animatio
 /* ---------- Motion: nothing snaps. Views that appear rise or fade in; colours blend. ---------- */
 @keyframes lr-rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
 @keyframes lr-fade { from { opacity:0; } to { opacity:1; } }
-#frenchView:not([hidden]),#barnabyView:not([hidden]),.cozy-pop:not([hidden]) { animation:lr-rise .3s cubic-bezier(.2,.8,.2,1) both; }
-#photo.open,#crate.open { animation:lr-fade .26s ease both; }
-#sheetBody.is-gliding { transition:transform .35s cubic-bezier(.2,.9,.3,1),background-color .3s ease,color .3s ease; }
+#frenchView:not([hidden]),#barnabyView:not([hidden]),.cozy-pop:not([hidden]) { animation:lr-rise var(--motion-slow) var(--motion-ease) both; }
+#photo.open,#crate.open { animation:lr-fade var(--motion-fast) var(--motion-ease) both; }
+#sheetBody.is-gliding { transition:transform var(--motion-slow) var(--motion-ease),background-color var(--motion-slow) var(--motion-ease),color var(--motion-slow) var(--motion-ease); }
 body.reduce-motion :is(#frenchView,#barnabyView,.cozy-pop,#photo,#crate) { animation:none; }
-@media (prefers-reduced-motion:reduce) { :is(#frenchView,#barnabyView,.cozy-pop,#photo,#crate) { animation:none; } #sheetBody.is-gliding { transition:transform .35s cubic-bezier(.2,.9,.3,1); } }
+@media (prefers-reduced-motion:reduce) { :is(#frenchView,#barnabyView,.cozy-pop,#photo,#crate) { animation:none; } #sheetBody.is-gliding { transition:transform var(--motion-slow) var(--motion-ease); } }
 
 
 /* ---------- Hand-drawn wobble: paper grain over the room, under the interface ---------- */

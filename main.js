@@ -1954,7 +1954,15 @@ function startLofiRooms() {
   const sheet = $('#sheet');
   let shareQR=null,roomScanner=null;
   function releaseRoomQR(){shareQR?.destroy();shareQR=null;roomScanner?.destroy();roomScanner=null;}
+  // A sheet in motion: inner blurs off (CSS .is-moving) and the 3D room eases to 30fps,
+  // so the slide gets the GPU. Lasts one --motion-slow plus a little slack.
+  let motionUntil = 0, motionTimer = 0;
+  function markMoving() {
+    motionUntil = performance.now() + 400; sheet.classList.add('is-moving');
+    clearTimeout(motionTimer); motionTimer = setTimeout(() => sheet.classList.remove('is-moving'), 400);
+  }
   function openSheet() {
+    if (!sheet.classList.contains('open')) markMoving();
     sheet.inert = false; sheet.setAttribute('aria-hidden','false'); sheet.classList.add('open');
     $('#bMenu').setAttribute('aria-expanded',String(!!$('#menu-today')));
   }
@@ -1969,6 +1977,7 @@ function startLofiRooms() {
     const returnFocus = sheet.contains(document.activeElement);
     sheetScreen = '';
     if (!notebookOpening) notebookTab = null;
+    if (open) markMoving();
     sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
     $('#bMenu').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;
     if (returnFocus) $('#bMenu').focus({preventScroll:true});
@@ -2442,14 +2451,29 @@ function startLofiRooms() {
   // rises in and the sheet eases to its new height. A repaint of the same screen stays still.
   let sheetScreen='';
   const screenKey=body=>{const main=body.querySelector(':scope > :not(.grab):not(.sheet-close):not(h2):not(p):not(.app-sheet-heading):not(.menu-actions)');return [body.dataset.tool||'',body.querySelector(':scope > h2, .app-sheet-heading > h2')?.textContent||'',main?.id||'',(main?.className||'').split(' ')[0]].join('|');};
+  // Switching screens inside an open sheet. The sheet hugs the bottom edge, so a height
+  // change only moves its top edge; that is replayed with transforms (no per-frame layout):
+  // taller: the new sheet starts pushed down to the old top edge and slides up into place;
+  // shorter: it keeps the old height (min-height) while sliding down, so no gap opens below.
   function glideSheet(run){
+    if(glideSheet.settle)glideSheet.settle();   // a glide still running lets go first
     const body=$('#sheetBody'),open=sheet.classList.contains('open'),from=open?body.getBoundingClientRect().height:0;
     run();
     const key=screenKey(body),same=key===sheetScreen;sheetScreen=key;
     if(!open||same||view.reducedMotion||!body.animate)return;
-    const to=body.getBoundingClientRect().height,ease='cubic-bezier(.2,.8,.2,1)';
-    body.classList.add('is-gliding');clearTimeout(glideSheet.done);glideSheet.done=setTimeout(()=>body.classList.remove('is-gliding'),360);
-    if(Math.abs(to-from)>2)body.animate([{height:from+'px',overflow:'hidden'},{height:to+'px',overflow:'hidden'}],{duration:320,easing:ease});
+    const to=body.getBoundingClientRect().height,ease='cubic-bezier(.2,.8,.2,1)',ms=340,shift=from-to;
+    markMoving();
+    body.classList.add('is-gliding');clearTimeout(glideSheet.done);glideSheet.done=setTimeout(()=>body.classList.remove('is-gliding'),ms+40);
+    if(Math.abs(shift)>2){
+      if(shift<0)body.animate([{transform:`translateY(${-shift}px)`},{transform:'none'}],{duration:ms,easing:ease});
+      else{
+        // Hold the end pose (fill) until the old height is released, then drop both in one
+        // step, so there is never a frame where the sheet jumps back up.
+        body.style.minHeight=from+'px';
+        const slide=body.animate([{transform:'none'},{transform:`translateY(${shift}px)`}],{duration:ms,easing:ease,fill:'forwards'});
+        const settle=glideSheet.settle=()=>{glideSheet.settle=null;body.style.minHeight='';slide.cancel();};slide.finished.then(settle,settle);
+      }
+    }
     for(const child of body.children)child.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{duration:280,easing:ease});
   }
   // tool tags the sheet so the shared pastel tool styles (tools.css) can theme it.
@@ -3489,8 +3513,13 @@ function startLofiRooms() {
   window.addEventListener('blur', () => {activePointers.clear(); wake();});
   for (const type of ['pointermove','wheel','keydown','keyup','input','change','click','visibilitychange']) document.addEventListener(type, wake, {passive:true});
   for (const type of ['resize','focus','storage']) window.addEventListener(type, wake, {passive:true});
-  const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
+  const renderLoop = LRPerformance.createLoop({activity,step:loop,ease:()=>performance.now()<motionUntil,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
+  // Warm up in idle time what the first big sheets need: the thumbnail renderer (a second
+  // WebGL context, costly to create) and the companion portrait shown on Today. Done on
+  // first tap instead, it stalls the sheet's slide-up while it builds.
+  const whenIdle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500));
+  setTimeout(() => whenIdle(() => { try { view.ensureThumbs(); companionPortrait('idle'); } catch (e) { /* the sheets still build these on demand */ } }), 800);
   liveWeather.refresh();
   window.__lr = { openNotebook,shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }

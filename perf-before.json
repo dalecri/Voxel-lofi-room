@@ -1,0 +1,156 @@
+{
+ "open menu #0": {
+  "frames": 5,
+  "span": 3742,
+  "worst": 1633,
+  "janky": 3,
+  "first": 659,
+  "longtasks": [
+   2301
+  ],
+  "draws": 5
+ },
+ "menu tab Rooms #0": {
+  "frames": 6,
+  "span": 84,
+  "worst": 17,
+  "janky": 0,
+  "first": 51,
+  "longtasks": [],
+  "draws": 3
+ },
+ "close menu #0": {
+  "frames": 0,
+  "span": 0,
+  "worst": 0,
+  "janky": 0,
+  "first": 0,
+  "longtasks": [],
+  "draws": 0
+ },
+ "open share #0": {
+  "frames": 12,
+  "span": 2271,
+  "worst": 950,
+  "janky": 2,
+  "first": 554,
+  "longtasks": [],
+  "draws": 3
+ },
+ "glide share->rooms #0": {
+  "frames": 2,
+  "span": 42,
+  "worst": 33,
+  "janky": 0,
+  "first": 8,
+  "longtasks": [],
+  "draws": 3
+ },
+ "close #0": {
+  "frames": 0,
+  "span": 0,
+  "worst": 0,
+  "janky": 0,
+  "first": 0,
+  "longtasks": [],
+  "draws": 0
+ },
+ "open control centre #0": {
+  "frames": 15,
+  "span": 3156,
+  "worst": 2433,
+  "janky": 2,
+  "first": 606,
+  "longtasks": [
+   2487,
+   2487,
+   2487,
+   2487,
+   2487,
+   2487,
+   2487
+  ],
+  "draws": 5
+ },
+ "close cc #0": {
+  "frames": 0,
+  "span": 0,
+  "worst": 0,
+  "janky": 0,
+  "first": 0,
+  "longtasks": [],
+  "draws": 0
+ },
+ "open menu #1": {
+  "frames": 15,
+  "span": 972,
+  "worst": 717,
+  "janky": 2,
+  "first": 72,
+  "longtasks": [],
+  "draws": 3
+ },
+ "menu tab Rooms #1": {
+  "frames": 12,
+  "span": 1302,
+  "worst": 683,
+  "janky": 1,
+  "first": 618,
+  "longtasks": [],
+  "draws": 2
+ },
+ "close menu #1": {
+  "frames": 7,
+  "span": 156,
+  "worst": 0,
+  "janky": 0,
+  "first": 156,
+  "longtasks": [],
+  "draws": 1
+ },
+ "open share #1": {
+  "frames": 24,
+  "span": 1577,
+  "worst": 733,
+  "janky": 2,
+  "first": 194,
+  "longtasks": [],
+  "draws": 3
+ },
+ "glide share->rooms #1": {
+  "frames": 2,
+  "span": 37,
+  "worst": 33,
+  "janky": 0,
+  "first": 4,
+  "longtasks": [],
+  "draws": 3
+ },
+ "close #1": {
+  "frames": 0,
+  "span": 0,
+  "worst": 0,
+  "janky": 0,
+  "first": 0,
+  "longtasks": [],
+  "draws": 0
+ },
+ "open control centre #1": {
+  "frames": 9,
+  "span": 704,
+  "worst": 367,
+  "janky": 2,
+  "first": 271,
+  "longtasks": [],
+  "draws": 3
+ },
+ "close cc #1": {
+  "frames": 4,
+  "span": 29,
+  "worst": 0,
+  "janky": 0,
+  "first": 29,
+  "longtasks": [],
+  "draws": 1
+ }
+}

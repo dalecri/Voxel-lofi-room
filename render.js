@@ -1958,9 +1958,15 @@
       this.thumbC = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     }
   };
+  // Resize the thumbnail canvas only when the size really changes: setting a canvas size,
+  // even to the same value, reallocates its drawing buffer, and previews come in batches.
+  R.sizeThumbs = function (pixels) {
+    const now = this.thumbR.getSize(this._thumbSize || (this._thumbSize = new THREE.Vector2()));
+    if (now.x !== pixels || now.y !== pixels) this.thumbR.setSize(pixels, pixels, false);
+  };
   R.thumb = function (it, definition, prepare, pixels = 120) {
     this.ensureThumbs();
-    this.thumbR.setSize(pixels,pixels,false);
+    this.sizeThumbs(pixels);
     const obj = this.makeObject(Object.assign({ id: -1 }, it), null, true, definition);
     this.thumbS.add(obj);
     obj.rotation.y = (definition || CAT[it.t]).kind === 'wall' ? 0.55 : 0;
@@ -1984,7 +1990,7 @@
     if (!this.roomThumbCache) this.roomThumbCache = LRVillage.createCache();
     return this.roomThumbCache.get(room, data => {
       this.ensureThumbs();
-      this.thumbR.setSize(240,240,false);
+      this.sizeThumbs(240);
       const group=new THREE.Group(), n=data.n || 10, walls=wallDefs(n), objects=new Map(), owned=[];
       // Cheap tiled shell: one instanced draw instead of meshing every wall voxel.
       const open=!!WALLS[data.wall?.style]?.none,wfn=(WALLS[data.wall?.style] || WALLS.paint).fn,ffn=(FLOORS[data.floor?.style] || FLOORS.oak).fn;

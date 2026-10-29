@@ -179,7 +179,8 @@
     function closeMore(focus){if(moreMenu.hidden)return;moreMenu.hidden=true;moreButton.setAttribute('aria-expanded','false');document.removeEventListener('pointerdown',outsideMore,true);if(focus)moreButton.focus({preventScroll:true});}
     function outsideMore(e){if(!moreWrap.contains(e.target))closeMore(false);}
     function newNote(){flush();safe(()=>model.add(roomName()));load();hideList();titleInput.focus();}
-    function close(focus=true) {if(!active)return;flush();closeMore(false);active=false;view.hidden=true;hideList();view.remove();onWriting(false);dismiss();if(focus){if(lastFocus?.isConnected&&lastFocus!==document.body)lastFocus.focus({preventScroll:true});else onClose();}}
+    function close(focus=true) {if(!active)return;flush();closeMore(false);active=false;hideList();onWriting(false);dismiss();setTimeout(()=>{if(!active){view.hidden=true;view.remove();}},400);   // the note slides away with the sheet, then leaves
+      if(focus){if(lastFocus?.isConnected&&lastFocus!==document.body)lastFocus.focus({preventScroll:true});else onClose();}}
     function open() {
       if(active)return;lastFocus=document.activeElement;beforeOpen();
       // codeSheet closes any previous editor. Activate only after the shared sheet is built.
