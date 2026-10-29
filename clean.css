@@ -444,9 +444,9 @@ body.reduce-motion .radio-library.is-playing .radio-vinyl,body.reduce-motion .ra
 #sheetBody:has(.future-mail) .future-mail .pixel-postcard.mailwin .future-mail-dock .mailwin-actions { flex:1 1 260px; min-width:0; }
 
 /* ---------- Rooms: a gallery, the room you're in leading ---------- */
-#menu-rooms .rooms-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:4px 0 16px; }
-#menu-rooms .rooms-heading h2 { margin:0; font:800 clamp(30px,8vw,38px)/1 var(--font); letter-spacing:-.04em; }
-#menu-rooms .rooms-count { padding:6px 12px; border-radius:999px; background:var(--chip); color:var(--ink); font:800 12px/1 var(--font); letter-spacing:.02em; white-space:nowrap; }
+#menu-lane .rooms-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:4px 0 16px; }
+#menu-lane .rooms-heading h2 { margin:0; font:800 clamp(30px,8vw,38px)/1 var(--font); letter-spacing:-.04em; }
+#menu-lane .rooms-count { padding:6px 12px; border-radius:999px; background:var(--chip); color:var(--ink); font:800 12px/1 var(--font); letter-spacing:.02em; white-space:nowrap; }
 .rooms-views { --sky-a:#ffe3c2; --sky-b:#f9c9b8; --sky-c:#d9d0f3; }
 .rooms-views[data-phase=evening] { --sky-a:#ffc59e; --sky-b:#e79bb0; --sky-c:#8f7fc9; }
 .rooms-views[data-phase=night] { --sky-a:#3b3f78; --sky-b:#2c2f5e; --sky-c:#1f2147; }
@@ -550,11 +550,11 @@ body.reduce-motion .rooms-views .rooms-card.here .rooms-floor::before { animatio
 /* ---------- Motion: nothing snaps. Views that appear rise or fade in; colours blend. ---------- */
 @keyframes lr-rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
 @keyframes lr-fade { from { opacity:0; } to { opacity:1; } }
-#frenchView:not([hidden]),#barnabyView:not([hidden]),.cozy-pop:not([hidden]) { animation:lr-rise .3s cubic-bezier(.2,.8,.2,1) both; }
-#photo.open,#crate.open { animation:lr-fade .26s ease both; }
-#sheetBody.is-gliding { transition:transform .35s cubic-bezier(.2,.9,.3,1),background-color .3s ease,color .3s ease; }
+#frenchView:not([hidden]),#barnabyView:not([hidden]),.cozy-pop:not([hidden]) { animation:lr-rise var(--motion-slow) var(--motion-ease) both; }
+#photo.open,#crate.open { animation:lr-fade var(--motion-fast) var(--motion-ease) both; }
+#sheetBody.is-gliding { transition:transform var(--motion-slow) var(--motion-ease),background-color var(--motion-slow) var(--motion-ease),color var(--motion-slow) var(--motion-ease); }
 body.reduce-motion :is(#frenchView,#barnabyView,.cozy-pop,#photo,#crate) { animation:none; }
-@media (prefers-reduced-motion:reduce) { :is(#frenchView,#barnabyView,.cozy-pop,#photo,#crate) { animation:none; } #sheetBody.is-gliding { transition:transform .35s cubic-bezier(.2,.9,.3,1); } }
+@media (prefers-reduced-motion:reduce) { :is(#frenchView,#barnabyView,.cozy-pop,#photo,#crate) { animation:none; } #sheetBody.is-gliding { transition:transform var(--motion-slow) var(--motion-ease); } }
 
 
 /* ---------- Hand-drawn wobble: paper grain over the room, under the interface ---------- */

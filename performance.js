@@ -23,7 +23,7 @@
       get revision() { return revision; }
     };
   }
-  function createLoop({ activity, step, draw, fullRate = () => false, now = () => performance.now(), raf = requestAnimationFrame, cancel = cancelAnimationFrame, delay = setTimeout, clear = clearTimeout }) {
+  function createLoop({ activity, step, draw, fullRate = () => false, ease = () => false, now = () => performance.now(), raf = requestAnimationFrame, cancel = cancelAnimationFrame, delay = setTimeout, clear = clearTimeout }) {
     let pending = null, timer = null, stopped = true, running = false, frames = 0, lastDraw = -Infinity;
     function schedule() { if (!stopped && pending === null) pending = raf(run); }
     function run() {
@@ -32,7 +32,8 @@
       running = true;
       const time = now();
       activity.begin(); step(time); // Input and simulation still run on every RAF.
-      const interval = activity.calm && !fullRate() ? 1000 / 30 : 0;
+      // ease(): a sheet or overlay is moving; give the GPU to the slide by drawing at 30fps.
+      const interval = (activity.calm || ease()) && !fullRate() ? 1000 / 30 : 0;
       if (activity.needsFrame() && time - lastDraw >= interval - .001) {
         draw(); frames++; lastDraw = time; activity.presented();
       }

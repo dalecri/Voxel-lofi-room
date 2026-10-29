@@ -16,7 +16,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomCode');page.evaluate('__lr.renderLoop.stop()')
  assert page.evaluate('cameraCalls')==0
  def rooms():
-  page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click()
+  page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click()
  def share():
   rooms();page.click('#bShareCode');page.click('.share-more summary');page.locator('.room-qr-canvas').wait_for()
  def esc():page.keyboard.press('Escape')

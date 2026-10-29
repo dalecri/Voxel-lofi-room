@@ -74,12 +74,12 @@ with sync_playwright() as p:
  # Every way in: the top-bar chip, the photo overlay, and the top of the Rooms tab.
  page.keyboard.press('Escape');page.click('#bShare');page.wait_for_selector('.share-card-img[src]');page.keyboard.press('Escape')
  page.click('#bPhoto');page.wait_for_selector('#photo.open');page.click('#photoShareLink');page.wait_for_selector('.share-card-img[src]');assert page.locator('#photo.open').count()==0
- page.keyboard.press('Escape');page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click()
- assert page.evaluate('(()=>{const s=document.querySelector("#bShareCode"),v=document.querySelector("#menu-rooms .roomstack, #menu-rooms .village, #menu-rooms .hroom");return !v||!!(s.compareDocumentPosition(v)&Node.DOCUMENT_POSITION_FOLLOWING);})()')
+ page.keyboard.press('Escape');page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click()
+ assert page.evaluate('(()=>{const s=document.querySelector("#bShareCode"),v=document.querySelector("#menu-lane .roomstack, #menu-lane .village, #menu-lane .hroom");return !v||!!(s.compareDocumentPosition(v)&Node.DOCUMENT_POSITION_FOLLOWING);})()')
  page.click('#bShareCode');page.wait_for_selector('.share-card-img[src]')
  assert not errors,errors
  # A pasted whole link works in the code box too.
- page.keyboard.press('Escape');page.evaluate('__lr.openSharedCode(null)');page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.click('#bImportCode')
+ page.keyboard.press('Escape');page.evaluate('__lr.openSharedCode(null)');page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click();page.click('#bImportCode')
  page.locator('textarea.code').fill('Come see my room! '+link);page.click('#bOpenCode');page.wait_for_selector('.friend-card-view')
  assert not errors,errors;ctx.close()
  # A friend opens the link in a fresh browser: the room card arrives and the address bar is tidied.

@@ -21,7 +21,7 @@ with sync_playwright() as p:
  def encode(data):return page.evaluate("d=>'LR0.'+btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(d)))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'')",data)
  code=encode(friend)
  def collection():
-  page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.click('#bImportCode')
+  page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click();page.click('#bImportCode')
  collection();page.locator('#friendRoomCode').fill('not a room code');page.click('#bOpenCode');page.get_by_text('That room code doesn’t look right',exact=True).wait_for(state='visible');assert page.evaluate('__lr.friendCards.list().length')==0
  page.locator('#friendRoomCode').fill(code);page.click('#bOpenCode');page.locator('.friend-card-stage.is-arriving').wait_for()
  assert page.locator('.friend-card-visit').is_disabled();assert page.locator('.friend-card-info').get_attribute('aria-hidden')=='true'
@@ -33,7 +33,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Saved cards',exact=True).click();assert page.locator('.friend-saved-row').count()==1;assert not page.locator('#friendCodeForm').is_visible()
  page.get_by_role('button',name='Open Moss Landing card',exact=True).click();page.wait_for_function('!document.querySelector(".friend-card-visit").disabled');assert page.locator('.is-arriving').count()==0
  page.get_by_role('button',name='Visit this room',exact=True).click();page.wait_for_function('__lr.room.name==="Moss Landing"');assert page.evaluate('__lr.meta.visit.gid')==515;assert json.loads(page.evaluate('localStorage.getItem("lr.room.101")'))==json.loads(home)
- page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.locator('.rooms-card[data-room-id="101"] .rooms-visit').click();page.wait_for_function('__lr.room.name==="My saved home"')
+ page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click();page.locator('.rooms-card[data-room-id="101"] .rooms-visit').click();page.wait_for_function('__lr.room.name==="My saved home"')
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.friendCards');assert page.evaluate('__lr.friendCards.list().length')==1
  collection();page.get_by_role('button',name='Add a room code',exact=True).click();page.locator('#friendRoomCode').fill(code);page.click('#bOpenCode');page.wait_for_function('!document.querySelector(".friend-card-visit").disabled');assert page.locator('.is-arriving').count()==0;assert page.evaluate('__lr.friendCards.list().length')==1
  page.add_style_tag(content='#toasts,#lampbotBubble{visibility:hidden!important}')

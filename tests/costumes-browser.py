@@ -98,7 +98,7 @@ with sync_playwright() as p:
  try:recipient.wait_for_function('!!window.__lr')
  except Exception:
   print('fresh startup errors',errors,recipient.evaluate('({THREE:!!window.THREE,LR:!!window.LR,companion:!!window.LRCompanion,wardrobe:!!window.LRCostumes})'),flush=True);raise
- recipient.click('#bMenu');recipient.get_by_role('tab',name='Rooms',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.get_by_role('button',name='Visit this room',exact=True).click();recipient.wait_for_function('__lr.room.name==="Wardrobe room"')
+ recipient.click('#bMenu');recipient.get_by_role('tab',name='Lane',exact=True).click();recipient.click('#bImportCode');recipient.locator('textarea.code').fill(code);recipient.click('#bOpenCode');recipient.get_by_role('button',name='Visit this room',exact=True).click();recipient.wait_for_function('__lr.room.name==="Wardrobe room"')
  assert recipient.evaluate('__lr.companion.costume')=='plain'
  assert 'PRIVATE_TEST_COSTUME' not in recipient.evaluate('JSON.stringify(localStorage)')
  assert not errors,errors

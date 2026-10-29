@@ -28,7 +28,7 @@
     ['newspaper','Newspaper','📰','Read the headlines'],
     ['todo','To-Do','✓','Your list for today'],
     ['moments','Cozy moments','✦','The checklist and the cats’ version'],
-    ['rooms','Rooms','⌂','Your home and new places'],
+    ['rooms','The Lane','⌂','Your house, the shop, mail and notices'],
     ['sound','Radio & sound','♫','Choose what’s playing'],
     ['settings','Settings','⚙','Weather, motion and room settings'],
   ].map(([id,label,icon,description])=>({id,label,icon,description,...(['mailbox','letters'].includes(id)?{iconSrc:'assets/mailbox-access.png'}:{})}));

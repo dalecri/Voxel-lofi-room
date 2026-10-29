@@ -33,8 +33,8 @@ with sync_playwright() as p:
         assert 'open' not in (sheet.get_attribute('class') or '')
     def template():
         page.click('#bMenu')
-        page.get_by_role('tab',name='Rooms',exact=True).click()
-        page.locator('#menu-rooms details.preset-group summary').first.click()
+        page.get_by_role('tab',name='Lane',exact=True).click()
+        page.locator('#menu-lane details.preset-group summary').first.click()
         page.locator('.card').filter(has_text='Lofi Study').click()
     template()
     closed()
@@ -67,7 +67,7 @@ with sync_playwright() as p:
     for width in [320,390,1280]:
         page.set_viewport_size({'width':width,'height':844})
         for action in ['button','Escape']:
-            page.click('#bMenu');page.get_by_role('tab',name='Rooms',exact=True).click();page.click('#bShareCode')
+            page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click();page.click('#bShareCode')
             page.click('.share-more summary');page.locator('textarea.code').wait_for()
             assert page.locator('textarea.code').input_value().startswith('LR1.')
             if action=='button':page.get_by_role('button',name='Close dialog',exact=True).click()

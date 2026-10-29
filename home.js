@@ -120,7 +120,8 @@
     function closeView(focus=true){
       if(!active)return;active=false;closeSort(false);
       if(view.contains(document.activeElement))document.activeElement.blur();
-      view.remove();dismiss();if(focus)onClose();
+      // Slide the sheet away with its content still in it; take the view out once it's gone.
+      dismiss();setTimeout(()=>{if(!active)view.remove();},400);if(focus)onClose();
     }
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
     return {open,close:closeView,refresh,view,get active(){return active;},tick(time){if(!active||time<next)return;next=time+1000;refresh();updatePreviews();}};
