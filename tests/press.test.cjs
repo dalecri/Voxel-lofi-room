@@ -144,3 +144,11 @@ test('press model: seeded four-cat sagas, morning brief with lead and today box,
  // nothing from the press can reach a shared room code
  const decor={v:1,name:'Room',n:10,wall:{style:'paint'},floor:{style:'oak'},press:s.values['lr.press'],items:[]};assert.ok(!JSON.stringify(W.shareDecor(decor)).includes('Dinner'));assert.ok(!('press' in W.shareDecor(decor)));
 });
+test('the morning brief carries an Around the lane column right after Today in the house',()=>{
+ const press=P.create({store:store(),now:()=>new Date(2026,9,19,7)});
+ const lane={body:'Mallow has three new finds on the shelf.',items:[{label:'Biscuit',value:'Sorting the post (at the Mail Room)'},{label:'<b>x</b>'.repeat(20),value:'y'.repeat(400)}]};
+ const b=press.brief({lane});const i=b.sections.findIndex(x=>x.id==='today');
+ assert.equal(b.sections[i+1].id,'lane');assert.equal(b.sections[i+1].title,'Around the lane');assert.equal(b.sections[i+1].items[0].label,'Biscuit');
+ assert.ok(b.sections[i+1].items[1].label.length<=40&&b.sections[i+1].items[1].value.length<=160,'clipped like every other section');
+ assert.ok(!press.brief({}).sections.some(x=>x.id==='lane'),'no residents, no column');
+});

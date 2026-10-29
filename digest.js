@@ -55,7 +55,7 @@
       open(key){ensure();const s=read(),found=s.issues.find(i=>(i.brief?i.date:i.week)===key)||s.issues[0];if(!found)return null;if(!found.read){found.read=true;save(s);}return copy(found);}};
   }
   // Story labels and claps come from the house press when it is present.
-  const LABEL={behind:'Behind the week',gossip:'Village gossip',ahead:'The week ahead',memory:'On this day',saga:'Pet column',week:'Week over week',roundup:'Records roundup',closing:'From the editor',streak:'On a roll',first:'A first',record:'House record',drought:'Gone quiet',diary:'From the diary',forecast:'Today in the house'};
+  const LABEL={lane:'On the lane',behind:'Behind the week',gossip:'Village gossip',ahead:'The week ahead',memory:'On this day',saga:'Pet column',week:'Week over week',roundup:'Records roundup',closing:'From the editor',streak:'On a roll',first:'A first',record:'House record',drought:'Gone quiet',diary:'From the diary',forecast:'Today in the house'};
   const keyOf=i=>i.brief?i.date:i.week;
   function createView({model,sheet,sound,scenes=()=>[],thumb=()=>null,openScene=()=>{},onRead=()=>{},notice=()=>{},press=null}){
     const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;};

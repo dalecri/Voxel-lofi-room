@@ -66,3 +66,30 @@ body.reduce-motion .lane-front { transition:none; }
 .lane-day ul { margin:6px 0 0; padding-left:18px; color:var(--ink); font:600 14px/1.45 var(--font); }
 .lane-holiday, .lane-season { color:var(--ink-dim); }
 .lane-place > .chipbtn { margin-top:14px; }
+
+/* ---------- Phase 2: residents, seasonal dressing, weather on the street ---------- */
+.lane-front { position:relative; }
+.lane-residents { display:flex; justify-content:center; align-items:center; gap:2px; min-height:14px; margin-top:-4px; }
+.lane-residents svg { width:18px; height:16px; padding:1px 1px 0; border-radius:6px; background:#fff6ead9; }
+.lane-residents small { font:800 10px/1 var(--font); }
+.lane-around { margin:0 0 10px; padding:8px 12px; border-radius:14px; background:var(--chip); color:var(--ink); font:600 13.5px/1.4 var(--font); }
+.lane-season-note { margin:-4px 0 12px; color:var(--ink-dim); font:600 13.5px/1.4 var(--font); }
+.lane-who { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+.lane-who li { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:14px; background:var(--chip); color:var(--ink); font:600 13.5px/1.35 var(--font); }
+.lane-who svg { flex:none; width:26px; height:23px; padding:2px 2px 0; border-radius:8px; background:#fff6ead9; }
+.lane-cake p { margin:4px 0 0; color:var(--ink); font:600 14px/1.4 var(--font); }
+/* Decorations stay hidden until the lane's season or weather turns them on. */
+.lane-snow, .lane-lights, .lane-pumpkin { display:none; }
+.lane[data-season=halloween] .lane-pumpkin { display:inline; }
+.lane[data-season=holiday] .lane-lights, .lane[data-season=holiday] .lane-snow, .lane[data-weather=snow] .lane-snow { display:inline; }
+.lane[data-season=holiday]:is([data-phase=evening],[data-phase=night]) .lane-lights circle { filter:drop-shadow(0 0 1.5px currentColor); }
+/* Weather over the street: a light layer that never catches taps. */
+.lane-street { position:relative; overflow:hidden; }
+.lane:is([data-weather=rain],[data-weather=snow],[data-weather=sakura]) .lane-street::after { content:''; position:absolute; inset:0; pointer-events:none; border-radius:inherit; }
+.lane[data-weather=rain] .lane-street::after { background:repeating-linear-gradient(105deg,transparent 0 10px,#ffffff38 10px 11px,transparent 11px 22px); animation:lane-rain .7s linear infinite; }
+.lane[data-weather=snow] .lane-street::after { background:radial-gradient(circle,#fff 0 1.3px,transparent 1.6px) 0 0/26px 26px,radial-gradient(circle,#ffffffc0 0 1px,transparent 1.3px) 13px 9px/30px 30px; animation:lane-snow 6s linear infinite; }
+.lane[data-weather=sakura] .lane-street::after { background:radial-gradient(ellipse 2.4px 1.6px,#f7b6cc 0 98%,transparent) 0 0/34px 34px,radial-gradient(ellipse 2px 1.4px,#ffd3e0 0 98%,transparent) 17px 12px/40px 40px; animation:lane-snow 9s linear infinite; }
+@keyframes lane-rain { to { background-position:-12px 44px; } }
+@keyframes lane-snow { to { background-position:20px 120px,33px 129px; } }
+body.reduce-motion .lane-street::after { animation:none !important; }
+@media (prefers-reduced-motion:reduce) { .lane-street::after { animation:none !important; } }

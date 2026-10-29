@@ -72,7 +72,7 @@
     for (let k = 0; k < 7; k++) {
       const d = new Date(new Date(today + 'T12:00').getTime() + k * DAY);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const items = [...events.filter(e => e.date === key).map(e => ({ kind: 'event', title: e.title })),
+      const items = [...events.filter(e => e.date === key).map(e => ({ kind: BIRTHDAY.test(e.title || '') ? 'birthday' : 'event', title: (BIRTHDAY.test(e.title || '') ? '🎂 ' : '') + e.title })),
         ...holidays.filter(h => h.date === key).map(h => ({ kind: 'holiday', title: h.name || h.title || 'Holiday' })),
         ...seasonal(key).map(s => ({ kind: 'season', title: typeof s === 'string' ? s : s.label || s.title || '' }))].filter(i => i.title);
       if (items.length) rows.push({ date: key, label: k === 0 ? 'Today' : k === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'long' }), items });
@@ -106,6 +106,79 @@
     };
   }
 
+
+  // ---------- Phase 2: residents, seasons and dressing (all systemic) ----------
+  // Residents are the save's own pets. Each gets one place a day, seeded by the date and
+  // the pet, and a templated thing to be doing there. Everyone is home at night.
+  const DOING = {
+    house: ['curled up by the window', 'napping on the rug', 'playing in the hall', 'watching the street from the sill'],
+    shop: ['helping Mallow stock the shelf', 'asleep on the shop counter', 'guarding the till', 'inspecting a new delivery'],
+    mail: ['sorting the post', 'asleep in the parcel bin', 'watching the mail slot', 'sitting on the Sunday magazines'],
+    notice: ['reading the notice board', 'batting at a pinned note', 'sunning by the board', 'keeping an eye on the week'],
+  };
+  function seeded(text) { let s = 2166136261; for (const ch of text) { s ^= ch.charCodeAt(0); s = Math.imul(s, 16777619); } return () => { s = Math.imul(s ^ (s >>> 15), 2246822507) ^ Math.imul(s ^ (s >>> 13), 3266489909); return ((s ^= s >>> 16) >>> 0) / 4294967296; }; }
+  function residents({ pets = [], date, phase = 'day' }) {
+    if (!valid(date)) return [];
+    return pets.slice(0, 12).map(pet => {
+      const rnd = seeded(date + '|' + pet.key), places = ['house', 'shop', 'mail', 'notice'];
+      let place = places[Math.floor(rnd() * places.length)];
+      const homeEarly = rnd() < 0.5;
+      if (phase === 'night' || (phase === 'evening' && homeEarly)) place = 'house';
+      const doing = phase === 'night' ? 'asleep at home' : DOING[place][Math.floor(rnd() * DOING[place].length)];
+      return { key: pet.key, name: pet.name, coat: pet.coat, place, doing };
+    });
+  }
+  const at = (list, place) => list.filter(r => r.place === place);
+  // "Neo is sorting the post." / "Neo and Biscuit are asleep at home." Pets doing the same thing share a line.
+  const andList = names => names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names.at(-1);
+  function sayAround(list) {
+    const groups = new Map();
+    for (const r of list) { if (!groups.has(r.doing)) groups.set(r.doing, []); groups.get(r.doing).push(r.name); }
+    return [...groups].map(([doing, names]) => `${andList(names)} ${names.length === 1 ? 'is' : 'are'} ${doing}.`).join(' ');
+  }
+  // The Daily Brief's lane column: this morning's routines, plus what's on Mallow's shelf.
+  const WHERE = { house: 'at home', shop: 'at the shop', mail: 'at the Mail Room', notice: 'by the notice board' };
+  function briefColumn({ residents: list = [], special = null }) {
+    if (!list.length && !special) return null;
+    const shop = special ? `Mallow has three new finds on the shelf, and it's Sunday: the ${special} is in.` : 'Mallow has three new finds on the shelf.';
+    return { body: shop, items: list.slice(0, 6).map(r => ({ label: r.name, value: `${r.doing[0].toUpperCase()}${r.doing.slice(1)}${r.place === 'house' ? '' : ' (' + WHERE[r.place] + ')'}` })) };
+  }
+  // Hemisphere: from the live-weather latitude when there is one, else the time zone.
+  const SOUTH = /^(Australia|Antarctica)\/|^Pacific\/(Auckland|Chatham|Fiji|Tongatapu|Apia|Noumea|Efate|Port_Moresby)|^America\/(Argentina|Sao_Paulo|Santiago|Montevideo|Asuncion|La_Paz|Lima|Punta_Arenas)|^Africa\/(Johannesburg|Maputo|Harare|Windhoek|Gaborone|Lusaka|Maseru|Mbabane|Lubumbashi)|^Indian\/(Mauritius|Reunion|Antananarivo)/;
+  function hemisphere({ latitude = null, timeZone = '' } = {}) {
+    if (Number.isFinite(latitude)) return latitude < 0 ? 'south' : 'north';
+    return SOUTH.test(String(timeZone)) ? 'south' : 'north';
+  }
+  // One templated note a month, shifted six months for the southern hemisphere.
+  const MONTH_NOTES = ['Deep winter: the lamps stay on a little longer.', 'Late winter: the days are stretching out again.', 'Early spring: the lane smells like wet soil.',
+    'Spring: windows open, the first warm afternoons.', 'Late spring: everything is green and a bit too tall.', 'Early summer: long light, late sunsets on the lane.',
+    'High summer: the cats nap in the shade by noon.', 'Late summer: warm evenings, the first crickets.', 'Early autumn: cool mornings, warm tea.',
+    'Autumn: leaves are turning along the lane.', 'Late autumn: frosty mornings, cozy nights in.', 'Early winter: the lane gets its first cold snap.'];
+  function seasonNote(date, hemi = 'north') {
+    if (!valid(date)) return '';
+    const m = (+date.slice(5, 7) - 1 + (hemi === 'south' ? 6 : 0)) % 12;
+    return MONTH_NOTES[m];
+  }
+  // Birthdays and anniversaries already on the calendar, the next 30 days.
+  const BIRTHDAY = /birthday|b-?day|anniversar|anniv/i;
+  function birthdays({ events = [], today, days = 30 }) {
+    if (!valid(today)) return [];
+    return events.filter(e => valid(e.date) && BIRTHDAY.test(e.title || '')).map(e => ({ ...e, inDays: daysBetween(today, e.date) }))
+      .filter(e => e.inDays >= 0 && e.inDays <= days).sort((a, b) => a.inDays - b.inDays);
+  }
+  // Seasonal dressing on the street, from the real date and weather.
+  function dressing({ date, seasons = [], weather = 'clear' }) {
+    let season = '';
+    if (valid(date)) {
+      const m = +date.slice(5, 7) - 1, d = +date.slice(8, 10), n = m * 100 + d;
+      for (const s of seasons) {
+        if (!Array.isArray(s.from) || !Array.isArray(s.to)) continue;
+        const a = s.from[0] * 100 + s.from[1], b = s.to[0] * 100 + s.to[1];
+        if (a <= b ? n >= a && n <= b : n >= a || n <= b) { season = s.group; break; }
+      }
+    }
+    return { season, weather: ['rain', 'storm', 'snow', 'sakura'].includes(weather) ? (weather === 'storm' ? 'rain' : weather) : '' };
+  }
   // ---------- The view: a street of four fronts, and the place you're at below it ----------
   // Little pixel fronts, drawn inline so there is nothing to fetch. Windows glow after dusk.
   const FRONTS = {
@@ -114,16 +187,36 @@
     mail: '<rect x="10" y="22" width="44" height="34" fill="#9fb4d8"/><rect x="8" y="18" width="48" height="6" fill="#5b6f9e"/><rect x="16" y="30" width="14" height="10" class="lane-window"/><rect x="38" y="30" width="10" height="26" fill="#43557f"/><rect x="18" y="45" width="10" height="7" fill="#fff6e8"/><path d="M18 45l5 4 5-4" fill="none" stroke="#c0675a" stroke-width="1.4"/>',
     notice: '<rect x="14" y="42" width="4" height="14" fill="#7a5a48"/><rect x="46" y="42" width="4" height="14" fill="#7a5a48"/><rect x="8" y="14" width="48" height="30" rx="2" fill="#a77a58"/><rect x="11" y="17" width="42" height="24" fill="#d9b88e"/><rect x="15" y="20" width="12" height="9" fill="#fff6e8"/><rect x="31" y="21" width="17" height="7" fill="#ffe08a"/><rect x="18" y="31" width="14" height="7" fill="#bfe3d0"/><rect x="36" y="31" width="10" height="8" fill="#f4c2c2"/><circle cx="21" cy="20" r="1.4" fill="#c0675a"/><circle cx="39" cy="21" r="1.4" fill="#5b6f9e"/>',
   };
-  function createView({ model, today, phase = () => 'day', reducedMotion = () => false, notice = () => {}, sound = {},
+  // Seasonal dressing, per front: pumpkins on the step (Halloween), string lights and snow on
+  // the roofline (winter holidays, or real snow). CSS shows them from the lane's data attributes.
+  const DECOR = {
+    house: { snow: 'M8 28 32 9l24 19h-5L32 14 13 28z', lights: [[12,27],[18,22],[24,18],[30,13],[36,13],[42,18],[48,22],[53,27]], step: [12, 52] },
+    shop: { snow: 'M18 14h28v3H18z', lights: [[9,26],[16,26],[23,26],[30,26],[37,26],[44,26],[51,26]], step: [44, 52] },
+    mail: { snow: 'M8 18h48v3H8z', lights: [[11,23],[18,23],[25,23],[32,23],[39,23],[46,23],[53,23]], step: [32, 52] },
+    notice: { snow: 'M8 14h48v3H8z', lights: [[11,16],[18,16],[25,16],[32,16],[39,16],[46,16],[53,16]], step: [24, 52] },
+  };
+  const LIGHT_COLOURS = ['#ff6b6b', '#ffd27a', '#7ed6a3', '#7fb8ff'];
+  function decor(id) {
+    const d = DECOR[id], [px, py] = d.step;
+    return `<path class="lane-snow" d="${d.snow}" fill="#ffffff"/>` +
+      `<g class="lane-lights">${d.lights.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="1.6" fill="${LIGHT_COLOURS[i % 4]}"/>`).join('')}</g>` +
+      `<g class="lane-pumpkin"><ellipse cx="${px}" cy="${py + 2}" rx="4" ry="3" fill="#e8782a"/><rect x="${px - .6}" y="${py - 2}" width="1.4" height="2" fill="#5a7a2a"/></g>`;
+  }
+  const catHead = (coat, name) => `<svg viewBox="0 0 16 14" aria-hidden="true"><title>${String(name).replace(/[<&]/g, '')}</title><path d="M2 13V4l3 2h6l3-2v9z" fill="#${(coat >>> 0).toString(16).padStart(6, '0').slice(-6)}" stroke="#00000040" stroke-width="1"/><rect x="5" y="8" width="1.6" height="1.6" fill="#2a2a2a"/><rect x="9.4" y="8" width="1.6" height="1.6" fill="#2a2a2a"/></svg>`;
+  function createView({ model, today, pets = () => [], weather = () => 'clear', seasons = [], location = () => ({}), phase = () => 'day', reducedMotion = () => false, notice = () => {}, sound = {},
     catalog = [], shop = null, thumb = () => '', onBuy = () => {}, openCatalogue = null,
     digest = null, mailbox = null, openLetter = () => {}, calendar = null }) {
     const el = (tag, cls, text, parent) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; if (parent) parent.appendChild(n); return n; };
     const play = name => { try { sound[name]?.(); } catch (e) { /* sounds are optional */ } };
-    let place = 'house', dismissedAway = false;
+    let place = 'house', dismissedAway = false, town = [];
     // mount(host): draws the lane into the menu tab and returns the house panel, which the
     // app fills with the rooms gallery, house map and guest book exactly as before.
     function mount(host, { awayNote = null } = {}) {
       const lane = el('section', 'lane', undefined, host); lane.dataset.phase = phase();
+      const dress = dressing({ date: today(), seasons, weather: weather() });
+      if (dress.season) lane.dataset.season = dress.season;
+      if (dress.weather) lane.dataset.weather = dress.weather;
+      town = residents({ pets: pets(), date: today(), phase: phase() });
       const head = el('div', 'lane-heading', undefined, lane); el('h2', '', 'The Lane', head);
       el('p', 'lane-when muted', new Date(today() + 'T12:00').toLocaleDateString(undefined, { weekday: 'long' }) + ' ' + ({ morning: 'morning', afternoon: 'afternoon', evening: 'evening', night: 'night', day: '' }[phase()] || '') + ' on the lane', head);
       if (awayNote && !dismissedAway) {
@@ -134,7 +227,9 @@
       const panels = {};
       for (const [id, name, hint] of PLACES) {
         const b = el('button', 'lane-front', undefined, street); b.type = 'button'; b.dataset.place = id; b.setAttribute('role', 'tab'); b.id = 'lane-tab-' + id; b.title = hint;
-        b.innerHTML = `<svg viewBox="0 0 64 60" aria-hidden="true" shape-rendering="crispEdges">${FRONTS[id]}<rect x="2" y="56" width="60" height="4" fill="#00000022"/></svg><span>${name}</span>`;
+        const here = at(town, id), faces = here.slice(0, 3).map(r => catHead(r.coat, r.name)).join('') + (here.length > 3 ? `<small>+${here.length - 3}</small>` : '');
+        b.innerHTML = `<svg viewBox="0 0 64 60" aria-hidden="true" shape-rendering="crispEdges">${FRONTS[id]}${decor(id)}<rect x="2" y="56" width="60" height="4" fill="#00000022"/></svg>${here.length ? `<span class="lane-residents">${faces}</span>` : ''}<span>${name}</span>`;
+        if (here.length) b.setAttribute('aria-label', `${name}: ${here.map(r => r.name).join(', ')} ${here.length === 1 ? 'is' : 'are'} here`);
         const panel = el('div', 'lane-place', undefined, lane); panel.id = 'lane-' + id; panel.dataset.place = id; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', b.id); b.setAttribute('aria-controls', panel.id);
         panels[id] = panel;
         b.onclick = () => choose(id, true);
@@ -151,11 +246,16 @@
         if (id !== 'house') renderPlace(id, panels[id]);
         if (user && !reducedMotion() && panels[id].animate) panels[id].animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
       }
+      // Who's home: one line above the house content the app fills in.
+      const home = at(town, 'house');
+      if (home.length) el('p', 'lane-around', sayAround(home), panels.house);
       choose(place);
       return { house: panels.house, choose, get place() { return place; } };
     }
     function renderPlace(id, panel) {
       panel.replaceChildren();
+      const here = at(town, id);
+      if (here.length) el('p', 'lane-around', sayAround(here), panel);
       try { ({ shop: renderShop, mail: renderMail, notice: renderNotice })[id](panel); }
       catch (e) { el('p', 'muted', 'This place is resting right now. Try again in a moment.', panel); }
     }
@@ -218,6 +318,7 @@
     function renderNotice(panel) {
       const t = today(), sky = el('p', 'lane-sky', undefined, panel);
       try { const m = calendar?.moon?.(new Date(t + 'T12:00')); sky.textContent = [m ? `${m.icon} ${m.name}.` : '', skyNote(t)].filter(Boolean).join(' '); } catch (e) { sky.textContent = skyNote(t); }
+      el('p', 'lane-season-note', seasonNote(t, hemisphere(location())), panel);
       const rows = notices({ today: t, events: calendar?.events() || [], holidays: calendar?.holidays() || [], seasonal: d => calendar?.seasonal(d) || [] });
       const tomorrow = rows.find(r => r.label === 'Tomorrow');
       const pinned = el('div', 'lane-pin', undefined, panel); el('b', '', 'Tomorrow in the house', pinned);
@@ -227,10 +328,22 @@
       const rest = rows.filter(r => r.label !== 'Tomorrow');
       if (!rest.length) el('p', 'muted', tomorrow ? 'Nothing else pinned this week.' : 'A quiet week on the lane.', week);
       for (const r of rest) { const row = el('div', 'lane-day', undefined, week); el('b', '', r.label, row); const ul = el('ul', '', undefined, row); for (const i of r.items) { const li = el('li', 'lane-' + i.kind, i.title, ul); } }
+      const cakes = birthdays({ events: calendar?.events() || [], today: t });
+      if (cakes.length) {
+        el('h3', '', 'Birthdays coming up', panel);
+        const list = el('div', 'lane-week', undefined, panel);
+        for (const c of cakes) { const row = el('div', 'lane-day lane-cake', undefined, list); el('b', '', c.inDays === 0 ? 'Today' : c.inDays === 1 ? 'Tomorrow' : `In ${c.inDays} days`, row); el('p', '', '🎂 ' + c.title, row); }
+      }
+      if (town.length) {
+        el('h3', '', 'Who’s where today', panel);
+        const names = { house: 'at home', shop: 'at the shop', mail: 'at the Mail Room', notice: 'by the notice board' };
+        const list = el('ul', 'lane-who', undefined, panel);
+        for (const r of town) { const li = el('li', '', undefined, list); li.innerHTML = catHead(r.coat, r.name); el('span', '', `${r.name} is ${r.doing}` + (/home/.test(r.doing) ? '' : ` (${names[r.place]})`), li); }
+      }
       if (calendar?.open) { const b = el('button', 'chipbtn', 'Pin something on the calendar', panel); b.type = 'button'; b.onclick = calendar.open; }
     }
     return { mount, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
   }
-  const api = { KEY, PLACES, FRONTS, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

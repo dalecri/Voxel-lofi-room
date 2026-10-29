@@ -64,6 +64,29 @@ with sync_playwright() as p:
  # The Notice Board: tomorrow's calendar event is pinned; the sky line names the next solstice or equinox.
  page.keyboard.press('Escape');page.click('#bMenu');page.locator('#menu-lane .lane-front[data-place=notice]').click();board=page.locator('#lane-notice')
  assert 'PRIVATE_VET_VISIT' in board.locator('.lane-pin').inner_text() and ('solstice' in board.inner_text() or 'equinox' in board.inner_text())
+ # Residents: the room's own pets, renamed or not, spread over the places by day and home at night.
+ page.keyboard.press('Escape')
+ page.evaluate('''()=>{const a=__lr;for(const [c,n] of [[0,'PRIVATE_BISCUIT'],[1,'Pepper'],[2,'Mochi']])a.room.add(a.room.make('cat',{x:2+c,z:6,c,name:n}));a.changed();
+   const d=new Date();d.setDate(d.getDate()+5);a.calendarModel.add({date:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,title:"Mom's birthday"});}''')
+ pets=page.evaluate("__lr.room.items.filter(i=>LR.CAT[i.t]?.kind==='pet'&&!LR.CAT[i.t].robot&&!i.visitor).length");assert pets>=3
+ def street():
+  page.click('#bMenu');page.locator('#menu-lane .lane-street').wait_for()
+  return page.evaluate('''()=>[...document.querySelectorAll('#menu-lane .lane-front')].map(b=>{const n=b.querySelectorAll('.lane-residents svg').length,more=+(b.querySelector('.lane-residents small')?.textContent.slice(1)||0);return [b.dataset.place,n+more]})''')
+ page.evaluate("__lr.setPhase('afternoon',true)");day=dict(street())
+ assert sum(day.values())==pets,day
+ page.keyboard.press('Escape');page.evaluate("__lr.setPhase('night',true)");night=dict(street())
+ assert night['house']==pets and night['shop']==night['mail']==night['notice']==0,night
+ assert 'asleep at home' in page.locator('#lane-house .lane-around').inner_text() and 'PRIVATE_BISCUIT' in page.locator('#lane-house .lane-around').inner_text()
+ # The Notice Board: birthdays ahead, who's where, and the month's note.
+ page.locator('#menu-lane .lane-front[data-place=notice]').click();board=page.locator('#lane-notice')
+ assert "Mom's birthday" in board.locator('.lane-cake').inner_text() and board.locator('.lane-who li').count()==pets and board.locator('.lane-season-note').inner_text().strip()
+ # Seasonal dressing follows the real date; the weather follows meta.weather.
+ page.keyboard.press('Escape');page.evaluate("__lr.meta.weather='snow'");page.click('#bMenu');lane_el=page.locator('#menu-lane .lane')
+ expected=page.evaluate("LRLane.dressing({date:new Date().toISOString().slice(0,10),seasons:LR.SEASONS||[],weather:'snow'})")
+ assert lane_el.get_attribute('data-weather')=='snow' and (lane_el.get_attribute('data-season') or '')==expected['season'],expected
+ assert page.locator('#menu-lane .lane-snow').first.evaluate('e=>getComputedStyle(e).display')!='none','snow sits on the roofs'
+ page.keyboard.press('Escape');page.evaluate("__lr.meta.weather='clear'")
+ assert 'PRIVATE_BISCUIT' not in str(page.evaluate("JSON.parse(localStorage.getItem('lr.lane')||'{}')")),'residents are derived, never stored'
  # Phone and desktop: the street fits, nothing scrolls sideways, in day and night.
  for phase in ['day','night']:
   page.evaluate(f"__lr.setPhase('{phase}',true)");page.keyboard.press('Escape');page.click('#bMenu');page.locator('#menu-lane .lane-street').wait_for()
@@ -74,5 +97,5 @@ with sync_playwright() as p:
     assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth'),(phase,width,place)
  assert 'lr.lane' not in json.dumps(page.evaluate('async()=>__lr.readCode(await __lr.roomCode())')),'lane state never travels in room codes'
  assert not errors,errors
- print('PASS lane: Rooms becomes the Lane at your house, gentle away note once, keyboard street, Mallow’s shelf with Fireflies, papers and letters, calendar notices, 320/390/1280 day/night')
+ print('PASS lane: Rooms becomes the Lane at your house, gentle away note once, keyboard street, Mallow’s shelf with Fireflies, papers and letters, calendar notices, residents by day and night, birthdays, seasonal dressing and weather, 320/390/1280 day/night')
  browser.close()
