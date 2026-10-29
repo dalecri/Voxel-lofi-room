@@ -19,7 +19,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();menu();tasks=page.locator('.task-notebook')
  for text in ['Take daily supplements','Scoop cat litter','Daily home chore','Workout','One important thing']:
   page.get_by_role('textbox',name='A little task',exact=True).fill(text);page.get_by_role('button',name='＋ Add',exact=True).click()
- first=page.get_by_role('checkbox',name='Take daily supplements',exact=True);first.focus();page.keyboard.press('Space');assert first.is_checked();assert tasks.locator('.task-counter').inner_text()=='1 of 6'
+ first=page.get_by_role('checkbox',name='Take daily supplements',exact=True);first.focus();page.keyboard.press('Space');assert first.is_checked();assert tasks.locator('.task-counter').inner_text()=='1 of 5'
  # Checkboxes precede their text; rows use a shared vellum surface and the companion/form stay in the paper.
  assert tasks.locator('.today-task').first.evaluate('e=>e.querySelector(".today-task-check").getBoundingClientRect().right<=e.querySelector(".today-task-text").getBoundingClientRect().left')
  assert tasks.locator('.task-journey').count()==1;assert tasks.locator('.today-task-form').count()==1
@@ -28,7 +28,7 @@ with sync_playwright() as p:
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':844});fit();assert tasks.locator('.today-task-list').evaluate('e=>getComputedStyle(e).gap')=='8px';assert tasks.locator('.task-checkmark').first.evaluate('e=>getComputedStyle(e).width')=='26px';tasks.screenshot(path=f'/tmp/notepad-todo-{phase}-{width}.png')
  page.get_by_role('button',name='Icon for task: Workout',exact=True).click();page.get_by_role('button',name='Use 🌙',exact=True).click();assert page.get_by_role('button',name='Icon for task: Workout',exact=True).inner_text()=='🌙'
- page.get_by_role('button',name='Remove task: One important thing',exact=True).click();assert tasks.locator('.today-task').count()==5
+ page.get_by_role('button',name='Remove task: One important thing',exact=True).click();assert tasks.locator('.today-task').count()==4
  page.keyboard.press('Escape');page.evaluate("__lr.roomToolsUI.open('groceries')");groceries=page.locator('.grocery-notebook')
  for text in ['Milk','Eggs','Bread','Apples','Tea']:
   page.get_by_role('textbox',name='Add groceries',exact=True).fill(text);page.get_by_role('button',name='Add to list',exact=True).click()
