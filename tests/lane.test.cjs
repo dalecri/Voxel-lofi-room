@@ -65,3 +65,9 @@ test('birthdays already on the calendar are spotted 30 days ahead and marked in 
   assert.deepEqual(L.birthdays({events,today:'2026-10-29'}).map(e=>[e.title,e.inDays]),[['Anniversary dinner',1],["Mom's Birthday",7]]);
   const rows=L.notices({today:'2026-10-29',events});assert.equal(rows[0].items[0].kind,'birthday');assert.match(rows[0].items[0].title,/^🎂 /);
 });
+test('the brief column: who is where this morning, plus the Sunday special',()=>{
+ const res=[{name:'Neo',place:'house',doing:'playing in the hall'},{name:'Biscuit',place:'mail',doing:'sorting the post'}];
+ const c=L.briefColumn({residents:res,special:'Galaxy aquarium'});
+ assert.match(c.body,/Sunday: the Galaxy aquarium is in/);assert.deepEqual(c.items,[{label:'Neo',value:'Playing in the hall'},{label:'Biscuit',value:'Sorting the post (at the Mail Room)'}]);
+ assert.equal(L.briefColumn({residents:[]}),null);assert.equal(L.briefColumn({residents:res}).body,'Mallow has three new finds on the shelf.');
+});

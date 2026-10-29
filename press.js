@@ -344,6 +344,9 @@
       if (!slim) ranked.forEach((s, i) => sections.push({ id: s.id, type: s.type, title: s.headline, body: s.body, ...(i === 0 ? { lead: true } : {}) }));
       const items = [...box.events.slice(0, 4).map(e => ({ label: e.time || 'All day', value: e.title })), ...(box.weather ? [{ label: 'Sky', value: box.weather }] : []), ...(box.tasks.length ? [{ label: 'Due', value: box.tasks.slice(0, 3).join(' · ') + (box.tasks.length > 3 ? ` · +${box.tasks.length - 3}` : '') }] : [])];
       sections.splice(slim ? 0 : 1, 0, { id: 'today', type: 'forecast', title: 'Today in the house', body: box.prediction, items: items.length ? items : [{ label: 'Calendar', value: 'Nothing booked yet.' }] });
+      // Around the lane: where the residents are this morning (built by lane.js, passed in).
+      const lane = src.lane && Array.isArray(src.lane.items) ? src.lane : null;
+      if (lane) sections.splice(sections.findIndex(x => x.id === 'today') + 1, 0, { id: 'lane', type: 'lane', title: 'Around the lane', body: clip(lane.body || '', 240), items: lane.items.slice(0, 6).map(i => ({ label: clip(i.label || 'A resident', 40), value: clip(i.value || '', 160) })) });
       const more = notes.slice(ranked.some(x => x.type === 'diary') ? 1 : 0).slice(0, 4).map(e => ({ label: clip(e.name || 'A cat', 40), value: clip(e.text, 160) }));
       if (!slim && more.length) sections.push({ id: 'diary-notes', type: 'diary', title: 'More from the cats’ diary', body: '', items: more });
       if (changedReps) save();

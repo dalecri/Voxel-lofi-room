@@ -136,6 +136,13 @@
     for (const r of list) { if (!groups.has(r.doing)) groups.set(r.doing, []); groups.get(r.doing).push(r.name); }
     return [...groups].map(([doing, names]) => `${andList(names)} ${names.length === 1 ? 'is' : 'are'} ${doing}.`).join(' ');
   }
+  // The Daily Brief's lane column: this morning's routines, plus what's on Mallow's shelf.
+  const WHERE = { house: 'at home', shop: 'at the shop', mail: 'at the Mail Room', notice: 'by the notice board' };
+  function briefColumn({ residents: list = [], special = null }) {
+    if (!list.length && !special) return null;
+    const shop = special ? `Mallow has three new finds on the shelf, and it's Sunday: the ${special} is in.` : 'Mallow has three new finds on the shelf.';
+    return { body: shop, items: list.slice(0, 6).map(r => ({ label: r.name, value: `${r.doing[0].toUpperCase()}${r.doing.slice(1)}${r.place === 'house' ? '' : ' (' + WHERE[r.place] + ')'}` })) };
+  }
   // Hemisphere: from the live-weather latitude when there is one, else the time zone.
   const SOUTH = /^(Australia|Antarctica)\/|^Pacific\/(Auckland|Chatham|Fiji|Tongatapu|Apia|Noumea|Efate|Port_Moresby)|^America\/(Argentina|Sao_Paulo|Santiago|Montevideo|Asuncion|La_Paz|Lima|Punta_Arenas)|^Africa\/(Johannesburg|Maputo|Harare|Windhoek|Gaborone|Lusaka|Maseru|Mbabane|Lubumbashi)|^Indian\/(Mauritius|Reunion|Antananarivo)/;
   function hemisphere({ latitude = null, timeZone = '' } = {}) {
@@ -337,6 +344,6 @@
     }
     return { mount, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

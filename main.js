@@ -527,7 +527,7 @@ function startLofiRooms() {
     let google = [], tasks = [];
     try { google = googleCalendar.cachedEvents?.(new Date()) || []; tasks = googleCalendar.cachedTasks || []; } catch (e) { /* Google stays optional and read-only */ }
     return { activity: calendarModel.activity(), catLog: catJournal.entries, focus: focusGarden.state.sessions, tally: roomTools.state.tally,
-      events: calendarModel.events(), google, tasks, weather: meta.liveWeather ? meta.weatherDetails : null, rooms };
+      events: calendarModel.events(), google, tasks, weather: meta.liveWeather ? meta.weatherDetails : null, rooms, lane: laneColumn() };
   }
   journalNews.edition(catJournal.entries);
   const ambientLife = LRLife.ambience({ random: () => Math.random() });
@@ -3510,6 +3510,13 @@ function startLofiRooms() {
   laneModel = LRLane.create({ store, today });
   // Residents: every pet across your saved rooms (not robot vacuums or visiting neighbours),
   // named the way the room names them, so anyone's renamed pets just work.
+  // The brief's lane column: this morning's routines and, on Sundays, Mallow's special.
+  function laneColumn() {
+    try {
+      const t = today(), special = LRLane.shelf({ catalog: LRShop.allCatalog, owns: id => shop.owns(id), date: t }).special;
+      return LRLane.briefColumn({ residents: LRLane.residents({ pets: lanePets(), date: t, phase: 'morning' }), special: LRShop.allCatalog.find(c => c.id === special)?.name || null });
+    } catch (e) { return null; }
+  }
   function lanePets() {
     const out = [], seen = new Set();
     for (const r of rooms) {
