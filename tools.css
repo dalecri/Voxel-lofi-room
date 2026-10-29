@@ -1,7 +1,6 @@
 /* Pastel tool sheets: every Control Center tool slides up as a docked card in
    Plus Jakarta Sans with its own palette, matching the typewriter, Daily Brief,
    future letters and mood tracker. Same palette day and night. */
-#sheetBody[data-tool="captions"] { --ps-bg:#ffd0bd; --ps-surface:#edc4b3; --ps-light:#f7e5de; --ps-edge:#d7ae9d; --ps-ink:#33190f; --ps-muted:#7d5240; --ps-dark:#391e13; --ps-on-dark:#f2d5ca; }
 #sheetBody[data-tool="groceries"] { --ps-bg:#eff0e4; --ps-surface:#e2e6d3; --ps-light:#f7f8ef; --ps-edge:#cfd6bd; --ps-ink:#2b3023; --ps-muted:#7c846f; --ps-dark:#5d7250; --ps-on-dark:#f7f8ef; }
 #sheetBody[data-tool="ideas"] { --ps-bg:#ffdcaa; --ps-surface:#eacda3; --ps-light:#f4e5cf; --ps-edge:#d2b790; --ps-ink:#33240f; --ps-muted:#7d6440; --ps-dark:#392a13; --ps-on-dark:#f1dfc5; }
 #sheetBody[data-tool="tea"] { --ps-bg:#dcebbd; --ps-surface:#d1e4a7; --ps-light:#e6f1d1; --ps-edge:#bcd18f; --ps-ink:#27330f; --ps-muted:#697d40; --ps-dark:#2d3913; --ps-on-dark:#e2eec8; }
@@ -17,12 +16,11 @@
 #sheetBody[data-tool="files"] { --ps-bg:#f1e9df; --ps-surface:#e6dbcd; --ps-light:#faf6f0; --ps-edge:#d8cbb9; --ps-ink:#2f261e; --ps-muted:#85776a; --ps-dark:#3d3129; --ps-on-dark:#f6efe6; }
 #sheetBody[data-tool="calendar"] { --ps-bg:#f7e0d2; --ps-surface:#f0d0bd; --ps-light:#faefe9; --ps-edge:#dbbaa7; --ps-ink:#331d0f; --ps-muted:#7d5740; --ps-dark:#392213; --ps-on-dark:#f5e1d4; }
 #sheetBody[data-tool="newspaper"] { --ps-bg:#ebe5d8; --ps-surface:#e1d9c5; --ps-light:#f4f0e9; --ps-edge:#d3c6a9; --ps-ink:#2c2516; --ps-muted:#7d6940; --ps-dark:#332b1a; --ps-on-dark:#ebe5d8; }
-#sheetBody[data-tool="tst"] { --ps-bg:#eef2fa; --ps-surface:#e1e7f3; --ps-light:#f8faff; --ps-edge:#cfd8ea; --ps-ink:#14213d; --ps-muted:#5d6b86; --ps-dark:#14213d; --ps-on-dark:#ffffff; }
 #sheetBody[data-tool="book"] { --ps-bg:#e9dcc6; --ps-surface:#e1d0b2; --ps-light:#f0e7d8; --ps-edge:#d3bc94; --ps-ink:#302512; --ps-muted:#7d6640; --ps-dark:#372b15; --ps-on-dark:#ebdfcb; }
 .library-view { --ps-bg:#efd9c3; --ps-surface:#e9cbad; --ps-light:#f4e6d7; --ps-edge:#d4b596; --ps-ink:#33210f; --ps-muted:#7d5e40; --ps-dark:#392613; --ps-on-dark:#f0dbc7; }
 /* Shared shell: docked to the bottom edge, slides up with the sheet. */
 #sheetBody[data-tool] { --ps-font:'Plus Jakarta Sans',Nunito,sans-serif; }
-#sheetBody:is([data-tool=captions],[data-tool=groceries],[data-tool=ideas],[data-tool=tea],[data-tool=tally],[data-tool=savings],[data-tool=sketch],[data-tool=french],[data-tool=whiteboard],[data-tool=wardrobe],[data-tool=merchant],[data-tool=files],[data-tool=calendar],[data-tool=newspaper],[data-tool=tst],[data-tool=book],[data-tool=habits],[data-tool=games]) {
+#sheetBody:is([data-tool=groceries],[data-tool=ideas],[data-tool=tea],[data-tool=tally],[data-tool=savings],[data-tool=sketch],[data-tool=french],[data-tool=whiteboard],[data-tool=wardrobe],[data-tool=merchant],[data-tool=files],[data-tool=calendar],[data-tool=newspaper],[data-tool=book],[data-tool=habits],[data-tool=games]) {
   --ink:var(--ps-ink); --ink-dim:var(--ps-muted); --panel:var(--ps-bg); --panel-solid:var(--ps-bg); --chip:var(--ps-surface); --line:var(--ps-edge); --accent:var(--ps-dark); --accent-ink:var(--ps-on-dark); --display:var(--ps-font); --note-ink:var(--ps-ink); --note-muted:var(--ps-muted);
   left:0; right:0; bottom:0; max-width:560px; margin:0 auto; padding:22px 22px calc(var(--sab,0px) + 22px); border-radius:36px 36px 0 0; background:var(--ps-bg); color:var(--ps-ink); font-family:var(--ps-font); }
 #sheetBody[data-tool] > .grab { display:none; }

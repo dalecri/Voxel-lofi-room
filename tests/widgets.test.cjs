@@ -71,11 +71,10 @@ test('share boundary retains decor, strips private root, item and nested metadat
 test('phase 2 static content and destinations stay in private storage with no extra fetches', async () => {
   W.register(LR);
   const s = store(), w = W.create({ store: s, fetchRSS: () => { throw Error('Unexpected fetch'); } });
-  const types = ['tstcorkboard', 'pomodorocandle', ...W.PORTALS.map(p => p.furnitureId)];
+  const types = ['pomodorocandle', ...W.PORTALS.map(p => p.furnitureId)];
   await w.refresh(types);
-  for (const id of ['tst-corkboard', 'pomodoro-candle', 'app-portals']) assert.ok(s.values['lr.widgets'][id]);
-  assert.equal(w.data('tst-corkboard').cadence, 'twice weekly');
-  assert.deepEqual(w.destinations('tstcorkboard').map(l => l.url), W.TST_CONTENT.links.map(l => l.url));
+  for (const id of ['pomodoro-candle', 'app-portals']) assert.ok(s.values['lr.widgets'][id]);
+  assert.equal(W.WIDGETS['tst-corkboard'], undefined);assert.equal(LR.CAT.tstcorkboard, undefined);
   assert.equal(w.destinations('pomodorocandle')[0].url, W.POMODORO_URL);
   for (const p of W.PORTALS) assert.ok(w.destinations(p.furnitureId).some(l => l.url === p.url));
   const extra = { furnitureId: 'gamingdesk', label: 'Second app', url: 'https://example.com/second' };

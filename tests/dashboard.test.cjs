@@ -9,7 +9,7 @@ test('five menu tabs and three file categories have stable order and namespaces'
 test('launcher derives live catalog portal URLs and every widget destination without including travel doors',()=>{
  const f=fixture(),widgets=W.create({store:f.store});const rows=D.destinations(LR.CAT,widgets);
  for(const p of W.PORTALS)assert.ok(rows.some(r=>r.furnitureId===p.furnitureId && r.url===D.url(p.url)),p.label);
- assert.ok(rows.some(r=>r.url===W.POMODORO_URL));for(const p of W.TST_CONTENT.links)assert.ok(rows.some(r=>r.url===D.url(p.url)));
+ assert.ok(rows.some(r=>r.url===W.POMODORO_URL));
  const catalog={...LR.CAT,testportal:{name:'New app',tap:'portal',link:'https://example.com/new'},roomdoor:{tap:'portal',link:123},bad:{tap:'portal',url:'javascript:alert(1)'}};
  assert.ok(D.destinations(catalog,widgets).some(r=>r.label==='New app'));assert.ok(!D.destinations(catalog,widgets).some(r=>['roomdoor','bad'].includes(r.furnitureId)));
  assert.equal(D.destinations(catalog,widgets,[{label:'Duplicate',url:W.POMODORO_URL}]).filter(r=>r.url===W.POMODORO_URL).length,1);

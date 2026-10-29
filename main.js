@@ -416,7 +416,6 @@ function startLofiRooms() {
     if(tools[p.id]){roomToolsUI.open(p.id,find(...tools[p.id])?.id || null);return;}
     if(p.id==='library')library.open();
     else if(p.id==='digest')digestUI.open();
-    else if(p.id==='captions')captionStudio();
     else if(p.id==='typewriter')letters.open();
     else if(p.id==='french')frenchUI.open();
     else if(p.id==='whiteboard')cozy.whiteboard(find('whiteboard')?.id || 'control-center-whiteboard');
@@ -429,7 +428,6 @@ function startLofiRooms() {
     else if(p.id==='calendar')calendar.open();
     else if(p.id==='habits')habitsUI.openHome();
     else if(p.id==='notebook')openNotebook();
-    else if(p.id==='tst')widgetAction(find('tstcorkboard') || {t:'tstcorkboard',id:null});
     else if(p.id==='moments'){closeSheets();openCozyMoments();}
     else if(['todo','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id==='todo'?'To-Do':p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
   }
@@ -522,8 +520,6 @@ function startLofiRooms() {
   ensureDaily();
   const merchant = LRLife.merchant({ store, today, owns: shop.owns, catalog: LRShop.catalog, exclusives: LRShop.exclusives });
   const catJournal = LRLife.journal({ store });
-  const tstPublished = LRTstPublished.create({ store });
-  const captionDesk = LRCaptions.create({store,published:id=>tstPublished.publishedClip(id),changed:()=>{const host=$('.caption-studio');if(host)LRCaptions.render(host,captionDesk,{publish:publishClip});const daily=$('.today-caption-desk');if(daily)LRCaptions.renderDaily(daily,captionDesk);}});
   const journalNews = LRLife.newspaper({ store, moments: MOMENTS });
   // The house press: pattern stories, tomorrow's box, pet sagas and claps (private, lr.press).
   const press = LRPress.create({ store });
@@ -987,7 +983,6 @@ function startLofiRooms() {
     if (tap === 'library') { library.open(); return; }
     if (tap === 'barnaby') { Sound.coin(); discover('gamer'); barnaby.open(); return; }
     if (tap === 'french') { Sound.flip(); frenchUI.open(); return; }
-    if (tap === 'captions') { Sound.flip(); captionStudio(); return; }
     if (tap === 'wardrobe') { wardrobeSheet(); return; }
     if (tap === 'newspaper') { newspaperSheet(); return; }
     if (tap === 'brief') { digestUI.open(); return; }
@@ -2205,11 +2200,6 @@ function startLofiRooms() {
     if (!cats.length) $('#crownCats').textContent = 'Add a cat from the Pets tab first.';
     $('#crownClose').onclick = closeSheets; openSheet();
   }
-  // TwoStoryTails captions: a pixel studio sheet, from Control Center or the clapperboard.
-  function captionStudio() {
-    codeSheet('Caption studio', '', h => { const host = h('section', 'caption-studio'); host.setAttribute('aria-label', 'Caption studio'); LRCaptions.render(host, captionDesk, { publish: publishClip }); }, 'captions');
-    captionDesk.refresh();
-  }
   // Notebook: Notes, Ideas, Whiteboard and Future me under one roof. Each tab is the full
   // tool; the room's typewriter, idea jar, whiteboard and mailbox still open their own.
   const NOTEBOOK = [['notes','Notes','📝'],['ideas','Ideas','💡'],['board','Whiteboard','▤'],['future','Future me','✉']];
@@ -2303,52 +2293,6 @@ function startLofiRooms() {
   // Game library: the owner's HTML games as cartridges, each a direct link.
   function gameLibrary() {
     codeSheet('Game library', '', h => LRGames.render(h('section', 'games-library'), { onOpen: () => { try { Sound.coin(); } catch (e) { /* optional interface sound */ } } }), 'games');
-  }
-  // Published: a caption leaves the studio and joins the TwoStoryTails grid.
-  function publishClip(clip) {
-    const post = tstPublished.publish({ clip: clip.id, text: LRCaptions.copyPayload(clip) });
-    if (!post) return;
-    try { Sound.chime(); } catch (e) { /* optional interface sound */ }
-    captionDesk.changed(); todayUI.refresh();
-    toast('<b>Published</b><span>Moved to your TwoStoryTails grid.</span>', 2200, true);
-  }
-  // TwoStoryTails: every published caption as a colourful grid, filterable by cat and category.
-  const tstView = { cat: null, category: null, shown: LRTstPublished.PAGE };
-  const tstSvg = p => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
-  function openPublished() {
-    codeSheet('TwoStoryTails', '', h => {
-      const links = h('div', 'tst-links');
-      const handle = document.createElement('span'); handle.className = 'tst-handle'; handle.textContent = LRWidgets.TST_CONTENT.account; links.appendChild(handle);
-      for (const l of LRWidgets.TST_CONTENT.links) { const a = document.createElement('a'); a.className = 'tst-link'; a.textContent = l.label; a.href = l.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; links.appendChild(a); }
-      LRTstPublished.render(h('section', 'tst-published'), { model: tstPublished, open: openTstPost, state: tstView });
-    }, 'tst');
-  }
-  function openTstPost(id) {
-    const post = tstPublished.get(id); if (!post) { openPublished(); return; }
-    codeSheet('TwoStoryTails', '', h => {
-      const host = h('section', 'tst-post'), el = (tag, cls, text, parent = host) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; parent.appendChild(n); return n; };
-      const back = el('button', 'tst-back', '‹ All posts'); back.type = 'button'; back.onclick = openPublished;
-      const cat = LRTstPublished.CATEGORIES.find(c => c.id === post.category);
-      const card = el('div', 'tst-tile tst-tile-big'); card.dataset.category = post.category; card.style.setProperty('--tile', cat.color);
-      const icon = el('span', 'tst-icon', undefined, card); icon.innerHTML = tstSvg(LRTstPublished.ICONS[post.icon]);
-      const text = el('p', 'tst-text', post.text, card);
-      const edit = el('textarea', 'tst-edit'); edit.value = post.text; edit.hidden = true; edit.maxLength = 600; edit.setAttribute('aria-label', 'Caption text');
-      el('p', 'tst-label', 'Cats');
-      const cats = el('div', 'tst-cats tst-cats-small'); cats.setAttribute('role', 'group'); cats.setAttribute('aria-label', 'Cats in this post');
-      for (const c of LRTstPublished.CATS) { const b = el('button', 'tst-cat', undefined, cats); b.type = 'button'; b.style.setProperty('--cat', c.color); b.setAttribute('aria-pressed', String(post.cats.includes(c.id))); const face = el('span', 'tst-cat-face', c.name[0], b); face.setAttribute('aria-hidden', 'true'); el('span', 'tst-cat-name', c.name, b);
-        b.onclick = () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); const now = tstPublished.get(id).cats.filter(x => x !== c.id); tstPublished.update(id, { cats: on ? [...now, c.id] : now }); }; }
-      el('p', 'tst-label', 'Category');
-      const chips = el('div', 'tst-chips tst-chips-wrap'); chips.setAttribute('role', 'radiogroup'); chips.setAttribute('aria-label', 'Category');
-      for (const c of LRTstPublished.CATEGORIES) { const b = el('button', 'tst-chip', undefined, chips); b.type = 'button'; b.setAttribute('role', 'radio'); b.style.setProperty('--chip-dot', c.color); b.setAttribute('aria-checked', String(post.category === c.id)); el('span', 'tst-chip-dot', undefined, b); el('span', '', c.name, b);
-        b.onclick = () => { const next = tstPublished.update(id, { category: c.id }); for (const x of chips.children) x.setAttribute('aria-checked', String(x === b)); card.dataset.category = c.id; card.style.setProperty('--tile', c.color); icon.innerHTML = tstSvg(LRTstPublished.ICONS[next.icon]); }; }
-      const actions = el('div', 'tst-actions');
-      const copyBtn = el('button', 'tst-action tst-copy', 'Copy', actions); copyBtn.type = 'button';
-      copyBtn.onclick = async () => { const ok = await LRCaptions.copy(tstPublished.get(id).text); copyBtn.textContent = ok ? 'Copied' : 'Try again'; setTimeout(() => { if (copyBtn.isConnected) copyBtn.textContent = 'Copy'; }, 1800); };
-      const editBtn = el('button', 'tst-action', 'Edit text', actions); editBtn.type = 'button';
-      editBtn.onclick = () => { if (edit.hidden) { edit.hidden = false; text.hidden = true; editBtn.textContent = 'Save text'; edit.focus(); } else { const next = tstPublished.update(id, { text: edit.value }); if (next) text.textContent = next.text; edit.hidden = true; text.hidden = false; editBtn.textContent = 'Edit text'; } };
-      const remove = el('button', 'tst-action tst-remove', post.from === 'studio' ? 'Back to studio' : 'Remove', actions); remove.type = 'button';
-      remove.onclick = () => { if (!remove.dataset.confirm) { remove.dataset.confirm = 'yes'; remove.textContent = post.from === 'studio' ? 'Move it back?' : 'Remove for good?'; return; } tstPublished.remove(id); captionDesk.changed(); todayUI.refresh(); openPublished(); toast(`<span>${post.from === 'studio' ? 'Back in the Caption studio.' : 'Removed from your grid.'}</span>`, 2000, true); };
-    }, 'tst');
   }
   // Cozy moments: a floating card under the room name, with the checklist and the cats' diary.
   const cozyPop = document.createElement('section');
@@ -2509,8 +2453,8 @@ function startLofiRooms() {
     for(const child of body.children)child.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{duration:280,easing:ease});
   }
   // tool tags the sheet so the shared pastel tool styles (tools.css) can theme it.
-  const SHEET_TOOLS = { 'Caption studio':'captions', 'Groceries':'groceries', 'On the fridge door':'groceries', 'Pushup tally':'tally', 'The idea jar':'ideas', 'Tea':'tea', 'A little savings jar':'savings', 'Pixel maker':'sketch', 'French corner':'french', 'A little whiteboard':'whiteboard', 'A little wardrobe':'wardrobe', 'Files':'files', 'Rename file':'files', 'Delete this file?':'files', 'Calendar':'calendar', 'The newspaper':'newspaper', 'Book':'book' };
-  const SHEET_TOOL_SUBS = { 'TwoStoryTails posting plan':'tst', 'Your day, remembered gently.':'calendar' };
+  const SHEET_TOOLS = { 'Groceries':'groceries', 'On the fridge door':'groceries', 'Pushup tally':'tally', 'The idea jar':'ideas', 'Tea':'tea', 'A little savings jar':'savings', 'Pixel maker':'sketch', 'French corner':'french', 'A little whiteboard':'whiteboard', 'A little wardrobe':'wardrobe', 'Files':'files', 'Rename file':'files', 'Delete this file?':'files', 'Calendar':'calendar', 'The newspaper':'newspaper', 'Book':'book' };
+  const SHEET_TOOL_SUBS = { 'Your day, remembered gently.':'calendar' };
   function codeSheet(title, sub, build, tool = '') { glideSheet(() => buildSheet(title, sub, build, tool)); }
   function buildSheet(title, sub, build, tool) {
     frenchUI?.close(false);
@@ -2538,13 +2482,10 @@ function startLofiRooms() {
   }
   function widgetAction(it) {
     const def = LRWidgets.attached(it.t);
-    if (!def || !['tst-corkboard', 'pomodoro-candle', 'app-portals'].includes(def.id)) return false;
+    if (!def || !['pomodoro-candle', 'app-portals'].includes(def.id)) return false;
     widgets.refresh([it.t]);
     const data = widgets.data(def.id), links = widgets.destinations(it.t);
-    if (def.id === 'tst-corkboard') {
-      if (widgetView && it.id) widgetView.feedback(it.id);
-      openPublished();
-    } else if (links.length > 1) {
+    if (links.length > 1) {
       codeSheet('Choose a destination', CAT[it.t].name, h => widgetLinks(h('div', 'widget-news'), links, it.id));
     } else if (links.length) {
       // Start the visual feedback before opening, keeping navigation in the tap
@@ -3041,7 +2982,7 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     const todoTab = sections['To-Do'];
     const todoHeading=h('div','todo-heading','',todoTab);h('h2','','To-Do',todoHeading);
-    todayUI.mount(target,{openDay:date=>calendar.openDay(date),captions:host=>{LRCaptions.renderDaily(host,captionDesk);},googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
+    todayUI.mount(target,{openDay:date=>calendar.openDay(date),googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     target = sections.Rooms;
     const roomsHeading=h('div','rooms-heading');h('h2','','Rooms',roomsHeading);h('span','rooms-count',`${rooms.length} room${rooms.length === 1 ? '' : 's'}`,roomsHeading);
@@ -3551,7 +3492,7 @@ function startLofiRooms() {
   const renderLoop = LRPerformance.createLoop({activity,step:loop,fullRate:()=>filming || !!view.capturing || $('#photo').classList.contains('open'),draw:()=>{if(!filming && !barnaby.active)view.draw();}});
   renderLoop.start();
   liveWeather.refresh();
-  window.__lr = { openNotebook,shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,tstPublished,openPublished,openTstPost,publishClip,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,captionStudio,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { openNotebook,shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, library, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, newspaperSheet, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.

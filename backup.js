@@ -4,7 +4,7 @@
   'use strict';
   const FORMAT='lofi-rooms-backup',VERSION=1,PREFIX='lr.',LAST='lr.lastBackup';
   // Never in a backup: sign-in tokens (private, and they expire) and caches the app rebuilds.
-  const SKIP=new Set(['lr.googleCalendarToken','lr.roomSnapshots','lr.captionDesk']);
+  const SKIP=new Set(['lr.googleCalendarToken','lr.roomSnapshots','lr.captionDesk']);   // lr.captionDesk: cache from the old Caption studio
   const kept=k=>typeof k==='string'&&k.startsWith(PREFIX)&&!SKIP.has(k)&&!/token/i.test(k);
   function keys(storage){const out=[];for(let i=0;i<storage.length;i++){const k=storage.key(i);if(kept(k))out.push(k);}return out.sort();}
   function build(storage,now=Date.now()){

@@ -297,10 +297,8 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-week-day:hover > b { outline:none; }
 
 .today-feature { display:grid; grid-template-columns:minmax(0,1fr) 56px; gap:10px; align-items:stretch; margin-bottom:26px; }
-.today-feature[data-active=caption] { grid-template-columns:56px minmax(0,1fr); }
 .today-feature.french-only { grid-template-columns:minmax(0,1fr); }
 .today-feature-pane { position:relative; min-width:0; display:flex; flex-direction:column; border-radius:24px; overflow:hidden; background:var(--today-gold); color:var(--today-gold-ink); min-height:290px; }
-.today-feature-pane + .today-feature-pane { background:var(--today-caption); color:var(--today-caption-ink); }
 .today-feature-pane[hidden] { display:none; }
 .today-feature-toggle { flex:none; display:block; width:100%; padding:22px 16px 8px; background:none; color:inherit; border:0; border-radius:0; font:500 23px/1.25 Fredoka,sans-serif; text-align:center; }
 .today-feature-toggle[aria-expanded=false] { display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; transform:rotate(180deg); padding:18px 10px; position:absolute; inset:0; height:auto; min-height:0; font-size:18px; cursor:pointer; }
@@ -315,22 +313,6 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-french .french-quick-actions { gap:12px; }
 .today-french .french-quick-actions button { width:44px; height:44px; background:#fff6; color:inherit; border-color:#49392233; }
 .today-french .french-review-status { color:inherit; opacity:.8; text-align:center; font-size:12px; }
-.today-caption-desk { padding:0 16px 20px; flex:1; display:flex; flex-direction:column; min-width:0; }
-.today-caption-desk[hidden] { display:none; }
-.today-caption-heading { display:flex; justify-content:flex-end; min-height:32px; }
-.today-caption-heading h3 { display:none; }
-.today-caption-desk button { min-width:44px; min-height:44px; padding:6px 10px; color:inherit; background:transparent; border:1px solid transparent; border-radius:14px; }
-.today-caption-desk button:hover { background:#ffffff35; }
-.today-caption-desk button:disabled { opacity:.4; }
-.today-caption-desk .today-caption-text { margin:0 0 14px; font-size:17px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; max-height:280px; overflow:auto; }
-.today-caption-meta { display:block; font-size:11px; opacity:.75; }
-.today-caption-actions { display:flex; align-items:center; gap:2px; margin-top:auto; padding-top:12px; }
-.today-caption-page { font-size:26px; }
-.today-caption-count { margin:0 auto 0 2px!important; font-size:12px; white-space:nowrap; }
-.today-caption-desk .today-caption-copy { border-color:#49392233; background:#fff6; font-weight:800; }
-.today-caption-idea { font-size:13px; margin-block:8px; }
-.today-caption-idea summary { cursor:pointer; padding-block:6px; }
-.today-caption-idea p { white-space:pre-wrap; }
 .today-main { display:block; min-width:0; }
 .today-sky.has-task-focus .today-google-focus { padding:18px; margin:0 0 14px; border:1px solid var(--line); border-radius:24px; background:var(--panel-solid); box-shadow:none; color:var(--ink); --note-ink:var(--ink); --note-muted:var(--ink-dim); --note-rule:var(--line); }
 .today-google-focus .google-tasks { padding:0; margin:0; min-width:0; }
@@ -357,7 +339,7 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .today-moment-extra { padding:12px 0; border-bottom:1px solid var(--line); }
 .today-moment-extra > summary { cursor:pointer; font:500 17px Fredoka,sans-serif; padding:4px; }
 .today-moment-extra .today-moment { margin-top:10px; }
-@media(max-width:360px) { .today-feature { gap:8px; grid-template-columns:minmax(0,1fr) 48px; }.today-feature[data-active=caption] { grid-template-columns:48px minmax(0,1fr); }.today-feature-toggle { font-size:21px; padding-inline:10px; }.today-caption-desk { padding-inline:12px; }.space-today .today-quick .today-ritual { padding:12px 4px; gap:7px; }.space-today .today-quick .ritual-icon { font-size:22px; }.space-today .today-quick b { font-size:16px; } }
+@media(max-width:360px) { .today-feature { gap:8px; grid-template-columns:minmax(0,1fr) 48px; }.today-feature-toggle { font-size:21px; padding-inline:10px; }.today-caption-desk { padding-inline:12px; }.space-today .today-quick .today-ritual { padding:12px 4px; gap:7px; }.space-today .today-quick .ritual-icon { font-size:22px; }.space-today .today-quick b { font-size:16px; } }
 @media(prefers-reduced-motion:no-preference) { .today-feature { transition:grid-template-columns .25s ease; }.today-feature-pane { transition:background .25s ease; } }
 .today-sky.has-task-focus .today-google-focus .chipbtn { background:var(--chip); color:var(--ink); }
 .today-google-focus .google-task-row.completed .google-task-copy b { color:var(--ink-dim); }
