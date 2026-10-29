@@ -3508,7 +3508,22 @@ function startLofiRooms() {
   // The Lane's places, wired to the systems that already exist: Mallow's shop and Fireflies,
   // the Daily Brief archive, the future-self mailbox and the calendar.
   laneModel = LRLane.create({ store, today });
-  laneUI = LRLane.createView({ model: laneModel, today, phase: () => meta.phase, reducedMotion: () => view.reducedMotion, sound: Sound,
+  // Residents: every pet across your saved rooms (not robot vacuums or visiting neighbours),
+  // named the way the room names them, so anyone's renamed pets just work.
+  function lanePets() {
+    const out = [], seen = new Set();
+    for (const r of rooms) {
+      const d = r.id === meta.current ? room.serialize() : store.get('lr.room.' + r.id, null);
+      for (const it of (d && Array.isArray(d.items) ? d.items : [])) {
+        const C = CAT[it.t];
+        if (!C || C.kind !== 'pet' || C.robot || it.visitor) continue;
+        const key = r.id + ':' + it.id; if (seen.has(key)) continue; seen.add(key);
+        out.push({ key, name: it.t === 'cat' ? catName(it) : (it.name || C.name), coat: it.t === 'cat' ? (CATS[it.c] || CATS[0]).base : (Array.isArray(C.vars?.[it.c || 0]) && typeof C.vars[it.c || 0][0] === 'number' ? C.vars[it.c || 0][0] : 0xb08a68) });
+      }
+    }
+    return out;
+  }
+  laneUI = LRLane.createView({ model: laneModel, today, phase: () => meta.phase, pets: lanePets, weather: () => meta.weather || 'clear', seasons: LR.SEASONS || [], location: () => { try { return { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }; } catch (e) { return {}; } }, reducedMotion: () => view.reducedMotion, sound: Sound,
     notice: text => toast(`<span>${esc(text)}</span>`, 2600, true),
     catalog: LRShop.allCatalog, shop, thumb: item => item.costume ? costumeThumb(item.costume) : item.piece ? thumbOf(item.piece) : '',
     onBuy: () => { renderTray(); try { discover('market'); } catch (e) { /* optional */ } },

@@ -40,3 +40,28 @@ test('the lane model records visits once a day and keeps read marks',()=>{
   day='2026-10-21';assert.equal(m.visit(),null);day='2026-10-25';assert.match(m.visit(2),/away 4 days/);assert.equal(m.visit(2),null,'only once per return');
   assert.equal(m.isRead('welcome'),false);m.markRead('welcome');m.markRead('welcome');assert.equal(m.isRead('welcome'),true);assert.equal(JSON.parse(data['lr.lane']).read.length,1);
 });
+test('residents: the save’s own pets, one seeded place a day, everyone home at night',()=>{
+  const pets=['Biscuit','Pepper','Mochi','Toast','Bean'].map((name,i)=>({key:'r:'+i,name,coat:0x111111*i}));
+  const day=L.residents({pets,date:'2026-10-29',phase:'afternoon'});
+  assert.deepEqual(day,L.residents({pets,date:'2026-10-29',phase:'afternoon'}),'same day, same routine');
+  assert.equal(day.length,5);assert.ok(day.every(r=>['house','shop','mail','notice'].includes(r.place)&&L.DOING[r.place].includes(r.doing)));
+  const week=new Set();for(let d=20;d<=29;d++)L.residents({pets,date:`2026-10-${d}`,phase:'morning'}).forEach(r=>week.add(r.place));
+  assert.equal(week.size,4,'over a week the pets visit every place');
+  assert.ok(L.residents({pets,date:'2026-10-29',phase:'night'}).every(r=>r.place==='house'&&r.doing==='asleep at home'));
+  assert.equal(L.residents({pets:[],date:'2026-10-29'}).length,0);
+  assert.equal(L.sayAround([{name:'Neo',doing:'asleep at home'},{name:'Cali',doing:'asleep at home'},{name:'Bean',doing:'sorting the post'}]),'Neo and Cali are asleep at home. Bean is sorting the post.');
+});
+test('seasons: hemisphere from latitude or time zone, a note a month, dressing from date and weather',()=>{
+  assert.equal(L.hemisphere({timeZone:'America/Toronto'}),'north');assert.equal(L.hemisphere({timeZone:'Australia/Sydney'}),'south');
+  assert.equal(L.hemisphere({timeZone:'America/Sao_Paulo'}),'south');assert.equal(L.hemisphere({latitude:-41,timeZone:'Europe/Paris'}),'south');
+  assert.notEqual(L.seasonNote('2026-07-10','north'),L.seasonNote('2026-07-10','south'));assert.equal(L.seasonNote('2026-07-10','south'),L.seasonNote('2026-01-10','north'));
+  const seasons=[{group:'halloween',from:[9,1],to:[10,2]},{group:'holiday',from:[11,1],to:[0,7]}];
+  assert.deepEqual(L.dressing({date:'2026-10-31',seasons,weather:'storm'}),{season:'halloween',weather:'rain'});
+  assert.deepEqual(L.dressing({date:'2027-01-05',seasons,weather:'snow'}),{season:'holiday',weather:'snow'});
+  assert.deepEqual(L.dressing({date:'2026-06-01',seasons,weather:'clear'}),{season:'',weather:''});
+});
+test('birthdays already on the calendar are spotted 30 days ahead and marked in the week',()=>{
+  const events=[{date:'2026-11-05',title:"Mom's Birthday"},{date:'2026-10-30',title:'Anniversary dinner'},{date:'2026-11-01',title:'Vet'},{date:'2027-02-01',title:'bday later'}];
+  assert.deepEqual(L.birthdays({events,today:'2026-10-29'}).map(e=>[e.title,e.inDays]),[['Anniversary dinner',1],["Mom's Birthday",7]]);
+  const rows=L.notices({today:'2026-10-29',events});assert.equal(rows[0].items[0].kind,'birthday');assert.match(rows[0].items[0].title,/^🎂 /);
+});
