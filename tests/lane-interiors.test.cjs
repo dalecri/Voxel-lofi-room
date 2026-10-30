@@ -31,3 +31,10 @@ test('the street: four fronts in Lane-tab order, each door on open pavement, and
  for(const p of ['house','shop','mail']){const o=L.outside(p),[x,,t]=L.STREET[p];assert(o.x>x&&o.x<x+3&&o.z>2,p);}
  assert(!R.GROUPS.some(g=>g[0]==='lane'),'street fronts never appear in the Add tray');
 });
+test('neighbours stand on the street with a talk action, and Mallow steps out of the shop in the mornings',()=>{
+ const folks=L.neighbors({phase:'morning',weather:'rain'});const {data,actions}=L.interior(R,'street',[],{neighbors:folks}),room=new R.Room();assert(room.load(data));builds(room,'street');
+ for(const t of ['lanemallow','lanereader','lanestray']){const it=room.items.find(i=>i.t===t);assert(it,t);assert.match(actions[it.id],/^talk:/);}
+ assert(!L.interior(R,'shop',[],{mallowOut:true}).data.items.some(i=>i.t==='merchantcat'));
+ const C=['lanehome','laneshop','lanepost'].map(t=>room.items.find(i=>i.t===t)).map(f=>[f.x+R.CAT[f.t].door,f.z+R.CAT[f.t].size[1]].join());
+ for(const n of folks)assert(!C.includes(n.at.join()),n.id+' never blocks a door');
+});
