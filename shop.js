@@ -53,10 +53,17 @@
       onPurchase(item);
       return true;
     }
+    // A present (from a visitor on the lane): owned like a purchase, but free.
+    function gift(id) {
+      const item = allCatalog.find(c => c.id === id);
+      if (!item || owned.has(id)) return false;
+      owned.add(id); store.set('lr.shopOwned', [...owned]); onPurchase(item);
+      return true;
+    }
     function spend(n) {if(!Number.isSafeInteger(n)||n<=0||balance<n)return false;balance-=n;store.set('lr.fireflies',balance);return true;}
     function tip(n) {if(![5,10,25].includes(n)||!spend(n))return false;onTip(n);return true;}
     function gild(room) {if(!room||isGilded(room)||!spend(150))return false;room.gild=finishOf(room);return true;}
-    return { earn, buy, tip, gild, owns: id => owned.has(id), available: C => !C.shop || owned.has(C.shop), get balance() { return balance; }, get earnedToday() { return day().earned; } };
+    return { earn, buy, gift, tip, gild, owns: id => owned.has(id), available: C => !C.shop || owned.has(C.shop), get balance() { return balance; }, get earnedToday() { return day().earned; } };
   }
 
   function register(L) {

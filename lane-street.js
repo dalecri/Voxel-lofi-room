@@ -136,3 +136,60 @@
     },
   });
 })();
+
+// Little discoveries: things that turn up on the street for a day. Unfound ones carry a small
+// glowing sparkle (it.on) so you can spot them from across the road.
+(function () {
+  const LR = typeof module !== 'undefined' && module.exports ? require('./room.js') : window.LR;
+  const { def, shade, mix, hash3 } = LR;
+  const sparkle = (m, s, y) => { if (s && s.on) { m.set(4, y, 4, 0xfff2b0, true).set(3, y + 1, 4, 0xfff2b0, true).set(5, y + 1, 4, 0xfff2b0, true).set(4, y + 2, 4, 0xfff2b0, true); } };
+  def('laneletter', {
+    name: 'A letter', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane', walk: true,
+    vars: [[0xfff6e8, 0xc0675a]],
+    build(m, [paper, seal], s) {
+      m.box(1, 0, 2, 7, 1, 6, paper).box(1, 1, 2, 7, 2, 3, shade(paper, 0.92));
+      for (let k = 0; k < 3; k++) m.box(1 + k, 1, 3 + k, 7 - k, 2, 4 + k, shade(paper, 0.9));   // the flap
+      m.box(3, 1, 4, 5, 2, 5, seal);
+      sparkle(m, s, 4);
+    },
+  });
+  def('lanebloom', {
+    name: 'A flower', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane',
+    vars: [[0x9a6ad8, 0xf2c14e, 'crocus'], [0xf2c14e, 0x6a4a2a, 'sunflower'], [0xb88ad8, 0xf2c14e, 'aster'], [0xf8f8f2, 0x86cc5c, 'snowdrop']],
+    build(m, [petal, heart, kind], s) {
+      const stems = kind === 'sunflower' ? [[4, 4, 12]] : [[2, 3, 5], [4, 5, 7], [6, 3, 4]];
+      for (const [x, z, h] of stems) {
+        m.box(x, 0, z, x + 1, h, z + 1, 0x4a8a3a);
+        if (kind === 'sunflower') { m.box(x - 2, h, z - 2, x + 3, h + 1, z + 3, petal).set(x, h + 1, z, heart).set(x - 1, h + 1, z, heart).set(x, h + 1, z - 1, heart); }
+        else if (kind === 'snowdrop') { m.set(x, h, z + 1, 0x4a8a3a).box(x, h - 2, z + 1, x + 1, h, z + 2, petal); }
+        else { m.box(x - 1, h, z, x + 2, h + 1, z + 1, petal).box(x, h, z - 1, x + 1, h + 1, z + 2, petal).set(x, h + 1, z, heart); }
+      }
+      m.box(1, 0, 6, 3, 1, 7, 0x5fae4a).box(5, 0, 1, 7, 1, 2, 0x5fae4a);
+      sparkle(m, s, kind === 'sunflower' ? 15 : 9);
+    },
+  });
+  def('laneparcel', {
+    name: 'A parcel', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane',
+    vars: [[0xc8955e, 0xe8dcc4]],
+    build(m, [card, string], s) {
+      m.box(1, 0, 1, 7, 5, 7, (x, y, z) => shade(card, 0.94 + 0.08 * hash3(x, y, z, 2)));
+      m.box(4, 0, 1, 5, 5, 7, string).box(1, 4, 4, 7, 5, 5, string).box(4, 5, 4, 5, 6, 5, string);
+      m.box(2, 1, 7, 4, 3, 8, 0xfff6e8).set(2, 2, 8, 0x3a3238);              // the address label
+      sparkle(m, s, 7);
+    },
+  });
+  def('lanevisitor', {
+    name: 'A visitor', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane',
+    vars: [[0x8a6a4a, 0x5a7fb0], [0xe8e2d8, 0xd9584a], [0x3a3438, 0xf2c14e], [0xd88a3a, 0x6a9a5a]],
+    build(m, [coat, pack], s) {
+      const fur = (x, y, z) => shade(coat, 0.95 + 0.07 * hash3(x, y, z, 4));
+      m.box(2, 0, 1, 6, 6, 5, fur).box(2, 0, 5, 3, 1, 7, coat).box(5, 0, 5, 6, 1, 7, coat);
+      m.box(1, 6, 2, 7, 11, 7, fur).box(1, 11, 3, 3, 13, 5, coat).box(5, 11, 3, 7, 13, 5, coat);
+      m.box(2, 7, 7, 6, 8, 8, mix(coat, 0xffffff, 0.5)).set(2, 9, 7, 0x3a3238).set(5, 9, 7, 0x3a3238).set(3, 8, 8, 0xf08aa0);
+      m.box(1, 2, -1, 7, 8, 1, pack).box(2, 8, -1, 6, 9, 1, shade(pack, 0.8)).box(3, 4, -2, 5, 6, -1, shade(pack, 0.85));   // a travelling pack
+      m.box(0, 12, 2, 8, 13, 7, shade(pack, 0.7)).box(2, 13, 3, 6, 14, 6, shade(pack, 0.7));                                 // a hat
+      m.box(6, 0, 0, 7, 1, 3, coat);
+      sparkle(m, s, 16);
+    },
+  });
+})();

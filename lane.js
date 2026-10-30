@@ -90,7 +90,7 @@
     return '';
   }
   function create({ store, today }) {
-    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [], talks: cleanTalks(s.talks) }; };
+    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [], talks: cleanTalks(s.talks), day: s.day && valid(s.day.date) ? { date: s.day.date, found: Array.isArray(s.day.found) ? s.day.found.filter(x => typeof x === 'string').slice(0, 8) : [], carrying: typeof s.day.carrying === 'string' ? s.day.carrying : null } : null, kept: Array.isArray(s.kept) ? s.kept.filter(x => typeof x === 'string' && valid(x.slice(0, 10))).slice(-60) : [] }; };
     const save = s => store.set(KEY, s);
     return {
       // Called when the lane is shown: returns the away note (once) and records the visit.
@@ -105,6 +105,12 @@
       markRead(id) { const s = read(); if (!s.read.includes(id)) { s.read.push(id); save(s); } },
       // The last thing you talked about with a neighbour: one small record each, never a log.
       memory: id => read().talks[id] || null,
+      // Today's little discoveries: what you've found, and the parcel you're carrying (if any).
+      // A new day starts fresh; a parcel nobody received is quietly returned by the post.
+      today() { const s = read(), t = today(); return s.day && s.day.date === t ? s.day : { date: t, found: [], carrying: null }; },
+      found(id) { const s = read(), d = this.today(); if (!d.found.includes(id)) d.found.push(id); if (d.carrying === id) d.carrying = null; s.day = d; if (/:letter$/.test(id) && !s.kept.includes(id)) s.kept.push(id); save(s); },
+      carry(id) { const s = read(), d = this.today(); d.carrying = id; s.day = d; save(s); },
+      get kept() { return read().kept; },
       remember(id, rec) { if (!NEIGHBORS[id]) return; const s = read(); s.talks[id] = { date: rec.date, topic: rec.topic, reply: rec.reply }; save(s); },
     };
   }
@@ -160,6 +166,56 @@
       ] },
   };
   const WET = w => ['rain', 'storm', 'snow'].includes(w);
+
+  // ---------- Little discoveries: two or three a day, seeded by the date ----------
+  // A letter from a neighbour, a flower on the green, a parcel left at the wrong door, and now and
+  // then a visitor passing through with a piece of furniture that needs a home. Nothing is lost if
+  // you miss a day: letters you open are kept in the Mail Room, and tomorrow brings new things.
+  const LANE_LETTERS = [
+    { from: 'Juniper', subject: 'A pressed leaf', body: 'I found a pressed leaf in a library book, right at the best chapter. Somebody marked their place with autumn. I’m leaving it in this envelope so you can mark yours.\n\nJuniper' },
+    { from: 'Mallow', subject: 'Inventory, sort of', body: 'Dear neighbour,\n\nI counted the shelf this morning and got a different number twice. I’ve decided the shop is slightly bigger on the inside. Come and check my maths sometime.\n\nYour shopkeeper, Mallow' },
+    { from: 'Puddle', subject: 'From under the awning', body: 'It rained on my side of town last night and I thought of the lane. The lamps here look like little moons in the puddles. I hope it rains near you soon. (Not too much.)\n\nPuddle' },
+    { from: 'A neighbour', subject: 'Your window', body: 'To whoever lives in the cottage: thank you for the light in your window. I walk home late, and it’s the warmest thing on the street.\n\nA neighbour' },
+    { from: 'Juniper', subject: 'A short one', body: 'Here is the whole of a poem I liked:\n\n“The kettle knows\nbefore I do\nthat it is time.”\n\nThat’s it. That’s the poem. Short ones count.\n\nJuniper' },
+    { from: 'Mallow', subject: 'A small confession', body: 'I talk to the teapots when the shop is quiet. They are excellent listeners. I thought you should know, in case you hear me through the door.\n\nMallow' },
+    { from: 'The Mail Room', subject: 'Postmark: somewhere warm', body: 'This postcard has travelled a long way and lost its sender on the journey. On the front: a sunny harbour. On the back, just one line: “Wish you were here.” We think it means you.' },
+    { from: 'Puddle', subject: 'A sunny day', body: 'It was sunny today so I didn’t come by. I wanted you to know I wasn’t ignoring you. I was being dry somewhere. Back with the next rain.\n\nPuddle' },
+  ];
+  const BLOOMS = { spring: ['crocus', 'Crocuses'], summer: ['sunflower', 'A sunflower'], autumn: ['aster', 'Asters'], winter: ['snowdrop', 'Snowdrops'] };
+  const BLOOM_SPOTS = [[4, 9], [9, 9], [6, 12], [11, 10], [1, 11]], BLOOM_WHERE = ['by the bench', 'near the lamp', 'at the edge of the green', 'under the big tree', 'by the path'];
+  const VISITORS = [
+    { name: 'Bramble', coat: 0x8a6a4a, who: 'a tinker passing through', says: 'Mended this on the road and I’ve no room left in the cart. Would you give it a home?' },
+    { name: 'Odile', coat: 0xe8e2d8, who: 'a traveller from the coast', says: 'I’m moving somewhere smaller, and this deserves a proper room. Yours, if you’d like it.' },
+    { name: 'Fennel', coat: 0x3a3438, who: 'a removals driver with one thing left over', says: 'Everything got delivered except this. The paperwork says “the lane”. That’s you, I reckon.' },
+    { name: 'Sorrel', coat: 0xd88a3a, who: 'Mallow’s cousin, heading north', says: 'Mallow said you’d appreciate something a bit unusual. Don’t tell him I gave it away for free.' },
+  ];
+  const PARCELS = [['Fragile: books', 'juniper'], ['This way up (probably)', 'mallow'], ['Smells faintly of tea', 'mallow'], ['Do not bend: pressed flowers', 'juniper'], ['Handle with care: one teapot', 'mallow']];
+  function seasonOf(date, south = false) { const m = +date.slice(5, 7), k = [3, 4, 5].includes(m) ? 'spring' : [6, 7, 8].includes(m) ? 'summer' : [9, 10, 11].includes(m) ? 'autumn' : 'winter'; return south ? { spring: 'autumn', summer: 'winter', autumn: 'spring', winter: 'summer' }[k] : k; }
+  // gifts: every catalogue id a visitor could bring (owned or not, so the day stays stable);
+  // giftFor() then picks the first one you don't own yet, starting from the day's seeded spot.
+  function discoveries({ date, gifts = [], south = false }) {
+    if (!valid(date)) return [];
+    const rnd = seeded(date + '|finds'), count = rnd() < 0.4 ? 3 : 2;
+    const kinds = seededOrder(['letter', 'bloom', 'parcel'], date + '|kinds').slice(0, count);
+    if (gifts.length && dayNumber(date) % 3 === 0 && rnd() < 0.6) kinds[kinds.length - 1] = 'visitor';   // a visitor is a treat, about one day in five
+    return kinds.map(kind => {
+      const id = date + ':' + kind;
+      if (kind === 'letter') { const l = LANE_LETTERS[Math.floor(rnd() * LANE_LETTERS.length)]; return { id, kind, at: [4, 2], piece: 'laneletter', ...l, title: `A letter from ${l.from}` }; }
+      if (kind === 'bloom') { const k = Math.floor(rnd() * BLOOM_SPOTS.length), [flower, label] = BLOOMS[seasonOf(date, south)]; return { id, kind, at: BLOOM_SPOTS[k], piece: 'lanebloom', c: Object.keys(BLOOMS).indexOf(seasonOf(date, south)), flower, title: `${label} came up ${BLOOM_WHERE[k]}` }; }
+      if (kind === 'parcel') { const [label, to] = PARCELS[Math.floor(rnd() * PARCELS.length)]; return { id, kind, at: [6, 3], piece: 'laneparcel', label, to, title: `A parcel for ${NEIGHBORS[to].name}`, }; }
+      const v = VISITORS[Math.floor(rnd() * VISITORS.length)];
+      return { id, kind, at: [9, 8], piece: 'lanevisitor', c: VISITORS.indexOf(v), gifts, giftAt: Math.floor(rnd() * gifts.length), ...v, title: `${v.name}, ${v.who}` };
+    });
+  }
+  function giftFor(d, owns = () => false) {
+    const list = d?.gifts || [];
+    for (let k = 0; k < list.length; k++) { const id = list[(d.giftAt + k) % list.length]; if (!owns(id)) return id; }
+    return null;   // you own everything: the visitor brings a jar of fireflies instead
+  }
+  // Letters you've opened on the lane, newest first, rebuilt from their ids.
+  function keptLetters(ids = []) {
+    return ids.map(id => { const d = discoveries({ date: id.slice(0, 10) }).find(x => x.id === id); return d && d.kind === 'letter' ? { id, date: id.slice(0, 10), from: d.from, subject: d.subject, body: d.body } : null; }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date));
+  }
   // Where everyone is right now. place: 'street' (with a spot on the street), 'shop', or 'away'.
   function neighbors({ phase = 'day', weather = 'clear' } = {}) {
     const wet = WET(weather), out = [];
@@ -299,7 +355,8 @@
   const catHead = (coat, name) => `<svg viewBox="0 0 16 14" aria-hidden="true"><title>${String(name).replace(/[<&]/g, '')}</title><path d="M2 13V4l3 2h6l3-2v9z" fill="#${(coat >>> 0).toString(16).padStart(6, '0').slice(-6)}" stroke="#00000040" stroke-width="1"/><rect x="5" y="8" width="1.6" height="1.6" fill="#2a2a2a"/><rect x="9.4" y="8" width="1.6" height="1.6" fill="#2a2a2a"/></svg>`;
   function createView({ model, today, pets = () => [], weather = () => 'clear', seasons = [], location = () => ({}), phase = () => 'day', reducedMotion = () => false, notice = () => {}, sound = {},
     catalog = [], shop = null, thumb = () => '', onBuy = () => {}, openCatalogue = null,
-    currentLocation = () => null, returnHome = null, visitRoom = null, digest = null, mailbox = null, openLetter = () => {}, calendar = null }) {
+    currentLocation = () => null, returnHome = null, visitRoom = null, digest = null, mailbox = null, openLetter = () => {}, calendar = null,
+    gifts = [], sheet = null, onFind = () => {} }) {
     const el = (tag, cls, text, parent) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; if (parent) parent.appendChild(n); return n; };
     const play = name => { try { sound[name]?.(); } catch (e) { /* sounds are optional */ } };
     let place = null, dismissedAway = false, town = [];
@@ -318,6 +375,7 @@
         el('p', '', awayNote, note); const ok = el('button', 'chipbtn', 'Thanks', note); ok.type = 'button'; ok.onclick = () => { dismissedAway = true; note.remove(); };
       }
       el('p','lane-intro muted','Step outside and stroll the street, pop straight into a place, or open your house to manage your rooms.',lane);
+      if (visitRoom) { const p = progress(), line = el('p', 'lane-finds', undefined, lane); line.textContent = p.carrying ? `📦 You’re carrying ${NEIGHBORS[p.carrying.to].name}’s parcel.` : p.found >= p.total ? `✨ You found all ${p.total} little things today.` : `✨ ${p.total - p.found} little thing${p.total - p.found === 1 ? '' : 's'} to find on the lane today.`; }
       if (visitRoom) { const walk = el('button', 'chipbtn primary lane-walk', '🚶 Walk the lane', lane); walk.type = 'button'; walk.onclick = () => { play('flip'); visitRoom('street'); }; }
       const location=currentLocation();if(location){const status=el('div','lane-location',undefined,lane);el('span','',location,status);if(returnHome){const back=el('button','chipbtn','Back home',status);back.type='button';back.onclick=returnHome;}}
       const street = el('div', 'lane-street', undefined, lane); street.setAttribute('role', 'group'); street.setAttribute('aria-label', 'Places on the lane');
@@ -412,6 +470,12 @@
         const text = el('span', '', undefined, row); el('b', '', letter.subject, text); el('small', '', 'From ' + letter.from, text);
         row.onclick = () => { model.markRead(letter.id); openLetter(letter); };
       }
+      const kept = keptLetters(model.kept);
+      if (kept.length) {
+        el('h3', '', 'Found on the lane', panel);
+        const found = el('div', 'lane-list', undefined, panel);
+        for (const letter of kept) { const row = el('button', 'lane-row', undefined, found); row.type = 'button'; el('span', 'lane-row-icon', '✉', row).setAttribute('aria-hidden', 'true'); const text = el('span', '', undefined, row); el('b', '', letter.subject, text); el('small', '', 'From ' + letter.from, text); row.onclick = () => openLetter(letter); }
+      }
     }
     // ---- The Notice Board: tomorrow and this week, straight from the calendar ----
     function renderNotice(panel) {
@@ -444,6 +508,53 @@
       for (const n of neighbors({ phase: phase(), weather: weather() })) { const li = el('li', '', undefined, folks); li.innerHTML = catHead(n.coat, n.name); el('span', '', `${n.name} is ${n.doing}.`, li); }
       if (calendar?.open) { const b = el('button', 'chipbtn', 'Pin something on the calendar', panel); b.type = 'button'; b.onclick = calendar.open; }
     }
+    function finds() {
+      const list = discoveries({ date: today(), gifts, south: hemisphere(location()) === 'south' });
+      return list.map(d => { if (d.kind !== 'visitor') return d; const item = catalog.find(c => c.id === giftFor(d, id => !!shop?.owns(id))) || null; return { ...d, item, gift: item?.piece || null }; });
+    }
+    function progress() { const day = model.today(), list = finds(); return { found: list.filter(d => day.found.includes(d.id)).length, total: list.length, carrying: list.find(d => d.id === day.carrying) || null }; }
+    // Tapping a discovery on the street.
+    function find(id) {
+      const d = finds().find(x => x.id === id); if (!d) return;
+      const done = model.today().found.includes(id);
+      if (d.kind === 'letter') { model.found(id); onFind(d, { take: true }); play('flip'); openLetter({ id, from: d.from, subject: d.subject, body: d.body }); return; }
+      if (d.kind === 'bloom') { if (done) { notice(`${d.title}. Still blooming.`); return; } model.found(id); play('chime'); notice(`${d.title}.`); onFind(d, { reward: 'bloom' }); return; }
+      if (!sheet) return;
+      if (d.kind === 'parcel') {
+        sheet(d.title, host => {
+          const box = el('div', 'lane-find', undefined, host);
+          el('p', 'lane-find-label', '“' + d.label + '”', box);
+          const to = NEIGHBORS[d.to], here = neighbors({ phase: phase(), weather: weather() }).find(n => n.id === d.to);
+          el('p', '', `Left at the wrong door. It’s addressed to ${to.name}, who is ${here?.doing || 'around somewhere'}.`, box);
+          if (here?.place === 'away') el('p', 'muted', 'Mallow will pass it on if they’re not about.', box);
+          const b = el('button', 'chipbtn primary', 'Pick it up', box); b.type = 'button';
+          b.onclick = () => { model.carry(id); play('click'); onFind(d, { take: true, close: true }); notice(`You’re carrying ${to.name}’s parcel. Say hello to hand it over.`); };
+        });
+        return;
+      }
+      // A visitor with something unusual.
+      sheet(d.name, host => {
+        const box = el('div', 'lane-talk lane-find', undefined, host);
+        const who = el('div', 'lane-talk-who', undefined, box); el('span', 'lane-talk-face', undefined, who).innerHTML = catHead(d.coat, d.name);
+        const nm = el('div', '', undefined, who); el('b', '', 'Visiting the lane', nm); el('small', '', d.who[0].toUpperCase() + d.who.slice(1), nm);
+        const log = el('div', 'lane-talk-log', undefined, box), say = (t, mine) => el('p', 'lane-bubble' + (mine ? ' mine' : ''), t, log);
+        if (done) { say('Enjoy it! I’ll be on my way by sunset. Lovely street, this.'); return; }
+        if (!d.item) {
+          say('I was going to give you something unusual, but you seem to have one of everything! Here, have a jar of fireflies instead.');
+          const b = el('button', 'chipbtn primary', 'Thank you', box); b.type = 'button'; b.onclick = () => { model.found(id); b.remove(); say('Thank you', true); onFind(d, { reward: 'visitor' }); };
+          return;
+        }
+        say(d.says);
+        const card = el('div', 'lane-item lane-gift', undefined, box);
+        const art = thumb(d.item); if (art) { const img = el('img', '', undefined, card); img.src = art; img.alt = ''; } else el('div', 'lane-item-icon', d.item.icon || '🎁', card);
+        el('b', '', d.item.name, card); el('p', 'muted', d.item.desc || '', card);
+        const row = el('div', 'lane-talk-replies', undefined, box);
+        const yes = el('button', 'chipbtn primary', 'Give it a home', row); yes.type = 'button';
+        const no = el('button', 'chipbtn', 'Not today', row); no.type = 'button';
+        yes.onclick = () => { model.found(id); row.remove(); card.remove(); say('Give it a home', true); say('Wonderful. It’s been waiting for the right room.'); play('chime'); onFind(d, { gift: d.item }); };
+        no.onclick = () => { row.remove(); say('Not today', true); say('No trouble at all. I’ll be about until sunset if you change your mind.'); };
+      });
+    }
     // A chat with a neighbour: what they remember, one question, two answers, and their reply.
     function renderTalk(id, host) {
       const N = NEIGHBORS[id]; if (!N) return;
@@ -455,6 +566,15 @@
       el('p', 'lane-talk-about muted', N.about, box);
       const log = el('div', 'lane-talk-log', undefined, box); log.setAttribute('aria-live', 'polite');
       const say = (text, mine) => el('p', 'lane-bubble' + (mine ? ' mine' : '') + (chat.remembered && !mine && log.children.length === 0 ? ' remembered' : ''), text, log);
+      const carried = finds().find(d => d.id === model.today().carrying && d.kind === 'parcel');
+      if (carried && (carried.to === id || id === 'mallow')) {
+        const own = carried.to === id, give = el('button', 'chipbtn primary lane-handover', own ? 'Hand over the parcel' : `Leave ${NEIGHBORS[carried.to].name}’s parcel with Mallow`, box); give.type = 'button';
+        give.onclick = () => {
+          model.found(carried.id); give.remove(); say(own ? 'Here’s your parcel.' : 'This is for ' + NEIGHBORS[carried.to].name + '.', true); play('chime');
+          say(own ? ({ mallow: 'My parcel! It was at the wrong door all morning? You’re a hero. A small, parcel-carrying hero.', juniper: 'Oh! I’d given up on it. Thank you. I owe you a chapter.' }[id] || 'Thank you!') : 'For Juniper? I’ll pass it on with a biscuit. Thank you, neighbour.');
+          onFind(carried, { reward: 'parcel' });
+        };
+      }
       for (const line of chat.lines) say(line);
       if (chat.ask) say(chat.ask);
       if (!chat.replies.length) return;
@@ -468,14 +588,14 @@
         };
       });
     }
-    return { mount, renderPlace, renderTalk, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
+    return { mount, renderPlace, renderTalk, finds, find, progress, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
   }
   // Public interiors are rebuilt for a visit; they never become house rooms or drafts.
   // The street outside: your house, Mallow's Shop, the Mail Room and the Notice Board in the
   // same order as the Lane tab, a sidewalk to stroll along and a little green across the road.
   // Doors carry actions ('home', 'go:shop', 'go:mail'); residents are today's pets out and about.
   const STREET = { house: [1, 0, 'lanehome'], shop: [5, 0, 'laneshop'], mail: [9, 0, 'lanepost'], notice: [12, 1, 'laneboard'] };
-  function street(L, { residents = [], season = null, neighbors: folks = [] } = {}) {
+  function street(L, { residents = [], season = null, neighbors: folks = [], finds = [], found = [], carrying = null } = {}) {
     const room = new L.Room(), actions = {};
     room.n = 14; room.name = 'The Lane';
     room.wall = { style: L.WALLS.none ? 'none' : 'paint', color: 0 };
@@ -494,6 +614,14 @@
     if (season === 'holiday') add('holidaytree', { x: 7, z: 9 });
     // Neighbours stand where their routine puts them; tapping one starts a chat.
     for (const n of folks) if (n.place === 'street' && n.piece) add(n.piece, { x: n.at[0], z: n.at[1], c: n.c || 0, name: n.name }, 'talk:' + n.id);
+    // Today's discoveries. Letters and parcels leave the street once picked up; the flower stays
+    // (it bloomed!) and the visitor waves you off after handing over their piece.
+    for (const d of finds) {
+      const done = found.includes(d.id), act = 'find:' + d.id;
+      if ((d.kind === 'letter' || d.kind === 'parcel') && (done || carrying === d.id)) continue;
+      add(d.piece, { x: d.at[0], z: d.at[1], c: d.c || 0, on: !done }, act);
+      if (d.kind === 'visitor' && !done && d.gift && L.CAT[d.gift]) for (const [x, z] of [[10, 8], [10, 9], [9, 10], [6, 9]]) if (add(d.gift, { x, z, on: true }, act)) break;
+    }
     // Pets who are out today wander the green, near the place they're spending the day.
     const spots = [[3, 7], [7, 8], [11, 7], [2, 10], [8, 11], [12, 11]];
     residents.filter(r => r.place !== 'house' && r.c != null).slice(0, spots.length).forEach((r, i) => add('cat', { x: spots[i][0], z: spots[i][1], c: r.c, name: r.name }));
@@ -546,6 +674,6 @@
     }
     return {data:room.serialize(),actions};
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer, discoveries, keptLetters, giftFor, VISITORS, LANE_LETTERS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);
