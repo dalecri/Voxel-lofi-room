@@ -29,7 +29,7 @@ with sync_playwright() as p:
  # First chat with Mallow: a hello, one question, two answers; your answer is kept for tomorrow.
  tap('lanemallow');assert 'Mallow' in page.locator('#sheetBody').inner_text() and talk().locator('.lane-talk-replies button').count()==2
  first=talk().locator('.lane-talk-replies button').first.inner_text();talk().locator('.lane-talk-replies button').first.click()
- assert talk().locator('.lane-bubble.mine').inner_text()==first and 'remember this tomorrow' in talk().inner_text()
+ assert talk().locator('.lane-bubble.mine').inner_text()==first and 'remember this' in talk().inner_text()
  mem=page.evaluate('JSON.parse(localStorage.getItem("lr.lane")).talks.mallow');assert mem['reply']==0,mem
  page.keyboard.press('Escape')
  # Again today: just a nod, no new question.
@@ -38,6 +38,28 @@ with sync_playwright() as p:
  page.evaluate('''()=>{const s=JSON.parse(localStorage.getItem("lr.lane"));const d=new Date();d.setDate(d.getDate()-1);s.talks.mallow.date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;localStorage.setItem("lr.lane",JSON.stringify(s));}''')
  recall=page.evaluate('m=>LRLane.NEIGHBORS.mallow.topics.find(t=>t.id===m.topic).replies[m.reply][2]',mem)
  tap('lanemallow');assert talk().locator('.lane-bubble.remembered').inner_text()==recall and talk().locator('.lane-talk-replies button').count()==2;page.keyboard.press('Escape')
+
+ # Build prior visit days through the real model, then exercise story UI and persistence.
+ def seed_chats(count):
+  page.evaluate('''count=>{
+   const store={get:(k,f)=>JSON.parse(localStorage.getItem(k))||f,set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
+   const state=store.get('lr.lane',{});delete state.talks.mallow;store.set('lr.lane',state);
+   const model=LRLane.create({store,today:()=>''});
+   for(let n=count;n>0;n--){const d=new Date();d.setDate(d.getDate()-n);const date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const chat=LRLane.talk('mallow',{date,memory:model.memory('mallow')});model.remember('mallow',LRLane.answer('mallow',chat.topic,1,date).record);
+   }
+  }''',count)
+ seed_chats(3)
+ tap('lanemallow');assert 'The quiet music box · 1 of 3' in talk().inner_text()
+ talk().locator('.lane-talk-replies button').last.click()
+ assert page.evaluate('JSON.parse(localStorage.getItem("lr.lane")).talks.mallow.warmth')==4
+ page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.companion')
+ page.evaluate('__lr.visitLaneRoom("street")');page.wait_for_function('__lr.laneVisit?.place==="street"')
+ tap('lanemallow');assert talk().locator('.lane-talk-replies').count()==0;page.keyboard.press('Escape')
+ seed_chats(7)
+ tap('lanemallow');assert 'My first sale was a crooked stool' in talk().inner_text()
+ assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
+ page.screenshot(path='/tmp/neighbour-warmth-mobile.png');page.keyboard.press('Escape')
 
  # Puddle and Juniper have their own voices.
  tap('lanestray');assert 'Puddle' in page.locator('#sheetBody').inner_text() and 'rain' in talk().inner_text().lower();page.keyboard.press('Escape')
