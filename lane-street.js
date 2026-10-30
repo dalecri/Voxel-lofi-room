@@ -193,3 +193,66 @@
     },
   });
 })();
+
+// Slow projects: a raised garden bed (empty, or one of four plants at five stages), the bench you
+// mend over three days, and the courtyard's chalk sign that fills in as pieces arrive.
+(function () {
+  const LR = typeof module !== 'undefined' && module.exports ? require('./room.js') : window.LR;
+  const { def, shade, hash3 } = LR;
+  const LEAF = 0x5fae4a, STEM = 0x4a8a3a;
+  const PLANT = [
+    // sunflower, lavender, strawberry, pumpkin: how each looks at full bloom
+    (m) => { m.box(4, 3, 4, 5, 15, 5, STEM).box(3, 8, 4, 4, 9, 6, LEAF).box(5, 11, 3, 6, 12, 5, LEAF); m.box(2, 15, 2, 7, 16, 7, 0xf2c14e).box(3, 16, 3, 6, 17, 6, 0x6a4a2a); },
+    (m) => { for (const [x, z] of [[2, 3], [4, 5], [6, 3], [3, 6], [5, 2]]) { m.box(x, 3, z, x + 1, 9, z + 1, 0x6a9a5a).box(x, 9, z, x + 1, 12, z + 1, 0x9a6ad8); } },
+    (m) => { m.box(1, 3, 1, 7, 5, 7, (x, y, z) => shade(LEAF, 0.9 + 0.15 * hash3(x, y, z, 5))); for (const [x, z] of [[1, 3], [6, 2], [3, 6], [5, 5], [2, 1]]) m.box(x, 4, z, x + 1, 6, z + 1, 0xd9384a).set(x, 6, z, LEAF); },
+    (m) => { m.box(1, 3, 2, 7, 4, 7, LEAF).box(2, 4, 3, 6, 7, 6, 0xe8782a).box(3, 7, 4, 4, 8, 5, STEM).set(2, 4, 1, LEAF).set(6, 4, 6, LEAF); },
+  ];
+  function bedBase(m) {
+    m.box(0, 0, 0, 8, 3, 8, (x, y, z) => (x === 0 || z === 0 || x === 7 || z === 7 ? shade(0x8a6a4a, 0.92 + 0.1 * hash3(x, y, z, 2)) : 0x5a3a26));
+  }
+  const vars = [['empty', 0, 0]];
+  for (let p = 0; p < 4; p++) for (let g = 0; g < 5; g++) vars.push(['plant', p, g]);
+  def('lanebed', {
+    name: 'Garden bed', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane', vars,
+    build(m, [kind, p, g]) {
+      bedBase(m);
+      if (kind === 'empty') { m.set(2, 3, 2, 0x4a2e1e).set(5, 3, 5, 0x4a2e1e); return; }
+      if (g === 0) { for (const [x, z] of [[2, 3], [4, 4], [5, 2]]) m.set(x, 3, z, 0x3a2418); m.box(6, 3, 6, 7, 6, 7, 0xf2efe8).set(6, 6, 6, 0xe86a6a); return; }   // seeds and a marker stick
+      if (g === 1) { m.set(4, 3, 4, STEM).set(3, 4, 4, LEAF).set(5, 4, 4, LEAF); return; }
+      if (g === 2) { m.box(4, 3, 4, 5, 6, 5, STEM).box(2, 5, 4, 7, 6, 5, LEAF).box(4, 6, 3, 5, 7, 6, LEAF); return; }
+      if (g === 3) { m.box(4, 3, 4, 5, 9, 5, STEM).box(2, 6, 4, 7, 7, 5, LEAF).box(3, 9, 3, 6, 11, 6, shade(LEAF, 0.85)); return; }
+      PLANT[p](m);
+    },
+  });
+  // The bench: broken, new slats (bare wood), sanded, then painted sage, coral or harbour blue.
+  def('lanebench', {
+    name: 'The old bench', kind: 'floor', group: 'lane', size: [2, 1], tap: 'lane', seat: 6,
+    vars: [['broken'], ['slats'], ['sanded'], ['painted', 0x9fb894], ['painted', 0xf07a5a], ['painted', 0x5a7fb0]],
+    build(m, [state, paint]) {
+      const IRON = 0x3a3842, raw = 0xd9b080, old = 0x8a7a68, wood = state === 'painted' ? paint : state === 'sanded' ? 0xe8c8a0 : raw;
+      for (const x of [1, 14]) m.box(x, 0, 2, x + 1, 6, 3, IRON).box(x, 0, 6, x + 1, 6, 7, IRON).box(x, 5, 2, x + 1, 6, 7, IRON).box(x, 6, 6, x + 1, 13, 7, IRON);
+      const slat = (z, y, ok, c) => { if (ok) m.box(0, y, z, 16, y + 1, z + 1, c); };
+      if (state === 'broken') {
+        slat(2, 6, true, old); slat(5, 6, true, old);                                     // two seat slats left, greying
+        m.box(0, 6, 4, 7, 7, 5, old).box(9, 5, 4, 16, 6, 5, shade(old, 0.85));             // one snapped and sagging
+        slat(6, 11, true, old); m.box(0, 8, 6, 9, 9, 7, old);                              // back rail half gone
+        m.box(3, 0, 8, 7, 1, 9, old).box(9, 0, 9, 12, 1, 10, old);                         // pieces on the grass
+        return;
+      }
+      for (const z of [2, 3, 4, 5]) slat(z, 6, true, (z % 2 && state === 'slats') ? shade(wood, 0.92) : wood);
+      for (const y of [8, 10, 12]) slat(6, y, true, wood);
+      if (state === 'painted') { m.box(6, 7, 3, 10, 8, 5, 0xfff6e8); m.set(7, 9, 6, 0xf2c14e).set(8, 9, 6, 0xf2c14e); }   // a cushion and a small brass plaque
+    },
+  });
+  // The courtyard's chalkboard: a little plan with one more square filled in per piece.
+  def('lanecourt', {
+    name: 'Courtyard sign', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane',
+    vars: [0, 1, 2, 3, 4, 5].map(n => [n]),
+    build(m, [n]) {
+      m.box(1, 0, 4, 2, 9, 5, 0x7a5a48).box(6, 0, 4, 7, 9, 5, 0x7a5a48);
+      m.box(0, 8, 3, 8, 16, 5, 0x7a5a48).box(1, 9, 5, 7, 15, 6, 0x2e3a34);
+      for (let k = 0; k < 5; k++) { const x = 1 + (k % 3) * 2, y = k < 3 ? 13 : 10; m.set(x, y, 6, k < n ? 0xf2efe8 : 0x4a5a52).set(x + 1, y, 6, k < n ? 0xf2efe8 : 0x4a5a52); }
+      if (n >= 5) m.set(6, 10, 6, 0xf2c14e).set(5, 11, 6, 0xf2c14e);   // a chalk star when it's finished
+    },
+  });
+})();

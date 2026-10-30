@@ -90,7 +90,7 @@
     return '';
   }
   function create({ store, today }) {
-    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [], talks: cleanTalks(s.talks), day: s.day && valid(s.day.date) ? { date: s.day.date, found: Array.isArray(s.day.found) ? s.day.found.filter(x => typeof x === 'string').slice(0, 8) : [], carrying: typeof s.day.carrying === 'string' ? s.day.carrying : null } : null, kept: Array.isArray(s.kept) ? s.kept.filter(x => typeof x === 'string' && valid(x.slice(0, 10))).slice(-60) : [] }; };
+    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [], talks: cleanTalks(s.talks), day: s.day && valid(s.day.date) ? { date: s.day.date, found: Array.isArray(s.day.found) ? s.day.found.filter(x => typeof x === 'string').slice(0, 8) : [], carrying: typeof s.day.carrying === 'string' ? s.day.carrying : null } : null, kept: Array.isArray(s.kept) ? s.kept.filter(x => typeof x === 'string' && valid(x.slice(0, 10))).slice(-60) : [], town: cleanTown(s.town) }; };
     const save = s => store.set(KEY, s);
     return {
       // Called when the lane is shown: returns the away note (once) and records the visit.
@@ -111,6 +111,9 @@
       found(id) { const s = read(), d = this.today(); if (!d.found.includes(id)) d.found.push(id); if (d.carrying === id) d.carrying = null; s.day = d; if (/:letter$/.test(id) && !s.kept.includes(id)) s.kept.push(id); save(s); },
       carry(id) { const s = read(), d = this.today(); d.carrying = id; s.day = d; save(s); },
       get kept() { return read().kept; },
+      // The street's slow projects: garden beds, the bench, the courtyard.
+      get town() { return read().town; },
+      setTown(town) { const s = read(); s.town = cleanTown(town); save(s); },
       remember(id, rec) { if (!NEIGHBORS[id]) return; const s = read(); s.talks[id] = { date: rec.date, topic: rec.topic, reply: rec.reply }; save(s); },
     };
   }
@@ -182,7 +185,7 @@
     { from: 'Puddle', subject: 'A sunny day', body: 'It was sunny today so I didn’t come by. I wanted you to know I wasn’t ignoring you. I was being dry somewhere. Back with the next rain.\n\nPuddle' },
   ];
   const BLOOMS = { spring: ['crocus', 'Crocuses'], summer: ['sunflower', 'A sunflower'], autumn: ['aster', 'Asters'], winter: ['snowdrop', 'Snowdrops'] };
-  const BLOOM_SPOTS = [[4, 9], [9, 9], [6, 12], [11, 10], [1, 11]], BLOOM_WHERE = ['by the bench', 'near the lamp', 'at the edge of the green', 'under the big tree', 'by the path'];
+  const BLOOM_SPOTS = [[4, 9], [5, 10], [6, 12], [0, 12], [7, 11]], BLOOM_WHERE = ['by the bench', 'near the garden', 'at the edge of the green', 'under the big tree', 'by the path'];
   const VISITORS = [
     { name: 'Bramble', coat: 0x8a6a4a, who: 'a tinker passing through', says: 'Mended this on the road and I’ve no room left in the cart. Would you give it a home?' },
     { name: 'Odile', coat: 0xe8e2d8, who: 'a traveller from the coast', says: 'I’m moving somewhere smaller, and this deserves a proper room. Yours, if you’d like it.' },
@@ -204,7 +207,7 @@
       if (kind === 'bloom') { const k = Math.floor(rnd() * BLOOM_SPOTS.length), [flower, label] = BLOOMS[seasonOf(date, south)]; return { id, kind, at: BLOOM_SPOTS[k], piece: 'lanebloom', c: Object.keys(BLOOMS).indexOf(seasonOf(date, south)), flower, title: `${label} came up ${BLOOM_WHERE[k]}` }; }
       if (kind === 'parcel') { const [label, to] = PARCELS[Math.floor(rnd() * PARCELS.length)]; return { id, kind, at: [6, 3], piece: 'laneparcel', label, to, title: `A parcel for ${NEIGHBORS[to].name}`, }; }
       const v = VISITORS[Math.floor(rnd() * VISITORS.length)];
-      return { id, kind, at: [9, 8], piece: 'lanevisitor', c: VISITORS.indexOf(v), gifts, giftAt: Math.floor(rnd() * gifts.length), ...v, title: `${v.name}, ${v.who}` };
+      return { id, kind, at: [7, 9], piece: 'lanevisitor', c: VISITORS.indexOf(v), gifts, giftAt: Math.floor(rnd() * gifts.length), ...v, title: `${v.name}, ${v.who}` };
     });
   }
   function giftFor(d, owns = () => false) {
@@ -212,18 +215,91 @@
     for (let k = 0; k < list.length; k++) { const id = list[(d.giftAt + k) % list.length]; if (!owns(id)) return id; }
     return null;   // you own everything: the visitor brings a jar of fireflies instead
   }
+  // ---------- Slow projects: the street changes a little, day by day ----------
+  // One step a day per project, never a deadline: beds grow on the days they're watered (rain
+  // counts), the bench is mended over three visits, and the courtyard gets one new piece a day,
+  // chosen by you. Everything stays once it's done, so the street slowly becomes yours.
+  const PLANTS = {
+    sunflower: { name: 'Sunflowers', seed: '🌻', c: 0 }, lavender: { name: 'Lavender', seed: '💜', c: 1 },
+    strawberry: { name: 'Strawberries', seed: '🍓', c: 2 }, pumpkin: { name: 'A pumpkin', seed: '🎃', c: 3 },
+  };
+  const GROW = ['Just planted', 'Sprouting', 'Leafing out', 'Budding', 'In full bloom'], GROWN = 4, BEDS = [[1, 10], [2, 10], [3, 10]];
+  const BENCH_STEPS = [
+    { label: 'Fit new slats', did: 'You fitted new slats. Juniper held the planks (and read between nails).' },
+    { label: 'Sand it smooth', did: 'Sanded smooth. It’s ready for paint.' },
+    { label: 'Paint it', did: 'A fresh coat of paint. The bench is mended!' },
+  ];
+  const BENCH_COLORS = [['sage', 'Sage'], ['coral', 'Coral'], ['blue', 'Harbour blue']];
+  const BENCH_STATE = ['Broken, with two slats missing', 'New slats, still rough', 'Sanded and ready for paint', 'Mended and freshly painted'];
+  // Each courtyard step offers two pieces; the one you pick stays.
+  const COURT = [
+    { label: 'A table', options: [{ name: 'An oilcloth table', items: [['mxmesa', 10, 9]] }, { name: 'A carved tea table', items: [['riad-table', 10, 9]] }] },
+    { label: 'Somewhere to sit', options: [{ name: 'Bentwood chairs', items: [['barbistrochair', 9, 9, 1], ['barbistrochair', 12, 10, 3]] }, { name: 'Woven equipal chairs', items: [['mxequipal', 9, 9, 1], ['mxequipal', 12, 10, 3]] }] },
+    { label: 'Lights for the evening', options: [{ name: 'Stone lanterns', items: [['toro', 13, 8], ['toro', 9, 11]] }, { name: 'Hanging lanterns', items: [['tsuridoro', 13, 8], ['tsuridoro', 9, 11]] }] },
+    { label: 'Something green', options: [{ name: 'Talavera planters', items: [['tavplanter', 9, 12], ['tavplanter', 13, 12]] }, { name: 'Pedestal planters', items: [['retro70s-planter', 9, 12], ['retro70s-planter', 13, 12]] }] },
+    { label: 'A centrepiece', options: [{ name: 'A statue fountain', items: [['eufountain', 11, 11]] }, { name: 'A plaza fountain', items: [['mxfountain', 11, 11]] }] },
+  ];
+  const emptyTown = () => ({ beds: BEDS.map(() => null), bench: { stage: 0, color: null, last: null }, court: { picks: [], last: null } });
+  function cleanTown(t) {
+    const out = emptyTown(); if (!t || typeof t !== 'object') return out;
+    if (Array.isArray(t.beds)) out.beds = BEDS.map((_, i) => { const b = t.beds[i]; return b && PLANTS[b.plant] && valid(b.planted) ? { plant: b.plant, planted: b.planted, water: Array.isArray(b.water) ? [...new Set(b.water.filter(valid))].sort().slice(-GROWN) : [] } : null; });
+    if (t.bench && typeof t.bench === 'object') out.bench = { stage: Math.max(0, Math.min(3, Number.isInteger(t.bench.stage) ? t.bench.stage : 0)), color: BENCH_COLORS.some(c => c[0] === t.bench.color) ? t.bench.color : null, last: valid(t.bench.last) ? t.bench.last : null };
+    if (out.bench.stage === 3 && !out.bench.color) out.bench.color = 'sage';
+    if (t.court && Array.isArray(t.court.picks)) out.court = { picks: t.court.picks.filter(x => x === 0 || x === 1).slice(0, COURT.length), last: valid(t.court.last) ? t.court.last : null };
+    return out;
+  }
+  const growth = bed => bed ? Math.min(GROWN, bed.water.length) : -1;
+  const copy = t => cleanTown(JSON.parse(JSON.stringify(t)));
+  // Each of these returns the new town, or null if it isn't possible today.
+  const projects = {
+    plant(town, i, plant, date) { if (!PLANTS[plant] || !valid(date) || town.beds[i] !== null || i < 0 || i >= BEDS.length) return null; const t = copy(town); t.beds[i] = { plant, planted: date, water: [] }; return t; },
+    water(town, i, date) { const b = town.beds[i]; if (!b || !valid(date) || b.water.includes(date) || growth(b) >= GROWN || date < b.planted) return null; const t = copy(town); t.beds[i].water.push(date); return t; },
+    // Rain waters every growing bed for you.
+    rain(town, date) { let t = town; town.beds.forEach((_, i) => { t = projects.water(t, i, date) || t; }); return t; },
+    clear(town, i) { if (growth(town.beds[i]) < GROWN) return null; const t = copy(town); t.beds[i] = null; return t; },
+    bench(town, date, color = null) { const b = town.bench; if (!valid(date) || b.stage >= 3 || b.last === date) return null; if (b.stage === 2 && !BENCH_COLORS.some(c => c[0] === color)) return null; const t = copy(town); t.bench.stage++; t.bench.last = date; if (t.bench.stage === 3) t.bench.color = color; return t; },
+    court(town, pick, date) { const c = town.court; if (!valid(date) || c.picks.length >= COURT.length || c.last === date || (pick !== 0 && pick !== 1)) return null; const t = copy(town); t.court.picks.push(pick); t.court.last = date; return t; },
+  };
+  // What the street shows for the projects. act: what tapping it opens.
+  function townPieces(town) {
+    const out = [];
+    town.beds.forEach((b, i) => { const g = growth(b); out.push({ t: 'lanebed', x: BEDS[i][0], z: BEDS[i][1], c: b ? 1 + PLANTS[b.plant].c * 5 + g : 0, act: 'bed:' + i }); });
+    out.push({ t: 'lanebench', x: 5, z: 7, r: 2, c: town.bench.stage < 3 ? town.bench.stage : 3 + BENCH_COLORS.findIndex(c => c[0] === town.bench.color), act: 'bench' });
+    out.push({ t: 'lanecourt', x: 8, z: 9, c: Math.min(town.court.picks.length, COURT.length), act: 'court' });
+    town.court.picks.forEach((pick, k) => { for (const [t, x, z, r] of COURT[k].options[pick].items) out.push({ t, x, z, r: r || 0, act: 'court' }); });
+    return out;
+  }
+  // A line for the Notice Board about each project.
+  function townNotes(town, date) {
+    const out = [];
+    const beds = town.beds.filter(Boolean);
+    if (!beds.length) out.push(['🌱', 'The garden beds are empty and waiting for seeds.']);
+    for (const b of beds) { const g = growth(b), thirsty = g < GROWN && !b.water.includes(date); out.push(['🌱', `${PLANTS[b.plant].name}: ${GROW[g].toLowerCase()}${g < GROWN ? ` (${g} of ${GROWN} days)` : ''}${thirsty ? '. Could use some water.' : '.'}`]); }
+    out.push(['🪑', `The bench: ${BENCH_STATE[town.bench.stage].toLowerCase()}.`]);
+    const n = town.court.picks.length;
+    out.push(['⛲', n >= COURT.length ? 'The courtyard is finished. Everyone’s been using it.' : n ? `The courtyard: ${n} of ${COURT.length} pieces. Next, ${COURT[n].label.toLowerCase()}.` : 'The courtyard is bare. It needs a table first.']);
+    return out;
+  }
+  // Neighbours notice the projects; at most one remark per chat.
+  function remark(id, { town = emptyTown(), weather = 'clear' } = {}) {
+    if (id === 'juniper') return ['That bench by the green has been broken for ages. Someone should fix it. I’m looking at you, gently.', 'New slats on the bench! I thought I heard hammering.', 'The bench is sanded. It just needs paint. I have opinions about colours, if you want them.', 'I’ve started reading on the mended bench. It’s the best seat on the lane.'][town.bench.stage];
+    if (id === 'mallow') { const n = town.court.picks.length; return n >= COURT.length ? 'Have you seen the courtyard? I had my morning tea there. Felt like a holiday.' : n ? `${COURT[n - 1].options[town.court.picks[n - 1]].name}, in the courtyard! It’s coming along beautifully.` : 'That courtyard is so bare. I keep picturing a little table there.'; }
+    if (id === 'puddle') { const b = town.beds.find(x => x && growth(x) < GROWN); if (b && WET(weather)) return `The rain is watering your ${PLANTS[b.plant].name.toLowerCase().replace(/^a /, '')}. I’ve been supervising.`; const done = town.beds.find(x => growth(x) >= GROWN); return done ? `${PLANTS[done.plant].name} in bloom! Rain did that. Rain, and you.` : null; }
+    return null;
+  }
   // Letters you've opened on the lane, newest first, rebuilt from their ids.
   function keptLetters(ids = []) {
     return ids.map(id => { const d = discoveries({ date: id.slice(0, 10) }).find(x => x.id === id); return d && d.kind === 'letter' ? { id, date: id.slice(0, 10), from: d.from, subject: d.subject, body: d.body } : null; }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date));
   }
   // Where everyone is right now. place: 'street' (with a spot on the street), 'shop', or 'away'.
-  function neighbors({ phase = 'day', weather = 'clear' } = {}) {
+  function neighbors({ phase = 'day', weather = 'clear', town = null } = {}) {
     const wet = WET(weather), out = [];
     const add = (id, place, doing, extra = {}) => out.push({ id, name: NEIGHBORS[id].name, coat: NEIGHBORS[id].coat, place, doing, ...extra });
     if (phase === 'morning') add('mallow', 'street', 'opening up the shop', { piece: 'lanemallow', at: [6, 2] });
     else add('mallow', 'shop', { day: 'minding the shelf', evening: 'counting the day’s Fireflies', night: 'dozing behind the counter' }[phase] || 'minding the shelf');
     if (phase === 'morning') add('juniper', 'street', 'reading the notice board', { piece: 'lanereader', c: 1, at: [13, 2] });
-    else if (phase === 'day') add('juniper', 'street', wet ? 'reading under the Mail Room porch' : 'reading under the tree', { piece: 'lanereader', c: 0, at: wet ? [9, 2] : [2, 8] });
+    else if (phase === 'day') add('juniper', 'street', wet ? 'reading under the Mail Room porch' : town?.bench.stage === 3 ? 'reading on the mended bench' : 'reading under the tree', { piece: 'lanereader', c: 0, at: wet ? [9, 2] : town?.bench.stage === 3 ? [4, 7] : [2, 8] });
+    else if (phase === 'evening' && !wet && (town?.court.picks.length || 0) >= 2) add('juniper', 'street', 'reading in the courtyard' + ((town.court.picks.length >= 3) ? ' by lantern light' : ''), { piece: 'lanereader', c: 0, at: [13, 10] });
     else add('juniper', 'away', 'home with a book');
     if (wet) add('puddle', 'street', weather === 'snow' ? 'watching the snow from under the awning' : 'sheltering under Mallow’s awning', { piece: 'lanestray', at: [5, 2] });
     else add('puddle', 'away', 'somewhere dry, waiting for rain');
@@ -356,7 +432,7 @@
   function createView({ model, today, pets = () => [], weather = () => 'clear', seasons = [], location = () => ({}), phase = () => 'day', reducedMotion = () => false, notice = () => {}, sound = {},
     catalog = [], shop = null, thumb = () => '', onBuy = () => {}, openCatalogue = null,
     currentLocation = () => null, returnHome = null, visitRoom = null, digest = null, mailbox = null, openLetter = () => {}, calendar = null,
-    gifts = [], sheet = null, onFind = () => {} }) {
+    gifts = [], sheet = null, onFind = () => {}, onTown = () => {} }) {
     const el = (tag, cls, text, parent) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; if (parent) parent.appendChild(n); return n; };
     const play = name => { try { sound[name]?.(); } catch (e) { /* sounds are optional */ } };
     let place = null, dismissedAway = false, town = [];
@@ -376,6 +452,9 @@
       }
       el('p','lane-intro muted','Step outside and stroll the street, pop straight into a place, or open your house to manage your rooms.',lane);
       if (visitRoom) { const p = progress(), line = el('p', 'lane-finds', undefined, lane); line.textContent = p.carrying ? `📦 You’re carrying ${NEIGHBORS[p.carrying.to].name}’s parcel.` : p.found >= p.total ? `✨ You found all ${p.total} little things today.` : `✨ ${p.total - p.found} little thing${p.total - p.found === 1 ? '' : 's'} to find on the lane today.`; }
+      if (visitRoom) { const t = model.town, d = today(), thirsty = t.beds.some(b => b && growth(b) < GROWN && !b.water.includes(d)), bench = t.bench.stage < 3 && t.bench.last !== d, court = t.court.picks.length < COURT.length && t.court.last !== d;
+        const todo = [thirsty && 'the garden could use water', bench && 'the bench needs a hand', court && 'the courtyard is ready for its next piece'].filter(Boolean);
+        if (todo.length) el('p', 'lane-todo', '🌱 ' + todo.join(', ').replace(/^./, c => c.toUpperCase()) + '.', lane); }
       if (visitRoom) { const walk = el('button', 'chipbtn primary lane-walk', '🚶 Walk the lane', lane); walk.type = 'button'; walk.onclick = () => { play('flip'); visitRoom('street'); }; }
       const location=currentLocation();if(location){const status=el('div','lane-location',undefined,lane);el('span','',location,status);if(returnHome){const back=el('button','chipbtn','Back home',status);back.type='button';back.onclick=returnHome;}}
       const street = el('div', 'lane-street', undefined, lane); street.setAttribute('role', 'group'); street.setAttribute('aria-label', 'Places on the lane');
@@ -503,9 +582,12 @@
         const list = el('ul', 'lane-who', undefined, panel);
         for (const r of town) { const li = el('li', '', undefined, list); li.innerHTML = catHead(r.coat, r.name); el('span', '', `${r.name} is ${r.doing}` + (/home/.test(r.doing) ? '' : ` (${names[r.place]})`), li); }
       }
+      el('h3', '', 'Around the lane', panel);
+      const notes = el('ul', 'lane-who lane-town-notes', undefined, panel);
+      for (const [icon, text] of townNotes(model.town, today())) { const li = el('li', '', undefined, notes); el('span', 'lane-town-icon', icon, li).setAttribute('aria-hidden', 'true'); el('span', '', text, li); }
       el('h3', '', 'Neighbours', panel);
       const folks = el('ul', 'lane-who lane-neighbours', undefined, panel);
-      for (const n of neighbors({ phase: phase(), weather: weather() })) { const li = el('li', '', undefined, folks); li.innerHTML = catHead(n.coat, n.name); el('span', '', `${n.name} is ${n.doing}.`, li); }
+      for (const n of neighbors({ phase: phase(), weather: weather(), town: model.town })) { const li = el('li', '', undefined, folks); li.innerHTML = catHead(n.coat, n.name); el('span', '', `${n.name} is ${n.doing}.`, li); }
       if (calendar?.open) { const b = el('button', 'chipbtn', 'Pin something on the calendar', panel); b.type = 'button'; b.onclick = calendar.open; }
     }
     function finds() {
@@ -524,7 +606,7 @@
         sheet(d.title, host => {
           const box = el('div', 'lane-find', undefined, host);
           el('p', 'lane-find-label', '“' + d.label + '”', box);
-          const to = NEIGHBORS[d.to], here = neighbors({ phase: phase(), weather: weather() }).find(n => n.id === d.to);
+          const to = NEIGHBORS[d.to], here = neighbors({ phase: phase(), weather: weather(), town: model.town }).find(n => n.id === d.to);
           el('p', '', `Left at the wrong door. It’s addressed to ${to.name}, who is ${here?.doing || 'around somewhere'}.`, box);
           if (here?.place === 'away') el('p', 'muted', 'Mallow will pass it on if they’re not about.', box);
           const b = el('button', 'chipbtn primary', 'Pick it up', box); b.type = 'button';
@@ -555,6 +637,64 @@
         no.onclick = () => { row.remove(); say('Not today', true); say('No trouble at all. I’ll be about until sunset if you change your mind.'); };
       });
     }
+    // Tapping a garden bed, the bench, or the courtyard: one small step today.
+    function project(act) {
+      if (!sheet) return;
+      const date = today(), save = (t, opts = {}) => { model.setTown(t); onTown(model.town, opts); };
+      if (act.startsWith('bed:')) {
+        const i = +act.slice(4);
+        sheet('Garden bed', host => {
+          const box = el('div', 'lane-find lane-project', undefined, host), bed = model.town.beds[i], g = growth(bed);
+          if (!bed) {
+            el('p', '', 'An empty bed, freshly dug. What would you like to grow? It takes four days of watering (rain counts).', box);
+            const row = el('div', 'lane-talk-replies', undefined, box);
+            for (const [key, P] of Object.entries(PLANTS)) { const b = el('button', 'chipbtn', `${P.seed} ${P.name}`, row); b.type = 'button'; b.onclick = () => { const t = projects.plant(model.town, i, key, date); if (!t) return; play('click'); save(projects.water(t, i, date) || t, { close: true, say: `${P.name} planted and watered. Come back tomorrow.` }); }; }
+            return;
+          }
+          const P = PLANTS[bed.plant];
+          el('p', 'lane-project-title', `${P.seed} ${P.name}: ${GROW[g]}`, box);
+          const bar = el('div', 'lane-progress', undefined, box); bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(GROWN)); bar.setAttribute('aria-valuenow', String(g));
+          for (let k = 0; k < GROWN; k++) el('span', k < g ? 'on' : '', undefined, bar);
+          if (g >= GROWN) {
+            el('p', '', 'In full bloom. It’ll stay like this as long as you like.', box);
+            const b = el('button', 'chipbtn', 'Clear the bed and plant something new', box); b.type = 'button'; b.onclick = () => { const t = projects.clear(model.town, i); if (t) save(t, { close: true, say: 'The bed is ready for new seeds.' }); };
+            return;
+          }
+          if (bed.water.includes(date)) { el('p', 'muted', 'Watered today. Come back tomorrow to see it grow.', box); return; }
+          const b = el('button', 'chipbtn primary', '💧 Water it', box); b.type = 'button';
+          b.onclick = () => { const t = projects.water(model.town, i, date); if (!t) return; play('chime'); const now = growth(t.beds[i]); save(t, { close: true, reward: now >= GROWN ? 'bloom' : null, say: now >= GROWN ? `${P.name} in full bloom!` : `${GROW[now]}. See you tomorrow.` }); };
+        });
+        return;
+      }
+      if (act === 'bench') {
+        sheet('The old bench', host => {
+          const box = el('div', 'lane-find lane-project', undefined, host), b = model.town.bench;
+          el('p', 'lane-project-title', BENCH_STATE[b.stage], box);
+          const bar = el('div', 'lane-progress', undefined, box); for (let k = 0; k < 3; k++) el('span', k < b.stage ? 'on' : '', undefined, bar);
+          if (b.stage >= 3) { el('p', '', 'Mended. Juniper reads here most afternoons now, and the plaque says “Fixed by a neighbour”.', box); return; }
+          if (b.last === date) { el('p', 'muted', 'That’s enough for today. Paint and glue like a night to settle.', box); return; }
+          const step = BENCH_STEPS[b.stage];
+          if (b.stage < 2) { const go = el('button', 'chipbtn primary', step.label, box); go.type = 'button'; go.onclick = () => { const t = projects.bench(model.town, date); if (t) { play('click'); save(t, { close: true, say: step.did }); } }; return; }
+          el('p', '', 'What colour should it be?', box);
+          const row = el('div', 'lane-talk-replies', undefined, box);
+          for (const [key, name] of BENCH_COLORS) { const c = el('button', 'chipbtn lane-paint', name, row); c.type = 'button'; c.dataset.paint = key; c.onclick = () => { const t = projects.bench(model.town, date, key); if (t) { play('chime'); save(t, { close: true, reward: 'bench', say: step.did }); } }; }
+        });
+        return;
+      }
+      if (act === 'court') {
+        sheet('The courtyard', host => {
+          const box = el('div', 'lane-find lane-project', undefined, host), c = model.town.court, n = c.picks.length;
+          el('p', 'lane-project-title', n >= COURT.length ? 'Finished!' : `${n} of ${COURT.length} pieces`, box);
+          const bar = el('div', 'lane-progress', undefined, box); for (let k = 0; k < COURT.length; k++) el('span', k < n ? 'on' : '', undefined, bar);
+          if (n) { const ul = el('ul', 'lane-court-list', undefined, box); c.picks.forEach((p, k) => el('li', '', COURT[k].options[p].name, ul)); }
+          if (n >= COURT.length) { el('p', '', 'A table, chairs, lights, plants and a fountain. The neighbours have tea here now.', box); return; }
+          if (c.last === date) { el('p', 'muted', 'One new piece a day. Tomorrow: ' + COURT[n].label.toLowerCase() + '.', box); return; }
+          el('p', '', `Today: ${COURT[n].label.toLowerCase()}. Which one?`, box);
+          const row = el('div', 'lane-talk-replies', undefined, box);
+          COURT[n].options.forEach((o, k) => { const b = el('button', 'chipbtn', o.name, row); b.type = 'button'; b.onclick = () => { const t = projects.court(model.town, k, date); if (t) { play('chime'); save(t, { close: true, reward: t.court.picks.length >= COURT.length ? 'court' : null, say: `${o.name} for the courtyard.` }); } }; });
+        });
+      }
+    }
     // A chat with a neighbour: what they remember, one question, two answers, and their reply.
     function renderTalk(id, host) {
       const N = NEIGHBORS[id]; if (!N) return;
@@ -576,6 +716,7 @@
         };
       }
       for (const line of chat.lines) say(line);
+      const note = chat.ask ? remark(id, { town: model.town, weather: weather() }) : null; if (note) say(note);
       if (chat.ask) say(chat.ask);
       if (!chat.replies.length) return;
       const picks = el('div', 'lane-talk-replies', undefined, box);
@@ -588,14 +729,14 @@
         };
       });
     }
-    return { mount, renderPlace, renderTalk, finds, find, progress, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
+    return { mount, renderPlace, renderTalk, finds, find, progress, project, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
   }
   // Public interiors are rebuilt for a visit; they never become house rooms or drafts.
   // The street outside: your house, Mallow's Shop, the Mail Room and the Notice Board in the
   // same order as the Lane tab, a sidewalk to stroll along and a little green across the road.
   // Doors carry actions ('home', 'go:shop', 'go:mail'); residents are today's pets out and about.
   const STREET = { house: [1, 0, 'lanehome'], shop: [5, 0, 'laneshop'], mail: [9, 0, 'lanepost'], notice: [12, 1, 'laneboard'] };
-  function street(L, { residents = [], season = null, neighbors: folks = [], finds = [], found = [], carrying = null } = {}) {
+  function street(L, { residents = [], season = null, neighbors: folks = [], finds = [], found = [], carrying = null, town = emptyTown() } = {}) {
     const room = new L.Room(), actions = {};
     room.n = 14; room.name = 'The Lane';
     room.wall = { style: L.WALLS.none ? 'none' : 'paint', color: 0 };
@@ -609,9 +750,10 @@
     add('lanehome', { x: 1, z: 0 }, 'home'); add('laneshop', { x: 5, z: 0 }, 'go:shop'); add('lanepost', { x: 9, z: 0 }, 'go:mail'); add('laneboard', { x: 12, z: 1 }, 'notice');
     add('streettree', { x: 0, z: 1, c: 0 }); add('plant', { x: 8, z: 1 }); add('mailbox', { x: 12, z: 3 }, 'go:mail');
     add('streetlamp', { x: 0, z: 3 }); add('streetlamp', { x: 8, z: 6 }); add('streetlamp', { x: 13, z: 6 });
-    add('bench', { x: 5, z: 7, r: 2 }); add('streettree', { x: 1, z: 8, c: 1 }); add('streettree', { x: 12, z: 9, c: 2 }); add('streettree', { x: 3, z: 12, c: 0 }); add('streettree', { x: 10, z: 12, c: 1 });
+    add('streettree', { x: 1, z: 8, c: 1 }); add('streettree', { x: 3, z: 12, c: 0 }); add('streettree', { x: 6, z: 13, c: 2 }); add('streettree', { x: 8, z: 13, c: 1 });
+    for (const p of townPieces(town)) add(p.t, { x: p.x, z: p.z, r: p.r || 0, c: p.c || 0 }, p.act);
     if (season === 'halloween') { add('pumpkins', { x: 3, z: 2 }); add('pumpkins', { x: 10, z: 3 }); }
-    if (season === 'holiday') add('holidaytree', { x: 7, z: 9 });
+    if (season === 'holiday') add('holidaytree', { x: 0, z: 7 });
     // Neighbours stand where their routine puts them; tapping one starts a chat.
     for (const n of folks) if (n.place === 'street' && n.piece) add(n.piece, { x: n.at[0], z: n.at[1], c: n.c || 0, name: n.name }, 'talk:' + n.id);
     // Today's discoveries. Letters and parcels leave the street once picked up; the flower stays
@@ -620,10 +762,10 @@
       const done = found.includes(d.id), act = 'find:' + d.id;
       if ((d.kind === 'letter' || d.kind === 'parcel') && (done || carrying === d.id)) continue;
       add(d.piece, { x: d.at[0], z: d.at[1], c: d.c || 0, on: !done }, act);
-      if (d.kind === 'visitor' && !done && d.gift && L.CAT[d.gift]) for (const [x, z] of [[10, 8], [10, 9], [9, 10], [6, 9]]) if (add(d.gift, { x, z, on: true }, act)) break;
+      if (d.kind === 'visitor' && !done && d.gift && L.CAT[d.gift]) for (const [x, z] of [[6, 10], [5, 9], [6, 11], [4, 11], [0, 9]]) if (add(d.gift, { x, z, on: true }, act)) break;
     }
     // Pets who are out today wander the green, near the place they're spending the day.
-    const spots = [[3, 7], [7, 8], [11, 7], [2, 10], [8, 11], [12, 11]];
+    const spots = [[3, 7], [7, 8], [2, 11], [8, 12], [0, 11], [4, 12]];
     residents.filter(r => r.place !== 'house' && r.c != null).slice(0, spots.length).forEach((r, i) => add('cat', { x: spots[i][0], z: spots[i][1], c: r.c, name: r.name }));
     return { data: room.serialize(), actions };
   }
@@ -674,6 +816,6 @@
     }
     return {data:room.serialize(),actions};
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer, discoveries, keptLetters, giftFor, VISITORS, LANE_LETTERS };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer, discoveries, keptLetters, giftFor, PLANTS, GROW, BENCH_STEPS, BENCH_COLORS, COURT, cleanTown, projects, growth, townPieces, townNotes, remark, VISITORS, LANE_LETTERS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);
