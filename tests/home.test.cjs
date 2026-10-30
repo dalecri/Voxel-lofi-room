@@ -43,3 +43,8 @@ test('Control Centre sort: Default keeps curated order, A-Z and Z-A sort by labe
  assert.deepEqual(H.sortApps(rows,'bogus').map(r=>r.id),['t','c','b']);
  assert.equal(JSON.stringify(rows),before);assert.deepEqual(H.SORTS.map(s=>s[0]),['default','az','za']);
 });
+
+test('universal search finds tool destinations alongside matching room contents',()=>{
+ const rows=H.search('radio',{apps:[{id:'sound',label:'Lofi radio'}],rooms:[{id:3,name:'Radio room'}]});
+ assert.deepEqual(rows.map(g=>g.type),['Tools','Rooms']);assert.equal(rows[0].items[0].id,'sound');assert.deepEqual(H.search('',{apps:[{id:'sound',label:'Lofi radio'}]}),[]);
+});

@@ -511,3 +511,20 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .home-sort-item:hover,.home-sort-item:focus-visible { background:var(--chip); }
 .home-sort-item[aria-checked=true] { background:var(--chip); }
 .home-sort-item[aria-checked=true]::after { content:''; width:10px; height:5px; margin-top:-3px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(-45deg); }
+
+/* Center the tool finder; Sort is its only adjacent utility. */
+.home-app-controls { display:grid; grid-template-columns:44px minmax(0,560px) 44px; justify-content:center; align-items:center; gap:8px; width:100%; margin:0 auto 18px; }
+.home-app-controls .home-search { grid-column:2; width:100%; text-align:center; }
+.home-app-controls .home-sort-wrap { grid-column:3; }
+
+/* A single room-level search floats above the canvas. */
+#roomSearchControl { display:contents; }
+#universalSearch { position:fixed; z-index:12; top:calc(var(--sat) + 92px); left:50%; transform:translate(-50%,-10px); width:min(520px,calc(100% - 32px)); box-sizing:border-box; padding:10px; margin:0; border:1px solid var(--line); border-radius:22px; background:var(--panel-solid); box-shadow:var(--shadow); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .18s,transform .18s,visibility .18s; }
+#universalSearch.is-expanded { opacity:1; visibility:visible; transform:translate(-50%,0); pointer-events:auto; }
+#universalSearch .home-search { min-height:44px; margin:0; padding:10px 14px; border:0; border-radius:14px; background:var(--chip); font-size:16px; }
+#universalSearch .home-results { max-height:min(50dvh,420px); overflow-y:auto; padding:4px; }
+#universalSearch .home-results > p { margin:8px; font-size:13px; }
+#universalSearch .home-result-group h3 { margin:12px 4px 4px; font-size:13px; }
+.home-app-controls { display:flex; justify-content:flex-end; margin-bottom:12px; }
+@media(prefers-reduced-motion:reduce) { #universalSearch { transition:none; } }
+body.reduce-motion #universalSearch { transition:none; }

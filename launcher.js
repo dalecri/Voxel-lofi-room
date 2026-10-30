@@ -27,7 +27,7 @@
     ['todo','To-Do','✓','Your list for today'],
     ['moments','Cozy moments','✦','The checklist and the cats’ version'],
     ['rooms','The Lane','⌂','Your house, the shop, mail and notices'],
-    ['sound','Radio & sound','♫','Choose what’s playing'],
+    ['sound','Lofi radio','♫','Choose what’s playing'],
     ['settings','Settings','⚙','Weather, motion and room settings'],
   ].map(([id,label,icon,description])=>({id,label,icon,description,...(['mailbox','letters'].includes(id)?{iconSrc:'assets/mailbox-access.png'}:{})}));
   // The first ID is the preview when absent. Any matching piece in the room

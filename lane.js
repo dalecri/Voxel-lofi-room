@@ -7,9 +7,9 @@
   'use strict';
   const KEY = 'lr.lane';
   const PLACES = [
-    ['house', 'Your house', 'Rooms, the house map and your guest book'],
-    ['shop', 'The Shop', 'Mallow’s shelf, three finds a day'],
-    ['mail', 'Mail Room', 'Papers, the Sunday magazine and letters'],
+    ['house', 'Your house', 'Manage your saved rooms'],
+    ['shop', 'Mallow’s Shop', 'Enter the shop · three finds a day'],
+    ['mail', 'Mail Room', 'Enter for papers and letters'],
     ['notice', 'Notice Board', 'What’s on this week'],
   ];
   const DAY = 86400000;
@@ -205,32 +205,34 @@
   const catHead = (coat, name) => `<svg viewBox="0 0 16 14" aria-hidden="true"><title>${String(name).replace(/[<&]/g, '')}</title><path d="M2 13V4l3 2h6l3-2v9z" fill="#${(coat >>> 0).toString(16).padStart(6, '0').slice(-6)}" stroke="#00000040" stroke-width="1"/><rect x="5" y="8" width="1.6" height="1.6" fill="#2a2a2a"/><rect x="9.4" y="8" width="1.6" height="1.6" fill="#2a2a2a"/></svg>`;
   function createView({ model, today, pets = () => [], weather = () => 'clear', seasons = [], location = () => ({}), phase = () => 'day', reducedMotion = () => false, notice = () => {}, sound = {},
     catalog = [], shop = null, thumb = () => '', onBuy = () => {}, openCatalogue = null,
-    digest = null, mailbox = null, openLetter = () => {}, calendar = null }) {
+    currentLocation = () => null, returnHome = null, visitRoom = null, digest = null, mailbox = null, openLetter = () => {}, calendar = null }) {
     const el = (tag, cls, text, parent) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; if (parent) parent.appendChild(n); return n; };
     const play = name => { try { sound[name]?.(); } catch (e) { /* sounds are optional */ } };
-    let place = 'house', dismissedAway = false, town = [];
+    let place = null, dismissedAway = false, town = [];
     // mount(host): draws the lane into the menu tab and returns the house panel, which the
     // app fills with the rooms gallery, house map and guest book exactly as before.
-    function mount(host, { awayNote = null } = {}) {
+    function mount(host, { awayNote = null, showHeading = true } = {}) {
       const lane = el('section', 'lane', undefined, host); lane.dataset.phase = phase();
       const dress = dressing({ date: today(), seasons, weather: weather() });
       if (dress.season) lane.dataset.season = dress.season;
       if (dress.weather) lane.dataset.weather = dress.weather;
       town = residents({ pets: pets(), date: today(), phase: phase() });
-      const head = el('div', 'lane-heading', undefined, lane); el('h2', '', 'The Lane', head);
+      const head = el('div', 'lane-heading', undefined, lane); if(showHeading)el('h2', '', 'The Lane', head);
       el('p', 'lane-when muted', new Date(today() + 'T12:00').toLocaleDateString(undefined, { weekday: 'long' }) + ' ' + ({ morning: 'morning', afternoon: 'afternoon', evening: 'evening', night: 'night', day: '' }[phase()] || '') + ' on the lane', head);
       if (awayNote && !dismissedAway) {
         const note = el('div', 'lane-away', undefined, lane); note.setAttribute('role', 'status');
         el('p', '', awayNote, note); const ok = el('button', 'chipbtn', 'Thanks', note); ok.type = 'button'; ok.onclick = () => { dismissedAway = true; note.remove(); };
       }
-      const street = el('div', 'lane-street', undefined, lane); street.setAttribute('role', 'tablist'); street.setAttribute('aria-label', 'Places on the lane');
+      el('p','lane-intro muted','Visit a place, or open your house to manage your rooms.',lane);
+      const location=currentLocation();if(location){const status=el('div','lane-location',undefined,lane);el('span','',location,status);if(returnHome){const back=el('button','chipbtn','Back home',status);back.type='button';back.onclick=returnHome;}}
+      const street = el('div', 'lane-street', undefined, lane); street.setAttribute('role', 'group'); street.setAttribute('aria-label', 'Places on the lane');
       const panels = {};
       for (const [id, name, hint] of PLACES) {
-        const b = el('button', 'lane-front', undefined, street); b.type = 'button'; b.dataset.place = id; b.setAttribute('role', 'tab'); b.id = 'lane-tab-' + id; b.title = hint;
+        const b = el('button', 'lane-front', undefined, street); b.type = 'button'; b.dataset.place = id;  b.id = 'lane-tab-' + id; b.title = hint;
         const here = at(town, id), faces = here.slice(0, 3).map(r => catHead(r.coat, r.name)).join('') + (here.length > 3 ? `<small>+${here.length - 3}</small>` : '');
-        b.innerHTML = `<svg viewBox="0 0 64 60" aria-hidden="true" shape-rendering="crispEdges">${FRONTS[id]}${decor(id)}<rect x="2" y="56" width="60" height="4" fill="#00000022"/></svg>${here.length ? `<span class="lane-residents">${faces}</span>` : ''}<span>${name}</span>`;
+        b.innerHTML = `<svg viewBox="0 0 64 60" aria-hidden="true" shape-rendering="crispEdges">${FRONTS[id]}${decor(id)}<rect x="2" y="56" width="60" height="4" fill="#00000022"/></svg>${here.length ? `<span class="lane-residents">${faces}</span>` : ''}<span>${name}</span><small class="lane-front-hint">${hint}</small>`;
         if (here.length) b.setAttribute('aria-label', `${name}: ${here.map(r => r.name).join(', ')} ${here.length === 1 ? 'is' : 'are'} here`);
-        const panel = el('div', 'lane-place', undefined, lane); panel.id = 'lane-' + id; panel.dataset.place = id; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', b.id); b.setAttribute('aria-controls', panel.id);
+        const panel = el('div', 'lane-place', undefined, lane); panel.id = 'lane-' + id; panel.dataset.place = id; panel.setAttribute('role', 'region'); panel.setAttribute('aria-labelledby', b.id); if(!['shop','mail'].includes(id))b.setAttribute('aria-controls',panel.id);
         panels[id] = panel;
         b.onclick = () => choose(id, true);
       }
@@ -239,12 +241,14 @@
         if (next) { e.preventDefault(); choose(next, true); street.querySelector(`[data-place=${next}]`).focus(); }
       };
       function choose(id, user = false) {
+        if(user && visitRoom && ['shop','mail'].includes(id)){place=null;play('flip');visitRoom(id);return;}
+        if(user && place===id)id=null;
         if (user && id !== place) play('flip');
         place = id;
-        for (const b of street.children) { const on = b.dataset.place === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; }
+        for (const b of street.children) { const on = b.dataset.place === id; if(!['shop','mail'].includes(b.dataset.place))b.setAttribute('aria-expanded',String(on));b.tabIndex=0; }
         for (const [pid, panel] of Object.entries(panels)) panel.hidden = pid !== id;
-        if (id !== 'house') renderPlace(id, panels[id]);
-        if (user && !reducedMotion() && panels[id].animate) panels[id].animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        if (id && id !== 'house') renderPlace(id, panels[id]);
+        if (id && user && !reducedMotion() && panels[id].animate) panels[id].animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
       }
       // Who's home: one line above the house content the app fills in.
       const home = at(town, 'house');
@@ -342,8 +346,53 @@
       }
       if (calendar?.open) { const b = el('button', 'chipbtn', 'Pin something on the calendar', panel); b.type = 'button'; b.onclick = calendar.open; }
     }
-    return { mount, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
+    return { mount, renderPlace, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView };
+  // Public interiors are rebuilt for a visit; they never become house rooms or drafts.
+  function interior(L, place, stock = []) {
+    if (!['shop','mail'].includes(place)) throw Error('Unknown lane room');
+    const room = new L.Room(), actions = {};
+    room.n = 14; room.name = place === 'shop' ? 'Mallow’s Shop' : 'Mail Room';
+    room.wall = {style:'wainscot',color:place === 'shop' ? 2 : 4};
+    room.floor = {style:'oak'};
+    const add = (t, o, action) => {
+      if (!L.CAT[t]) return null;
+      const it = room.make(t, o); if (!room.canPlace(it)) return null;
+      room.add(it); if (action) actions[it.id] = action; return it;
+    };
+    add('olddoor',{k:0,u:6,e:0,r:0},'home');
+    add('rug',{x:4,z:8,c:place === 'shop'?2:0});
+    add('floorlamp',{x:12,z:1,on:true});
+    add('plant',{x:1,z:1});
+    add('clock',{k:0,u:9,e:4});
+    add('window',{k:1,u:5,e:2});
+    add('plant',{x:12,z:12});
+    if (place === 'shop') {
+      add('marketstall',{x:2,z:1},'shop');
+      add('merchantcat',{x:4,z:3,name:'Mallow'},'shop');
+      add('bookshelf',{x:10,z:0},'shop');
+      for (const [i,item] of stock.slice(0,4).entries()) {
+        const x=1+(i%2)*6,z=6+Math.floor(i/2)*4;
+        const t=item.piece&&L.CAT[item.piece]?.kind==='floor'?item.piece:'nightstand';
+        const display=add(t,{x,z,c:0},'shop');
+        if (!display) add('nightstand',{x,z},'shop');
+        if(display?.t==='nightstand')add(item.piece&&L.CAT[item.piece]?.kind==='small'?item.piece:'books',{p:display.id,lx:0,lz:0},'shop');
+      }
+      // A stocked counter remains available even after the collection is complete.
+      add('desk',{x:10,z:3},'shop');
+    } else {
+      add('filecab',{x:1,z:0},'mail');add('filecab',{x:2,z:0},'mail');add('filecab',{x:3,z:0},'mail');
+      const papers=add('desk',{x:1,z:2},'mail');
+      if(papers)add('morningpaper',{p:papers.id,lx:0,lz:0},'mail');
+      add('bookshelf',{x:10,z:0},'mail');
+      add('mailbox',{x:9,z:3},'mail');
+      const writing=add('desk',{x:2,z:6},'compose');
+      if(writing)add('letterbox',{p:writing.id,lx:0,lz:0},'mailbox');
+      add('chair',{x:3,z:8,r:2});
+      add('sofa',{x:9,z:9,c:1});
+    }
+    return {data:room.serialize(),actions};
+  }
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

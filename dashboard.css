@@ -64,3 +64,8 @@
 #sheetBody[data-dashboard-font=mono] :where(h2,.today-welcome h2) { font:400 29px/1.15 'VT323',ui-monospace,monospace; }
 #sheetBody[data-dashboard-font=mono] :where(h3,h4,.google-tasks-heading h3,.google-task-day-heading h4) { font:400 25px/1.15 'VT323',ui-monospace,monospace; }
 #sheetBody[data-dashboard-font=mono] .settings-toggle-grid .toggle { font-family:'VT323',ui-monospace,monospace; }
+
+.capture-tabs { display:flex; gap:4px; padding:4px; margin:0 0 18px; border-radius:18px; background:var(--chip); }
+.capture-tabs .chipbtn { flex:1; margin:0; border:0; border-radius:14px; background:transparent; box-shadow:none; }
+.capture-tabs .chipbtn[aria-current=page] { background:var(--panel-solid); color:var(--ink); }
+.capture-photo { display:block; width:100%; max-height:46vh; object-fit:contain; border-radius:20px; margin-bottom:16px; }
