@@ -873,7 +873,7 @@ function startLofiRooms() {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bLane:'The Lane', bUndo: 'Undo (Ctrl+Z)', bShare: 'Photo and share', bHome: 'Control Centre', bMenu: 'Menu (H)', bCharacter: 'Character view (C)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bLane:'The Lane', bSettings:'Settings (,)', bUndo: 'Undo (Ctrl+Z)', bShare: 'Photo and share', bHome: 'Control Centre', bMenu: 'Menu (H)', bCharacter: 'Character view (C)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -1882,6 +1882,7 @@ function startLofiRooms() {
     else if (key === 'm') toggleRadio();
     else if (key === 'u') doUndo();
     else if (key === '?' || key === 'h') { $('#bMenu').click(); }
+    else if (key === ',') { $('#bSettings').click(); }
     else if (key === 'Escape') {
       if (state.drag) { if (state.drag.kind === 'move') setHidden(0); state.drag = null; view.setGhost(null); }
       else if (filming) filmCancel = true;
@@ -1976,7 +1977,7 @@ function startLofiRooms() {
     if (!notebookOpening) notebookTab = null;
     if (open) markMoving();
     sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
-    $('#bMenu').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;
+    $('#bMenu').setAttribute('aria-expanded','false'); $('#bSettings')?.setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;
     if (returnFocus) $('#bMenu').focus({preventScroll:true});
     // Dismissal and the pending room transition must survive an unavailable audio device.
     if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
@@ -2354,6 +2355,13 @@ function startLofiRooms() {
   $('#bMenu').onclick = () => {
     if (sheet.classList.contains('open') && $('#menu-today')) { closeSheets(); return; }
     renderMenu(); openSheet();
+    try { Sound.slide(true); } catch (e) { /* optional interface sound */ }
+  };
+  // Settings has its own button in the top-right corner: it opens the menu straight on Settings.
+  const settingsOpen = () => sheet.classList.contains('open') && !!$('#menu-settings') && !$('#menu-settings').hidden;
+  $('#bSettings').onclick = () => {
+    if (settingsOpen()) { closeSheets(); return; }
+    store.set('lr.menuTab', 'Settings'); renderMenu(); openSheet(); $('#bSettings').setAttribute('aria-expanded', 'true');
     try { Sound.slide(true); } catch (e) { /* optional interface sound */ }
   };
   sheet.addEventListener('click', e => { if (e.target === sheet) closeSheets(); });
@@ -2900,7 +2908,7 @@ function startLofiRooms() {
     if (doorNear !== d.id) { doorNear = d.id; toast(`<span>${laneAct ? LANE_DOORS[laneAct] || 'A door' : d.link === LANE ? 'Out to the lane' : d.link && rooms.some(r => r.id === d.link) ? `Door to ${roomTitle(d.link)}` : 'A door to somewhere new'}</span>`, 1200, true); }
     const face = doorFront(d)[2];
     let dh = P.heading - face; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
-    if (Math.abs(dh) < 0.8 && P.moving) {
+    if (Math.abs(dh) < 0.8 && (P.moving || held.size)) {   // walking in, or still pushing against it after the arrival pause
       doorCool = now + 1500;
       if (laneAct) { view.openDoor(d.id); Sound.creak(); laneInteract(laneAct); return; }
       if (d.link === LANE) { view.openDoor(d.id); Sound.creak(); visitLaneRoom('street'); return; }

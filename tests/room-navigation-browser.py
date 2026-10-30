@@ -18,7 +18,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.companion');assert page.evaluate('__lr.room.items.some(i=>i.t==="cat")') is False
 
 
- assert page.locator('header .chips > button').evaluate_all('es=>es.map(e=>e.id)')==['bHome','bLane','bShare','bMenu','bUndo']
+ assert page.locator('header .chips > button').evaluate_all('es=>es.map(e=>e.id)')==['bHome','bLane','bShare','bMenu','bUndo','bSettings']
  assert page.locator('#bPhoto,#bMusic,#rotL,#rotR').count()==0
  page.click('#bMenu');assert page.locator('.menu-tabs [role=tab]').evaluate_all('es=>es.map(e=>e.getAttribute("aria-label"))')==['Today','Settings'];page.keyboard.press('Escape')
  for width in [320,390,1280]:
