@@ -359,16 +359,16 @@
   @keyframes h2flash { 30% { color:var(--accent); } }
   @media (prefers-reduced-motion:reduce) { h2.flash { animation:none; } }
   textarea.code { width: 100%; border-radius: 14px; padding: 10px; font: 12px/1.4 ui-monospace, monospace; background: var(--chip); color: inherit; border: 0; resize: vertical; word-break: break-all; }
-  /* cat view: first person from a cat's eyes */
-  #catbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--sab) + 16px); display: none; align-items: center; gap: 8px; padding: 8px; border-radius: 22px; z-index: 20; }
-  #catbar b { padding: 0 10px; font-family: var(--display); font-weight: 600; }
-  #catbar button { padding: 11px 15px; border-radius: 16px; font-weight: 700; font-size: 14px; background: var(--chip); color: inherit; white-space: nowrap; }
-  #catbar button.primary { background: #3a2a48; color: #fff; }
-  @media (max-width: 480px) { #catbar { gap: 6px; padding: 6px; } #catbar b { padding: 0 6px; font-size: 14px; } #catbar button { padding: 10px 12px; font-size: 13px; } }
-  body.catcam #catbar { display: flex; }
-  body.catcam .explorebar, body.catcam .tools, body.catcam #tray, body.catcam #rotL, body.catcam #rotR { display: none !important; }
-  body:not(.exploring) #bCat { display: none; }
-  body.catcam #bCat { outline: 2px solid currentColor; }
+  /* First-person character view. */
+  #characterbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--sab) + 16px); display: none; align-items: center; gap: 8px; padding: 8px; border-radius: 22px; z-index: 20; }
+  #characterbar b { white-space:nowrap; padding: 0 10px; font-family: var(--display); font-weight: 600; }
+  #characterbar button { padding: 11px 15px; border-radius: 16px; font-weight: 700; font-size: 14px; background: var(--chip); color: inherit; white-space: nowrap; }
+  #characterbar button.primary { background: #3a2a48; color: #fff; }
+  @media (max-width: 480px) { #characterbar { gap: 6px; padding: 6px; } #characterbar b { padding: 0 6px; font-size: 14px; } #characterbar button { padding: 10px 12px; font-size: 13px; } }
+  body.charactercam #characterbar { display: flex; }
+  body.charactercam .explorebar, body.charactercam .tools, body.charactercam #tray, body.charactercam #rotL, body.charactercam #rotR { display: none !important; }
+  body:not(.exploring) #bCharacter { display: none; }
+  body.charactercam #bCharacter { outline: 2px solid currentColor; }
   .house { display: flex; flex-direction: column; gap: 6px; }
   .hroom { background: var(--chip); border-radius: 16px; padding: 10px 12px; }
   .hroom.here { outline: 2px solid currentColor; outline-offset: -2px; }
@@ -539,7 +539,7 @@
   <button class="panel" id="bAppShortcut" aria-label="Choose room shortcut" title="Choose room shortcut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
   <button class="panel app-shortcut-edit" id="bEditAppShortcut" aria-label="Change room shortcut" title="Change room shortcut" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg></button>
   </div>
-  <button class="panel" id="bCat" aria-label="Cat view: see the room through a cat's eyes"><svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="16" rx="4.6" ry="3.8"/><ellipse cx="6" cy="10.5" rx="1.9" ry="2.4"/><ellipse cx="18" cy="10.5" rx="1.9" ry="2.4"/><ellipse cx="9.3" cy="6.5" rx="1.8" ry="2.3"/><ellipse cx="14.7" cy="6.5" rx="1.8" ry="2.3"/></svg></button>
+  <button class="panel" id="bCharacter" aria-label="Character view: explore as your character"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg></button>
   <button class="panel" id="rotL" aria-label="Turn the room left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></svg></button>
   <button class="panel" id="rotR" aria-label="Turn the room right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v4h-4"/></svg></button>
 </div>
@@ -560,7 +560,7 @@
   <button id="bEdit" class="primary" aria-label="Decorate this room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>Decorate</span></button>
 </div>
 
-<div id="catbar" class="panel"><b id="catName">Cali</b><button id="catNext">Next cat</button><button id="catExit" class="primary">Back to room</button></div>
+<div id="characterbar" class="panel"><b id="characterName">Little dude</b><button id="characterExit" class="primary">Back to room</button></div>
 
 <div id="toasts"></div>
 

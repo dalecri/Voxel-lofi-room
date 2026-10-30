@@ -63,12 +63,12 @@ with sync_playwright() as p:
  page.wait_for_timeout(2200);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'capture' in page.evaluate('__lr.activity.sources');page.evaluate('__lr.view.endCapture()')
  page.wait_for_function('__lr.renderLoop.sleeping');page.keyboard.press('Escape');page.click('#bPhoto');page.wait_for_function('document.querySelector("#photo").classList.contains("open")');assert page.evaluate('!__lr.renderLoop.sleeping');page.keyboard.press('Escape')
  print('capture passed',flush=True)
- # Rain, beat mode and first-person cat view each prohibit sleeping.
+ # Rain, beat mode and first-person character view each prohibit sleeping.
  page.evaluate("__lr.view.setWeather('rain');window.frameStart=performance.now();window.frameCount=__lr.renderLoop.frames");page.wait_for_timeout(2500);fps=page.evaluate('(__lr.renderLoop.frames-frameCount)*1000/(performance.now()-frameStart)');assert 0<fps<=32,fps;print('active Calm submissions/sec:',round(fps,1),flush=True);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'weather' in page.evaluate('__lr.activity.sources')
  page.evaluate("__lr.view.setWeather('clear');__lr.view.music=true;__lr.meta.music=true;__lr.Sound.beat=()=>.4")
  # Use actual controls for the explicit preference; no Calm override.
  page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('switch',name='Reduced motion',exact=True).click();page.keyboard.press('Escape');page.wait_for_timeout(2200);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'beat' in page.evaluate('__lr.activity.sources')
- page.evaluate('''() => {const a=__lr,type=Object.keys(LR.CAT).find(k=>LR.CAT[k].kind==='pet'&&!LR.CAT[k].robot);const it=a.room.add(a.room.make(type,{x:3,z:3}));a.changed();if(!a.view.enterCatView(it.id))throw Error('Cat view did not open');}''');page.wait_for_timeout(2200);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'camera' in page.evaluate('__lr.activity.sources');page.evaluate('__lr.view.exitCatView()')
+ page.evaluate('''() => {const a=__lr;if(!a.view.enterCharacterView())throw Error('Character view did not open');}''');page.wait_for_timeout(2200);assert not page.evaluate('__lr.renderLoop.sleeping');assert 'camera' in page.evaluate('__lr.activity.sources');page.evaluate('__lr.view.exitCharacterView()')
  # Persisted toggle is applied before the first frame after reload.
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.renderLoop');assert page.evaluate('__lr.meta.calmPerformance');assert page.evaluate('!__lr.view.reducedMotion');assert page.evaluate('__lr.view.composer===null');assert page.evaluate('__lr.view.sun.shadow.mapSize.x')==1024
  assert page.evaluate('!__lr.view.r.getContext().getContextAttributes().antialias');assert page.evaluate('__lr.view.r.getContext().getContextAttributes().powerPreference')=='low-power'

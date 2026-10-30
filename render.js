@@ -1523,11 +1523,11 @@
     if (this.companion) this.companion.frame(dt, t);
     if (this.cozyLife) this.cozyLife.frame(dt, t);
     this.updateBreathing();
-    if (this.fp) this.updateCatView(dt, t);
+    if (this.fp) this.updateCharacterView(dt, t);
     if (render) this.draw();
   };
 
-  // ---- cat view: first person from a cat's eyes ----
+  // ---- immersive character view and room ambience ----
   R.updateBreathing = function () {
     if (!this.breathCircle && this.breathing) {
       this.breathCircle = new THREE.Group();
@@ -1601,59 +1601,33 @@
     this.lifeEvents = alive;
   };
 
-  R.enterCatView = function (id) {
-    const P = this.pets.get(id);
-    if (!P || P.robot) return false;
-    if (this.fp) { const o = this.objs.get(this.fp.id); if (o) o.visible = true; }   // switching cats
-    this.fp = { id, yaw: P.heading, look: 0, pitch: -0.08, bob: 0 };
-    this.cam = this.fpCam;
-    [this.fx, this.glowFx].forEach(f => { f.uPersp.value = 1; });
-    this.setHover(0);
-    this.placeCamera();
-    return true;
+  R.enterCharacterView = function(at){
+    if(this.fp)return true;
+    const character=this.companion;if(!character||!character.takeControl(at))return false;
+    this.fp={id:character.id,yaw:character.brain.state.heading,look:0,pitch:-.08,bob:0};
+    this.cam=this.fpCam;character.object.visible=false;
+    [this.fx,this.glowFx].forEach(f=>{f.uPersp.value=1;});this.setHover(0);this.placeCamera();this.updateCharacterView(0,this.t);return true;
   };
-  R.exitCatView = function () {
-    if (!this.fp) return;
-    const o = this.objs.get(this.fp.id); if (o) o.visible = true;
-    const P = this.pets.get(this.fp.id); if (P) P.manual = 0;
-    this.fp = null; this.cam = this.isoCam;
-    [this.fx, this.glowFx].forEach(f => { f.uPersp.value = 0; });
-    this.placeCamera();
+  R.exitCharacterView = function(){
+    if(!this.fp)return;
+    this.companion?.releaseControl();this.fp=null;this.cam=this.isoCam;
+    [this.fx,this.glowFx].forEach(f=>{f.uPersp.value=0;});this.placeCamera();
   };
-  // walking yourself: f forward/back, s sideways, in the direction you're looking
-  R.catMove = function (f, s, dt) {
-    const fp = this.fp, P = fp && this.pets.get(fp.id);
-    if (!P || (!f && !s)) return;
-    const yaw = fp.yaw + fp.look;
-    const dx = Math.sin(yaw) * f + Math.cos(yaw) * s, dz = Math.cos(yaw) * f - Math.sin(yaw) * s;
-    const len = Math.hypot(dx, dz) || 1, sp = 1.6 * dt;
-    if (P.perch) { P.perch = null; P.y = 0; }
-    P.path = null; P.next = null; P.eat = null; P.watch = null; P.onArrive = null; P.hop = null;
-    P.state = 'walk'; P.manual = this.t + 5;
-    const nx = P.x + dx / len * sp, nz = P.z + dz / len * sp, r = 0.22;
-    const free = (x, z) => this.cellFree(Math.floor(x), Math.floor(z));
-    if (free(nx + Math.sign(dx) * r, P.z)) P.x = nx;          // slide along walls and furniture
-    if (free(P.x, nz + Math.sign(dz) * r)) P.z = nz;
-    if (f > 0) { P.heading = yaw; fp.yaw = yaw; fp.look = 0; }
-    fp.bob += dt * 11;
+  R.characterMove = function(f,side,dt){
+    if(!this.fp)return false;
+    const yaw=this.fp.yaw+this.fp.look,moved=this.companion?.move(f,side,yaw,dt);
+    if(moved&&f>0){this.fp.yaw=yaw;this.fp.look=0;}return moved;
   };
-  R.updateCatView = function (dt, t) {
-    const fp = this.fp, P = this.pets.get(fp.id), obj = this.objs.get(fp.id);
-    if (!P || !obj) { this.exitCatView(); if (this.hooks.catViewEnded) this.hooks.catViewEnded(); return; }
-    obj.visible = false;   // no looking at the inside of your own head
-    // follow where the cat is facing, keeping whatever look-around the player added
-    let dh = P.heading - fp.yaw; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
-    fp.yaw += dh * Math.min(1, dt * 3);
-    const walking = P.state === 'walk' || P.hop;
-    if (walking && !(P.manual > t)) fp.bob += dt * 11;
-    const yaw = fp.yaw + fp.look;
-    const eye = (P.state === 'nap' ? 0.34 : 0.62) + (walking ? Math.abs(Math.sin(fp.bob)) * 0.025 : 0);
-    const local = new THREE.Vector3(P.x + Math.sin(yaw) * 0.22, P.y + eye, P.z + Math.cos(yaw) * 0.22);
-    const pos = this.root.localToWorld(local);
-    this.fpCam.position.copy(pos);
-    const cp = Math.cos(fp.pitch);
-    this.fpCam.lookAt(pos.x + Math.sin(yaw) * cp, pos.y + Math.sin(fp.pitch), pos.z + Math.cos(yaw) * cp);
-    this.fpCam.updateMatrixWorld();
+  R.walkCharacterTo = function(x,z,heading){return !!this.fp&&!!this.companion?.walkTo(x,z,heading);};
+  R.updateCharacterView = function(dt,t){
+    const character=this.companion,fp=this.fp;
+    if(!character||!character.brain.controlled){this.exitCharacterView();this.hooks.characterViewEnded?.();return;}
+    const P=character.brain.state;character.object.visible=false;
+    let dh=P.heading-fp.yaw;while(dh>Math.PI)dh-=Math.PI*2;while(dh<-Math.PI)dh+=Math.PI*2;fp.yaw+=dh*Math.min(1,dt*3);
+    if(P.moving&&!this.reducedMotion)fp.bob+=dt*11;
+    const yaw=fp.yaw+fp.look,eye=.75+(P.moving&&!this.reducedMotion?Math.abs(Math.sin(fp.bob))*.012:0);
+    const pos=this.root.localToWorld(new THREE.Vector3(P.x+Math.sin(yaw)*.12,eye,P.z+Math.cos(yaw)*.12));this.fpCam.position.copy(pos);
+    const cp=Math.cos(fp.pitch);this.fpCam.lookAt(pos.x+Math.sin(yaw)*cp,pos.y+Math.sin(fp.pitch),pos.z+Math.cos(yaw)*cp);this.fpCam.updateMatrixWorld();
   };
 
   R.animatePiece = function (obj, it, C, dt, t) {
@@ -2060,7 +2034,7 @@
   };
 
   // Mutations may come from delayed events while no RAF is pending.
-  for (const name of ['enterCatView','exitCatView','boing','spin','excite','play','poof','pop','feedFish','feedBirds','walkCatTo','petCat','callCat','feedCat','sync','resize','setPhase','setWeather','setRain','burst','icon','sparkle','openDoor','setGhost','beginCapture','endCapture','snapshot','ambientEvent','refreshEnv']) {
+  for (const name of ['enterCharacterView','exitCharacterView','walkCharacterTo','boing','spin','excite','play','poof','pop','feedFish','feedBirds','walkCatTo','petCat','callCat','feedCat','sync','resize','setPhase','setWeather','setRain','burst','icon','sparkle','openDoor','setGhost','beginCapture','endCapture','snapshot','ambientEvent','refreshEnv']) {
     const method = R[name];
     if (!method) continue;
     R[name] = function (...args) { const result = method.apply(this,args); if(this.activity) this.activity.wake(); return result; };

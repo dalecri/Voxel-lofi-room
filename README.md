@@ -107,7 +107,7 @@ Then open http://localhost:5180.
   - **From the furniture and things that are on:** a crackling fire, a clock ticking, faint neon buzz, keyboard clacks when a computer is on, the fish tank bubbler, the odd hiss from a hot mug.
   - **From the weather:** rain on the glass, a heavy storm with distant thunder, soft wind for snow and clear nights, crickets on summer nights, birds in the morning.
   - **Always there:** a barely-there room tone, rare house creaks, a distant city hum in scenes and gamer setups, and the rare soft meow.
-  - **In cat view:** sounds are louder the closer you are, so the fire gets louder as you walk up to it.
+  - **In character view:** sounds are louder the closer you are, so the fire gets louder as you walk up to it.
   - **Taps sound like the thing:**
     - lamps click (each style a little different), neon crackles on, fires whoosh (bigger the first time in a room), candles strike a match
     - sofas poof, desk chairs squeak, beds rustle, books flip, curtains swish, mugs sip softly, plants get a trickle
@@ -129,17 +129,17 @@ Then open http://localhost:5180.
 - **Turn the room.** Walls facing you are cut away automatically, the same way the Sims does it, so you can decorate all four walls.
 - **Scene mode.** Pick the **Open plot** wall style (in Paint, Walls) to remove all four walls and build an open diorama instead, like a city corner or a tram stop. Start one from the Neon Alley, Tram Stop or Empty Plot templates, or from **City Block**, a 20×20 crossroads with four corners of shops, a tram line, a canal and a park.
 - **Bigger plots.** In Paint, Plot size, grow any room or scene from the cozy 10×10 to 14×14, 20×20 or 24×24 for multi-block cities. Pieces stay where they are when it grows, and it only shrinks once nothing would fall off the edge.
-- **Cat view.** Tap the paw button (or press <kbd>C</kbd>) to see the room in first person through a cat's eyes. Up close, at cat height, with all four walls up.
-  - The camera rides along as the cat wanders, and you drag to look around.
-  - Tap the floor to walk there, and tap things to use them. On a computer, WASD or the arrow keys walk too.
-  - **Next cat** hops into another cat's head, and **Back to room** returns to the diorama.
+- **Character view.** Tap the character button (or press <kbd>C</kbd>) to explore from your little companion's eyes, with all four walls up. No cat is required.
+  - Drag to look around; tap the floor to walk there, or use WASD / arrow keys on a computer. Furniture and walls block movement.
+  - Your character pauses its idle routines while controlled. Cats keep their own behavior.
+  - Tap things to use them, and **Back to room** or <kbd>Esc</kbd> to return to the diorama and resume the character's routine.
 - **A connected house.** Join your saved rooms with doors and walk between them.
   - The **Doors** tab has twelve styles that each open their own way:
     - panel, cottage, old wooden (arched, with iron straps), glass, French doors, sliding barn, shoji, sliding glass patio
     - a sci-fi door that slides up, a bead curtain and a stone archway
     - a free-standing doorway, so streets, gardens and other open scenes can join in
   - Tap one and pick a room or a new one. The other side gets a matching door leading back automatically.
-  - In cat view, just walk into a doorway. You arrive in the next room as the same cat.
+  - In character view, walk into a doorway to arrive as your character in the next room, with the same outfit and no extra cats.
   - The menu's **Your house** map shows every room and where its doors go. Tap a door to travel, or tap **Change** to send it somewhere else.
 - **The Lane.** The Rooms tab grew into a little street. Four fronts sit along it, each with a job, drawn in pixels that light up at dusk:
   - **Your house** holds everything the Rooms tab had: the rooms gallery, sharing, the house map, the guest book and new rooms.
@@ -304,7 +304,7 @@ Run `node --test tests/*.test.cjs` and `npm run build`, then `python3 tests/cost
 | Radio on/off | Music chip, or tap a record player to change station | <kbd>M</kbd> |
 | Undo | Undo chip | <kbd>Ctrl</kbd>+<kbd>Z</kbd> or <kbd>U</kbd> |
 | Random room | Surprise | <kbd>G</kbd> |
-| Cat view | Paw button, then drag to look and tap the floor to walk | <kbd>C</kbd>, then WASD or the arrows to walk, drag or <kbd>Q</kbd>/<kbd>E</kbd> to look, <kbd>N</kbd> for the next cat, <kbd>Esc</kbd> to leave |
+| Character view | Character button, then drag to look and tap the floor to walk | <kbd>C</kbd>, then WASD or the arrows to walk, drag or <kbd>Q</kbd>/<kbd>E</kbd> to look, <kbd>Esc</kbd> to leave |
 | Menu | Menu chip | <kbd>H</kbd> |
 
 ## Install on Android

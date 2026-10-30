@@ -250,7 +250,7 @@
     },
   });
 
-  LR.MOMENTS.push(['wanderer', 'Wanderer', 'Walked through a door as a cat'], ['openhouse', 'Open house', 'Walked through a door into another room'], ['cuckoo', 'Cuckoo!', 'Heard the cuckoo clock call the hour'], ['feast', 'Dinner time', 'A cat came running for food'], ['stargazer', 'Stargazer', 'Found a constellation']);
+  LR.MOMENTS.push(['wanderer', 'Wanderer', 'Walked through a door as your character'], ['openhouse', 'Open house', 'Walked through a door into another room'], ['cuckoo', 'Cuckoo!', 'Heard the cuckoo clock call the hour'], ['feast', 'Dinner time', 'A cat came running for food'], ['stargazer', 'Stargazer', 'Found a constellation']);
   // ---- a guest book note: a friend left it with a reply code (never in the Add tray) ----
   const STICKERS = [
     ['.#..#.', '######', '######', '.####.', '..##..', '......'],   // heart

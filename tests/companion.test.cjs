@@ -72,3 +72,20 @@ test('room changes reset the one state and quiet rituals suppress speech', () =>
 test('task celebration reuses the hop without adding a speech bubble',()=>{
  const b=createBrain(),e=env();b.step(.1,e);const before=[b.state.message,b.state.bubbleUntil,b.state.category];b.celebrate(e,'task',true);b.step(.1,e);assert.ok(b.state.hop>0);assert.deepEqual([b.state.message,b.state.bubbleUntil,b.state.category],before);
 });
+
+test('taking over the companion suspends autonomous routines, including sleep, until released',()=>{
+ assert.equal(createBrain().takeControl(env({walk:new Array(100).fill(0)})),false);
+ const b=createBrain(),e=env({hour:2,phase:'night'});b.step(.1,e);assert.equal(b.state.mode,'sleep');assert(b.takeControl(e,{x:2.5,z:2.5,heading:0}));assert(b.controlled);
+ advance(b,e,20);assert.equal(b.state.x,2.5);assert.equal(b.state.z,2.5);assert.equal(b.state.y,0);assert.equal(b.state.pose,'stand');assert.equal(b.state.mode,'idle');
+ b.releaseControl();assert(!b.controlled);b.step(.1,e);assert.equal(b.state.mode,'sleep');
+});
+test('character movement normalizes diagonals, respects collisions and pauses behind sheets',()=>{
+ const e=env(),a=createBrain(),b=createBrain();a.takeControl(e,{x:2.5,z:2.5});b.takeControl(e,{x:2.5,z:2.5});a.move(1,0,0,.1,e);b.move(1,1,0,.1,e);assert(Math.abs(Math.hypot(b.state.x-2.5,b.state.z-2.5)-.16)<1e-8);assert(Math.abs(a.state.z-2.5-.16)<1e-8);
+ const blocked=env({walk:new Array(100).fill(1)});for(let x=0;x<10;x++)blocked.walk[3*10+x]=0;const c=createBrain();c.takeControl(blocked,{x:2.5,z:2.5});for(let n=0;n<100;n++){c.move(1,0,0,.1,blocked);c.step(.1,blocked);}assert(c.state.z<2.8);assert(c.state.z>=2.5);
+ assert(b.walkTo(e,5,5));const before={x:b.state.x,z:b.state.z};advance(b,{...e,paused:true},5);assert.equal(b.state.x,before.x);assert.equal(b.state.z,before.z);assert(!b.state.moving);
+});
+test('tap-to-walk routes around furniture and faces a doorway on arrival without room writes',()=>{
+ const e=env();e.walk[1*10+2]=0;const before=structuredClone(e),b=createBrain();b.takeControl(e,{x:1.5,z:1.5});assert(!b.walkTo(e,2,1));assert(b.walkTo(e,4,1,Math.PI));
+ for(let n=0;n<100;n++){b.step(.1,e);assert(e.walk[Math.floor(b.state.z)*10+Math.floor(b.state.x)]>0);}assert.equal(b.state.x,4.5);assert.equal(b.state.z,1.5);assert.equal(b.state.heading,Math.PI);assert.deepEqual(e,before);
+ b.releaseControl();assert(!b.walkTo(e,2,2));assert.equal(b.move(1,0,0,.1,e),false);
+});

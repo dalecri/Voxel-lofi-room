@@ -33,7 +33,7 @@ function startLofiRooms() {
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
   const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}),onTallyGoal:t=>{remember('pushups',{date:t.date,id:t.date});try{Sound.init();if(Sound.on)Sound.chime();}catch(e){/* quiet reps still count */}if(companion)companion.hop();} });
-  const letters = LRLetters.createView({ store,sheet:codeSheet,dismiss:closeSheets,onClose:()=>$('#bHome').focus({preventScroll:true}),onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCat(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); }, mailbox:{count:()=>roomTools.state.mail.filter(l=>!l.read).length,open:()=>roomToolsUI.open('mailbox')} });
+  const letters = LRLetters.createView({ store,sheet:codeSheet,dismiss:closeSheets,onClose:()=>$('#bHome').focus({preventScroll:true}),onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCharacter(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); }, mailbox:{count:()=>roomTools.state.mail.filter(l=>!l.read).length,open:()=>roomToolsUI.open('mailbox')} });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -77,7 +77,7 @@ function startLofiRooms() {
     ['parliament', 'Cat parliament', 'All five cats in one room'],
     ['culprit', 'Whodunnit', 'A cat knocked something off a table'],
     ['visitor', 'Neighbour cat', 'A cat from next door dropped by'],
-    ['catseye', 'Cat’s-eye view', 'Saw the room through a cat’s eyes'],
+    ['catseye', 'A new perspective', 'Explored the room through your character’s eyes'], // Keep the existing unlock key.
     ['dreamer', 'Dream mode', 'Stayed up past midnight as the room drifted'],
     ['watered', 'Thirsty no more', 'Gave a plant its daily water'],
     ['bloom', 'In bloom', 'A plant you watered every day burst into flowers'],
@@ -161,7 +161,7 @@ function startLofiRooms() {
   const view = new LRRender.Renderer($('#c'), {
     calmPerformance: meta.calmPerformance === true,
     catActivity(id, kind) { recordCat(room.get(id), kind); },
-    catViewEnded() { document.body.classList.remove('catcam'); },
+    characterViewEnded() { document.body.classList.remove('charactercam'); },
     catLand() { Sound.thump(0.5); },
     catSigh() { Sound.sigh(); },
     thunder() { const near = Math.random() < 0.4; setTimeout(() => Sound.thunder(near), near ? 120 : 500 + Math.random() * 900); },
@@ -199,7 +199,7 @@ function startLofiRooms() {
     beforeOpen() {
       frenchUI?.close();
       home.close(false); letters.close();
-      closeSheets(); closeCrate(); closePhoto(); exitCat(true);
+      closeSheets(); closeCrate(); closePhoto(); exitCharacter(true);
       if (rituals.breath.active) stopBreathing();
       if (stream) stream.volume = .45;
     },
@@ -218,7 +218,7 @@ function startLofiRooms() {
     openScene:f=>{
       const probe=new LR.Room();if(!probe.load(LRWidgets.shareDecor(f.decor)))throw Error('This scene could not be opened.');
       probe.items=probe.items.filter(i=>CAT[i.t]);closeSheets();leaveThen(()=>{
-        exitCat(true);room.load(probe.serialize());meta.current=Date.now();delete meta.visit;undo.length=0;baseSig=sig();
+        exitCharacter(true);room.load(probe.serialize());meta.current=Date.now();delete meta.visit;undo.length=0;baseSig=sig();
         view.panGoal.set(0,0,0);view.zoomGoal=1;changed();save();updateHeader();
       });
     },
@@ -304,7 +304,7 @@ function startLofiRooms() {
   }
   $('#bAppShortcut').onclick=()=>{
     updateAppShortcut();const p=shortcutApp();if(!p){appShortcutSheet();return;}
-    home.close(false);letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);launchTool(p);
+    home.close(false);letters.close();closeSheets();closeCrate();closePhoto();exitCharacter(true);launchTool(p);
   };
   $('#bEditAppShortcut').onclick=appShortcutSheet;
   updateAppShortcut();
@@ -368,7 +368,7 @@ function startLofiRooms() {
     previewKey:()=>JSON.stringify([meta.current,room.items.map(i=>[i.t,i.c])]),
     preview:p=>{const f=LRLauncher.furniture(p,room.items,CAT);return f?{...f,src:thumbOf(f.id,f.variant)}:null;},
 
-    beforeOpen:()=>{clearControlReturn();frenchUI?.close();letters.close();closeSheets();closeCrate();closePhoto();exitCat(true);if(rituals.breath.active)stopBreathing();},
+    beforeOpen:()=>{clearControlReturn();frenchUI?.close();letters.close();closeSheets();closeCrate();closePhoto();exitCharacter(true);if(rituals.breath.active)stopBreathing();},
     onClose:()=>$('#bHome').focus(),
     actions:{
       launch:launchTool,
@@ -389,7 +389,7 @@ function startLofiRooms() {
     },
     beforeOpen() {
       home.close(false); letters.close(); barnaby.close();
-      closeSheets(); closeCrate(); closePhoto(); exitCat(true);
+      closeSheets(); closeCrate(); closePhoto(); exitCharacter(true);
       if (rituals.breath.active) stopBreathing();
     },
     reduced: () => view.reducedMotion,
@@ -839,7 +839,7 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Explore / Decorate
   function setMode(mode, quiet) {
-    if (mode !== 'explore') exitCat(true);
+    if (mode !== 'explore') exitCharacter(true);
     state.mode = mode;
     const editing = mode === 'edit';
     for (const [selector, visible] of [['.tools',editing],['#tray',editing],['.explorebar',!editing]]) {
@@ -866,7 +866,7 @@ function startLofiRooms() {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bMusic: 'Lofi radio (M) · Hold to open Sound', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bShare: 'Share this room', bHome: 'Control Centre', bMenu: 'Menu (H)', bCat: 'Cat view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bMusic: 'Lofi radio (M) · Hold to open Sound', bUndo: 'Undo (Ctrl+Z)', bPhoto: 'Photo', bShare: 'Share this room', bHome: 'Control Centre', bMenu: 'Menu (H)', bCharacter: 'Character view (C)', rotL: 'Turn the room (Q)', rotR: 'Turn the room (E)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -1007,9 +1007,10 @@ function startLofiRooms() {
     }
     if (tap === 'portal') {
       const target = it.link && rooms.find(r => r.id === it.link);
-      if (view.fp) {   // as a cat: trot over to the doorway, the walk-through check does the rest
-        const [fx, fz] = doorFront(it);
-        if (!view.walkCatTo(view.fp.id, fx, fz)) { const me = room.get(view.fp.id); if (target) walkThrough(it, target.id, me && { c: me.c, name: me.name }); else doorPicker(it); }
+      if (view.fp) {   // Walk the character to the doorway, then travel through it.
+        doorCool=0;
+        const [fx, fz, face] = doorFront(it);
+        if (!view.walkCharacterTo(fx, fz, face)) { if (target) walkThrough(it, target.id, true); else doorPicker(it); }
         else toast(`<span>${target ? `To ${target.name}` : 'A door to somewhere new'}</span>`, 1000, true);
         return;
       }
@@ -1211,8 +1212,8 @@ function startLofiRooms() {
     const [w, d] = fp(i); return { x: i.x + w / 2, z: i.z + d / 2 };
   }
   function soundState(dt) {
-    const P = view.fp && view.pets.get(view.fp.id), month = new Date().getMonth(), w = meta.weather || 'clear';
-    // in cat view, closer things are louder; from above, everything sits at a gentle level
+    const P = view.fp && companion?.brain.state, month = new Date().getMonth(), w = meta.weather || 'clear';
+    // in character view, closer things are louder; from above, everything sits at a gentle level
     const level = (list, base) => {
       if (!list.length) return 0;
       if (!P) return base;
@@ -1256,39 +1257,21 @@ function startLofiRooms() {
     if (meta.season !== key) { meta.season = key; saveMeta(); setTimeout(() => toast(`<span>${S.label}</span>`, 3200), 4000); }
   })();
   let follow = null;
-  // cat view: the room in first person, from one of the cats
-  const held = new Set();
-  window.addEventListener('keyup', e => { held.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key); });
-  window.addEventListener('blur', () => held.clear());
-  const residentCats = () => room.items.filter(i => i.t === 'cat');
-  function enterCat(id) {
-    const cats = residentCats();
-    if (!cats.length) { Sound.nope(); toast('<span>Add a cat first (Decorate, Add, Pets)</span>', 1800); return; }
-    const pick = id ? room.get(id) : (follow && room.get(follow.id)) || cats.find(c => !c.visitor) || cats[0];
-    if (!pick || !view.enterCatView(pick.id)) return;
-    document.body.classList.add('catcam');
-    $('#catName').textContent = catName(pick);
-    Sound.meow(); haptic(8);
-    if (!store.get('lr.tipCat', false)) { store.set('lr.tipCat', true); toast(`<span>${FINE ? 'Drag to look around, click the floor to walk, click things to use them. WASD walks too.' : 'Drag to look around, tap the floor to walk, tap things to use them'}</span>`, 3600); }
-    else toast(`<span>You're ${catName(pick)} now</span>`, 1200);
-    discover('catseye');
+  // First person belongs to the companion; cats keep their own routines.
+  const held = new Set();let characterTipShown=false;
+  window.addEventListener('keyup',e=>{held.delete(e.key.length===1?e.key.toLowerCase():e.key);});
+  window.addEventListener('blur',()=>held.clear());
+  function enterCharacter(at){
+    if(!view.enterCharacterView(at)){Sound.nope();toast('<span>Leave a little floor space for your character to walk.</span>',1800);return false;}
+    document.body.classList.add('charactercam');$('#characterName').textContent=companion.name;Sound.turn();haptic(8);held.clear();
+    if(!characterTipShown){characterTipShown=true;toast(`<span>${FINE?'Drag to look around, click the floor to walk, or use WASD. Click things to use them.':'Drag to look around, tap the floor to walk, and tap things to use them.'}</span>`,3600);}
+    discover('catseye');return true;
   }
-  function nextCat() {
-    const cats = residentCats(); if (!view.fp || cats.length < 2) return;
-    const i = cats.findIndex(c => c.id === view.fp.id);
-    enterCat(cats[(i + 1) % cats.length].id);
+  function exitCharacter(quiet){
+    if(!view.fp)return;view.exitCharacterView();held.clear();document.body.classList.remove('charactercam');if(!quiet)Sound.turn();
   }
-  function exitCat(quiet) {
-    if (!view.fp) return;
-    view.exitCatView(); held.clear();
-    const gone = room.items.filter(i => i.explorer);   // a cat that walked in with you heads back home
-    if (gone.length) { gone.forEach(i => { view.poof(i.id, [0xffffff, 0xffd0e0]); room.remove(i.id); }); changed(); }
-    document.body.classList.remove('catcam');
-    if (!quiet) Sound.turn();
-  }
-  $('#bCat').onclick = () => { if (view.fp) exitCat(); else enterCat(); };
-  $('#catNext').onclick = () => nextCat();
-  $('#catExit').onclick = () => exitCat();
+  $('#bCharacter').onclick=()=>{if(view.fp)exitCharacter();else enterCharacter();};
+  $('#characterExit').onclick=()=>exitCharacter();
   const catName = it => it.name || (CATS[it.c] || CATS[0]).name;
   // mischief: now and then a cat wanders over and knocks something off a table
   function mischief() {
@@ -1799,7 +1782,7 @@ function startLofiRooms() {
         lastTap = null;
       } else if (state.mode === 'explore' && view.fp) {
         const p = view.pickFloor(e.clientX, e.clientY);
-        if (p && view.walkCatTo(view.fp.id, Math.floor(p.x), Math.floor(p.z))) { const P = view.pets.get(view.fp.id); if (P) P.manual = 0; }
+        if(p)view.walkCharacterTo(Math.floor(p.x),Math.floor(p.z));
       } else if (state.mode === 'explore' && follow && performance.now() < follow.until) {
         const p = view.pickFloor(e.clientX, e.clientY);
         if (p && view.walkCatTo(follow.id, Math.floor(p.x), Math.floor(p.z))) { follow.until = performance.now() + 6000; view.sparkle(new THREE.Vector3(Math.floor(p.x) + 0.5, 0.1, Math.floor(p.z) + 0.5), 0xffd0e0, 6); }
@@ -1843,13 +1826,12 @@ function startLofiRooms() {
     if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // leave browser shortcuts like Ctrl+R alone
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (view.fp) {   // cat view: WASD or the arrows walk, Q/E look around, C or Esc goes back
+    if (view.fp) {   // character view: WASD or the arrows walk, Q/E look around, C or Esc goes back
       if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); held.add(key); return; }
       if (key === 'q') { view.fp.look += 0.35; return; }
       if (key === 'e') { view.fp.look -= 0.35; return; }
-      if (key === 'Escape' || key === 'c') { exitCat(); return; }
-      if (key === 'n') { nextCat(); return; }
-    } else if (key === 'c' && state.mode === 'explore') { enterCat(); return; }
+      if (key === 'Escape' || key === 'c') { exitCharacter(); return; }
+    } else if (key === 'c' && state.mode === 'explore') { enterCharacter(); return; }
     const trayOpen = tray.classList.contains('open');
     const keys = { 1: 'add', 2: 'move', 3: 'turn', 4: 'paint', 5: 'remove' };
     if (keys[key]) { if (state.mode === 'explore') setMode('edit', true); document.querySelector(`.tools [data-tool="${keys[key]}"]`).click(); }
@@ -1954,6 +1936,7 @@ function startLofiRooms() {
     clearTimeout(motionTimer); motionTimer = setTimeout(() => sheet.classList.remove('is-moving'), 400);
   }
   function openSheet() {
+    if(view.fp)held.clear();
     if (!sheet.classList.contains('open')) markMoving();
     sheet.inert = false; sheet.setAttribute('aria-hidden','false'); sheet.classList.add('open');
     $('#bMenu').setAttribute('aria-expanded',String(!!$('#menu-today')));
@@ -1983,7 +1966,7 @@ function startLofiRooms() {
   }
   function startBreathing() {
     if (rituals.breath.active) return;
-    closeSheets(); closePhoto(); exitCat(true); setMode('explore', true);
+    closeSheets(); closePhoto(); exitCharacter(true); setMode('explore', true);
     breathCamera = { pan: view.panGoal.clone(), zoom: view.zoomGoal };
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1; held.clear(); view.setHover(0); view.clearLifeEvents();
     if (Sound.on) { Sound.init(); if (Sound.ctx) Sound.ctx.resume(); }
@@ -2840,9 +2823,9 @@ function startLofiRooms() {
     return back;
   }
   let travelling = false;
-  function walkThrough(door, to, asCat, asked) {
+  function walkThrough(door, to, asCharacter, asked) {
     if (travelling) return;
-    if (!asked && isEdited()) { leaveThen(() => walkThrough(door, to, asCat, true)); return; }
+    if (!asked && isEdited()) { leaveThen(() => walkThrough(door, to, asCharacter, true)); return; }
     travelling = true;
     const from = meta.current, hint = CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null;
     view.openDoor(door.id); Sound.creak();
@@ -2857,21 +2840,18 @@ function startLofiRooms() {
       $('#fade').classList.remove('on');
       if (back) setTimeout(() => view.openDoor(back.id), 200);
       discover('openhouse');
-      // walking as a cat: arrive as that cat in the doorway on the other side
-      if (asCat != null && back) {
-        const [fx, fz, face] = doorFront(back);
-        const cat = room.add(room.make('cat', { x: Math.max(0, Math.min(room.n - 1, fx)), z: Math.max(0, Math.min(room.n - 1, fz)), c: asCat.c, name: asCat.name, visitor: true, explorer: true }));
-        changed();
-        setTimeout(() => { const P = view.pets.get(cat.id); if (P) P.heading = face + Math.PI; enterCat(cat.id); discover('wanderer'); travelling = false; }, 60);
-      } else travelling = false;
+      if(asCharacter){
+        const at=back?doorFront(back):null;
+        setTimeout(()=>{enterCharacter(at?{x:at[0]+.5,z:at[1]+.5,heading:at[2]+Math.PI}:undefined);discover('wanderer');travelling=false;},60);
+      }else travelling=false;
     }, 820);
   }
-  // in cat view, walking into a door's doorway takes you through it
+  // Walking your character into a doorway takes you through it.
   let doorNear = 0, doorCool = 0;
-  function catDoors(now) {
+  function characterDoors(now) {
     if (!view.fp || travelling || now < doorCool) return;
-    const P = view.pets.get(view.fp.id), me = room.get(view.fp.id);
-    if (!P || !me) return;
+    const P=companion?.brain.state;
+    if(!P)return;
     const cx = Math.floor(P.x), cz = Math.floor(P.z);
     const span = i => (CAT[i.t].kind === 'wall' ? CAT[i.t].size[0] : 1);
     const d = room.items.find(i => isPortal(i) && Array.from({ length: span(i) }, (_, k) => doorFront(i, k)).some(([x, z]) => x === cx && z === cz));
@@ -2879,9 +2859,9 @@ function startLofiRooms() {
     if (doorNear !== d.id) { doorNear = d.id; toast(`<span>${d.link && rooms.some(r => r.id === d.link) ? `Door to ${roomTitle(d.link)}` : 'A door to somewhere new'}</span>`, 1200, true); }
     const face = doorFront(d)[2];
     let dh = P.heading - face; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
-    if (Math.abs(dh) < 0.8 && (P.manual > view.t || P.state === 'walk')) {
+    if (Math.abs(dh) < 0.8 && P.moving) {
       doorCool = now + 1500;
-      if (d.link && rooms.some(r => r.id === d.link)) walkThrough(d, d.link, { c: me.c, name: me.name });
+      if (d.link && rooms.some(r => r.id === d.link)) walkThrough(d, d.link, true);
       else doorPicker(d);
     }
   }
@@ -2891,9 +2871,9 @@ function startLofiRooms() {
     h('div', 'grab'); h('h2', '', 'Where does this door go?');
     h('p', 'muted', 'Pick one of your rooms, or start a new one. Walking through brings you back the same way.');
     const list = h('div', 'cards');
-    const me = view.fp && room.get(view.fp.id), asCat = me ? { c: me.c, name: me.name } : null;
+    const asCharacter=!!view.fp;
     const stick = id => { const clean = !isEdited(); door.link = id; if (isSaved()) { patchSaved(meta.current, d => d.items.forEach(i => { if (i.id === door.id) i.link = id; })); if (clean) baseSig = sig(); } };
-    const link = id => { pushUndo(); stick(id); changed(); save(); closeSheets(); if (relink) toast(`<span>This door now goes to ${roomTitle(id)}</span>`, 1500); else walkThrough(door, id, asCat); };
+    const link = id => { pushUndo(); stick(id); changed(); save(); closeSheets(); if (relink) toast(`<span>This door now goes to ${roomTitle(id)}</span>`, 1500); else walkThrough(door, id, asCharacter); };
     rooms.filter(r => r.id !== meta.current).forEach(r => {
       const b = document.createElement('button'); b.className = 'card room';
       b.innerHTML = `<div class="art">🚪</div><b>${r.name}</b><span>${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
@@ -2906,10 +2886,11 @@ function startLofiRooms() {
       closeSheets();
       leaveThen(() => {
         pushUndo(); stick(id); save();
-        exitCat(true);
+        exitCharacter(true);
         newRoom('blank', id);
-        backDoor(from, CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null);
+        const back=backDoor(from, CAT[door.t].kind === 'wall' ? { k: door.k, u: door.u, t: door.t, c: door.c } : null);
         changed(); commit(true); discover('openhouse');
+        if(asCharacter){const at=back&&doorFront(back);enterCharacter(at?{x:at[0]+.5,z:at[1]+.5,heading:at[2]+Math.PI}:undefined);}
       });
     };
     list.appendChild(nb);
@@ -2923,7 +2904,7 @@ function startLofiRooms() {
   function switchRoom(id, asked) {
     if (id === meta.current) return;
     if (!asked) { leaveThen(() => switchRoom(id, true)); return; }
-    exitCat(true);
+    exitCharacter(true);
     if (!loadRoom(id)) { toast('<span>Couldn’t open that room</span>', 1500); return; }
     undo.length = 0; baseSig = sig(); save();
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
@@ -3001,7 +2982,7 @@ function startLofiRooms() {
     const pending=store.get('lr.pendingDraft',null);
     if(pending && pending.id!==meta.current){
       const resume=h('button','chipbtn');resume.textContent='Resume unsaved room: '+(pending.data?.name || 'Untitled room');
-      resume.onclick=()=>leaveThen(()=>{const probe=new LR.Room();if(!probe.load(pending.data))return;exitCat(true);room.load(probe.serialize());meta.current=pending.id;baseSig=pending.base || sig();undo.length=0;delete meta.visit;store.del('lr.pendingDraft');closeSheets();changed();save();updateHeader();});
+      resume.onclick=()=>leaveThen(()=>{const probe=new LR.Room();if(!probe.load(pending.data))return;exitCharacter(true);room.load(probe.serialize());meta.current=pending.id;baseSig=pending.base || sig();undo.length=0;delete meta.visit;store.del('lr.pendingDraft');closeSheets();changed();save();updateHeader();});
     }
 
     // the house map: which rooms connect to which, with a tap to travel
@@ -3256,7 +3237,7 @@ function startLofiRooms() {
   async function filmDay() {
     if (filming) return;
     if (!('VideoEncoder' in window)) { toast('<span>This browser can’t make videos. Try Chrome, or the Android app.</span>', 2800, true); return; }
-    closePhoto(); closeSheets(); exitCat(true);
+    closePhoto(); closeSheets(); exitCharacter(true);
     const { w: W, h: H, fps: FPS, secs } = FILM, F = FPS * secs, seg = F / 4;
     const ov = $('#filming'), bar = $('#filmBar'), label = $('#filmPct');
     filming = true; filmCancel = false; ov.classList.add('open'); bar.style.width = '0%'; label.textContent = 'Getting the camera ready…';
@@ -3448,12 +3429,12 @@ function startLofiRooms() {
       }
       if ([...view.pets.values()].some(P => P.perch && !P.hop)) discover('perch');
     }
-    if (view.fp) catDoors(now);
-    if (view.fp && held.size) {
+    if (view.fp) characterDoors(now);
+    if (view.fp && held.size && !sheet.classList.contains('open') && !letters.active && !barnaby.active && !frenchUI?.active) {
       const f = (held.has('w') || held.has('ArrowUp') ? 1 : 0) - (held.has('s') || held.has('ArrowDown') ? 1 : 0);
       const sd = (held.has('d') ? 1 : 0) - (held.has('a') ? 1 : 0), turn = (held.has('ArrowLeft') ? 1 : 0) - (held.has('ArrowRight') ? 1 : 0);
       if (turn) view.fp.look += turn * dt * 2.2;
-      view.catMove(f, sd, dt);
+      view.characterMove(f, sd, dt);
     }
     view.beat = meta.music && !stream && !view.reducedMotion ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
     if (!filming && !barnaby.active) { view.frame(dt, t, false); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); atlasUI.frame(); }
@@ -3465,7 +3446,7 @@ function startLofiRooms() {
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) liveWeather.refresh(); });
   window.addEventListener('resize', () => view.resize());
-  companion = LRCompanion.create({ view, room, slots: wardrobe.slots, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, quiet: home.active || letters.active || barnaby.active || frenchUI?.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
+  companion = LRCompanion.create({ view, room, slots: wardrobe.slots, onWardrobe: wardrobeSheet, environment: () => ({ roomId: meta.current, editing: state.mode === 'edit', hour: new Date().getHours(), phase: meta.phase, weather: meta.weather, dream: driftNow(), beat: view.beat, paused:sheet.classList.contains('open'), quiet: home.active || letters.active || barnaby.active || frenchUI?.active || rituals.breath.active || filming || document.hidden || $('#intro').classList.contains('open') || $('#photo').classList.contains('open') }) });
   view.companion = companion;
   const cozy = LRCozyFurniture.createView({pixelArt:it=>roomTools.pixelPoster(meta.current,it.id),store,model:LRCozyFurniture.create({store}),view,room,roomId:()=>meta.current,files,wardrobe,companion:()=>companion,sheet:codeSheet,close:closeSheets,sound:Sound,discover,notice:text=>toast(`<span>${esc(text)}</span>`,2300,true),editing:()=>state.mode==='edit',hidden:()=>letters.active || barnaby.active || frenchUI?.active || filming || document.hidden || $('#photo').classList.contains('open'),takePhoto:()=>$('#bPhoto').click(),openFiles:()=>dashboard.files('Photos')});
   view.cozyLife = cozy;

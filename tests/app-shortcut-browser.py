@@ -34,7 +34,7 @@ with sync_playwright() as p:
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [390,1280]:
-   page.set_viewport_size({'width':width,'height':844});a=button.bounding_box();paw=page.locator('#bCat').bounding_box();assert a['y']+a['height']<=paw['y'];assert a['width']>=44 and a['height']>=44;assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/app-shortcut-{phase}-{width}.png')
+   page.set_viewport_size({'width':width,'height':844});a=button.bounding_box();paw=page.locator('#bCharacter').bounding_box();assert a['y']+a['height']<=paw['y'];assert a['width']>=44 and a['height']>=44;assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/app-shortcut-{phase}-{width}.png')
  # A vanished custom destination fails gently into the picker, without opening a stale URL.
  page.evaluate("const s=JSON.parse(localStorage.getItem('lr.portals'));s.custom=[];localStorage.setItem('lr.portals',JSON.stringify(s));window.opened=[];window.open=(...args)=>opened.push(args);void 0");button.click();assert body.locator('h2').inner_text()=='Room shortcut';assert page.evaluate('opened')==[];body.get_by_role('button',name='Clear shortcut',exact=True).click();assert page.evaluate("localStorage.getItem('lr.appShortcut')") is None;assert button.get_attribute('aria-label')=='Choose room shortcut'
  button.click();esc();assert not page.locator('#sheet').evaluate("e=>e.classList.contains('open')");assert not errors,errors

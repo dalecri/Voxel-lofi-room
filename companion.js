@@ -167,6 +167,7 @@
     const activities = activityLoop();
     const s = { pose: 'stand', activity: null, activityStage: 'idle', sipping: false, pageTurn: 0, x: 0, y: 0, z: 0, heading: 0, mode: 'idle', brightness: 1, bob: 0, tilt: 0, hop: 0, message: '', bubbleUntil: 0, roomId: null, elapsed: 0, target: null, perch: null };
     let turns = 0, words = 0, pause = 2, jump = 0, transit = null, lastSpeech = -45, nextIdle = 60, lastContext = '';
+    let controlled=false, route=null, moved=false, arrivalHeading=null;
     function free(e, x, z) { return x >= 0 && z >= 0 && x < e.n && z < e.n && e.walk[z * e.n + x] > 0; }
     function floor(e) {
       let best = null, distance = Infinity;
@@ -189,7 +190,18 @@
       if (s.roomId !== e.roomId) {
         s.roomId = e.roomId; s.x = e.n / 2; s.z = e.n / 2; s.y = 0;
         Object.assign(s, floor(e) || { x: .5, y: 0, z: .5 });
-        s.target = null; s.perch = null; transit = null; s.message = ''; pause = 2; lastContext = ''; activities.reset(s);
+        s.target = null; s.perch = null; transit = null; s.message = ''; pause = 2; lastContext = ''; route=null;moved=false;activities.reset(s);
+      }
+      if(controlled){
+        s.y=0;s.hop=0;s.bob=0;s.tilt=0;s.weight=0;s.blink=false;s.brightness=1;s.message='';s.sipping=false;s.pageTurn=0;s.pose='stand';
+        if(e.paused||e.quiet||e.editing){s.moving=false;s.mode='idle';moved=false;return s;}
+        s.moving=moved;moved=false;
+        if(route?.length){
+          const to=route[0];if(!free(e,Math.floor(to.x),Math.floor(to.z)))route=null;
+          else {const dx=to.x-s.x,dz=to.z-s.z,d=Math.hypot(dx,dz),stride=dt*1.6;s.heading=Math.atan2(dx,dz);s.moving=d>0;
+            if(d<=stride){s.x=to.x;s.z=to.z;route.shift();if(!route.length&&Number.isFinite(arrivalHeading))s.heading=arrivalHeading;}else{s.x+=dx/d*stride;s.z+=dz/d*stride;}}
+        }
+        s.mode=s.moving?'wander':'idle';return s;
       }
       const night = sleeping(e), rain = rainy(e);
       s.brightness = (night ? .22 : 1) * (rain ? 1.18 : 1);
@@ -241,7 +253,23 @@
       s.weight = !e.reducedMotion && s.mode === 'idle' ? Math.sin(s.elapsed * .35) * .015 : 0;
       return s;
     }
-    return { state: s, step, speak, celebrate, say(text,cheer=false){if(cheer)celebrate({},'moment',true);s.message=String(text);s.bubbleUntil=s.elapsed+4;lastSpeech=s.elapsed;}, tap(e) { celebrate(e, 'tap'); } };
+    function takeControl(e,at){
+      step(0,e);if(at&&Number.isFinite(at.x)&&Number.isFinite(at.z)){s.x=at.x;s.z=at.z;if(Number.isFinite(at.heading))s.heading=at.heading;}
+      const ground=floor(e);if(!ground)return false;
+      if(s.y>0||!free(e,Math.floor(s.x),Math.floor(s.z)))Object.assign(s,ground);
+      activities.reset(s);transit=null;jump=0;s.target=null;s.perch=null;s.y=0;s.moving=false;route=null;moved=false;controlled=true;step(0,e);return true;
+    }
+    function releaseControl(){controlled=false;route=null;moved=false;s.moving=false;s.target=null;s.mode='idle';pause=2;activities.reset(s);}
+    function move(f,side,yaw,dt,e){
+      if(!controlled||(!f&&!side)||!Number.isFinite(yaw))return false;
+      route=null;const dx=Math.sin(yaw)*f+Math.cos(yaw)*side,dz=Math.cos(yaw)*f-Math.sin(yaw)*side,len=Math.hypot(dx,dz)||1,stride=1.6*Math.max(0,Math.min(.1,dt)),r=.22;
+      const nx=s.x+dx/len*stride,nz=s.z+dz/len*stride,beforeX=s.x,beforeZ=s.z;
+      if(free(e,Math.floor(nx+Math.sign(dx)*r),Math.floor(s.z)))s.x=nx;
+      if(free(e,Math.floor(s.x),Math.floor(nz+Math.sign(dz)*r)))s.z=nz;
+      s.heading=yaw;moved=s.x!==beforeX||s.z!==beforeZ;s.moving=moved;return moved;
+    }
+    function walkTo(e,x,z,heading){if(!controlled||!Number.isFinite(x)||!Number.isFinite(z))return false;const path=pathTo(e,s,[{x:Math.floor(x)+.5,z:Math.floor(z)+.5}]);if(!path)return false;route=path.slice(1);arrivalHeading=Number.isFinite(heading)?heading:null;if(!route.length&&arrivalHeading!==null){s.heading=arrivalHeading;moved=true;s.moving=true;}return true;}
+    return { state: s, step, takeControl, releaseControl, move, walkTo, get controlled(){return controlled;}, speak, celebrate, say(text,cheer=false){if(cheer)celebrate({},'moment',true);s.message=String(text);s.bubbleUntil=s.elapsed+4;lastSpeech=s.elapsed;}, tap(e) { celebrate(e, 'tap'); } };
   }
   const costumes = typeof module !== 'undefined' && module.exports ? require('./costumes.js') : root.LRCostumes;
   // One shared rig. Costumes merge their voxels into these parts, never into room decor.
@@ -430,7 +458,7 @@
       const hits = view.raycaster.intersectObjects(object.userData.meshes, false), wall = view.pickWall(x, y);
       return !!hits.length && (!item || hits[0].distance < item.dist) && (!wall || hits[0].distance <= wall.t + .05);
     }
-    return { say(text,cheer=false){brain.say(text,cheer);}, id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, hop() { brain.celebrate(env(), 'task', true); }, get name() { return DISPLAY_NAME; } };
+    return { takeControl(at){scan();return brain.takeControl(env(),at);},releaseControl(){brain.releaseControl();object.visible=true;},move(f,side,yaw,dt){return brain.move(f,side,yaw,dt,env());},walkTo(x,z,heading){return brain.walkTo(env(),x,z,heading);},say(text,cheer=false){brain.say(text,cheer);}, id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, hop() { brain.celebrate(env(), 'task', true); }, get name() { return DISPLAY_NAME; } };
   }
   const api = { RIG, buildDude, definitionFor, definitionForSlots, attachRig, applyPose, scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
