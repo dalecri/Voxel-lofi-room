@@ -437,7 +437,7 @@
       light.color.setHex(typing ? 0xb7d5ff : currentSlots.hood === 'automata' ? 0xa4eee0 : 0xffe4c0);
       const dim = 1 - .6 * (view.breathDim || 0);
       object.userData.glowMat.color.setScalar(s.brightness * dim); light.intensity = .6 * s.brightness * dim;
-      object.visible = !view.fp;
+      object.visible = !view.fp || !!view.fp.isometric;
       if (s.mode === 'sleep' && !e.quiet && (zTime -= dt) <= 0) { view.icon('z', new THREE.Vector3(s.x, s.y + (s.pose==='sleep' ? .5 : 1.2), s.z), { size: .15, vy: .15, life: 2, seed: 4 }); zTime = 6; }
       bubble.hidden = !s.message || !object.visible || e.quiet;
       if (!bubble.hidden) {

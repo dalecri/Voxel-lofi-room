@@ -401,7 +401,7 @@
 
   R.placeCamera = function () {
     const aspect = this.w / this.h;
-    if (this.fp) {
+    if (this.fp && !this.fp.isometric) {
       this.fpCam.aspect = aspect; this.fpCam.updateProjectionMatrix();
       const ppu = this.h / (2 * Math.tan(this.fpCam.fov * Math.PI / 360));
       this.fx.uScale.value = this.glowFx.uScale.value = ppu * this.r.getPixelRatio();
@@ -1420,7 +1420,7 @@
     this.zoom += (this.zoomGoal - this.zoom) * k;
     this.pan.lerp(this.panGoal, k);
     this.placeCamera();
-    const mask = this.noWalls ? 0 : this.fp ? 15 : this.visibleMask();   // inside the room every wall stays up
+    const mask = this.noWalls ? 0 : this.fp && !this.fp.isometric ? 15 : this.visibleMask();   // inside the room every wall stays up
     if (mask !== this.mask && this.room) { this.buildShell(this.room, mask); this.applyVisibility(); }
 
     let phaseDirty = false;
@@ -1601,12 +1601,19 @@
     this.lifeEvents = alive;
   };
 
-  R.enterCharacterView = function(at){
+  R.enterCharacterView = function(at,isometric=false){
     if(this.fp)return true;
     const character=this.companion;if(!character||!character.takeControl(at))return false;
-    this.fp={id:character.id,yaw:character.brain.state.heading,look:0,pitch:-.08,bob:0};
-    this.cam=this.fpCam;character.object.visible=false;
-    [this.fx,this.glowFx].forEach(f=>{f.uPersp.value=1;});this.setHover(0);this.placeCamera();this.updateCharacterView(0,this.t);return true;
+    this.fp={id:character.id,yaw:character.brain.state.heading,look:0,pitch:-.08,bob:0,isometric};
+    this.cam=isometric?this.isoCam:this.fpCam;character.object.visible=isometric;
+    [this.fx,this.glowFx].forEach(f=>{f.uPersp.value=isometric?0:1;});this.setHover(0);this.placeCamera();this.updateCharacterView(0,this.t);return true;
+  };
+  R.setCharacterPerspective = function(isometric){
+    if(!this.fp)return;
+    this.fp.isometric=isometric;this.fp.yaw=this.companion.brain.state.heading;this.fp.look=0;this.cam=isometric?this.isoCam:this.fpCam;
+    this.companion.object.visible=isometric;
+    [this.fx,this.glowFx].forEach(f=>{f.uPersp.value=isometric?0:1;});
+    this.placeCamera();this.updateCharacterView(0,this.t);
   };
   R.exitCharacterView = function(){
     if(!this.fp)return;
@@ -1615,14 +1622,16 @@
   };
   R.characterMove = function(f,side,dt){
     if(!this.fp)return false;
-    const yaw=this.fp.yaw+this.fp.look,moved=this.companion?.move(f,side,yaw,dt);
-    if(moved&&f>0){this.fp.yaw=yaw;this.fp.look=0;}return moved;
+    const yaw=this.fp.isometric?this.yaw+Math.PI:this.fp.yaw+this.fp.look,moved=this.companion?.move(f,this.fp.isometric?-side:side,yaw,dt);
+    if(moved&&this.fp.isometric)this.companion.brain.state.heading=Math.atan2(Math.sin(yaw)*f-Math.cos(yaw)*side,Math.cos(yaw)*f+Math.sin(yaw)*side);
+    if(moved&&!this.fp.isometric&&f>0){this.fp.yaw=yaw;this.fp.look=0;}return moved;
   };
   R.walkCharacterTo = function(x,z,heading){return !!this.fp&&!!this.companion?.walkTo(x,z,heading);};
   R.updateCharacterView = function(dt,t){
     const character=this.companion,fp=this.fp;
     if(!character||!character.brain.controlled){this.exitCharacterView();this.hooks.characterViewEnded?.();return;}
-    const P=character.brain.state;character.object.visible=false;
+    const P=character.brain.state;character.object.visible=!!fp.isometric;
+    if(fp.isometric)return;
     let dh=P.heading-fp.yaw;while(dh>Math.PI)dh-=Math.PI*2;while(dh<-Math.PI)dh+=Math.PI*2;fp.yaw+=dh*Math.min(1,dt*3);
     if(P.moving&&!this.reducedMotion)fp.bob+=dt*11;
     // Stand above the bed's 1.25-cell mattress, with room to see across it.

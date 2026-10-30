@@ -1267,13 +1267,13 @@ function startLofiRooms() {
   })();
   let follow = null;
   // First person belongs to the companion; cats keep their own routines.
-  const held = new Set();let characterTipShown=false;
+  const held = new Set();let characterTipShown=false, characterIsometric=false;
   window.addEventListener('keyup',e=>{held.delete(e.key.length===1?e.key.toLowerCase():e.key);});
   window.addEventListener('blur',()=>held.clear());
   function enterCharacter(at){
-    if(!view.enterCharacterView(at)){Sound.nope();toast('<span>Leave a little floor space for your character to walk.</span>',1800);return false;}
-    document.body.classList.add('charactercam');$('#characterName').textContent=companion.name;Sound.turn();haptic(8);held.clear();
-    if(!characterTipShown){characterTipShown=true;toast(`<span>${FINE?'Drag to look around, click the floor to walk, or use WASD. Click things to use them.':'Drag to look around, tap the floor to walk, and tap things to use them.'}</span>`,3600);}
+    if(!view.enterCharacterView(at,characterIsometric)){Sound.nope();toast('<span>Leave a little floor space for your character to walk.</span>',1800);return false;}
+    document.body.classList.add('charactercam');$('#characterName').textContent=companion.name;updateCharacterControls();Sound.turn();haptic(8);held.clear();
+    if(!characterTipShown){characterTipShown=true;toast(`<span>${characterIsometric?'Tap the floor to walk, or use the arrows or WASD. Drag to rotate the room.':FINE?'Drag to look around, click the floor to walk, or use WASD. Click things to use them.':'Drag to look around, tap the floor to walk, and tap things to use them.'}</span>`,3600);}
     discover('catseye');return true;
   }
   function exitCharacter(quiet){
@@ -1281,6 +1281,21 @@ function startLofiRooms() {
   }
   $('#bCharacter').onclick=()=>{if(view.fp)exitCharacter();else enterCharacter();};
   $('#characterExit').onclick=()=>exitCharacter();
+  function updateCharacterControls(){
+    $('#characterPerspective').textContent=characterIsometric?'First person':'Isometric';
+    $('#characterPerspective').setAttribute('aria-label',characterIsometric?'Switch to first-person view':'Control in isometric view');
+    $('#characterDirections').hidden=!characterIsometric;
+  }
+  $('#characterPerspective').onclick=()=>{
+    characterIsometric=!characterIsometric;held.clear();view.setCharacterPerspective(characterIsometric);updateCharacterControls();
+    if(characterIsometric)toast('<span>Tap the floor to walk, or use the arrows or WASD. Drag to rotate the room.</span>',3200);
+    activity.wake();
+  };
+  document.querySelectorAll('#characterDirections button').forEach(button=>{
+    button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);held.add(button.dataset.key);activity.wake();});
+    const release=()=>held.delete(button.dataset.key);
+    button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
+  });
   const catName = it => it.name || (CATS[it.c] || CATS[0]).name;
   // mischief: now and then a cat wanders over and knocks something off a table
   function mischief() {
@@ -1725,7 +1740,7 @@ function startLofiRooms() {
   });
   canvas.addEventListener('pointermove', e => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (gesture && pointers.size >= 2 && view.fp) return;
+    if (gesture && pointers.size >= 2 && view.fp && !view.fp.isometric) return;
     if (gesture && pointers.size >= 2) {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
@@ -1741,7 +1756,7 @@ function startLofiRooms() {
       if (!orbit.moved && orbit.sx !== undefined && Math.hypot(e.clientX - orbit.sx, e.clientY - orbit.sy) < 8) return;
       orbit.moved = true;
       orbit.x = e.clientX; orbit.y = e.clientY;
-      if (view.fp) { view.fp.look -= dx * 0.006; view.fp.pitch = Math.max(-0.9, Math.min(0.75, view.fp.pitch + dy * 0.005)); }   // look around
+      if (view.fp && !view.fp.isometric) { view.fp.look -= dx * 0.006; view.fp.pitch = Math.max(-0.9, Math.min(0.75, view.fp.pitch + dy * 0.005)); }   // look around
       else if (orbit.pan) panBy(dx, dy);
       else { view.yawGoal -= dx * 0.008; view.pitchGoal = Math.max(0.3, Math.min(1.2, view.pitchGoal + dy * 0.005)); }
       return;
@@ -1817,7 +1832,7 @@ function startLofiRooms() {
   canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !state.drag) { view.setGhost(null); view.setHover(0); mouse = null; } });
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
-    if (view.fp) { view.fpCam.fov = Math.max(45, Math.min(90, view.fpCam.fov + e.deltaY * 0.03)); view.placeCamera(); return; }
+    if (view.fp && !view.fp.isometric) { view.fpCam.fov = Math.max(45, Math.min(90, view.fpCam.fov + e.deltaY * 0.03)); view.placeCamera(); return; }
     view.zoomGoal = Math.max(0.7, Math.min(room.n > 14 ? 4.5 : 3, view.zoomGoal * Math.exp(-e.deltaY * 0.0015)));
   }, { passive: false });
 
@@ -1839,8 +1854,8 @@ function startLofiRooms() {
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (view.fp) {   // character view: WASD or the arrows walk, Q/E look around, C or Esc goes back
       if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) { e.preventDefault(); held.add(key); return; }
-      if (key === 'q') { view.fp.look += 0.35; return; }
-      if (key === 'e') { view.fp.look -= 0.35; return; }
+      if (key === 'q') { if(view.fp.isometric)view.yawGoal+=Math.PI/2;else view.fp.look += 0.35; return; }
+      if (key === 'e') { if(view.fp.isometric)view.yawGoal-=Math.PI/2;else view.fp.look -= 0.35; return; }
       if (key === 'Escape' || key === 'c') { exitCharacter(); return; }
     } else if (key === 'c' && state.mode === 'explore') { enterCharacter(); return; }
     const trayOpen = tray.classList.contains('open');
@@ -3501,8 +3516,8 @@ function startLofiRooms() {
     if (view.fp) characterDoors(now);
     if (view.fp && held.size && !sheet.classList.contains('open') && !letters.active && !barnaby.active && !frenchUI?.active) {
       const f = (held.has('w') || held.has('ArrowUp') ? 1 : 0) - (held.has('s') || held.has('ArrowDown') ? 1 : 0);
-      const sd = (held.has('d') ? 1 : 0) - (held.has('a') ? 1 : 0), turn = (held.has('ArrowLeft') ? 1 : 0) - (held.has('ArrowRight') ? 1 : 0);
-      if (turn) view.fp.look += turn * dt * 2.2;
+      const sd = (held.has('d') || (view.fp.isometric && held.has('ArrowRight')) ? 1 : 0) - (held.has('a') || (view.fp.isometric && held.has('ArrowLeft')) ? 1 : 0), turn = (held.has('ArrowLeft') ? 1 : 0) - (held.has('ArrowRight') ? 1 : 0);
+      if (turn && !view.fp.isometric) view.fp.look += turn * dt * 2.2;
       view.characterMove(f, sd, dt);
     }
     view.beat = meta.music && !stream && !view.reducedMotion ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat

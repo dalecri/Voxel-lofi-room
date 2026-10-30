@@ -365,6 +365,9 @@
   #characterbar button { padding: 11px 15px; border-radius: 16px; font-weight: 700; font-size: 14px; background: var(--chip); color: inherit; white-space: nowrap; }
   #characterbar button.primary { background: #3a2a48; color: #fff; }
   @media (max-width: 480px) { #characterbar { gap: 6px; padding: 6px; } #characterbar b { padding: 0 6px; font-size: 14px; } #characterbar button { padding: 10px 12px; font-size: 13px; } }
+  #characterbar { flex-wrap:wrap; justify-content:center; max-width:calc(100% - 24px); width:max-content; }
+  #characterDirections:not([hidden]) { display:flex; justify-content:center; gap:8px; flex-basis:100%; }
+  #characterDirections button { touch-action:none; width:44px; height:44px; padding:0; font-size:22px; }
   body.charactercam #characterbar { display: flex; }
   body.charactercam .explorebar, body.charactercam .tools, body.charactercam #tray, body.charactercam #rotL, body.charactercam #rotR { display: none !important; }
   body:not(.exploring) #bCharacter { display: none; }
@@ -557,7 +560,7 @@
   <button id="bEdit" class="primary" aria-label="Decorate this room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>Decorate</span></button>
 </div>
 
-<div id="characterbar" class="panel"><b id="characterName">Little dude</b><button id="characterExit" class="primary">Back to room</button></div>
+<div id="characterbar" class="panel"><b id="characterName">Little dude</b><button id="characterPerspective" aria-label="Control in isometric view">Isometric</button><button id="characterExit" class="primary">Done</button><div id="characterDirections" hidden aria-label="Walk your character"><button data-key="ArrowUp" aria-label="Walk up">↑</button><button data-key="ArrowLeft" aria-label="Walk left">←</button><button data-key="ArrowDown" aria-label="Walk down">↓</button><button data-key="ArrowRight" aria-label="Walk right">→</button></div></div>
 
 <div id="toasts"></div>
 
