@@ -24,7 +24,7 @@ with sync_playwright() as p:
  def done():page.get_by_role('button',name='Done',exact=True).click()
  def up(name):page.get_by_role('button',name='Move '+name+' widget up',exact=True).click()
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();open_today()
- default=['week','feature','tasks','tools','weather'];assert order()==default
+ default=['week','feature','tools','weather'];assert order()==default;assert page.locator('.space-today .today-tasks,.space-today .today-google-focus,[data-widget="tasks"]').count()==0
  assert page.locator('.today-welcome').evaluate('e=>!e.closest(".today-widget-stack") && !e.closest("[data-widget]")')
  assert page.locator('.today-welcome .today-condition').count()==1
  assert page.locator('.today-widget-controls:visible').count()==0;assert page.get_by_role('button',name='Arrange widgets',exact=True).count()==0
@@ -44,9 +44,9 @@ with sync_playwright() as p:
  page.mouse.up();assert page.locator('.calendar-detail').count()==0;assert page.locator('.today-widget-drag-preview').count()==0;done()
  # Content continuity: the French word card's text survives being moved around.
  card=page.locator('.today-feature .french-today-card');card.wait_for();word=card.inner_text()
- edit();assert page.locator('.today-widget-body').evaluate_all('es=>es.every(e=>e.inert)');assert page.locator('.today-widget-controls:visible').count()==5
+ edit();assert page.locator('.today-widget-body').evaluate_all('es=>es.every(e=>e.inert)');assert page.locator('.today-widget-controls:visible').count()==4
  assert page.get_by_role('button',name='Move This week widget up',exact=True).is_disabled()
- for _ in range(4):up('Weather')
+ for _ in range(3):up('Weather')
  assert order()[0]=='weather';assert stored()==order()
  handle=page.get_by_role('button',name='Drag Weather widget',exact=True);handle.focus();handle.press('ArrowDown');assert order()[1]=='weather' and stored()==order();handle.press('ArrowUp')
  # Mouse drag moves the first widget below the second, without rebuilding either.

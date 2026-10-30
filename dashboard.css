@@ -18,58 +18,28 @@
 .saved-scenes-shelf:empty{display:none}
 @media(max-width:360px){.dashboard-tabs{gap:2px}.dashboard-tabs .chipbtn{padding:9px 7px;font-size:12px}.launcher-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* One compact navigation row: tabs scroll within it; actions stay reachable. */
-.dashboard-tabs.menu-tabs { margin: 0 0 10px; padding: 4px; border-radius: 20px; gap: 3px; background: var(--panel-solid); }
-.dashboard-tabs.menu-tabs .chipbtn { padding: 8px 9px; border-radius: 16px; background: transparent; }
-.dashboard-tabs.menu-tabs [aria-selected=true] { background: var(--accent); color: var(--panel-solid); }
-@media(max-width:360px) { .dashboard-tabs.menu-tabs { gap: 1px; padding: 3px; } .dashboard-tabs.menu-tabs .chipbtn { padding: 8px 5px; font-size: 12px; } }
-
-.menu-actions { float: right; display: flex; gap: 6px; align-items: center; margin: 0 0 8px 12px; }
-.menu-actions .sheet-icon, .menu-actions .space-search-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; margin: 0; float: none; border-radius: 16px; background: var(--chip); color: var(--ink); flex: none; }
-.menu-actions .sheet-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-
-.menu-nav { display: flex; align-items: center; gap: 4px; position: sticky; top: 0; z-index: 2; background: var(--panel-solid); margin-bottom: 8px; }
-.menu-nav .dashboard-tabs.menu-tabs { position: static; flex: 1; min-width: 0; margin: 0; }
-.menu-nav .menu-tabs .chipbtn { flex: 1 0 auto; padding: 8px 4px; font-size: 12px; }
-.menu-nav .menu-actions { float: none; flex: none; gap: 4px; margin: 0; }
-
-/* Menu tabs use the same line-icon style as Search and Close. */
-.menu-nav .menu-tabs { gap: 1px; padding: 2px; }
-.menu-nav .menu-tabs .chipbtn { display: grid; place-items: center; flex: 1 1 0; min-width: 32px; height: 44px; padding: 6px 2px; }
-
-/* A visible smoked-glass surface, with a lit edge like the app's panels. */
-.menu-nav {
-  border-radius:24px;
-  border:1px solid color-mix(in srgb,var(--ink) 20%,transparent);
-  padding:2px;
-  background:color-mix(in srgb,var(--ink) 14%,var(--panel-solid));
-  box-shadow:inset 0 1px 0 #ffffff30,inset 0 -1px 0 #00000012,0 5px 18px #00000018;
+/* A quiet, solid navigation rail matching the dashboard widgets. */
+.menu-actions { float:right; display:flex; align-items:center; gap:4px; margin:0 0 8px 12px; }
+.menu-actions .sheet-icon,.menu-actions .space-search-toggle { display:grid; place-items:center; flex:none; width:44px; height:44px; padding:0; margin:0; float:none; border:0; border-radius:14px; background:transparent; color:var(--ink); box-shadow:none; }
+.menu-nav { display:flex; align-items:center; gap:8px; position:sticky; top:0; z-index:2; isolation:isolate; margin-bottom:12px; padding:6px; border:1px solid var(--line); border-radius:22px; background:var(--panel-solid); box-shadow:none; }
+.menu-nav .dashboard-tabs.menu-tabs { position:static; display:flex; flex:1; min-width:0; gap:4px; margin:0; padding:0; background:transparent; }
+.menu-nav .menu-tabs .chipbtn { display:grid; place-items:center; flex:1 1 0; min-width:36px; height:44px; min-height:44px; margin:0; padding:0; border:0; border-radius:14px; background:transparent; color:var(--ink-dim); box-shadow:none; transform:none; }
+.menu-nav .menu-tabs .chipbtn[aria-selected=true] { background:color-mix(in srgb,var(--accent) 20%,var(--panel-solid)); color:var(--ink); }
+.menu-nav .menu-actions { float:none; flex:none; gap:2px; margin:0; padding-left:6px; border-left:1px solid var(--line); }
+.menu-nav button svg { width:21px; height:21px; }
+@media(hover:hover) {
+  .menu-nav button:hover { background:var(--chip); color:var(--ink); }
 }
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-  .menu-nav {
-    background:linear-gradient(150deg,#ffffff0d,transparent 65%),color-mix(in srgb,var(--ink) 16%,color-mix(in srgb,var(--panel-solid) 80%,transparent));
-    -webkit-backdrop-filter:blur(18px) saturate(140%);
-    backdrop-filter:blur(18px) saturate(140%);
-  }
-}
-@media(prefers-reduced-transparency:reduce) {
-  .menu-nav { background:color-mix(in srgb,var(--ink) 14%,var(--panel-solid)); -webkit-backdrop-filter:none; backdrop-filter:none; }
-}
-.menu-nav .dashboard-tabs.menu-tabs { background:transparent; }
-.menu-nav .menu-actions .space-search-toggle { background:transparent; border:0; box-shadow:none; }
-
-/* Keep scrolling cards out of the header, including its rounded side gutters.
-   Repaint the glass over an opaque sheet backing so text cannot bleed through. */
-.menu-nav::before {
-  content:""; position:absolute; inset:-16px 0 -8px; z-index:-2;
-  background:var(--panel-solid);
-  box-shadow:-32px 0 var(--panel-solid),32px 0 var(--panel-solid);
-  pointer-events:none;
-}
-.menu-nav::after {
-  content:""; position:absolute; inset:0; z-index:-1;
-  border-radius:inherit; background:inherit; box-shadow:inherit;
-  pointer-events:none;
+.menu-nav button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+/* An opaque backing keeps scrolling content out of the header and side gutters. */
+.menu-nav::before { content:""; position:absolute; inset:-16px 0 -8px; z-index:-2; background:var(--panel-solid); box-shadow:-32px 0 var(--panel-solid),32px 0 var(--panel-solid); pointer-events:none; }
+.menu-nav::after { content:""; position:absolute; inset:-1px; z-index:-1; border:1px solid var(--line); border-radius:inherit; background:var(--panel-solid); pointer-events:none; }
+@media(max-width:360px) {
+  .menu-nav { gap:4px; padding:4px; }
+  .menu-nav .dashboard-tabs.menu-tabs { gap:2px; }
+  .menu-nav .menu-tabs .chipbtn { min-width:32px; }
+  .menu-nav .menu-actions { padding-left:4px; }
+  .menu-nav .menu-actions button { width:40px; }
 }
 
 /* A pair of compact settings on each line, including phone widths. */

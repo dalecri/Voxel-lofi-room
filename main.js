@@ -2963,7 +2963,7 @@ function startLofiRooms() {
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
     const todoTab = sections['To-Do'];
     const todoHeading=h('div','todo-heading','',todoTab);h('h2','','To-Do',todoHeading);
-    todayUI.mount(target,{openDay:date=>calendar.openDay(date),googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),google:host=>googleTasksUI.mount(host),tasks:todoTab});
+    todayUI.mount(target,{openDay:date=>calendar.openDay(date),google:host=>googleTasksUI.mount(host),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     // The Lane: your house and a few places on the street. The house panel holds what the
     // Rooms tab always did (gallery, share, house map, guest book, new rooms), unchanged.
