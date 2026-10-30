@@ -90,7 +90,7 @@
     return '';
   }
   function create({ store, today }) {
-    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [] }; };
+    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [], talks: cleanTalks(s.talks) }; };
     const save = s => store.set(KEY, s);
     return {
       // Called when the lane is shown: returns the away note (once) and records the visit.
@@ -103,7 +103,101 @@
       get firstVisit() { return read().firstVisit || today(); },
       isRead: id => read().read.includes(id),
       markRead(id) { const s = read(); if (!s.read.includes(id)) { s.read.push(id); save(s); } },
+      // The last thing you talked about with a neighbour: one small record each, never a log.
+      memory: id => read().talks[id] || null,
+      remember(id, rec) { if (!NEIGHBORS[id]) return; const s = read(); s.talks[id] = { date: rec.date, topic: rec.topic, reply: rec.reply }; save(s); },
     };
+  }
+
+  // ---------- Neighbours: a few cats with routines, personalities and a short memory ----------
+  // Routines follow the time of day and the weather, nothing else, so they're the same for
+  // everyone on the same day. Each chat asks one small question; tomorrow they remember your answer.
+  const NEIGHBORS = {
+    mallow: { name: 'Mallow', coat: 0xe8a050, role: 'Shopkeeper', about: 'Warm, a little theatrical about his stock, always halfway through a story about where something came from.',
+      hello: 'Ah, a customer! Or a friend. Both, ideally.', missed: 'There you are! The shelf has turned over twice without you.', again: 'Back already? I’m still thinking about what you said.',
+      topics: [
+        { id: 'teapot', ask: 'A crate of teapots came in, and one of them hums when you pour. Keep it, or send it back?', replies: [
+          ['Keep it, it has character', 'That’s what I said! It stays.', 'That humming teapot? Sold it this morning to someone who hums back. You were right.'],
+          ['Send it back', 'Sensible. A little boring, but sensible.', 'I sent the humming teapot back like you said. I miss it a bit, if I’m honest.']] },
+        { id: 'sign', ask: 'I’m repainting the sign. Coral again, or something bolder?', replies: [
+          ['Coral, always', 'Coral it is. The street wouldn’t recognise me otherwise.', 'Coral it stayed. The street looks like itself, thanks to you.'],
+          ['Something bolder', 'Bolder! Oh, you’re trouble. I like it.', 'I tried bolder on a scrap of wood. Too bold. Coral won, but thank you for pushing me.']] },
+        { id: 'stories', ask: 'People ask where my finds come from. Should I tell the true stories, or the better ones?', replies: [
+          ['The true ones', 'Honest Mallow. It has a ring to it.', 'I told a true story yesterday, like you said. The lamp came from a car boot sale. They loved it anyway.'],
+          ['The better ones', 'A merchant after my own heart.', 'Yesterday a rug “flew in from a mountain monastery”. You’re a bad influence. Thank you.']] },
+        { id: 'early', ask: 'Do you think a shop should open early, or whenever the shopkeeper wakes up?', replies: [
+          ['Early, with the sun', 'Up with the sun, then. Ugh. Fine.', 'I opened early, like you said. Nobody came for an hour, but the light on the shelf was lovely.'],
+          ['Whenever you wake up', 'Finally, someone who understands.', 'I slept in, on your advice. Best morning I’ve had all month.']] },
+      ] },
+    juniper: { name: 'Juniper', coat: 0x9a8a78, role: 'The reader', about: 'Quiet and dry. Reads anything, everywhere, and lends books whether you asked or not.',
+      hello: 'Oh. Hello. I’m Juniper. I’ll be reading, mostly.', missed: 'You’ve been away. I read three books about it.', again: 'Twice in one day. People will talk.',
+      topics: [
+        { id: 'pick', ask: 'I’m torn between a mystery and a book about moss. Which one?', replies: [
+          ['The mystery', 'Mystery. Good. I’ll pretend I didn’t guess the ending.', 'I finished the mystery you picked. It was the cat. It’s always the cat.'],
+          ['The moss book', 'Moss. Bold choice. Correct choice.', 'The moss book was wonderful. I’ll never walk past a step the same way.']] },
+        { id: 'lend', ask: 'I could lend you something. Short, or long?', replies: [
+          ['Something short', 'Short. I’ll find you something you can finish in one cup of tea.', 'I found you a short one, like you asked. Poems, mostly about weather. It’s on the notice board.'],
+          ['Something long', 'Long. You’re braver than you look.', 'I picked out a long one for you. Eight hundred pages. No pressure. Some pressure.']] },
+        { id: 'quiet', ask: 'Do you read with music on, or in silence?', replies: [
+          ['With music', 'Hm. I tried that once. I read the same page eleven times.', 'I tried reading with music, because you do. Lofi, like your radio. It was… actually nice.'],
+          ['In silence', 'Correct. We understand each other.', 'I thought about what you said, about silence. It’s why I sit out here. Even the street is quiet in the afternoon.']] },
+        { id: 'ending', ask: 'Do you peek at the last page first?', replies: [
+          ['Always', 'Monster. Fascinating monster.', 'I peeked at the last page yesterday, because of you. I feel terrible. It was great.'],
+          ['Never', 'Good. Some of us still have principles.', 'Never peek, you said. I didn’t. The ending got me, properly. Thank you.']] },
+      ] },
+    puddle: { name: 'Puddle', coat: 0x7d8590, role: 'Comes with the rain', about: 'A shy grey stray who only turns up when it rains, and shelters under Mallow’s awning.',
+      hello: 'Oh! You can see me. Most people walk faster in the rain.', missed: 'It hasn’t rained in a while. I was hoping you’d still be here.', again: 'Still raining. Still here. Still you.',
+      topics: [
+        { id: 'rain', ask: 'Do you like the rain, or do you just put up with it?', replies: [
+          ['I love it', 'Me too. It makes the whole street smell like a garden.', 'Last time you said you love the rain. I thought about it all the way home.'],
+          ['I put up with it', 'That’s fair. I’ll try to bring the gentle kind.', 'You said you put up with the rain, so I brought the soft kind today. Did you notice?']] },
+        { id: 'awning', ask: 'Mallow says he doesn’t mind me under here. Do you think he means it?', replies: [
+          ['He’s glad you’re here', 'You think so? I’ll stay a bit longer, then.', 'I stayed under the awning longer, like you said. Mallow brought me a saucer of milk. I think you were right.'],
+          ['You could ask him', 'Ask him? Out loud? …Maybe next time.', 'I asked Mallow, like you said. He said the awning was built for me. I don’t think that’s true, but I liked it.']] },
+        { id: 'name', ask: 'Puddle isn’t my real name. I like it better, though. Do you?', replies: [
+          ['It suits you', 'It does, doesn’t it. Small and shiny.', 'You said Puddle suits me. I’ve been saying it to myself. Puddle. Yes.'],
+          ['What’s the real one?', 'It’s… a secret. Ask me on a sunny day.', 'You asked my real name. It’s still raining, so it’s still a secret. Sorry. Nearly.']] },
+      ] },
+  };
+  const WET = w => ['rain', 'storm', 'snow'].includes(w);
+  // Where everyone is right now. place: 'street' (with a spot on the street), 'shop', or 'away'.
+  function neighbors({ phase = 'day', weather = 'clear' } = {}) {
+    const wet = WET(weather), out = [];
+    const add = (id, place, doing, extra = {}) => out.push({ id, name: NEIGHBORS[id].name, coat: NEIGHBORS[id].coat, place, doing, ...extra });
+    if (phase === 'morning') add('mallow', 'street', 'opening up the shop', { piece: 'lanemallow', at: [6, 2] });
+    else add('mallow', 'shop', { day: 'minding the shelf', evening: 'counting the day’s Fireflies', night: 'dozing behind the counter' }[phase] || 'minding the shelf');
+    if (phase === 'morning') add('juniper', 'street', 'reading the notice board', { piece: 'lanereader', c: 1, at: [13, 2] });
+    else if (phase === 'day') add('juniper', 'street', wet ? 'reading under the Mail Room porch' : 'reading under the tree', { piece: 'lanereader', c: 0, at: wet ? [9, 2] : [2, 8] });
+    else add('juniper', 'away', 'home with a book');
+    if (wet) add('puddle', 'street', weather === 'snow' ? 'watching the snow from under the awning' : 'sheltering under Mallow’s awning', { piece: 'lanestray', at: [5, 2] });
+    else add('puddle', 'away', 'somewhere dry, waiting for rain');
+    return out;
+  }
+  // One short chat. Yesterday's answer comes back first; today's question is seeded by the date
+  // and never repeats yesterday's. Talking again the same day just gets a nod.
+  function talk(id, { date, memory = null } = {}) {
+    const N = NEIGHBORS[id]; if (!N || !valid(date)) return null;
+    const gap = memory && valid(memory.date) ? daysBetween(memory.date, date) : null;
+    const said = memory && N.topics.find(t => t.id === memory.topic);
+    if (gap === 0 && said) return { id, name: N.name, lines: [N.again], ask: null, replies: [], remembered: false };
+    const lines = [];
+    let remembered = false;
+    if (gap === 1 && said && said.replies[memory.reply]) { lines.push(said.replies[memory.reply][2]); remembered = true; }
+    else if (gap > 1) lines.push(N.missed);
+    else lines.push(N.hello);
+    const pool = N.topics.filter(t => !said || t.id !== said.id), rnd = seeded(date + '|talk|' + id);
+    const topic = pool[Math.floor(rnd() * pool.length)];
+    return { id, name: N.name, lines, topic: topic.id, ask: topic.ask, replies: topic.replies.map(r => r[0]), remembered };
+  }
+  // Your answer: what they say back, and the small record to keep for tomorrow.
+  function answer(id, topicId, reply, date) {
+    const t = NEIGHBORS[id]?.topics.find(x => x.id === topicId), r = t?.replies[reply];
+    return r ? { line: r[1], record: { date, topic: topicId, reply } } : null;
+  }
+  function cleanTalks(t) {
+    const out = {};
+    if (t && typeof t === 'object') for (const id of Object.keys(NEIGHBORS)) { const r = t[id]; if (r && valid(r.date) && typeof r.topic === 'string' && Number.isInteger(r.reply)) out[id] = { date: r.date, topic: r.topic, reply: r.reply }; }
+    return out;
   }
 
 
@@ -345,16 +439,43 @@
         const list = el('ul', 'lane-who', undefined, panel);
         for (const r of town) { const li = el('li', '', undefined, list); li.innerHTML = catHead(r.coat, r.name); el('span', '', `${r.name} is ${r.doing}` + (/home/.test(r.doing) ? '' : ` (${names[r.place]})`), li); }
       }
+      el('h3', '', 'Neighbours', panel);
+      const folks = el('ul', 'lane-who lane-neighbours', undefined, panel);
+      for (const n of neighbors({ phase: phase(), weather: weather() })) { const li = el('li', '', undefined, folks); li.innerHTML = catHead(n.coat, n.name); el('span', '', `${n.name} is ${n.doing}.`, li); }
       if (calendar?.open) { const b = el('button', 'chipbtn', 'Pin something on the calendar', panel); b.type = 'button'; b.onclick = calendar.open; }
     }
-    return { mount, renderPlace, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
+    // A chat with a neighbour: what they remember, one question, two answers, and their reply.
+    function renderTalk(id, host) {
+      const N = NEIGHBORS[id]; if (!N) return;
+      const date = today(), chat = talk(id, { date, memory: model.memory(id) }); if (!chat) return;
+      const box = el('div', 'lane-talk', undefined, host); box.dataset.neighbor = id;
+      const who = el('div', 'lane-talk-who', undefined, box);
+      const face = el('span', 'lane-talk-face', undefined, who); face.innerHTML = catHead(N.coat, N.name);
+      const name = el('div', '', undefined, who); el('b', '', N.role, name); el('small', '', N.name === 'Mallow' ? 'Mallow’s Shop' : 'Your neighbour', name);
+      el('p', 'lane-talk-about muted', N.about, box);
+      const log = el('div', 'lane-talk-log', undefined, box); log.setAttribute('aria-live', 'polite');
+      const say = (text, mine) => el('p', 'lane-bubble' + (mine ? ' mine' : '') + (chat.remembered && !mine && log.children.length === 0 ? ' remembered' : ''), text, log);
+      for (const line of chat.lines) say(line);
+      if (chat.ask) say(chat.ask);
+      if (!chat.replies.length) return;
+      const picks = el('div', 'lane-talk-replies', undefined, box);
+      chat.replies.forEach((label, i) => {
+        const b = el('button', 'chipbtn', label, picks); b.type = 'button';
+        b.onclick = () => {
+          const res = answer(id, chat.topic, i, date); if (!res) return;
+          model.remember(id, res.record); picks.remove(); say(label, true); play('click'); say(res.line);
+          el('p', 'lane-talk-note muted', `${N.name} will remember this tomorrow.`, box);
+        };
+      });
+    }
+    return { mount, renderPlace, renderTalk, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
   }
   // Public interiors are rebuilt for a visit; they never become house rooms or drafts.
   // The street outside: your house, Mallow's Shop, the Mail Room and the Notice Board in the
   // same order as the Lane tab, a sidewalk to stroll along and a little green across the road.
   // Doors carry actions ('home', 'go:shop', 'go:mail'); residents are today's pets out and about.
   const STREET = { house: [1, 0, 'lanehome'], shop: [5, 0, 'laneshop'], mail: [9, 0, 'lanepost'], notice: [12, 1, 'laneboard'] };
-  function street(L, { residents = [], season = null } = {}) {
+  function street(L, { residents = [], season = null, neighbors: folks = [] } = {}) {
     const room = new L.Room(), actions = {};
     room.n = 14; room.name = 'The Lane';
     room.wall = { style: L.WALLS.none ? 'none' : 'paint', color: 0 };
@@ -371,6 +492,8 @@
     add('bench', { x: 5, z: 7, r: 2 }); add('streettree', { x: 1, z: 8, c: 1 }); add('streettree', { x: 12, z: 9, c: 2 }); add('streettree', { x: 3, z: 12, c: 0 }); add('streettree', { x: 10, z: 12, c: 1 });
     if (season === 'halloween') { add('pumpkins', { x: 3, z: 2 }); add('pumpkins', { x: 10, z: 3 }); }
     if (season === 'holiday') add('holidaytree', { x: 7, z: 9 });
+    // Neighbours stand where their routine puts them; tapping one starts a chat.
+    for (const n of folks) if (n.place === 'street' && n.piece) add(n.piece, { x: n.at[0], z: n.at[1], c: n.c || 0, name: n.name }, 'talk:' + n.id);
     // Pets who are out today wander the green, near the place they're spending the day.
     const spots = [[3, 7], [7, 8], [11, 7], [2, 10], [8, 11], [12, 11]];
     residents.filter(r => r.place !== 'house' && r.c != null).slice(0, spots.length).forEach((r, i) => add('cat', { x: spots[i][0], z: spots[i][1], c: r.c, name: r.name }));
@@ -378,7 +501,7 @@
   }
   // The cell you step onto when you come out of a place, facing the street.
   const outside = place => { const [x, z, t] = STREET[place] || STREET.house; return { x: x + (t === 'lanehome' ? 1 : 2) + 0.5, z: z + 3.5, heading: 0 }; };
-  function interior(L, place, stock = [], opts) {
+  function interior(L, place, stock = [], opts = {}) {
     if (place === 'street') return street(L, opts);
     if (!['shop','mail'].includes(place)) throw Error('Unknown lane room');
     const room = new L.Room(), actions = {};
@@ -399,7 +522,7 @@
     add('plant',{x:12,z:12});
     if (place === 'shop') {
       add('marketstall',{x:2,z:1},'shop');
-      add('merchantcat',{x:4,z:3,name:'Mallow'},'shop');
+      if (!opts.mallowOut) add('merchantcat',{x:4,z:3,name:'Mallow'},'shop');   // mornings he's out front, opening up
       add('bookshelf',{x:10,z:0},'shop');
       for (const [i,item] of stock.slice(0,4).entries()) {
         const x=1+(i%2)*6,z=6+Math.floor(i/2)*4;
@@ -423,6 +546,6 @@
     }
     return {data:room.serialize(),actions};
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -88,3 +88,51 @@
     },
   });
 })();
+
+// The neighbours: seated cats with a prop each, so you can tell them apart at a glance.
+// They're figures, not pets: they stay where their routine puts them and wait to be talked to.
+(function () {
+  const LR = typeof module !== 'undefined' && module.exports ? require('./room.js') : window.LR;
+  const { def, shade, mix, hash3 } = LR;
+  function seated(m, coat, { eye = 0x6ab04a, stripes = null } = {}) {
+    const fur = (x, y, z) => (stripes && (y + (x >> 2)) % 3 === 0 ? stripes : shade(coat, 0.95 + 0.07 * hash3(x, y, z, 9)));
+    m.box(2, 0, 1, 6, 6, 5, fur);                                         // body
+    m.box(2, 0, 5, 3, 1, 7, coat).box(5, 0, 5, 6, 1, 7, coat);             // front paws
+    m.box(1, 6, 2, 7, 11, 7, fur);                                        // head
+    m.box(1, 11, 3, 3, 13, 5, coat).box(5, 11, 3, 7, 13, 5, coat);         // ears
+    m.set(2, 11, 5, 0xf0a0b0).set(5, 11, 5, 0xf0a0b0);
+    m.box(2, 7, 7, 6, 8, 8, mix(coat, 0xffffff, 0.55));                    // muzzle
+    m.set(2, 9, 7, eye).set(5, 9, 7, eye).set(3, 8, 8, 0xf08aa0);
+    m.box(6, 0, 0, 7, 1, 4, coat).box(6, 1, 0, 7, 4, 1, coat);             // tail curled round
+  }
+  def('lanemallow', {
+    name: 'Mallow', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane',
+    vars: [[0xe8a050, 0xf07a5a]],
+    build(m, [coat, apron]) {
+      seated(m, coat, { stripes: 0xd88a3a });
+      m.box(2, 2, 5, 6, 6, 6, apron).set(3, 6, 5, apron).set(4, 6, 5, apron);   // his shop apron
+      m.box(7, 0, 5, 8, 13, 6, 0x8a6a4a);                                   // broom handle
+      m.box(6, 0, 4, 9, 2, 7, 0xe6c06a);                                    // bristles
+    },
+  });
+  def('lanereader', {
+    name: 'Juniper', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane',
+    vars: [[0x9a8a78, 'book'], [0x9a8a78, 'paper']],
+    build(m, [coat, what]) {
+      seated(m, coat, { eye: 0xc8b040, stripes: 0x6a5a4a });
+      m.box(1, 9, 7, 3, 10, 8, 0x3a3238).box(5, 9, 7, 7, 10, 8, 0x3a3238);       // round glasses
+      m.set(2, 9, 8, 0xc8b040).set(5, 9, 8, 0xc8b040);
+      if (what === 'paper') m.box(0, 3, 7, 8, 8, 8, (x, y) => (y === 6 && x > 0 && x < 7 ? 0x6a6a72 : 0xf4f0e6));
+      else { m.box(0, 4, 7, 4, 7, 8, 0xfff6e8).box(4, 4, 7, 8, 7, 8, 0xf4ecdc).box(0, 3, 7, 8, 4, 8, 0x5b6f9e); }
+    },
+  });
+  def('lanestray', {
+    name: 'Puddle', kind: 'floor', group: 'lane', size: [1, 1], tap: 'lane',
+    vars: [[0x7d8590]],
+    build(m, [coat]) {
+      seated(m, coat, { eye: 0x7ac8e8 });
+      m.box(0, 13, 6, 1, 18, 7, 0x4a8a3a).box(-2, 18, 0, 8, 19, 9, (x, y, z) => shade(0x5fae4a, 0.9 + 0.15 * hash3(x, 0, z, 3)));   // a big leaf for an umbrella
+      for (const [x, z] of [[-1, 2], [7, 7], [3, 9]]) m.set(x, 17, z, 0x9ad0f0);
+    },
+  });
+})();

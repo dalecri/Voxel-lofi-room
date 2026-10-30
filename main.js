@@ -1916,7 +1916,7 @@ function startLofiRooms() {
   function setPhase(p, quiet) {
     if (p === meta.phase && view.env.phase === p) return;
     meta.phase = p; saveMeta();
-    view.setPhase(p); view.refreshEnv(p);
+    view.setPhase(p); view.refreshEnv(p); refreshStreet();
     if (meta.mood === 'auto') applyMood();
     setTimeout(() => checkDrift(), 50);
     updateHeader();
@@ -1933,7 +1933,7 @@ function startLofiRooms() {
     meta.weather = WEATHERS.includes(w) ? w : 'clear';
     meta.raining = meta.weather === 'rain' || meta.weather === 'storm';
     view.weatherIntensity=meta.liveWeather?LRWeather.intensity(meta.weatherDetails):1;
-    view.setWeather(meta.weather); view.setRain(meta.raining); view.refreshEnv(meta.phase);
+    view.setWeather(meta.weather); view.setRain(meta.raining); view.refreshEnv(meta.phase); refreshStreet();
     if (meta.mood === 'auto') applyMood();
     document.body.classList.toggle('raining', meta.raining);
     if (quiet) return;
@@ -2954,6 +2954,7 @@ function startLofiRooms() {
     if(action==='home'){returnFromLane();return;}
     if(action==='street'){visitLaneRoom('street');return;}
     if(action==='go:shop'||action==='go:mail'){visitLaneRoom(action.slice(3));return;}
+    if(action.startsWith('talk:')){const id=action.slice(5),N=LRLane.NEIGHBORS[id];if(!N)return;Sound.meow?.();codeSheet(N.name,'',h=>laneUI.renderTalk(id,h('div')));return;}
     if(action==='notice'){codeSheet('Notice Board','',h=>laneUI.renderPlace('notice',h('div','lane-place')));return;}
     if(action==='compose'){roomToolsUI.open('mailbox');return;}
     if(action==='mailbox'){roomToolsUI.open('mailbox');return;}
@@ -2964,7 +2965,7 @@ function startLofiRooms() {
   // Your home is kept aside once, however many places you stroll between, and comes back on return.
   const LANE = -100, LANE_IDS = { street: -100, shop: -101, mail: -102 };
   const LANE_DOORS = { home: 'Your house', street: 'Out to the lane', 'go:shop': 'Mallow’s Shop', 'go:mail': 'Mail Room' };
-  const LANE_BAR = { street: [['← Home', 'home'], ['Notice board', 'notice']], shop: [['← The lane', 'street'], ['Browse shelf', 'shop']], mail: [['← The lane', 'street'], ['Mail & papers', 'mail']] };
+  const LANE_BAR = { street: [['← Home', 'home'], ['Notice board', 'notice']], shop: [['← The lane', 'street'], ['Browse shelf', 'shop'], ['Chat with Mallow', 'talk:mallow']], mail: [['← The lane', 'street'], ['Mail & papers', 'mail']] };
   function visitLaneRoom(place) {
     if(!LANE_IDS[place]||travelling)return;
     closeSheets();
@@ -2973,13 +2974,11 @@ function startLofiRooms() {
       const asCharacter=!!view.fp,from=laneVisit?.place||'house';
       let interior;
       if(place==='street'){
-        const pets=lanePets(),byKey=new Map(pets.map(p=>[p.key,p]));
-        const out=LRLane.residents({pets,date:today(),phase:meta.phase}).map(r=>({...r,c:byKey.get(r.key)?.c}));
-        interior=LRLane.interior(LR,'street',[],{residents:out,season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather:meta.weather||'clear'}).season});
+        interior=streetInterior();
       }else{
         const stock=LRLane.shelf({catalog:LRShop.allCatalog,owns:id=>shop.owns(id),date:today()});
         const offers=[...stock.items,...(stock.special?[stock.special]:[])].map(id=>LRShop.allCatalog.find(i=>i.id===id)).filter(Boolean);
-        interior=LRLane.interior(LR,place,offers);
+        interior=LRLane.interior(LR,place,offers,{mallowOut:place==='shop'&&meta.phase==='morning'});
       }
       const home=laneVisit||{current:meta.current,data:room.serialize(),base:baseSig,visit:meta.visit,undo:[...undo]};
       laneVisit={place,current:home.current,data:home.data,base:home.base,visit:home.visit,undo:home.undo,actions:interior.actions,asCharacter};
@@ -2991,11 +2990,23 @@ function startLofiRooms() {
       for(const [label,action] of LANE_BAR[place]){const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=label;b.onclick=()=>laneInteract(action);bar.appendChild(b);}
       setMode('explore',true);changed();dirty=false;updateHeader();
       if(asCharacter){doorCool=performance.now()+1500;enterCharacter(place==='street'?LRLane.outside(from):{x:6.5,z:3.5,heading:0});}
-      const hint={street:'Walk up to a door to go in, or tap a building.',shop:'Tap Mallow or a display to browse his finds.',mail:'Tap the paper desk or mailbox to read what’s waiting.'}[place];
+      const hint={street:'Walk up to a door to go in, tap a building, or say hello to a neighbour.',shop:meta.phase==='morning'?'Mallow’s out front opening up, but the shelf is ready.':'Tap Mallow or a display to browse his finds.',mail:'Tap the paper desk or mailbox to read what’s waiting.'}[place];
       if(place==='street')Sound.turn();
       toast(`<b>${esc(room.name)}</b><span>${hint}</span>`,3500);
     });
     if(laneVisit)go();else leaveThen(go);
+  }
+  // The street as it is right now: today's pets out and about, the neighbours' routines, the season.
+  function streetInterior() {
+    const pets=lanePets(),byKey=new Map(pets.map(p=>[p.key,p])),weather=meta.weather||'clear';
+    const residents=LRLane.residents({pets,date:today(),phase:meta.phase}).map(r=>({...r,c:byKey.get(r.key)?.c}));
+    return LRLane.interior(LR,'street',[],{residents,neighbors:LRLane.neighbors({phase:meta.phase,weather}),season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather}).season});
+  }
+  // When the weather or time changes while you're on the street, the neighbours move to match.
+  function refreshStreet() {
+    if(laneVisit?.place!=='street'||view.fp)return;
+    const fresh=streetInterior();
+    room.load(fresh.data);laneVisit.actions=fresh.actions;baseSig=sig();changed();dirty=false;
   }
   function returnFromLane() {
     if(!laneVisit)return;
