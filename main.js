@@ -2954,6 +2954,7 @@ function startLofiRooms() {
     if(action==='home'){returnFromLane();return;}
     if(action==='street'){visitLaneRoom('street');return;}
     if(action==='go:shop'||action==='go:mail'){visitLaneRoom(action.slice(3));return;}
+    if(action.startsWith('find:')){laneUI.find(action.slice(5));return;}
     if(action.startsWith('talk:')){const id=action.slice(5),N=LRLane.NEIGHBORS[id];if(!N)return;Sound.meow?.();codeSheet(N.name,'',h=>laneUI.renderTalk(id,h('div')));return;}
     if(action==='notice'){codeSheet('Notice Board','',h=>laneUI.renderPlace('notice',h('div','lane-place')));return;}
     if(action==='compose'){roomToolsUI.open('mailbox');return;}
@@ -3000,7 +3001,22 @@ function startLofiRooms() {
   function streetInterior() {
     const pets=lanePets(),byKey=new Map(pets.map(p=>[p.key,p])),weather=meta.weather||'clear';
     const residents=LRLane.residents({pets,date:today(),phase:meta.phase}).map(r=>({...r,c:byKey.get(r.key)?.c}));
-    return LRLane.interior(LR,'street',[],{residents,neighbors:LRLane.neighbors({phase:meta.phase,weather}),season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather}).season});
+    const day=laneModel.today();
+    return LRLane.interior(LR,'street',[],{residents,finds:laneUI.finds(),found:day.found,carrying:day.carrying,neighbors:LRLane.neighbors({phase:meta.phase,weather}),season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather}).season});
+  }
+  // A discovery was found: pay out its small reward, hand over a visitor's gift, and update the
+  // street in place (works while walking as the character too).
+  function laneFound(d,{take,reward,gift,close}={}){
+    if(reward==='bloom')shop.earn('water','lane-bloom-'+today());else if(reward)shop.earn('moment');
+    if(gift&&shop.gift(gift.id)){toast(`<b>${esc(gift.name)}</b><span>It’s yours. Find it in Decorate.</span>`,2600);haptic(10);}
+    if(laneVisit?.place==='street'){
+      for(const [iid,act] of Object.entries(laneVisit.actions)){
+        if(act!=='find:'+d.id)continue;const it=room.get(+iid);if(!it)continue;
+        if(take||(gift&&!/^lane/.test(it.t))){room.remove(+iid);delete laneVisit.actions[iid];}else it.on=false;
+      }
+      changed();dirty=false;
+    }
+    if(close)closeSheets();
   }
   // When the weather or time changes while you're on the street, the neighbours move to match.
   function refreshStreet() {
@@ -3619,7 +3635,8 @@ function startLofiRooms() {
     }
     return out;
   }
-  laneUI = LRLane.createView({ currentLocation:()=>laneVisit?'You’re visiting '+room.name:null,returnHome:()=>{returnFromLane();},visitRoom:visitLaneRoom, model: laneModel, today, phase: () => meta.phase, pets: lanePets, weather: () => meta.weather || 'clear', seasons: LR.SEASONS || [], location: () => { try { return { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }; } catch (e) { return {}; } }, reducedMotion: () => view.reducedMotion, sound: Sound,
+  const laneGifts=LRShop.allCatalog.filter(i=>i.piece&&!i.costume&&CAT[i.piece]).map(i=>i.id).sort();
+  laneUI = LRLane.createView({ gifts:laneGifts,sheet:(title,fill)=>codeSheet(title,'',h=>fill(h('div'))),onFind:(d,o)=>laneFound(d,o), currentLocation:()=>laneVisit?'You’re visiting '+room.name:null,returnHome:()=>{returnFromLane();},visitRoom:visitLaneRoom, model: laneModel, today, phase: () => meta.phase, pets: lanePets, weather: () => meta.weather || 'clear', seasons: LR.SEASONS || [], location: () => { try { return { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }; } catch (e) { return {}; } }, reducedMotion: () => view.reducedMotion, sound: Sound,
     notice: text => toast(`<span>${esc(text)}</span>`, 2600, true),
     catalog: LRShop.allCatalog, shop, thumb: item => item.costume ? costumeThumb(item.costume) : item.piece ? thumbOf(item.piece) : '',
     onBuy: () => { renderTray(); try { discover('market'); } catch (e) { /* optional */ } },
