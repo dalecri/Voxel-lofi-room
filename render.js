@@ -1625,7 +1625,8 @@
     const P=character.brain.state;character.object.visible=false;
     let dh=P.heading-fp.yaw;while(dh>Math.PI)dh-=Math.PI*2;while(dh<-Math.PI)dh+=Math.PI*2;fp.yaw+=dh*Math.min(1,dt*3);
     if(P.moving&&!this.reducedMotion)fp.bob+=dt*11;
-    const yaw=fp.yaw+fp.look,eye=1.0+(P.moving&&!this.reducedMotion?Math.abs(Math.sin(fp.bob))*.012:0);
+    // Stand above the bed's 1.25-cell mattress, with room to see across it.
+    const yaw=fp.yaw+fp.look,eye=1.65+(P.moving&&!this.reducedMotion?Math.abs(Math.sin(fp.bob))*.012:0);
     const pos=this.root.localToWorld(new THREE.Vector3(P.x+Math.sin(yaw)*.12,eye,P.z+Math.cos(yaw)*.12));this.fpCam.position.copy(pos);
     const cp=Math.cos(fp.pitch);this.fpCam.lookAt(pos.x+Math.sin(yaw)*cp,pos.y+Math.sin(fp.pitch),pos.z+Math.cos(yaw)*cp);this.fpCam.updateMatrixWorld();
   };

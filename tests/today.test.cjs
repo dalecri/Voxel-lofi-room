@@ -81,7 +81,7 @@ test('weather card maps five local days from existing forecast and ignores disab
 
 test('widget order ignores invalid, duplicate and obsolete IDs and restores missing widgets',()=>{
  assert.deepEqual(T.widgetOrder(null),T.WIDGET_IDS);
- assert.deepEqual(T.widgetOrder(['weather','tasks','weather','old',null,{},'week']),['weather','week','feature','tools']);
+ assert.deepEqual(T.widgetOrder(['weather','weather','old',null,{},'week']),['weather','week','feature','tasks','tools']);
  assert.deepEqual(T.widgetOrder('weather'),T.WIDGET_IDS);
  const saved=['tools','feature'];assert.deepEqual(T.widgetOrder(saved,['week','feature','tools']),['tools','feature','week']);assert.deepEqual(saved,['tools','feature']);
 });

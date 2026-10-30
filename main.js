@@ -276,7 +276,7 @@ function startLofiRooms() {
     }
   }
 
-  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','todo','moments','settings','breathing'].includes(p.id)).map(p=>['typewriter','ideas','whiteboard','mailbox'].includes(p.id)?{...p,inNotebook:true}:p);   // the four writing tools live in Notebook; search still finds them
+  const controlApps=()=>LRLauncher.destinations(CAT,widgets,files.custom,LRDashboard.destinations).filter(p=>!['rooms','moments','settings','breathing'].includes(p.id)).map(p=>['ideas','whiteboard','mailbox'].includes(p.id)?{...p,inNotebook:true}:p);   // Keep Notes visible; the other writing tools also live in Notebook.
   // A device-private destination ID, resolved from the same directory as Control Centre.
   const APP_SHORTCUT_KEY='lr.appShortcut';
   const shortcutApp=()=>{const id=store.get(APP_SHORTCUT_KEY,null);return controlApps().find(p=>p.id===id);};
@@ -422,8 +422,9 @@ function startLofiRooms() {
     else if(p.id==='calendar')calendar.open();
     else if(p.id==='habits')habitsUI.openHome();
     else if(p.id==='notebook')openNotebook();
+    else if(p.id==='todo')codeSheet('To-Do','',h=>{const host=h('div');host.id='menu-todo';const heading=document.createElement('div');heading.className='todo-heading';host.appendChild(heading);todayUI.mountTasks(host,{google:target=>googleTasksUI.mount(target)});});
     else if(p.id==='moments'){closeSheets();openCozyMoments();}
-    else if(['todo','rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id==='todo'?'To-Do':p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
+    else if(['rooms','sound','settings'].includes(p.id)){store.set('lr.menuTab',p.id==='rooms'?'Lane':p.id[0].toUpperCase()+p.id.slice(1));renderMenu();openSheet();}
   }
   $('#bHome').onclick=()=>home.open();
 
@@ -2961,9 +2962,8 @@ function startLofiRooms() {
     spotlight.querySelector('input').addEventListener('input',e=>villageView?.filter(e.target.value));
     let target = sections.Today;
     const h = (tag, cls, html, host=target) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; host.appendChild(el); return el; };
-    const todoTab = sections['To-Do'];
-    const todoHeading=h('div','todo-heading','',todoTab);h('h2','','To-Do',todoHeading);
-    todayUI.mount(target,{openDay:date=>calendar.openDay(date),google:host=>googleTasksUI.mount(host),tasks:todoTab});
+    const todoTab=document.createElement('div');
+    todayUI.mount(target,{openDay:date=>calendar.openDay(date),googleToday:host=>googleTasksUI.mount(host,null,{scheduled:true,todayOnly:true}),tasks:todoTab});
     frenchUI.mountToday(target.querySelector('.today-duo'),{flip:true});
     // The Lane: your house and a few places on the street. The house panel holds what the
     // Rooms tab always did (gallery, share, house map, guest book, new rooms), unchanged.
