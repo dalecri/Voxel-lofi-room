@@ -223,7 +223,8 @@
         const note = el('div', 'lane-away', undefined, lane); note.setAttribute('role', 'status');
         el('p', '', awayNote, note); const ok = el('button', 'chipbtn', 'Thanks', note); ok.type = 'button'; ok.onclick = () => { dismissedAway = true; note.remove(); };
       }
-      el('p','lane-intro muted','Visit a place, or open your house to manage your rooms.',lane);
+      el('p','lane-intro muted','Step outside and stroll the street, pop straight into a place, or open your house to manage your rooms.',lane);
+      if (visitRoom) { const walk = el('button', 'chipbtn primary lane-walk', '🚶 Walk the lane', lane); walk.type = 'button'; walk.onclick = () => { play('flip'); visitRoom('street'); }; }
       const location=currentLocation();if(location){const status=el('div','lane-location',undefined,lane);el('span','',location,status);if(returnHome){const back=el('button','chipbtn','Back home',status);back.type='button';back.onclick=returnHome;}}
       const street = el('div', 'lane-street', undefined, lane); street.setAttribute('role', 'group'); street.setAttribute('aria-label', 'Places on the lane');
       const panels = {};
@@ -349,7 +350,36 @@
     return { mount, renderPlace, get place() { return place; }, set place(v) { if (PLACES.some(p => p[0] === v)) place = v; } };
   }
   // Public interiors are rebuilt for a visit; they never become house rooms or drafts.
-  function interior(L, place, stock = []) {
+  // The street outside: your house, Mallow's Shop, the Mail Room and the Notice Board in the
+  // same order as the Lane tab, a sidewalk to stroll along and a little green across the road.
+  // Doors carry actions ('home', 'go:shop', 'go:mail'); residents are today's pets out and about.
+  const STREET = { house: [1, 0, 'lanehome'], shop: [5, 0, 'laneshop'], mail: [9, 0, 'lanepost'], notice: [12, 1, 'laneboard'] };
+  function street(L, { residents = [], season = null } = {}) {
+    const room = new L.Room(), actions = {};
+    room.n = 14; room.name = 'The Lane';
+    room.wall = { style: L.WALLS.none ? 'none' : 'paint', color: 0 };
+    room.floor = { style: L.FLOORS.grass ? 'grass' : 'oak' };
+    const add = (t, o, action) => {
+      if (!L.CAT[t]) return null;
+      const it = room.make(t, o); if (!room.canPlace(it)) return null;
+      room.add(it); if (action) actions[it.id] = action; return it;
+    };
+    for (let x = 0; x < 14; x += 2) { add('sidewalk', { x, z: 2 }); add('road', { x, z: 4, r: 1 }); }
+    add('lanehome', { x: 1, z: 0 }, 'home'); add('laneshop', { x: 5, z: 0 }, 'go:shop'); add('lanepost', { x: 9, z: 0 }, 'go:mail'); add('laneboard', { x: 12, z: 1 }, 'notice');
+    add('streettree', { x: 0, z: 1, c: 0 }); add('plant', { x: 8, z: 1 }); add('mailbox', { x: 12, z: 3 }, 'go:mail');
+    add('streetlamp', { x: 0, z: 3 }); add('streetlamp', { x: 8, z: 6 }); add('streetlamp', { x: 13, z: 6 });
+    add('bench', { x: 5, z: 7, r: 2 }); add('streettree', { x: 1, z: 8, c: 1 }); add('streettree', { x: 12, z: 9, c: 2 }); add('streettree', { x: 3, z: 12, c: 0 }); add('streettree', { x: 10, z: 12, c: 1 });
+    if (season === 'halloween') { add('pumpkins', { x: 3, z: 2 }); add('pumpkins', { x: 10, z: 3 }); }
+    if (season === 'holiday') add('holidaytree', { x: 7, z: 9 });
+    // Pets who are out today wander the green, near the place they're spending the day.
+    const spots = [[3, 7], [7, 8], [11, 7], [2, 10], [8, 11], [12, 11]];
+    residents.filter(r => r.place !== 'house' && r.c != null).slice(0, spots.length).forEach((r, i) => add('cat', { x: spots[i][0], z: spots[i][1], c: r.c, name: r.name }));
+    return { data: room.serialize(), actions };
+  }
+  // The cell you step onto when you come out of a place, facing the street.
+  const outside = place => { const [x, z, t] = STREET[place] || STREET.house; return { x: x + (t === 'lanehome' ? 1 : 2) + 0.5, z: z + 3.5, heading: 0 }; };
+  function interior(L, place, stock = [], opts) {
+    if (place === 'street') return street(L, opts);
     if (!['shop','mail'].includes(place)) throw Error('Unknown lane room');
     const room = new L.Room(), actions = {};
     room.n = 14; room.name = place === 'shop' ? 'Mallow’s Shop' : 'Mail Room';
@@ -360,7 +390,7 @@
       const it = room.make(t, o); if (!room.canPlace(it)) return null;
       room.add(it); if (action) actions[it.id] = action; return it;
     };
-    add('olddoor',{k:0,u:6,e:0,r:0},'home');
+    add('olddoor',{k:0,u:6,e:0,r:0},'street');
     add('rug',{x:4,z:8,c:place === 'shop'?2:0});
     add('floorlamp',{x:12,z:1,on:true});
     add('plant',{x:1,z:1});
@@ -393,6 +423,6 @@
     }
     return {data:room.serialize(),actions};
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

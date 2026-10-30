@@ -584,7 +584,7 @@ function startLofiRooms() {
     if (view.ph.night > 0.6 && WALLS[room.wall.style] && WALLS[room.wall.style].none && room.items.length >= 8) discover('city');
   }
   function updateSaveChip() {
-    if(laneVisit){$('#bSave').hidden=true;$('#bGuest').hidden=true;$('#disc').textContent=laneVisit.place==='shop'?'Mallow’s daily finds':'Papers and letters';document.body.classList.remove('unsaved');return;}
+    if(laneVisit){$('#bSave').hidden=true;$('#bGuest').hidden=true;$('#disc').textContent=({street:'Your street',shop:'Mallow’s daily finds',mail:'Papers and letters'})[laneVisit.place];document.body.classList.remove('unsaved');return;}
     const saved = isSaved(), edited = isEdited(), b = $('#bSave');
     b.hidden = saved && !edited;
     const g = $('#bGuest'), visiting = !!(meta.visit && meta.visit.id === meta.current), signed = visiting && !!meta.visit.signed;
@@ -649,7 +649,7 @@ function startLofiRooms() {
   const tray = $('#tray'), tabs = $('#tabs'), row = $('#row'), addSearch=$('#furnitureSearch');
   let addQuery='';
   const addLabels=new Map(GROUPS);
-  const matchingAddItems=()=>Object.values(CAT).filter(C=>shop.available(C) && (addQuery ? (C.name+' '+(addLabels.get(C.group)||'')).toLocaleLowerCase().includes(addQuery.toLocaleLowerCase()) : C.group===state.group && (!state.addFilter || C.key===state.addFilter)));
+  const matchingAddItems=()=>Object.values(CAT).filter(C=>shop.available(C) && C.group!=='lane' && (addQuery ? (C.name+' '+(addLabels.get(C.group)||'')).toLocaleLowerCase().includes(addQuery.toLocaleLowerCase()) : C.group===state.group && (!state.addFilter || C.key===state.addFilter)));
   // Bound thumbnail work for broad searches across the entire catalog.
   const addItems=()=>addQuery?matchingAddItems().slice(0,60):matchingAddItems();
   addSearch.oninput=()=>{addQuery=addSearch.value.trim();state.addFilter=null;renderTray();};
@@ -961,7 +961,11 @@ function startLofiRooms() {
   function interact(id, hit) {
     const it = room.get(id);
     if (!it) return;
-    if(laneVisit?.actions[id]){view.boing(id);laneInteract(laneVisit.actions[id]);return;}
+    if(laneVisit?.actions[id]){
+      const act=laneVisit.actions[id];
+      if(view.fp&&isPortal(it)){doorCool=0;const [fx,fz,face]=doorFront(it);if(view.walkCharacterTo(fx,fz,face)){toast(`<span>${LANE_DOORS[act]||'A door'}</span>`,1000,true);return;}}
+      view.boing(id);if(isPortal(it)){view.openDoor(id);Sound.creak();}laneInteract(act);return;
+    }
     const C = CAT[it.t];
     view.boing(id); haptic(5); duck();
     if (it.tipped) { pushUndo(); it.tipped = false; changed(); Sound.place(weightOf(it)); toast(`<span>Picked the ${C.name.toLowerCase()} back up</span>`, 1200); return; }
@@ -1013,6 +1017,10 @@ function startLofiRooms() {
       if (lines && lines.length) toast(`<span>${pickOne([].concat(lines))}</span>`, 1400);
       if (F.moment) discover(F.moment);
       return;
+    }
+    if (tap === 'portal' && it.link === LANE) {
+      if (view.fp) { doorCool = 0; const [fx, fz, face] = doorFront(it); if (view.walkCharacterTo(fx, fz, face)) { toast('<span>Out to the lane</span>', 1000, true); return; } }
+      view.openDoor(id); Sound.creak(); visitLaneRoom('street'); return;
     }
     if (tap === 'portal') {
       const target = it.link && rooms.find(r => r.id === it.link);
@@ -2835,6 +2843,7 @@ function startLofiRooms() {
   function doorFront(it, k) {
     const n = room.n, u = it.u + (k || 0);   // k: which cell along a wide door
     if (CAT[it.t].kind === 'wall') return [[u, 0, Math.PI], [0, n - 1 - u, -Math.PI / 2], [n - 1 - u, n - 1, 0], [n - 1, u, Math.PI / 2]][it.k];
+    if (CAT[it.t].door != null && !((it.r || 0) & 3)) return [it.x + CAT[it.t].door, it.z + CAT[it.t].size[1], Math.PI];   // a lane front's door column
     const d = [[0, 1], [1, 0], [0, -1], [-1, 0]][(it.r || 0) & 3];   // a doorway faces +z, turned by r
     return [it.x + d[0], it.z + d[1], Math.atan2(-d[0], -d[1])];
   }
@@ -2887,12 +2896,14 @@ function startLofiRooms() {
     const span = i => (CAT[i.t].kind === 'wall' ? CAT[i.t].size[0] : 1);
     const d = room.items.find(i => isPortal(i) && Array.from({ length: span(i) }, (_, k) => doorFront(i, k)).some(([x, z]) => x === cx && z === cz));
     if (!d) { doorNear = 0; return; }
-    if (doorNear !== d.id) { doorNear = d.id; toast(`<span>${laneVisit?.actions[d.id]==='home'?'Back home':d.link && rooms.some(r => r.id === d.link) ? `Door to ${roomTitle(d.link)}` : 'A door to somewhere new'}</span>`, 1200, true); }
+    const laneAct = laneVisit?.actions[d.id];
+    if (doorNear !== d.id) { doorNear = d.id; toast(`<span>${laneAct ? LANE_DOORS[laneAct] || 'A door' : d.link === LANE ? 'Out to the lane' : d.link && rooms.some(r => r.id === d.link) ? `Door to ${roomTitle(d.link)}` : 'A door to somewhere new'}</span>`, 1200, true); }
     const face = doorFront(d)[2];
     let dh = P.heading - face; while (dh > Math.PI) dh -= Math.PI * 2; while (dh < -Math.PI) dh += Math.PI * 2;
     if (Math.abs(dh) < 0.8 && P.moving) {
       doorCool = now + 1500;
-      if(laneVisit?.actions[d.id]==='home'){returnFromLane();return;}
+      if (laneAct) { view.openDoor(d.id); Sound.creak(); laneInteract(laneAct); return; }
+      if (d.link === LANE) { view.openDoor(d.id); Sound.creak(); visitLaneRoom('street'); return; }
       if (d.link && rooms.some(r => r.id === d.link)) walkThrough(d, d.link, true);
       else doorPicker(d);
     }
@@ -2906,6 +2917,12 @@ function startLofiRooms() {
     const asCharacter=!!view.fp;
     const stick = id => { const clean = !isEdited(); door.link = id; if (isSaved()) { patchSaved(meta.current, d => d.items.forEach(i => { if (i.id === door.id) i.link = id; })); if (clean) baseSig = sig(); } };
     const link = id => { pushUndo(); stick(id); changed(); save(); closeSheets(); if (relink) toast(`<span>This door now goes to ${roomTitle(id)}</span>`, 1500); else walkThrough(door, id, asCharacter); };
+    if (!laneVisit) {
+      const out = document.createElement('button'); out.className = 'card room lane-door-card';
+      out.innerHTML = `<div class="art">🏡</div><b>Out to the lane</b><span>Your front door: step out onto the street.</span>`;
+      out.onclick = () => { pushUndo(); stick(LANE); changed(); save(); closeSheets(); if (relink) toast('<span>This door now opens onto the lane</span>', 1500); else visitLaneRoom('street'); };
+      list.appendChild(out);
+    }
     rooms.filter(r => r.id !== meta.current).forEach(r => {
       const b = document.createElement('button'); b.className = 'card room';
       b.innerHTML = `<div class="art">🚪</div><b>${r.name}</b><span>${r.n} thing${r.n === 1 ? '' : 's'}</span>`;
@@ -2935,30 +2952,50 @@ function startLofiRooms() {
   }
   function laneInteract(action) {
     if(action==='home'){returnFromLane();return;}
+    if(action==='street'){visitLaneRoom('street');return;}
+    if(action==='go:shop'||action==='go:mail'){visitLaneRoom(action.slice(3));return;}
+    if(action==='notice'){codeSheet('Notice Board','',h=>laneUI.renderPlace('notice',h('div','lane-place')));return;}
     if(action==='compose'){roomToolsUI.open('mailbox');return;}
     if(action==='mailbox'){roomToolsUI.open('mailbox');return;}
     const place=action==='shop'?'shop':'mail';
     codeSheet(place==='shop'?'Mallow’s shelf':'Mail Room','',h=>laneUI.renderPlace(place,h('div','lane-place')));
   }
+  // Lane visits swap the live room for a public place (the street, the shop or the mail room).
+  // Your home is kept aside once, however many places you stroll between, and comes back on return.
+  const LANE = -100, LANE_IDS = { street: -100, shop: -101, mail: -102 };
+  const LANE_DOORS = { home: 'Your house', street: 'Out to the lane', 'go:shop': 'Mallow’s Shop', 'go:mail': 'Mail Room' };
+  const LANE_BAR = { street: [['← Home', 'home'], ['Notice board', 'notice']], shop: [['← The lane', 'street'], ['Browse shelf', 'shop']], mail: [['← The lane', 'street'], ['Mail & papers', 'mail']] };
   function visitLaneRoom(place) {
-    if(!['shop','mail'].includes(place))return;
+    if(!LANE_IDS[place]||travelling)return;
     closeSheets();
-    leaveThen(()=>fadeTravel(()=>{
-      const asCharacter=!!view.fp;
-      const stock=LRLane.shelf({catalog:LRShop.allCatalog,owns:id=>shop.owns(id),date:today()});
-      const offers=[...stock.items,...(stock.special?[stock.special]:[])].map(id=>LRShop.allCatalog.find(i=>i.id===id)).filter(Boolean);
-      const interior=LRLane.interior(LR,place,offers);
-      laneVisit={place,current:meta.current,data:room.serialize(),base:baseSig,visit:meta.visit,undo:[...undo],actions:interior.actions,asCharacter};
-      exitCharacter(true);room.load(interior.data);meta.current=place==='shop'?-101:-102;delete meta.visit;
+    if(laneVisit?.place===place)return;
+    const go=()=>fadeTravel(()=>{
+      const asCharacter=!!view.fp,from=laneVisit?.place||'house';
+      let interior;
+      if(place==='street'){
+        const pets=lanePets(),byKey=new Map(pets.map(p=>[p.key,p]));
+        const out=LRLane.residents({pets,date:today(),phase:meta.phase}).map(r=>({...r,c:byKey.get(r.key)?.c}));
+        interior=LRLane.interior(LR,'street',[],{residents:out,season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather:meta.weather||'clear'}).season});
+      }else{
+        const stock=LRLane.shelf({catalog:LRShop.allCatalog,owns:id=>shop.owns(id),date:today()});
+        const offers=[...stock.items,...(stock.special?[stock.special]:[])].map(id=>LRShop.allCatalog.find(i=>i.id===id)).filter(Boolean);
+        interior=LRLane.interior(LR,place,offers);
+      }
+      const home=laneVisit||{current:meta.current,data:room.serialize(),base:baseSig,visit:meta.visit,undo:[...undo]};
+      laneVisit={place,current:home.current,data:home.data,base:home.base,visit:home.visit,undo:home.undo,actions:interior.actions,asCharacter};
+      exitCharacter(true);room.load(interior.data);meta.current=LANE_IDS[place];delete meta.visit;
       undo.length=0;baseSig=sig();view.panGoal.set(0,0,0);view.zoomGoal=1;
-      document.body.classList.add('visiting-lane');
+      document.body.classList.add('visiting-lane');document.body.dataset.lanePlace=place;
       let bar=$('#laneVisitBar');if(!bar){bar=document.createElement('nav');bar.id='laneVisitBar';bar.className='panel lane-visit-bar';bar.setAttribute('aria-label','Lane room actions');document.body.appendChild(bar);}
       bar.replaceChildren();bar.hidden=false;
-      for(const [label,action] of [['← Back home','home'],[place==='shop'?'Browse shelf':'Mail & papers',place]]){const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=label;b.onclick=()=>laneInteract(action);bar.appendChild(b);}
+      for(const [label,action] of LANE_BAR[place]){const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=label;b.onclick=()=>laneInteract(action);bar.appendChild(b);}
       setMode('explore',true);changed();dirty=false;updateHeader();
-      if(asCharacter)enterCharacter({x:6.5,z:3.5,heading:0});
-      toast(`<b>${esc(room.name)}</b><span>${place==='shop'?'Tap Mallow or a display to browse his finds.':'Tap the paper desk or mailbox to read what’s waiting.'}</span>`,3500);
-    }));
+      if(asCharacter){doorCool=performance.now()+1500;enterCharacter(place==='street'?LRLane.outside(from):{x:6.5,z:3.5,heading:0});}
+      const hint={street:'Walk up to a door to go in, or tap a building.',shop:'Tap Mallow or a display to browse his finds.',mail:'Tap the paper desk or mailbox to read what’s waiting.'}[place];
+      if(place==='street')Sound.turn();
+      toast(`<b>${esc(room.name)}</b><span>${hint}</span>`,3500);
+    });
+    if(laneVisit)go();else leaveThen(go);
   }
   function returnFromLane() {
     if(!laneVisit)return;
@@ -2966,9 +3003,11 @@ function startLofiRooms() {
     room.load(previous.data);meta.current=previous.current;baseSig=previous.base;
     if(previous.visit)meta.visit=previous.visit;else delete meta.visit;
     undo.splice(0,undo.length,...previous.undo);laneVisit=null;
-    document.body.classList.remove('visiting-lane');if($('#laneVisitBar'))$('#laneVisitBar').hidden=true;
+    document.body.classList.remove('visiting-lane');delete document.body.dataset.lanePlace;if($('#laneVisitBar'))$('#laneVisitBar').hidden=true;
     view.panGoal.set(0,0,0);view.zoomGoal=1;changed();save();updateHeader();
-    if(asCharacter)enterCharacter();Sound.turn();
+    // Back in through your front door, if one of your doors opens onto the lane.
+    if(asCharacter){const front=room.items.find(i=>isPortal(i)&&i.link===LANE),at=front&&doorFront(front);doorCool=performance.now()+1500;enterCharacter(at?{x:at[0]+.5,z:at[1]+.5,heading:at[2]+Math.PI}:undefined);}
+    Sound.turn();
   }
   function switchRoom(id, asked) {
     if (id === meta.current) return;
@@ -3564,7 +3603,7 @@ function startLofiRooms() {
         const C = CAT[it.t];
         if (!C || C.kind !== 'pet' || C.robot || it.visitor) continue;
         const key = r.id + ':' + it.id; if (seen.has(key)) continue; seen.add(key);
-        out.push({ key, name: it.t === 'cat' ? catName(it) : (it.name || C.name), coat: it.t === 'cat' ? (CATS[it.c] || CATS[0]).base : (Array.isArray(C.vars?.[it.c || 0]) && typeof C.vars[it.c || 0][0] === 'number' ? C.vars[it.c || 0][0] : 0xb08a68) });
+        out.push({ key, c: it.t === 'cat' ? (it.c || 0) : null, name: it.t === 'cat' ? catName(it) : (it.name || C.name), coat: it.t === 'cat' ? (CATS[it.c] || CATS[0]).base : (Array.isArray(C.vars?.[it.c || 0]) && typeof C.vars[it.c || 0][0] === 'number' ? C.vars[it.c || 0][0] : 0xb08a68) });
       }
     }
     return out;

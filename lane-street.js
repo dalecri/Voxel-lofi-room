@@ -1,0 +1,90 @@
+// The Lane outdoors: the four fronts from the Lane tab, built as voxel buildings so the street
+// you walk matches the street you tap. They live in their own 'lane' group, which is never in
+// the Add tray: they only appear on the street scene that lane.js builds for a visit.
+// A front with `door` is a doorway: the cell in front of that column is where you step in.
+(function () {
+  const LR = typeof module !== 'undefined' && module.exports ? require('./room.js') : window.LR;
+  const { def, shade, hash3 } = LR;
+  const WARM = 0xffd27a, DARK = 0x2a2026;
+  const brickish = (c, s) => (x, y, z) => shade(c, 0.94 + 0.08 * hash3(x >> 1, y >> 1, z >> 1, s));
+  // A swinging front door on column `col` (cells) of a front `d` voxels deep, `h` tall.
+  function door(m, col, d, h, colour, knob) {
+    const x0 = col * 8 + 1, x1 = x0 + 6;
+    m.box(x0, 0, d - 1, x1, h, d, DARK);                                   // the doorway behind
+    m.box(x0 - 1, 0, d, x0, h + 1, d + 1, shade(colour, 0.8)).box(x1, 0, d, x1 + 1, h + 1, d + 1, shade(colour, 0.8)).box(x0 - 1, h, d, x1 + 1, h + 1, d + 1, shade(colour, 0.8));
+    m.part('door', [x0, 0, d + 0.5]);
+    m.box(x0, 0, d, x1, h, d + 1, (x, y) => (y === 4 || y === h - 4 || x === x0 ? shade(colour, 0.9) : colour));
+    m.set(x1 - 2, (h >> 1) + 1, d + 1, knob || 0xe6b450);
+    m.main();
+    m.box(x0 - 1, 0, d + 1, x1 + 1, 1, d + 2, 0x9a8a7a);                  // the step
+  }
+  function window_(m, x0, y0, x1, y1, z, frame) {
+    m.box(x0 - 1, y0 - 1, z, x1 + 1, y1 + 1, z + 1, frame);
+    m.box(x0, y0, z, x1, y1, z + 1, WARM, true);
+    m.box(x0, ((y0 + y1) >> 1), z + 1, x1, ((y0 + y1) >> 1) + 1, z + 2, frame);
+    m.box(x0 - 1, y0 - 2, z + 1, x1 + 1, y0 - 1, z + 2, frame);              // sill
+  }
+
+  // Your house: a warm cottage with a pitched roof and a chimney.
+  def('lanehome', {
+    name: 'Your house', kind: 'floor', group: 'lane', size: [3, 2], wallish: true, tap: 'portal', door: 1,
+    vars: [[0xc99872, 0x8f5a4a, 0x6b4334]],
+    build(m, [wall, roof, wood]) {
+      const W = 24, D = 16, H = 17;
+      m.box(0, 0, 1, W, H, D, brickish(wall, 3));
+      m.box(0, 0, D - 1, W, 1, D, shade(wall, 0.75));
+      for (let k = 0; k < 9; k++) m.box(-1, H + k, k - 1 + 1, W + 1, H + k + 1, D + 1 - k, (x, y, z) => (z === k || z === D - k ? shade(roof, 0.82) : shade(roof, 0.95 + 0.08 * hash3(x >> 1, y, 0, 4))));
+      m.box(17, H + 3, 4, 21, H + 13, 8, shade(roof, 0.8)).box(16, H + 13, 3, 22, H + 14, 9, shade(roof, 0.65));
+      window_(m, 2, 7, 6, 12, D, 0xf2e8d8); window_(m, 18, 7, 22, 12, D, 0xf2e8d8);
+      door(m, 1, D, 13, wood);
+      m.box(9, 14, D, 15, 15, D + 2, shade(roof, 0.9));                    // a little porch hood
+      m.box(2, 0, D + 1, 6, 2, D + 3, 0x7a5a48).box(2, 2, D + 1, 6, 3, D + 3, 0x5fae4a);   // window box
+    },
+  });
+  // Mallow's Shop: a cream front, a striped coral awning and a dark sign with a lamp.
+  def('laneshop', {
+    name: 'Mallow’s Shop', kind: 'floor', group: 'lane', size: [3, 2], wallish: true, tap: 'portal', door: 2,
+    vars: [[0xefe3cf, 0xf07a5a, 0x7a5a48]],
+    build(m, [wall, awning, wood]) {
+      const W = 24, D = 16, H = 22;
+      m.box(0, 0, 1, W, H, D, brickish(wall, 5));
+      m.box(-1, H, 0, W + 1, H + 1, D + 1, 0x3c2d4f).box(0, H + 1, 1, W, H + 2, D, (x, y, z) => shade(0x8f5a4a, 0.92 + 0.1 * hash3(x >> 1, 0, z >> 1, 6)));   // a plum cornice and a tiled roof
+      m.box(1, 2, D, 14, 11, D + 1, WARM, true);                              // the shop window
+      m.box(0, 1, D, 15, 2, D + 1, wood).box(0, 11, D, 15, 12, D + 1, wood).box(7, 2, D, 8, 11, D + 1, wood);
+      m.box(2, 2, D + 1, 6, 4, D + 2, 0x86cc5c).box(9, 2, D + 1, 13, 5, D + 2, 0xe8a0b4);   // finds in the window
+      for (let x = -1; x < W + 1; x++) for (let k = 0; k < 4; k++) m.set(x, 14 - k, D + k, (x >> 1) % 2 ? 0xfff4e6 : awning);
+      m.box(4, 16, D, 20, 21, D + 1, 0x3c2d4f);
+      m.box(11, 17, D + 1, 13, 20, D + 2, WARM, true);
+      for (const x of [6, 8, 15, 17]) m.set(x, 18, D + 1, 0xf2e8d8);
+      door(m, 2, D, 12, wood);
+    },
+  });
+  // The Mail Room: a blue post office with a deep cornice and an envelope in the window.
+  def('lanepost', {
+    name: 'Mail Room', kind: 'floor', group: 'lane', size: [3, 2], wallish: true, tap: 'portal', door: 2,
+    vars: [[0x9fb4d8, 0x5b6f9e, 0x43557f]],
+    build(m, [wall, trim, wood]) {
+      const W = 24, D = 16, H = 22;
+      m.box(0, 0, 1, W, H, D, brickish(wall, 7));
+      m.box(-1, H - 3, 0, W + 1, H, D + 2, trim).box(0, H, 1, W, H + 2, D, shade(trim, 0.85));
+      m.box(0, 0, D, W, 2, D + 1, shade(trim, 0.9));
+      window_(m, 3, 7, 12, 15, D, 0xf2f0ea);
+      m.box(5, 4, D + 1, 10, 7, D + 2, 0xfff6e8);
+      m.set(6, 6, D + 2, 0xc0675a).set(7, 5, D + 2, 0xc0675a).set(8, 6, D + 2, 0xc0675a);
+      for (let x = 3; x < 21; x++) if (hash3(x, 1, 2, 3) < 0.55) m.set(x, H - 2, D + 2, 0xfff6e8);   // lettering
+      door(m, 2, D, 15, wood, 0xd8d8e0);
+    },
+  });
+  // The Notice Board: two posts, a cork face and a few pinned notes. Tapping it reads the week.
+  def('laneboard', {
+    name: 'Notice Board', kind: 'floor', group: 'lane', size: [2, 1], wallish: true, tap: 'lane',
+    vars: [[0xa77a58, 0xd9b88e]],
+    build(m, [frame, cork]) {
+      m.box(2, 0, 3, 4, 10, 5, 0x7a5a48).box(12, 0, 3, 14, 10, 5, 0x7a5a48);
+      m.box(0, 10, 3, 16, 24, 5, frame).box(1, 11, 5, 15, 23, 6, cork);
+      m.box(0, 24, 2, 16, 25, 6, shade(frame, 0.8));
+      [[2, 17, 6, 22, 0xfff6e8], [8, 18, 14, 21, 0xffe08a], [3, 12, 8, 16, 0xbfe3d0], [10, 12, 14, 17, 0xf4c2c2]].forEach(([x0, y0, x1, y1, c]) => m.box(x0, y0, 6, x1, y1, 7, c));
+      m.set(4, 21, 7, 0xc0675a).set(11, 20, 7, 0x5b6f9e).set(5, 15, 7, 0xc0675a).set(12, 16, 7, 0x3a9a5a);
+    },
+  });
+})();
