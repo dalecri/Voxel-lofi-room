@@ -1,17 +1,8 @@
 // Private ambient widgets and outbound launchers. Room items identify surfaces, never carry widget data.
 (function (root) {
-  // OWNER CONFIG: Pomodoro Terrarium session URL (confirmed by the owner).
-  const POMODORO_URL = 'https://heycristobal.com/pomodoro-terrarium/';
-  // OWNER CONFIG: each row marks confirmed links or defaults still needing verification.
-  // Add another row with the same furnitureId to get a destination picker.
-  const PORTALS = [
-    { furnitureId: 'terrarium', label: 'Voxel Worlds', url: 'https://heycristobal.com/voxel-worlds/' },
-    { furnitureId: 'arcade', label: 'HTML games', url: 'https://heycristobal.com/my-collection/' }, // Opens the in-app Game library (games.js); this URL is only the fallback.
-    { furnitureId: 'libcase', label: 'Portfolio', url: 'https://heycristobal.com/' }, // Owner: verify portfolio URL when editing; confirmed as heycristobal.com.
-    { furnitureId: 'gamingdesk', label: 'QR Code generator', url: 'https://heycristobal.com/QR-Code-generator/' }, // Owner: verify QR app URL when editing; confirmed with this capitalization.
-  ];
-  const KEY = 'lr.widgets', HOUR = 3600000;
-  const RSS = 'https://www.cbc.ca/webfeed/rss/rss-topstories';
+  // The arcade's in-app Game library keeps its fallback destination.
+  const PORTALS = [{ furnitureId:'arcade', label:'HTML games', url:'https://heycristobal.com/my-collection/' }];
+  const KEY = 'lr.widgets';
   const WORDS = [
     ['bonjour', 'hello', 'Bonjour, mon ami !'], ['le chat', 'cat', 'Le chat dort sur le lit.'],
     ['la maison', 'house', 'La maison est petite.'], ['le soleil', 'sun', 'Le soleil brille ce matin.'],
@@ -38,69 +29,34 @@
   function articleURL(value) {
     try { const u = new URL(value); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; }
   }
-  function headlines(rows) {
-    return (Array.isArray(rows) ? rows : []).filter(r => r && typeof r.title === 'string' && articleURL(r.url))
-      .slice(0, 10).map(r => ({ title: r.title.slice(0, 400), url: articleURL(r.url), source: 'CBC News' }));
-  }
-  function parseRSS(text) {
-    const doc = new DOMParser().parseFromString(text, 'application/xml');
-    if (doc.querySelector('parsererror')) throw new Error('Invalid feed');
-    const rows = headlines(Array.from(doc.querySelectorAll('item')).map(item => ({ title: item.querySelector('title')?.textContent.trim(), url: item.querySelector('link')?.textContent.trim() })));
-    if (!rows.length) throw new Error('Empty feed');
-    return rows;
-  }
   // Keep the legacy note ID inside lr.widgets; its only surface is now the French desk.
   const WIDGETS = {
     'fridge-note': { id: 'fridge-note', furnitureId: 'frenchdesk', dataSource: 'local:french-words', refreshCadence: 'local-midnight', surface: 'desk', render: data => ({ ...data, title: 'Un mot par jour', paper: '#f6e4a2', lines: [data.word || '', data.translation || '', data.example || ''] }) },
-    newspaper: { id: 'newspaper', furnitureId: 'newspaper', dataSource: RSS, refreshCadence: HOUR, surface: 'paper',
-      render: (data, now) => {
-        const rows = headlines(data.headlines), cached = !!data.fetchedAt && (data.failed || now - data.fetchedAt >= HOUR);
-        return { headlines: rows, cached, fetchedAt: data.fetchedAt || 0, title: 'CBC NEWS', paper: '#eee6d7', lines: [rows[0]?.title || 'A quiet moment for the news.', cached ? 'cached' : 'Top stories', 'Tap to read'] };
-      } },
-    'pomodoro-candle': { id: 'pomodoro-candle', furnitureId: 'pomodorocandle', dataSource: 'local:pomodoro-url', refreshCadence: 'static', surface: 'flame',
-      render: data => ({ label: 'Pomodoro Terrarium', url: articleURL(data.url || POMODORO_URL) }) },
     'app-portals': { id: 'app-portals', get furnitureId() { return [...new Set(PORTALS.map(p => p.furnitureId))]; }, dataSource: 'local:portals', refreshCadence: 'static', surface: 'portal',
       render: data => ({ portals: (data.portals || PORTALS).map(p => ({ ...p, url: articleURL(p.url) })).filter(p => p.url) }) },
 
   };
   const matches = (def, type) => (Array.isArray(def.furnitureId) ? def.furnitureId : [def.furnitureId]).includes(type);
   const attached = type => Object.values(WIDGETS).find(def => matches(def, type));
-  function create({ store, now = () => new Date(), fetchRSS = url => fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(12000) }), parse = parseRSS }) {
-    const saved = store.get(KEY, {}), state = {};
-    let pending = null;
-    if (saved && saved.newspaper) {
-      const s = saved.newspaper;
-      state.newspaper = { headlines: headlines(s.headlines), fetchedAt: Number(s.fetchedAt) || 0, attemptedAt: Number(s.attemptedAt) || 0, failed: !!s.failed };
-    }
+  function create({ store, now = () => new Date() }) {
+    // Only local words and the remaining static destination are live widget data.
+    // Old headline and retired portal caches are never read or rendered.
+    const state = {};
     const save = () => store.set(KEY, state);
     async function refresh(types) {
-      const d = now(), time = d.getTime();
+      const d = now();
       if (types.includes('frenchdesk') && state['fridge-note']?.date !== dateKey(d)) { state['fridge-note'] = wordOfDay(d); save(); }
-      const configs = { 'pomodoro-candle': { url: POMODORO_URL }, 'app-portals': { portals: PORTALS } };
+      const configs = { 'app-portals': { portals: PORTALS } };
       for (const [id, config] of Object.entries(configs)) if (types.some(t => matches(WIDGETS[id], t)) && JSON.stringify(state[id]) !== JSON.stringify(config)) {
         state[id] = JSON.parse(JSON.stringify(config)); save();
       }
-      if (!types.includes('newspaper')) return;
-      const news = state.newspaper || (state.newspaper = { headlines: [], fetchedAt: 0, attemptedAt: 0, failed: false });
-      if (pending || (news.attemptedAt && time - news.attemptedAt < HOUR)) return pending;
-      news.attemptedAt = time; save();
-      pending = Promise.resolve().then(async () => {
-        try {
-          const response = await fetchRSS(RSS);
-          if (!response.ok) throw new Error('Feed unavailable');
-          const rows = headlines(parse(await response.text()));
-          if (!rows.length) throw new Error('Empty feed');
-          news.headlines = rows; news.fetchedAt = now().getTime(); news.failed = false;
-        } catch (e) { news.failed = true; }
-        finally { save(); pending = null; }
-      });
-      return pending;
     }
-    function data(id) { return WIDGETS[id].render(state[id] || {}, now().getTime()); }
+
+    function data(id) { return WIDGETS[id]?.render(state[id] || {}, now().getTime()); }
     function destinations(type) {
       const def = attached(type); if (!def) return [];
       const value = data(def.id);
-      const rows = def.id === 'pomodoro-candle' ? [value] : def.id === 'app-portals' ? value.portals.filter(p => p.furnitureId === type) : [];
+      const rows = def.id === 'app-portals' ? value.portals.filter(p => p.furnitureId === type) : [];
       return rows.map(p => ({ label: p.label, url: articleURL(p.url) })).filter(p => p.url);
     }
     return { refresh, data, destinations, get state() { return state; } };
@@ -162,12 +118,6 @@
         const data = widgets.data(def.id), key = JSON.stringify(data);
         if (key !== entry.key) { if (entry.canvas) paint(entry, data); entry.key = key; }
         if (!entry.canvas) { entry.mesh.rotation.y = time * .0005; entry.mesh.material.opacity = .38 + .12 * Math.sin(time * .0015 + it.id); }
-        const flame = obj.userData.parts.portalflame;
-        if (flame) {
-          const feedback = Math.max(0, (entry.feedbackUntil || 0) - time) / 900;
-          flame.scale.set(1 + feedback * .12, 1 + .035 * Math.sin(time * .003) + feedback * .24, 1 + feedback * .12);
-          flame.rotation.z = Math.sin(time * .004) * (.025 + feedback * .06);
-        }
         const quiet = hidden(); entry.mesh.visible = !quiet;
         const p = view.root.localToWorld(view.itemPoint(it.id, [LR.CAT[it.t].size[0] * 4, def.surface === 'desk' ? 14 : def.surface === 'paper' ? 2 : def.surface === 'board' ? 17 : (LR.topOf(it) || 24) + 2, 4])).project(view.cam), rect = view.r.domElement.getBoundingClientRect();
         entry.badge.hidden = !editing() || quiet || p.z < -1 || p.z > 1;
@@ -180,7 +130,7 @@
   }
   function register(L) {
     L.def('pomodorocandle', {
-      name: 'Pomodoro portal candle', kind: 'small', group: 'lights', size: [1, 1], tap: 'widget', on: true, anim: 'flame', vars: [[0xb7ccb2]],
+      name: 'Cozy candle', kind: 'small', group: 'lights', size: [1, 1], on: true, anim: 'flame', vars: [[0xb7ccb2]],
       build(m, [wax]) {
         m.box(1, 0, 1, 7, 1, 7, 0xa7835b).box(2, 1, 2, 6, 9, 6, wax).box(3, 9, 3, 5, 10, 5, 0x493a32);
         m.part('portalflame', [4, 10, 4]).box(3, 10, 3, 5, 12, 5, 0xffbd72, true).set(4, 12, 4, 0xffebbe, true); m.main();
@@ -188,7 +138,7 @@
     });
     for (const p of PORTALS) if (L.CAT[p.furnitureId] && !L.CAT[p.furnitureId].tap) L.CAT[p.furnitureId].tap = 'widget';
   }
-  const api = { POMODORO_URL, PORTALS, attached, register, WIDGETS, WORDS, RSS, HOUR, wordOfDay, articleURL, parseRSS, create, createView, shareDecor };
+  const api = { PORTALS, attached, register, WIDGETS, WORDS, wordOfDay, articleURL, create, createView, shareDecor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else { root.LRWidgets = api; register(root.LR); }
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -9,9 +9,6 @@ test('terrarium is a small three-wood diorama that fits normal furniture surface
  assert.equal(woods.size,3);
  const r=new LR.Room(),desk=r.add(r.make('desk',{x:2,z:2}));const it=r.make('terrarium',{p:desk.id,lx:0,lz:0});assert.ok(r.canPlace(it));r.add(it);assert.equal(r.get(it.id).p,desk.id);
 });
-test('owner config automatically supplies the exact Voxel Worlds destination, widget and launcher icon',async()=>{
- const expected={label:'Voxel Worlds',url:'https://heycristobal.com/voxel-worlds/'};
- const w=W.create({store,fetchRSS:()=>{throw Error('Unexpected network call');}});
- assert.equal(W.attached('terrarium').id,'app-portals');assert.deepEqual(w.destinations('terrarium'),[expected]);await w.refresh(['terrarium']);assert.deepEqual(w.destinations('terrarium'),[expected]);
- const tile=D.destinations(LR.CAT,w).find(d=>d.furnitureId==='terrarium');assert.equal(tile.label,expected.label);assert.equal(tile.url,expected.url);assert.equal(tile.icon,'🫙');
+test('terrarium remains a local diorama without a widget or Voxel Worlds destination',async()=>{
+ const w=W.create({store});assert.equal(W.attached('terrarium'),undefined);assert.deepEqual(w.destinations('terrarium'),[]);await w.refresh(['terrarium']);assert.deepEqual(w.destinations('terrarium'),[]);assert.equal(D.destinations(LR.CAT,w).find(d=>d.furnitureId==='terrarium'),undefined);
 });

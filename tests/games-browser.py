@@ -31,7 +31,7 @@ with sync_playwright() as p:
  tab=opened.value;tab.wait_for_load_state();assert tab.url=='https://heycristobal.com/gnomeboy/';assert tab.evaluate('window.opener===null');tab.close()
  # The App launcher sends HTML games to the library too.
  page.evaluate('__lr.dashboard.launcher()');page.locator('.launcher-tile',has_text='HTML games').first.click();assert page.locator('.games-library').is_visible();assert page.evaluate('window.__opened')==[]
- # Other portals still open their own link.
- page.evaluate('__lr.dashboard.launcher()');page.locator('.launcher-tile',has_text='Voxel Worlds').first.click();assert page.evaluate('window.__opened')==['https://heycristobal.com/voxel-worlds/']
- assert not errors,errors;print('PASS game library: Control Centre and launcher open it, nine cartridges link directly in an isolated tab, other portals unchanged')
+ # Retired built-in portals are not listed alongside the game library.
+ page.evaluate('__lr.dashboard.launcher()');assert page.locator('.launcher-tile',has_text='Voxel Worlds').count()==0;assert page.evaluate('window.__opened')==[]
+ assert not errors,errors;print('PASS game library: Control Centre and launcher open it, nine cartridges link directly in an isolated tab, retired portals absent')
  browser.close()

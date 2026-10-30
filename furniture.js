@@ -518,7 +518,7 @@
     },
   });
   def('newspaper', {
-    name: 'Newspaper', kind: 'small', group: 'kitchen', size: [1, 1], tap: 'newspaper', vars: [[]],
+    name: 'Newspaper', kind: 'small', group: 'kitchen', size: [1, 1], vars: [[]],
     build(m) {
       m.box(0, 0, 0, 8, 1, 8, 0xeee6d7);
       m.box(1, 1, 1, 7, 2, 2, 0x55504c);
@@ -1159,7 +1159,7 @@
     },
   });
   def('lectern', {
-    name:'Reading lectern',kind:'floor',group:'furniture',size:[1,1],tap:'library',
+    name:'Reading lectern',kind:'floor',group:'furniture',size:[1,1],
     vars:[[0xb18a60,0x526459],[0x765242,0x494d70],[0xd2bc91,0x8e554f]],
     build(m,[wood,cover]) {
       m.box(1,0,1,7,1,7,shade(wood,.78)).box(2,1,2,6,2,6,wood);

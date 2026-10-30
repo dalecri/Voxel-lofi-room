@@ -430,7 +430,7 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .control-back { display:grid; place-items:center; flex:none; width:44px; height:44px; min-width:44px; padding:0; border:1px solid var(--line); border-radius:16px; background:var(--chip); color:var(--ink); }
 .control-back:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 .control-return-actions { display:flex; flex:none; align-items:center; justify-content:space-between; gap:12px; width:100%; box-sizing:border-box; margin:0 0 12px; clear:both; }
-.control-return-actions > :is(.sheet-close,.french-close,.library-close) { position:static; float:none; margin:0; }
+.control-return-actions > :is(.sheet-close,.french-close) { position:static; float:none; margin:0; }
 .control-return-overlay { position:absolute; left:20px; right:20px; top:max(16px,env(safe-area-inset-top)); width:auto; z-index:5; }
 .barnaby-chrome.has-control-return,.cozy-pop-head.has-control-return { flex-wrap:wrap; }
 .barnaby-chrome > .control-return-actions,.cozy-pop-head > .control-return-actions { flex-basis:100%; }
@@ -492,9 +492,8 @@ body.night .station-card { --radio-display:color-mix(in srgb,var(--panel-solid) 
 .app-sheet-heading { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:6px 8px; align-items:center; box-sizing:border-box; flex:none; width:100%; min-height:44px; padding:0; margin:0 0 12px; border:0; }
 .app-sheet-heading > h2 { grid-column:2; grid-row:1; min-width:0; margin:0; padding:0; text-align:center; color:var(--ink); font:500 20px/1.25 Fredoka,sans-serif; overflow-wrap:anywhere; }
 .app-sheet-heading > .control-back { grid-column:1; grid-row:1; }
-.app-sheet-heading > :is(.sheet-close,.french-close,.library-close,.barnaby-close,.cozy-pop-close),.app-sheet-heading > :is(#shopClose,#crownClose) { grid-column:3; grid-row:1; display:grid; place-items:center; position:static; float:none; width:44px; height:44px; min-height:44px; margin:0; padding:0; justify-self:end; border-radius:16px; background:var(--chip); color:var(--ink); }
+.app-sheet-heading > :is(.sheet-close,.french-close,.barnaby-close,.cozy-pop-close),.app-sheet-heading > :is(#shopClose,#crownClose) { grid-column:3; grid-row:1; display:grid; place-items:center; position:static; float:none; width:44px; height:44px; min-height:44px; margin:0; padding:0; justify-self:end; border-radius:16px; background:var(--chip); color:var(--ink); }
 .app-sheet-heading > :is(.french-progress,.cozy-pop-count) { grid-column:1/-1; grid-row:2; justify-self:center; margin:0; font-size:12px; }
-.library-heading.app-sheet-heading { position:absolute; left:20px; right:20px; top:max(16px,env(safe-area-inset-top)); width:auto; z-index:2; }
 .barnaby-chrome.app-sheet-heading { margin:0; padding:calc(env(safe-area-inset-top) + 8px) 12px 8px; border-bottom:1px solid var(--line); }
 #sheetBody .tea-top { grid-template-columns:1fr auto; }
 #sheetBody:has(.app-sheet-heading) .studio-titles h4 { display:none; }

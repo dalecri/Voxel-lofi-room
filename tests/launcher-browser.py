@@ -15,7 +15,6 @@ with sync_playwright() as p:
  calls=[]
  def route(r):
   if r.request.url.startswith('http://127.0.0.1:'):r.continue_()
-  elif r.request.url=='https://www.cbc.ca/webfeed/rss/rss-topstories':calls.append(r.request.url);r.fulfill(content_type='application/rss+xml',headers={'access-control-allow-origin':'*'},body='<rss><channel><item><title>Fixture headline</title><link>https://www.cbc.ca/news/test</link></item></channel></rss>')
   else:raise AssertionError(r.request.url)
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.home');page.set_default_timeout(10000)
@@ -36,8 +35,7 @@ with sync_playwright() as p:
  for id,tab in [('sound','Sound')]:
   launch(id);assert (page.get_by_role('tab',selected=True).get_attribute('aria-label') or page.get_by_role('tab',selected=True).inner_text())==tab;page.keyboard.press('Escape')
  page.click('#bHome');assert view.locator('[data-app=rooms],[data-app=journal],[data-app=settings]').count()==0;body.get_by_role('button',name='Open Settings',exact=True).click();assert page.get_by_role('tab',selected=True).get_attribute('aria-label')=='Settings';page.keyboard.press('Escape')
- launch('newspaper');page.wait_for_function("document.querySelector('#sheetBody').textContent.includes('Fixture headline')");page.keyboard.press('Escape');assert len(calls)==1
- page.click('#bHome');view.get_by_role('searchbox',name='Find a tool or app').fill('voxel');assert view.locator('[data-app]').count()==1;view.locator('[data-app]').click();assert page.evaluate('opened.at(-1)')==['https://heycristobal.com/voxel-worlds/','_blank','noopener,noreferrer']
+ page.click('#bHome');assert view.locator('[data-app=library],[data-app=newspaper]').count()==0;page.keyboard.press('Escape');assert len(calls)==0
  page.click('#bHome');view.get_by_role('button',name='＋ Add your own',exact=True).click();body.get_by_role('textbox',name='Name',exact=True).fill('PRIVATE_HOME_LINK');body.get_by_role('textbox',name='URL',exact=True).fill('https://example.com/owner');body.get_by_role('button',name='Add destination',exact=True).click();page.keyboard.press('Escape')
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.home');page.evaluate('''() => {window.opened=[];window.open=(...a)=>opened.push(a);}''');page.click('#bHome');view.get_by_role('searchbox',name='Find a tool or app').fill('PRIVATE_HOME_LINK');view.locator('[data-app]').click();assert page.evaluate('opened.at(-1)[0]')=='https://example.com/owner'
  page.evaluate('__lr.dashboard.launcher()');assert body.get_by_role('button',name='Notetaker',exact=True).count()==1;assert body.get_by_role('button',name='PRIVATE_HOME_LINK',exact=True).count()==1;body.get_by_role('button',name='Typewriter',exact=True).click();assert page.locator('#letterBody').inner_text()=='PRIVATE_HOME_TOOL_LETTER';page.click('#letterClose')

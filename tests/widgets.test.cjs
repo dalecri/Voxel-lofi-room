@@ -24,7 +24,7 @@ test('30 mixed French words rotate by local civil date, including DST and midnig
 
 test('French desk note is local, never attaches to the fridge, and updates at midnight', async () => {
   const s = store(); let d = new Date(2026, 9, 15, 23, 59);
-  const w = W.create({ store: s, now: () => d, fetchRSS: () => { throw Error('unexpected network'); } });
+  const w = W.create({ store: s, now: () => d });
   await w.refresh(['minifridge']);assert.equal(w.data('fridge-note').word,undefined);assert.equal(W.attached('minifridge'),undefined);assert.equal(W.attached('frenchdesk').surface,'desk');
   await w.refresh(['frenchdesk']); const before = w.data('fridge-note');
   d = new Date(2026, 9, 16); await w.refresh(['frenchdesk']);
@@ -32,28 +32,15 @@ test('French desk note is local, never attaches to the fridge, and updates at mi
   assert.deepEqual(Object.keys(s.values), ['lr.widgets']);
 });
 
-test('one hourly fetch across widgets, concurrency and reload; last good news survives failure', async () => {
-  const s = store(); let time = Date.now(), calls = 0;
-  const args = { store: s, now: () => new Date(time), fetchRSS: async url => { assert.equal(url, W.RSS); calls++; return { ok: true, text: async () => 'xml' }; }, parse: () => [row] };
-  const w = W.create(args);
-  await w.refresh([]); assert.equal(calls, 0);
-  await Promise.all(Array.from({ length: 20 }, () => w.refresh(['newspaper', 'newspaper'])));
-  assert.equal(calls, 1); assert.deepEqual(w.data('newspaper').headlines, [row]); assert.equal(w.data('newspaper').cached, false);
-  await W.create(args).refresh(['newspaper']); assert.equal(calls, 1);
-  const failed = W.create({ ...args, fetchRSS: async () => { calls++; throw Error('CORS'); } });
-  time += W.HOUR; await failed.refresh(['newspaper']); assert.equal(calls, 2);
-  assert.equal(failed.data('newspaper').cached, true); assert.deepEqual(failed.data('newspaper').headlines, [row]);
-  const reload = W.create(args); await reload.refresh(['newspaper']); assert.equal(calls, 2);
-  time += W.HOUR; await reload.refresh(['newspaper']); assert.equal(calls, 3); assert.equal(reload.data('newspaper').cached, false);
-});
-
-test('empty, malformed or HTTP-failed feeds preserve last good headlines; unsafe URLs are rejected', async () => {
-  for (const result of ['empty', 'parse', 'http']) {
-    const s = store({ 'lr.widgets': { newspaper: { headlines: [row], fetchedAt: 1000, attemptedAt: 1000 } } });
-    const w = W.create({ store: s, now: () => new Date(1000 + W.HOUR), fetchRSS: async () => ({ ok: result !== 'http', text: async () => 'bad' }), parse: () => { if (result === 'parse') throw Error('bad XML'); return []; } });
-    await w.refresh(['newspaper']); assert.deepEqual(w.data('newspaper').headlines, [row]); assert.equal(w.data('newspaper').cached, true);
-  }
-  assert.equal(W.articleURL('javascript:alert(1)'), ''); assert.equal(W.articleURL('data:text/html,hi'), '');
+test('retired news and portal caches never restore links or start a fetch', async () => {
+  const s=store({'lr.widgets':{newspaper:{headlines:[row]},'pomodoro-candle':{url:'https://example.com/retired'},'app-portals':{portals:[{furnitureId:'terrarium',url:'https://example.com/retired'}]}}});
+  const oldFetch=global.fetch;let requests=0;global.fetch=()=>{requests++;throw Error('Unexpected network');};
+  try {const w=W.create({store:s});await Promise.all(Array.from({length:4},()=>w.refresh(['newspaper','pomodorocandle','terrarium','libcase','gamingdesk','frenchdesk','arcade'])));
+    assert.equal(requests,0);assert.equal(w.data('newspaper'),undefined);assert.equal(W.WIDGETS.newspaper,undefined);assert.equal(W.RSS,undefined);assert.equal(W.parseRSS,undefined);
+    for(const type of ['newspaper','pomodorocandle','terrarium','libcase','gamingdesk']){assert.equal(W.attached(type),undefined);assert.deepEqual(w.destinations(type),[]);}
+    assert(!JSON.stringify(w.state).includes('retired'));assert(w.data('fridge-note').word);assert.deepEqual(w.destinations('arcade'),[{label:'HTML games',url:'https://heycristobal.com/my-collection/'}]);
+  } finally {global.fetch=oldFetch;}
+  assert.equal(W.articleURL('javascript:alert(1)'), '');assert.equal(W.articleURL('data:text/html,hi'),'');
 });
 
 test('share boundary retains decor, strips private root, item and nested metadata without mutating a room', () => {
@@ -70,16 +57,16 @@ test('share boundary retains decor, strips private root, item and nested metadat
 
 test('phase 2 static content and destinations stay in private storage with no extra fetches', async () => {
   W.register(LR);
-  const s = store(), w = W.create({ store: s, fetchRSS: () => { throw Error('Unexpected fetch'); } });
+  const s = store(), w = W.create({ store: s });
   const types = ['pomodorocandle', ...W.PORTALS.map(p => p.furnitureId)];
   await w.refresh(types);
-  for (const id of ['pomodoro-candle', 'app-portals']) assert.ok(s.values['lr.widgets'][id]);
+  for (const id of ['app-portals']) assert.ok(s.values['lr.widgets'][id]);
   assert.equal(W.WIDGETS['tst-corkboard'], undefined);assert.equal(LR.CAT.tstcorkboard, undefined);
-  assert.equal(w.destinations('pomodorocandle')[0].url, W.POMODORO_URL);
+  assert.deepEqual(w.destinations('pomodorocandle'), []);
   for (const p of W.PORTALS) assert.ok(w.destinations(p.furnitureId).some(l => l.url === p.url));
   const extra = { furnitureId: 'gamingdesk', label: 'Second app', url: 'https://example.com/second' };
   W.PORTALS.push(extra);
-  try { await w.refresh(['gamingdesk']); assert.equal(w.destinations('gamingdesk').length, 2); }
+  try { await w.refresh(['gamingdesk']); assert.equal(w.destinations('gamingdesk').length, 1); }
   finally { W.PORTALS.pop(); }
   assert.equal(w.destinations('minifridge').length, 0);
   assert.ok(!LR.CAT.pomodorocandle.focusRitual);

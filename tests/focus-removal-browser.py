@@ -1,4 +1,4 @@
-"""npm run build && python3 tests/pixel-maker-browser.py. Retired focus candle migration and remaining Pomodoro portal."""
+"""npm run build && python3 tests/pixel-maker-browser.py. Retired focus candle migration and decorative former portal."""
 import functools,json
 from pathlib import Path
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
@@ -30,11 +30,10 @@ with sync_playwright() as p:
  page.evaluate('window.opened=[];window.open=(...args)=>opened.push(args)')
  for width in [390,1280]:
   page.set_viewport_size({'width':width,'height':844});page.click('#bHome');assert page.locator('#homeView [data-app=focus]').count()==0
-  page.locator('#homeView [data-app]').filter(has_text='Pomodoro Terrarium').click()
-  assert page.evaluate('opened.at(-1)[0]')=='https://heycristobal.com/pomodoro-terrarium/'
+  assert page.locator('#homeView [data-app]').filter(has_text='Pomodoro Terrarium').count()==0;page.keyboard.press('Escape')
  page.evaluate("const it=__lr.room.add(__lr.room.make('pomodorocandle',{x:4,z:4}));__lr.changed();__lr.interact(it.id)")
- assert page.evaluate('opened.at(-1)[0]')=='https://heycristobal.com/pomodoro-terrarium/'
+ assert page.evaluate('opened.length')==0
  assert page.locator('#focusSnuff').count()==0
- assert not errors,errors;print('PASS focus removed from catalog/apps/badges, legacy timers and shortcut cleared, placed candles migrate, external Pomodoro remains at mobile/desktop widths',flush=True)
+ assert not errors,errors;print('PASS focus removed from catalog/apps/badges, legacy timers and shortcut cleared, placed candles migrate, retired Pomodoro has no link at mobile/desktop widths',flush=True)
  browser.close()
 server.shutdown()

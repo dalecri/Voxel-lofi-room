@@ -15,12 +15,10 @@
 #sheetBody[data-tool="merchant"] { --ps-bg:#f2d8b2; --ps-surface:#e9cb9f; --ps-light:#f3e2cb; --ps-edge:#d0b58c; --ps-ink:#33250f; --ps-muted:#7d6440; --ps-dark:#392a13; --ps-on-dark:#f1dfc5; }
 #sheetBody[data-tool="files"] { --ps-bg:#f1e9df; --ps-surface:#e6dbcd; --ps-light:#faf6f0; --ps-edge:#d8cbb9; --ps-ink:#2f261e; --ps-muted:#85776a; --ps-dark:#3d3129; --ps-on-dark:#f6efe6; }
 #sheetBody[data-tool="calendar"] { --ps-bg:#f7e0d2; --ps-surface:#f0d0bd; --ps-light:#faefe9; --ps-edge:#dbbaa7; --ps-ink:#331d0f; --ps-muted:#7d5740; --ps-dark:#392213; --ps-on-dark:#f5e1d4; }
-#sheetBody[data-tool="newspaper"] { --ps-bg:#ebe5d8; --ps-surface:#e1d9c5; --ps-light:#f4f0e9; --ps-edge:#d3c6a9; --ps-ink:#2c2516; --ps-muted:#7d6940; --ps-dark:#332b1a; --ps-on-dark:#ebe5d8; }
 #sheetBody[data-tool="book"] { --ps-bg:#e9dcc6; --ps-surface:#e1d0b2; --ps-light:#f0e7d8; --ps-edge:#d3bc94; --ps-ink:#302512; --ps-muted:#7d6640; --ps-dark:#372b15; --ps-on-dark:#ebdfcb; }
-.library-view { --ps-bg:#efd9c3; --ps-surface:#e9cbad; --ps-light:#f4e6d7; --ps-edge:#d4b596; --ps-ink:#33210f; --ps-muted:#7d5e40; --ps-dark:#392613; --ps-on-dark:#f0dbc7; }
 /* Shared shell: docked to the bottom edge, slides up with the sheet. */
 #sheetBody[data-tool] { --ps-font:'Plus Jakarta Sans',Nunito,sans-serif; }
-#sheetBody:is([data-tool=groceries],[data-tool=ideas],[data-tool=tea],[data-tool=tally],[data-tool=savings],[data-tool=sketch],[data-tool=french],[data-tool=whiteboard],[data-tool=wardrobe],[data-tool=merchant],[data-tool=files],[data-tool=calendar],[data-tool=newspaper],[data-tool=book],[data-tool=habits],[data-tool=games]) {
+#sheetBody:is([data-tool=groceries],[data-tool=ideas],[data-tool=tea],[data-tool=tally],[data-tool=savings],[data-tool=sketch],[data-tool=french],[data-tool=whiteboard],[data-tool=wardrobe],[data-tool=merchant],[data-tool=files],[data-tool=calendar],[data-tool=book],[data-tool=habits],[data-tool=games]) {
   --ink:var(--ps-ink); --ink-dim:var(--ps-muted); --panel:var(--ps-bg); --panel-solid:var(--ps-bg); --chip:var(--ps-surface); --line:var(--ps-edge); --accent:var(--ps-dark); --accent-ink:var(--ps-on-dark); --display:var(--ps-font); --note-ink:var(--ps-ink); --note-muted:var(--ps-muted);
   left:0; right:0; bottom:0; max-width:560px; margin:0 auto; padding:22px 22px calc(var(--sab,0px) + 22px); border-radius:36px 36px 0 0; background:var(--ps-bg); color:var(--ps-ink); font-family:var(--ps-font); }
 #sheetBody[data-tool] > .grab { display:none; }
@@ -32,11 +30,11 @@
 #sheetBody[data-tool] > .muted { display:flex; align-items:center; gap:10px; margin:0 0 16px; padding:10px 16px; border:1.5px solid var(--ps-edge); border-radius:20px; background:var(--ps-surface); color:var(--ps-ink); font:600 13.5px/1.45 var(--ps-font); }
 /* Controls: pills, a dark primary, soft fields and rounded cards. */
 #sheetBody[data-tool] :is(h3,h4,h5,label,legend,summary,p,li,small,b,strong,span,button,input,textarea,select,time) { font-family:var(--ps-font); }
-#sheetBody[data-tool] :where(.chipbtn,.mailwin-btn,.roomtool button:not([class*=grid]):not([class*=cell]):not([class*=swatch]):not([class*=color]):not([class*=pixel]):not(.tea-dial *),.dashboard-tabs [role=tab],.widget-news a,.widget-links a,.widget-news button) { min-height:44px; border:1.5px solid var(--ps-edge); border-radius:999px; background:var(--ps-surface); color:var(--ps-ink); box-shadow:none; font:700 15px/1.2 var(--ps-font); }
+#sheetBody[data-tool] :where(.chipbtn,.mailwin-btn,.roomtool button:not([class*=grid]):not([class*=cell]):not([class*=swatch]):not([class*=color]):not([class*=pixel]):not(.tea-dial *),.dashboard-tabs [role=tab],.widget-destinations a,.widget-links a,.widget-destinations button) { min-height:44px; border:1.5px solid var(--ps-edge); border-radius:999px; background:var(--ps-surface); color:var(--ps-ink); box-shadow:none; font:700 15px/1.2 var(--ps-font); }
 #sheetBody[data-tool] :is(.chipbtn.primary,.primary,button[aria-selected=true].chipbtn,.dashboard-tabs [role=tab][aria-selected=true]) { border-color:var(--ps-dark); background:var(--ps-dark); color:var(--ps-on-dark); }
 #sheetBody[data-tool] :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=date]),textarea,select) { border:1.5px solid var(--ps-edge); border-radius:16px; background:var(--ps-light); color:var(--ps-ink); font:600 15px/1.4 var(--ps-font); box-shadow:none; }
 #sheetBody[data-tool] :is(input,textarea)::placeholder { color:var(--ps-muted); opacity:1; }
-#sheetBody[data-tool] :is(.roomtool-card,.dashboard-file,.file-row,.letter-row,.roomtool-list > *,.calendar-detail section,.widget-news li) { border:1.5px solid var(--ps-edge); border-radius:22px; background:var(--ps-surface); color:var(--ps-ink); }
+#sheetBody[data-tool] :is(.roomtool-card,.dashboard-file,.file-row,.letter-row,.roomtool-list > *,.calendar-detail section,.widget-destinations li) { border:1.5px solid var(--ps-edge); border-radius:22px; background:var(--ps-surface); color:var(--ps-ink); }
 #sheetBody[data-tool] :is(.muted,.small) { color:var(--ps-muted); }
 #sheetBody[data-tool] :is(button,input,textarea,select,summary,a,[tabindex]):focus-visible { outline:3px solid var(--ps-dark); outline-offset:3px; }
 @media(max-width:420px) { #sheetBody[data-tool]:not([data-tool=mood]) { padding:18px 16px calc(var(--sab,0px) + 18px); border-radius:32px 32px 0 0; } #sheetBody[data-tool] .app-sheet-heading { grid-template-columns:44px minmax(0,1fr) 44px; } #sheetBody[data-tool] .app-sheet-heading > :is(.control-back,.sheet-close,.french-close,#shopClose,#crownClose),#sheetBody[data-tool] .app-sheet-heading .sheet-icon { width:44px; height:44px; min-height:44px; } }
@@ -49,17 +47,6 @@
 #sheetBody[data-tool] .calendar-day[aria-current=date],#sheetBody[data-tool] .calendar-day[aria-pressed=true] { border-color:var(--ps-dark); box-shadow:inset 0 0 0 1.5px var(--ps-dark); }
 #sheetBody[data-tool] .tea-pill { border:1.5px solid var(--ps-edge); border-radius:999px; background:var(--ps-surface); color:var(--ps-ink); font-family:var(--ps-font); }
 #sheetBody[data-tool] .tea-pill[aria-pressed=true] { border-color:var(--ps-dark); background:var(--ps-dark); color:var(--ps-on-dark); }
-/* My Library slides up as a docked sheet too (it used to cover the screen). */
-.library-view { --ps-font:'Plus Jakarta Sans',Nunito,sans-serif; --ink:var(--ps-ink); --ink-dim:var(--ps-muted); --panel:var(--ps-bg); --panel-solid:var(--ps-bg); --chip:var(--ps-surface); --line:var(--ps-edge); --accent:var(--ps-dark); --accent-ink:var(--ps-on-dark); --display:var(--ps-font);
-  inset:auto 0 0 0; height:min(88dvh,820px); max-width:560px; margin:0 auto; padding:84px 22px calc(env(safe-area-inset-bottom) + 22px); border-radius:36px 36px 0 0; align-items:stretch; background:var(--ps-bg); color:var(--ps-ink); font-family:var(--ps-font); box-shadow:0 0 0 100vmax #2814142e,0 -8px 30px #0003; transform:translateY(100%); transition:transform .35s cubic-bezier(.2,.9,.3,1); }
-.library-view.is-open { transform:none; }
-.library-view .library-heading.app-sheet-heading { top:22px; left:22px; right:22px; grid-template-columns:48px minmax(0,1fr) 48px; }
-.library-view .library-heading h2 { color:var(--ps-ink); font:800 clamp(18px,5vw,23px)/1.2 var(--ps-font); letter-spacing:-.02em; }
-.library-view .library-heading :is(.control-back,.library-close) { width:48px; height:48px; min-height:48px; display:grid; place-items:center; padding:0; border:1.5px solid var(--ps-edge); border-radius:16px; background:var(--ps-surface); color:var(--ps-ink); box-shadow:none; font-size:22px; }
-.library-view :is(h2,h3,h4,p,button,input,textarea,label,span,small,b) { font-family:var(--ps-font); }
-.library-view :focus-visible { outline:3px solid var(--ps-dark); }
-@media(min-width:760px) { .library-view { max-width:920px; } }
-@media(prefers-reduced-motion:reduce) { .library-view { transition:none; } }
 /* Centered titles: both header sides reserve room for two buttons. */
 #sheetBody:has(.drift-reader) .brief-heading,#sheetBody:has(.future-mail) .future-mail-heading { grid-template-columns:106px minmax(0,1fr) 106px; }
 #sheetBody :is(.brief-heading,.future-mail-heading) > .control-back { justify-self:start; }
@@ -71,7 +58,7 @@
 /* Light matches the room's daytime panels, Dark its night panels (index.html :root / body.night). */
 body[data-tool-theme=light] { --mono-bg:#fffaf3; --mono-surface:#f2ece5; --mono-light:#ffffff; --mono-edge:#dcd4ce; --mono-ink:#4a3530; --mono-muted:#84746e; --mono-dark:#4a3530; --mono-on-dark:#fffaf3; }
 body[data-tool-theme=dark] { --mono-bg:#262850; --mono-surface:#373960; --mono-light:#2e3058; --mono-edge:#515177; --mono-ink:#f2eeff; --mono-muted:#b5b3ca; --mono-dark:#f2eeff; --mono-on-dark:#262850; }
-body:is([data-tool-theme=light],[data-tool-theme=dark]) #sheetBody:is([data-tool]:not([data-tool=mood])),body:is([data-tool-theme=light],[data-tool-theme=dark]) .library-view { --ps-bg:var(--mono-bg); --ps-surface:var(--mono-surface); --ps-light:var(--mono-light); --ps-edge:var(--mono-edge); --ps-ink:var(--mono-ink); --ps-muted:var(--mono-muted); --ps-dark:var(--mono-dark); --ps-on-dark:var(--mono-on-dark); }
+body:is([data-tool-theme=light],[data-tool-theme=dark]) #sheetBody:is([data-tool]:not([data-tool=mood])) { --ps-bg:var(--mono-bg); --ps-surface:var(--mono-surface); --ps-light:var(--mono-light); --ps-edge:var(--mono-edge); --ps-ink:var(--mono-ink); --ps-muted:var(--mono-muted); --ps-dark:var(--mono-dark); --ps-on-dark:var(--mono-on-dark); }
 body:is([data-tool-theme=light],[data-tool-theme=dark]) #sheetBody:has(#lettersView) { --tw-bg:var(--mono-bg); --tw-surface:var(--mono-surface); --tw-raise:var(--mono-light); --tw-edge:var(--mono-edge); --tw-ink:var(--mono-ink); --tw-muted:var(--mono-muted); --tw-dark:var(--mono-dark); --tw-on-dark:var(--mono-on-dark); }
 body:is([data-tool-theme=light],[data-tool-theme=dark]) #sheetBody:has(.drift-reader) { --db-bg:var(--mono-bg); --db-surface:var(--mono-surface); --db-raise:var(--mono-light); --db-light:var(--mono-light); --db-edge:var(--mono-edge); --db-ink:var(--mono-ink); --db-muted:var(--mono-muted); --db-dark:var(--mono-dark); --db-on-dark:var(--mono-on-dark); }
 body:is([data-tool-theme=light],[data-tool-theme=dark]) #sheetBody:has(.future-mail) { --fm-bg:var(--mono-bg); --fm-surface:var(--mono-surface); --fm-card:var(--mono-surface); --fm-light:var(--mono-light); --fm-edge:var(--mono-edge); --fm-ink:var(--mono-ink); --fm-muted:var(--mono-muted); --fm-dark:var(--mono-dark); --fm-on-dark:var(--mono-on-dark); }

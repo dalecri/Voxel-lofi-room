@@ -5,7 +5,6 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from playwright.sync_api import sync_playwright
 ROOT=Path(__file__).resolve().parents[1]
-RSS='https://www.cbc.ca/webfeed/rss/rss-topstories'
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self,*args): pass
 server=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(ROOT/'www')))
@@ -19,11 +18,8 @@ with sync_playwright() as p:
         request=route.request
         if request.url.startswith('http://127.0.0.1:'):return route.continue_()
         requests.append((request.url,request.resource_type))
-        if request.url==RSS:
-            route.fulfill(content_type='application/rss+xml',headers={'access-control-allow-origin':'*'},body='<rss><channel><item><title>PRIVATE_PHASE2_NEWS</title><link>https://www.cbc.ca/news/test</link></item></channel></rss>')
-        else:
-            assert request.resource_type=='document', (request.url,request.resource_type)
-            route.fulfill(content_type='text/html',body='<title>Outbound destination fixture</title>')
+        assert request.resource_type=='document', (request.url,request.resource_type)
+        route.fulfill(content_type='text/html',body='<title>Outbound destination fixture</title>')
     context.route('**/*',outbound)
     page=context.new_page(); page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle')

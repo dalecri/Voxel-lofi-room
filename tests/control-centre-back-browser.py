@@ -12,8 +12,8 @@ Thread(target=server.serve_forever,daemon=True).start()
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(viewport={'width':390,'height':900},reduced_motion='reduce')
- context.add_init_script('''if(!localStorage.getItem('sheetFixture')){localStorage.setItem('sheetFixture','true');const r={v:1,name:'Tools room',n:10,wall:{style:'paint',color:0},floor:{style:'oak'},items:[]};for(const [k,v] of Object.entries({'lr.intro':true,'lr.rooms':[{id:101,name:r.name,n:0}],'lr.room.101':r,'lr.meta':{current:101,phase:'day',realtime:false,dreamy:false,visitors:false,mischief:false,calmPerformance:true}}))localStorage.setItem(k,JSON.stringify(v));}''')
- context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}) if 'twostorycaptions.json' in r.request.url else r.fulfill(body='<rss><channel/></rss>',content_type='application/xml'))
+ context.add_init_script('''if(!localStorage.getItem('sheetFixture')){localStorage.setItem('sheetFixture','true');const r={v:1,name:'Tools room',n:10,wall:{style:'paint',color:0},floor:{style:'oak'},items:[]};for(const [k,v] of Object.entries({'lr.intro':true,'lr.portals':{next:2,custom:[{id:'custom-1',label:'Navigation fixture',url:'https://example.com/navigation'}],bindings:{}},'lr.rooms':[{id:101,name:r.name,n:0}],'lr.room.101':r,'lr.meta':{current:101,phase:'day',realtime:false,dreamy:false,visitors:false,mischief:false,calmPerformance:true}}))localStorage.setItem(k,JSON.stringify(v));}''')
+ context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.home');page.evaluate('__lr.renderLoop.stop()')
  home=page.locator('#homeView');body=page.locator('#sheetBody');back=page.get_by_role('button',name='Back to Control Centre',exact=True)
@@ -24,7 +24,7 @@ with sync_playwright() as p:
   row=page.locator('.control-return-actions,[data-control-header].has-control-return');assert row.count()==1
   # One layout snapshot: a sheet whose content settles (e.g. captions loading) shifts every box together.
   box=page.evaluate("""()=>{const row=document.querySelector('.control-return-actions,[data-control-header].has-control-return'),r=e=>{if(!e)return null;const b=e.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height}};
-   const nav=document.querySelector('#sheetBody > .menu-nav');return {b:r(document.querySelector('button[aria-label="Back to Control Centre"]')),x:r(row.querySelector('.sheet-close,.french-close,.library-close,.barnaby-close,.cozy-pop-close,#shopClose,#crownClose,#photoClose')),r:r(row),t:r(row.querySelector('h2')),nav:r(nav)}}""")
+   const nav=document.querySelector('#sheetBody > .menu-nav');return {b:r(document.querySelector('button[aria-label="Back to Control Centre"]')),x:r(row.querySelector('.sheet-close,.french-close,.barnaby-close,.cozy-pop-close,#shopClose,#crownClose,#photoClose')),r:r(row),t:r(row.querySelector('h2')),nav:r(nav)}}""")
   b,x,r,t=box['b'],box['x'],box['r'],box['t']
   assert abs(b['y']-x['y'])<=1 and b['x']<x['x'],(b,x)
   assert abs(b['x']-r['x'])<=1 and abs(x['x']+x['width']-r['x']-r['width'])<=1
@@ -41,7 +41,6 @@ with sync_playwright() as p:
  launch('french');page.evaluate('__lr.calendar.openDay("2026-10-20")');back.wait_for();page.evaluate('__lr.french.open()');back.wait_for();assert_header();assert page.get_by_role('button',name='Close French corner',exact=True).is_visible();returned('french')
  launch('french');back.focus();page.keyboard.press('Tab');assert page.get_by_role('button',name='Close French corner',exact=True).evaluate('e=>e===document.activeElement');page.keyboard.press('Shift+Tab');assert back.evaluate('e=>e===document.activeElement');returned('french')
  launch('notebook');page.click('#noteMore');page.get_by_role('menuitem',name='All notes',exact=True).click();back.focus();page.keyboard.press('Tab');assert page.locator('#letterClose').evaluate('e=>e===document.activeElement');returned('notebook')
- launch('library');page.get_by_role('button',name='Open folder',exact=True).click();back.wait_for();returned('library')
  # Close/Escape keep their room destination; subsequent furniture tools get no Back.
  launch('french');page.get_by_role('button',name='Close French corner',exact=True).click();page.wait_for_function('!__lr.french.active && !document.querySelector(".control-back")');page.evaluate('__lr.french.open()');assert back.count()==0;page.keyboard.press('Escape');open_home()
  launch('tea');page.keyboard.press('Escape');page.wait_for_function('!document.querySelector(".control-back")');page.evaluate('__lr.roomToolsUI.open("groceries")');assert back.count()==0;page.keyboard.press('Escape');open_home()
@@ -49,12 +48,12 @@ with sync_playwright() as p:
  body.get_by_role('button',name='Open Settings',exact=True).click();back.wait_for();back.click();home.wait_for();assert body.get_by_role('button',name='Open Settings',exact=True).evaluate('e=>e===document.activeElement')
  body.get_by_role('button',name='Set room shortcut',exact=True).click();back.wait_for();back.click();home.wait_for();assert body.get_by_role('button',name='Set room shortcut',exact=True).evaluate('e=>e===document.activeElement')
  # External apps retain the source menu while the browser handles the other page.
- page.evaluate('window.open=(...args)=>{window.externalOpened=args}');external=home.locator('[data-app^="portal:"]').first;assert external.count();external.click();assert home.is_visible();assert page.evaluate('__lr.home.active');assert page.evaluate('!!window.externalOpened');assert back.count()==0
+ page.evaluate('window.open=(...args)=>{window.externalOpened=args}');external=home.locator('[data-app^="portal:"]').filter(has_text='Navigation fixture').first;assert external.count();external.click();assert home.is_visible();assert page.evaluate('__lr.home.active');assert page.evaluate('!!window.externalOpened');assert back.count()==0
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':900})
-   for app in ['tea','french','sound','library','notebook','tally','groceries']:
+   for app in ['tea','french','sound','notebook','tally','groceries']:
     launch(app);assert back.bounding_box()['width']>=44;assert back.bounding_box()['height']>=44;assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/control-back-{app}-{phase}-{width}.png');returned(app)
  page.set_viewport_size({'width':390,'height':400});launch('notebook');assert page.locator('#letterScroll').bounding_box()['height']>=40;assert page.locator('#letterNew').bounding_box()['y']+page.locator('#letterNew').bounding_box()['height']<=400;returned('notebook');page.set_viewport_size({'width':1280,'height':900})
  # Every built-in Control Centre app supplies the same return path.
@@ -62,4 +61,4 @@ with sync_playwright() as p:
   launch(app);returned(app)
  assert not errors,errors;browser.close()
 server.shutdown()
-print('PASS contextual Back: search/scroll/focus restore, nested rerenders, French/library/letters/tools/settings/shortcut, draft save, room close/Escape isolation, external apps, day/night phone/desktop layouts')
+print('PASS contextual Back: search/scroll/focus restore, nested rerenders, French/letters/tools/settings/shortcut, draft save, room close/Escape isolation, external apps, day/night phone/desktop layouts')

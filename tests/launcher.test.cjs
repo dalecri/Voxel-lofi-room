@@ -3,15 +3,15 @@ const L=require('../launcher.js'),D=require('../dashboard.js'),LR=require('../ro
 require('../furniture.js');W.register(LR);
 function fixture(){const data=new Map(),store={get:(k,d)=>structuredClone(data.get(k)??d),set:(k,v)=>data.set(k,structuredClone(v))};return {store,data};}
 test('one tool directory includes every private room tool and file section with unique stable IDs',()=>{
- const ids=L.TOOLS.map(t=>t.id);assert.equal(new Set(ids).size,ids.length);assert.ok(!ids.includes('focus'));assert.ok(!ids.includes('captions')&&!ids.includes('tst'),'no TwoStoryTails tools');
- for(const id of ['mood','tally','typewriter','mailbox','groceries','ideas','tea','savings','sketch','french','whiteboard','breathing','wardrobe','merchant','letters','scenes','photos','camera','newspaper','todo','moments','digest','rooms','sound','settings'])assert.ok(ids.includes(id),id);
+ const ids=L.TOOLS.map(t=>t.id);assert.equal(new Set(ids).size,ids.length);assert.ok(!ids.includes('focus'));assert.ok(!ids.includes('library')&&!ids.includes('newspaper'));assert.ok(!ids.includes('captions')&&!ids.includes('tst'),'no TwoStoryTails tools');
+ for(const id of ['mood','tally','typewriter','mailbox','groceries','ideas','tea','savings','sketch','french','whiteboard','breathing','wardrobe','merchant','letters','scenes','photos','camera','todo','moments','digest','rooms','sound','settings'])assert.ok(ids.includes(id),id);
  assert.ok(L.TOOLS.every(t=>t.label&&t.icon&&t.description&&!t.url));
 });
 test('Home directory derives actual portal/widget destinations and reflects private custom links after reload',()=>{
  const {store,data}=fixture(),widgets=W.create({store}),model=D.create({store});model.addPortal('Private bank','https://example.com/my-bank');
  const apps=L.destinations(LR.CAT,widgets,D.create({store}).custom,D.destinations);
- assert.equal(apps.find(p=>p.furnitureId==='terrarium').url,'https://heycristobal.com/voxel-worlds/');
- assert.equal(apps.find(p=>p.furnitureId==='pomodorocandle').url,W.POMODORO_URL);
+ for(const id of ['terrarium','pomodorocandle','libcase','gamingdesk'])assert.equal(apps.find(p=>p.furnitureId===id),undefined);
+ assert.equal(apps.find(p=>p.furnitureId==='arcade').inApp,true);
  assert.equal(apps.find(p=>p.label==='Private bank').url,'https://example.com/my-bank');assert.ok(data.has('lr.portals'));
  const portalApps=apps.filter(p=>p.url);assert.equal(new Set(portalApps.map(p=>p.url)).size,portalApps.length);
  // Returned rows are disposable views, not mutable application config or room data.

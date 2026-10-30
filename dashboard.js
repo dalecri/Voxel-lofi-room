@@ -18,7 +18,7 @@
     const rows=[];
     for(const [id,C] of Object.entries(CAT)) {
       if(C.tap==='portal' && url(C.link || C.url)) rows.push({furnitureId:id,label:C.name,url:url(C.link || C.url),icon:C.icon || '↗'});
-      for(const p of widgets?.destinations(id) || []) rows.push({furnitureId:id,label:p.label || C.name,url:url(p.url),...(id==='arcade'?{inApp:true}:{}),icon:C.icon || ({terrarium:'🫙',pomodorocandle:'🕯',arcade:'🎮',crt:'📺',libcase:'📚',gamingdesk:'⌨',tstcorkboard:'📌'})[id] || '↗'});
+      for(const p of widgets?.destinations(id) || []) rows.push({furnitureId:id,label:p.label || C.name,url:url(p.url),...(id==='arcade'?{inApp:true}:{}),icon:C.icon || ({arcade:'🎮',crt:'📺'})[id] || '↗'});
     }
     rows.push(...custom.map(p=>({...p,url:url(p.url),icon:'☆',custom:true})));
     const seen=new Set();return rows.filter(p=>p.url && !seen.has(p.url) && seen.add(p.url));
@@ -86,7 +86,7 @@
       const form=h('form','dashboard-form'),label=element('label','','Name'),name=element('input'),ul=element('label','','URL'),input=element('input'),status=element('p','muted');name.required=true;name.maxLength=80;input.required=true;input.type='url';input.placeholder='https://…';label.appendChild(name);ul.appendChild(input);form.append(label,ul,status);
       const b=button(form,'Add destination',()=>{});b.type='submit';form.onsubmit=e=>{e.preventDefault();try{const p=model.addPortal(name.value,input.value);sheet('Destination added','Find it on the phone whenever you like.',h=>{h('p').textContent=`${p.label} is ready. Place a portal in your room for a direct shortcut.`;const row=h('div','rowbtns');button(row,'Place a portal',()=>placePortal(p));button(row,'Back to launcher',launcher);});}catch(e){status.textContent=e.message;}};
     });}
-    function portal(it,key){const p=model.bound(key);if(p){launch(p);return;}sheet('Connect this portal','Choose one of your private destinations. Add links using the phone.',h=>{const list=h('div','widget-news');model.custom.forEach(p=>button(list,p.label,()=>{model.bind(key,p.id);close();launch(p);}));if(!model.custom.length)button(list,'Add a destination',addPortal);});}
+    function portal(it,key){const p=model.bound(key);if(p){launch(p);return;}sheet('Connect this portal','Choose one of your private destinations. Add links using the phone.',h=>{const list=h('div','widget-destinations');model.custom.forEach(p=>button(list,p.label,()=>{model.bind(key,p.id);close();launch(p);}));if(!model.custom.length)button(list,'Add a destination',addPortal);});}
     let fileTab='Letters';
     function files(tab=fileTab){fileTab=FILE_TABS.includes(tab)?tab:'Letters';letters.flush();sheet('Files','',h=>{
       const host=h('div'),panels=tabs(host,FILE_TABS,fileTab,n=>{fileTab=n;},'files');
