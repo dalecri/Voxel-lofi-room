@@ -167,7 +167,7 @@
     const activities = activityLoop();
     const s = { pose: 'stand', activity: null, activityStage: 'idle', sipping: false, pageTurn: 0, x: 0, y: 0, z: 0, heading: 0, mode: 'idle', brightness: 1, bob: 0, tilt: 0, hop: 0, message: '', bubbleUntil: 0, roomId: null, elapsed: 0, target: null, perch: null };
     let turns = 0, words = 0, pause = 2, jump = 0, transit = null, lastSpeech = -45, nextIdle = 60, lastContext = '';
-    let controlled=false, route=null, moved=false, arrivalHeading=null;
+    let controlled=false, route=null, moved=false, arrivalHeading=null, resting=null;   // resting: sitting somewhere with tea, until told otherwise
     function free(e, x, z) { return x >= 0 && z >= 0 && x < e.n && z < e.n && e.walk[z * e.n + x] > 0; }
     function floor(e) {
       let best = null, distance = Infinity;
@@ -190,7 +190,15 @@
       if (s.roomId !== e.roomId) {
         s.roomId = e.roomId; s.x = e.n / 2; s.z = e.n / 2; s.y = 0;
         Object.assign(s, floor(e) || { x: .5, y: 0, z: .5 });
-        s.target = null; s.perch = null; transit = null; s.message = ''; pause = 2; lastContext = ''; route=null;moved=false;activities.reset(s);
+        s.target = null; s.perch = null; transit = null; s.message = ''; pause = 2; lastContext = ''; route=null;moved=false;activities.reset(s);resting=null;s.holdTea=false;
+      }
+      if(resting&&!controlled){
+        // Settle onto the seat with a little hop, then sit, cup in paw, with the odd sip.
+        if(transit){transit.t=Math.min(1,transit.t+dt/.9);const k=transit.t,smooth=k*k*(3-2*k);for(const a of ['x','y','z'])s[a]=transit.from[a]+(transit.to[a]-transit.from[a])*smooth;s.y+=Math.sin(k*Math.PI)*.4;if(k===1){Object.assign(s,transit.to);transit=null;}}
+        s.pose='lounge';s.mode='rest';s.heading=resting.heading;s.holdTea=!!resting.tea;s.sipping=!!resting.tea&&!transit&&(s.elapsed-resting.since)%9>6.5;
+        s.brightness=1;s.tilt=0;s.bob=0;s.hop=0;s.weight=0;s.blink=!e.reducedMotion&&s.elapsed%7.4<.16;s.moving=false;
+        if(s.elapsed>=s.bubbleUntil)s.message='';
+        return s;
       }
       if(controlled){
         s.y=0;s.hop=0;s.bob=0;s.tilt=0;s.weight=0;s.blink=false;s.brightness=1;s.message='';s.sipping=false;s.pageTurn=0;s.pose='stand';
@@ -257,7 +265,13 @@
       step(0,e);if(at&&Number.isFinite(at.x)&&Number.isFinite(at.z)){s.x=at.x;s.z=at.z;if(Number.isFinite(at.heading))s.heading=at.heading;}
       const ground=floor(e);if(!ground)return false;
       if(s.y>0||!free(e,Math.floor(s.x),Math.floor(s.z)))Object.assign(s,ground);
-      activities.reset(s);transit=null;jump=0;s.target=null;s.perch=null;s.y=0;s.moving=false;route=null;moved=false;controlled=true;step(0,e);return true;
+      resting=null;s.holdTea=false;activities.reset(s);transit=null;jump=0;s.target=null;s.perch=null;s.y=0;s.moving=false;route=null;moved=false;controlled=true;step(0,e);return true;
+    }
+    function rest(at){
+      if(!at){if(resting){resting=null;s.holdTea=false;s.pose='stand';}return;}
+      activities.reset(s);route=null;s.target=null;s.perch=null;jump=0;
+      resting={heading:Number.isFinite(at.heading)?at.heading:0,tea:at.tea!==false,since:s.elapsed};
+      const to={x:at.x,y:at.y||0,z:at.z};if(at.instant)Object.assign(s,to);else transit={from:{x:s.x,y:s.y,z:s.z},to,t:0};
     }
     function releaseControl(){controlled=false;route=null;moved=false;s.moving=false;s.target=null;s.mode='idle';pause=2;activities.reset(s);}
     function move(f,side,yaw,dt,e){
@@ -269,7 +283,7 @@
       s.heading=yaw;moved=s.x!==beforeX||s.z!==beforeZ;s.moving=moved;return moved;
     }
     function walkTo(e,x,z,heading){if(!controlled||!Number.isFinite(x)||!Number.isFinite(z))return false;const path=pathTo(e,s,[{x:Math.floor(x)+.5,z:Math.floor(z)+.5}]);if(!path)return false;route=path.slice(1);arrivalHeading=Number.isFinite(heading)?heading:null;if(!route.length&&arrivalHeading!==null){s.heading=arrivalHeading;moved=true;s.moving=true;}return true;}
-    return { state: s, step, takeControl, releaseControl, move, walkTo, get controlled(){return controlled;}, speak, celebrate, say(text,cheer=false){if(cheer)celebrate({},'moment',true);s.message=String(text);s.bubbleUntil=s.elapsed+4;lastSpeech=s.elapsed;}, tap(e) { celebrate(e, 'tap'); } };
+    return { state: s, step, takeControl, releaseControl, move, walkTo, rest, get resting(){return !!resting;}, get controlled(){return controlled;}, speak, celebrate, say(text,cheer=false){if(cheer)celebrate({},'moment',true);s.message=String(text);s.bubbleUntil=s.elapsed+4;lastSpeech=s.elapsed;}, tap(e) { celebrate(e, 'tap'); } };
   }
   const costumes = typeof module !== 'undefined' && module.exports ? require('./costumes.js') : root.LRCostumes;
   // One shared rig. Costumes merge their voxels into these parts, never into room decor.
@@ -342,10 +356,10 @@
     const read=s.pose==='read' || s.activity?.kind==='read' && s.activity.stage==='to-seat';
     const type=s.pose==='type',fidget=type && !reduced ? Math.sin(s.elapsed*5)*.06 : 0;
     p.leftarm.rotation.x=type ? -1.3+fidget : read ? -.45 : -stride;
-    p.rightarm.rotation.x=type ? -1.3-fidget : s.sipping ? -.9 : read ? -.45 : stride;
+    p.rightarm.rotation.x=type ? -1.3-fidget : s.sipping ? -.9 : (read || s.holdTea) ? -.45 : stride;
     p.leftarm.position.z=p.rightarm.position.z=(4+(type ? 1 : 0))/8;
     p.book.visible=p.page.visible=read;p.page.rotation.z=reduced ? 0 : s.pageTurn*Math.PI;
-    p.cup.visible=!!s.sipping;p.cup.position.y=(s.sipping ? 13 : 7)/8;
+    p.cup.visible=!!(s.sipping||s.holdTea);p.cup.position.y=(s.sipping ? 13 : 7)/8;
     // A tiny breath in idle, with no ambient motion when reduced motion is requested.
     const breath=!reduced && !sleep && !walk && !seated ? Math.sin(s.elapsed*1.2)*.012 : 0;
     p.head.position.y=RIG.head[1]/8+breath;
@@ -458,7 +472,7 @@
       const hits = view.raycaster.intersectObjects(object.userData.meshes, false), wall = view.pickWall(x, y);
       return !!hits.length && (!item || hits[0].distance < item.dist) && (!wall || hits[0].distance <= wall.t + .05);
     }
-    return { takeControl(at){scan();return brain.takeControl(env(),at);},releaseControl(){brain.releaseControl();object.visible=true;},move(f,side,yaw,dt){return brain.move(f,side,yaw,dt,env());},walkTo(x,z,heading){return brain.walkTo(env(),x,z,heading);},say(text,cheer=false){brain.say(text,cheer);}, id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, hop() { brain.celebrate(env(), 'task', true); }, get name() { return DISPLAY_NAME; } };
+    return { rest(at){brain.rest(at);},get resting(){return brain.resting;},takeControl(at){scan();return brain.takeControl(env(),at);},releaseControl(){brain.releaseControl();object.visible=true;},move(f,side,yaw,dt){return brain.move(f,side,yaw,dt,env());},walkTo(x,z,heading){return brain.walkTo(env(),x,z,heading);},say(text,cheer=false){brain.say(text,cheer);}, id: ID, object, brain, bubble, frame, hit, setCostume, setSlots, get slots() { return {...currentSlots}; }, get costume() { return costumeId(); }, tap() { brain.tap(env()); onWardrobe(); }, celebrate() { brain.celebrate(env()); }, hop() { brain.celebrate(env(), 'task', true); }, get name() { return DISPLAY_NAME; } };
   }
   const api = { RIG, buildDude, definitionFor, definitionForSlots, attachRig, applyPose, scanActivities, pathTo, activityLoop, ID, DISPLAY_NAME, SPEECH, category, createBrain, definition, create };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

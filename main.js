@@ -2962,6 +2962,7 @@ function startLofiRooms() {
     if(action==='home'){returnFromLane();return;}
     if(action==='street'){visitLaneRoom('street');return;}
     if(action==='go:shop'||action==='go:mail'){visitLaneRoom(action.slice(3));return;}
+    if(action==='winddown'){windDown();return;}
     if(action.startsWith('find:')){laneUI.find(action.slice(5));return;}
     if(action.startsWith('bed:')||action==='bench'||action==='court'){laneUI.project(action);return;}
     if(action.startsWith('talk:')){const id=action.slice(5),N=LRLane.NEIGHBORS[id];if(!N)return;Sound.meow?.();codeSheet(N.name,'',h=>laneUI.renderTalk(id,h('div')));return;}
@@ -2975,7 +2976,7 @@ function startLofiRooms() {
   // Your home is kept aside once, however many places you stroll between, and comes back on return.
   const LANE = -100, LANE_IDS = { street: -100, shop: -101, mail: -102 };
   const LANE_DOORS = { home: 'Your house', street: 'Out to the lane', 'go:shop': 'Mallow’s Shop', 'go:mail': 'Mail Room' };
-  const LANE_BAR = { street: [['← Home', 'home'], ['Notice board', 'notice']], shop: [['← The lane', 'street'], ['Browse shelf', 'shop'], ['Chat with Mallow', 'talk:mallow']], mail: [['← The lane', 'street'], ['Mail & papers', 'mail']] };
+  const LANE_BAR = { street: [['← Home', 'home'], ['Notice board', 'notice'], ['☕ Wind down', 'winddown']], shop: [['← The lane', 'street'], ['Browse shelf', 'shop'], ['Chat with Mallow', 'talk:mallow']], mail: [['← The lane', 'street'], ['Mail & papers', 'mail']] };
   function visitLaneRoom(place) {
     if(!LANE_IDS[place]||travelling)return;
     closeSheets();
@@ -3001,7 +3002,7 @@ function startLofiRooms() {
       setMode('explore',true);changed();dirty=false;updateHeader();
       if(asCharacter){doorCool=performance.now()+1500;enterCharacter(place==='street'?LRLane.outside(from):{x:6.5,z:3.5,heading:0});}
       const hint={street:'Walk up to a door to go in, tap a building, or say hello to a neighbour.',shop:meta.phase==='morning'?'Mallow’s out front opening up, but the shelf is ready.':'Tap Mallow or a display to browse his finds.',mail:'Tap the paper desk or mailbox to read what’s waiting.'}[place];
-      if(place==='street')Sound.turn();
+      if(place==='street'){Sound.turn();inviteWindDown();}else{$('#laneClose')?.remove();}
       toast(`<b>${esc(room.name)}</b><span>${hint}</span>`,3500);
     });
     if(laneVisit)go();else leaveThen(go);
@@ -3013,7 +3014,7 @@ function startLofiRooms() {
     const day=laneModel.today();
     if(['rain','storm','snow'].includes(weather))laneModel.setTown(LRLane.projects.rain(laneModel.town,today()));   // rain waters the garden
     const town=laneModel.town;
-    return LRLane.interior(LR,'street',[],{residents,town,finds:laneUI.finds(),found:day.found,carrying:day.carrying,neighbors:LRLane.neighbors({phase:meta.phase,weather,town}),season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather}).season});
+    return LRLane.interior(LR,'street',[],{residents,town,lit:['evening','night'].includes(meta.phase),finds:laneUI.finds(),found:day.found,carrying:day.carrying,neighbors:LRLane.neighbors({phase:meta.phase,weather,town,closed:laneModel.closedToday}),season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather}).season});
   }
   // A discovery was found: pay out its small reward, hand over a visitor's gift, and update the
   // street in place (works while walking as the character too).
@@ -3039,18 +3040,69 @@ function startLofiRooms() {
     for(const [iid,act] of Object.entries(laneVisit.actions))if(/^(bed:|bench$|court$|talk:)/.test(act)){room.remove(+iid);delete laneVisit.actions[iid];}
     const town=laneModel.town,put=(t,o,act)=>{if(!CAT[t])return;const it=room.make(t,o);if(!room.canPlace(it))return;room.add(it);laneVisit.actions[it.id]=act;};
     for(const p of LRLane.townPieces(town))put(p.t,{x:p.x,z:p.z,r:p.r||0,c:p.c||0},p.act);
-    for(const n of LRLane.neighbors({phase:meta.phase,weather:meta.weather||'clear',town}))if(n.place==='street'&&n.piece)put(n.piece,{x:n.at[0],z:n.at[1],c:n.c||0,name:n.name},'talk:'+n.id);
+    for(const n of LRLane.neighbors({phase:meta.phase,weather:meta.weather||'clear',town,closed:laneModel.closedToday}))if(n.place==='street'&&n.piece)put(n.piece,{x:n.at[0],z:n.at[1],c:n.c||0,name:n.name},'talk:'+n.id);
     changed();dirty=false;
   }
   // When the weather or time changes while you're on the street, the neighbours move to match.
   function refreshStreet() {
     if(laneVisit?.place!=='street'||view.fp)return;
     const fresh=streetInterior();
-    room.load(fresh.data);laneVisit.actions=fresh.actions;baseSig=sig();changed();dirty=false;
+    room.load(fresh.data);laneVisit.actions=fresh.actions;baseSig=sig();changed();dirty=false;inviteWindDown();
+  }
+  // ---- The day's gentle close ----
+  // Lamps and windows come on one by one, the neighbours say goodnight and head home, and your
+  // character sits down with tea. Then a short look back at the day: only what happened, never
+  // what didn't. It can happen any evening, as often as you like; nothing counts streaks.
+  let winding=false,invitedOn=null;
+  function inviteWindDown(){
+    if(laneVisit?.place!=='street'||winding||!['evening','night'].includes(meta.phase)||laneModel.closedToday||invitedOn===today())return;
+    invitedOn=today();setTimeout(()=>{if(laneVisit?.place==='street'&&!winding)toast('<b>The lamps are coming on</b><span>Tap ☕ Wind down whenever you’re ready.</span>',3600);},1600);
+  }
+  function windDown(){
+    if(winding)return;
+    if(laneVisit?.place!=='street'){visitLaneRoom('street');const go=()=>laneVisit?.place==='street'?windDown():setTimeout(go,150);setTimeout(go,150);return;}
+    winding=true;closeSheets();exitCharacter(true);$('#laneClose')?.remove();
+    const quick=view.reducedMotion,wait=ms=>new Promise(r=>setTimeout(r,quick?0:ms));
+    (async()=>{
+      if(!['evening','night'].includes(meta.phase))setPhase('evening',true);
+      // The lights, one by one.
+      const lights=room.items.filter(i=>['streetlamp','lanehome','laneshop','lanepost'].includes(i.t)||(laneVisit.actions[i.id]==='court'&&'on' in i));
+      if(!quick){lights.forEach(i=>{i.on=false;});changed();}
+      await wait(600);
+      for(const it of lights){it.on=true;changed();try{Sound.click(true);}catch(e){}await wait(420);}
+      // The neighbours head home (Puddle stays put if it's raining).
+      const leaving=[...new Set(Object.values(laneVisit.actions).filter(a=>a.startsWith('talk:')||/^find:.*:visitor$/.test(a)))];
+      for(const act of leaving){
+        const who=act.startsWith('talk:')?act.slice(5):'visitor';
+        toast(`<span>${esc(LRLane.GOODNIGHTS[who]||'')}</span>`,2200,true);
+        if(who!=='puddle')for(const [iid,a] of Object.entries(laneVisit.actions))if(a===act){try{view.poof(+iid);}catch(e){}room.remove(+iid);delete laneVisit.actions[iid];}
+        changed();await wait(1500);
+      }
+      laneModel.close();
+      // Tea.
+      const spot=LRLane.restSpot(laneModel.town),y=spot.seat&&CAT[spot.seat]?.seat?CAT[spot.seat].seat/8:0;
+      companion.rest({x:spot.x,z:spot.z,y,heading:spot.heading,tea:true,instant:quick});
+      try{Sound.sip();}catch(e){}
+      toast(`<span>You sit down ${esc(spot.where)} with a cup of tea.</span>`,2600,true);
+      view.zoomGoal=quick?view.zoomGoal:1.35;
+      await wait(2200);
+      closingCard();
+    })().catch(()=>{}).finally(()=>{winding=false;});
+  }
+  function closingCard(){
+    $('#laneClose')?.remove();
+    const day=laneModel.today(),date=today();
+    const chats=Object.keys(LRLane.NEIGHBORS).filter(id=>laneModel.memory(id)?.date===date).map(id=>LRLane.NEIGHBORS[id].name);
+    const r=LRLane.recap({date,found:day.found.length,chats,town:laneModel.town,weather:meta.weather||'clear'});
+    const card=document.createElement('section');card.id='laneClose';card.className='panel lane-close';card.setAttribute('role','dialog');card.setAttribute('aria-label',r.title);
+    card.innerHTML=`<h2>${esc(r.title)}</h2><ul>${r.lines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul><p class="lane-close-quiet">${esc(r.close)}</p><p class="muted">${esc(r.tomorrow)}</p><div class="lane-close-actions"><button type="button" class="chipbtn primary" data-act="night">Goodnight</button><button type="button" class="chipbtn" data-act="stay">Stay a while</button></div>`;
+    card.querySelector('[data-act=night]').onclick=()=>{card.remove();if(meta.phase!=='night')setPhase('night',true);toast('<span>Goodnight. The lane will be here.</span>',2200,true);};
+    card.querySelector('[data-act=stay]').onclick=()=>card.remove();
+    document.body.appendChild(card);card.querySelector('[data-act=stay]').focus({preventScroll:true});
   }
   function returnFromLane() {
     if(!laneVisit)return;
-    const previous=laneVisit,asCharacter=!!view.fp;closeSheets();exitCharacter(true);
+    const previous=laneVisit,asCharacter=!!view.fp;closeSheets();exitCharacter(true);$('#laneClose')?.remove();companion.rest(null);
     room.load(previous.data);meta.current=previous.current;baseSig=previous.base;
     if(previous.visit)meta.visit=previous.visit;else delete meta.visit;
     undo.splice(0,undo.length,...previous.undo);laneVisit=null;
@@ -3660,7 +3712,7 @@ function startLofiRooms() {
     return out;
   }
   const laneGifts=LRShop.allCatalog.filter(i=>i.piece&&!i.costume&&CAT[i.piece]).map(i=>i.id).sort();
-  laneUI = LRLane.createView({ gifts:laneGifts,sheet:(title,fill)=>codeSheet(title,'',h=>fill(h('div'))),onFind:(d,o)=>laneFound(d,o),onTown:(t,o)=>laneTown(o), currentLocation:()=>laneVisit?'You’re visiting '+room.name:null,returnHome:()=>{returnFromLane();},visitRoom:visitLaneRoom, model: laneModel, today, phase: () => meta.phase, pets: lanePets, weather: () => meta.weather || 'clear', seasons: LR.SEASONS || [], location: () => { try { return { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }; } catch (e) { return {}; } }, reducedMotion: () => view.reducedMotion, sound: Sound,
+  laneUI = LRLane.createView({ gifts:laneGifts,sheet:(title,fill)=>codeSheet(title,'',h=>fill(h('div'))),onFind:(d,o)=>laneFound(d,o),onTown:(t,o)=>laneTown(o),windDown:()=>windDown(), currentLocation:()=>laneVisit?'You’re visiting '+room.name:null,returnHome:()=>{returnFromLane();},visitRoom:visitLaneRoom, model: laneModel, today, phase: () => meta.phase, pets: lanePets, weather: () => meta.weather || 'clear', seasons: LR.SEASONS || [], location: () => { try { return { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }; } catch (e) { return {}; } }, reducedMotion: () => view.reducedMotion, sound: Sound,
     notice: text => toast(`<span>${esc(text)}</span>`, 2600, true),
     catalog: LRShop.allCatalog, shop, thumb: item => item.costume ? costumeThumb(item.costume) : item.piece ? thumbOf(item.piece) : '',
     onBuy: () => { renderTray(); try { discover('market'); } catch (e) { /* optional */ } },
@@ -3693,7 +3745,7 @@ function startLofiRooms() {
   const whenIdle = fn => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500));
   setTimeout(() => whenIdle(() => { try { view.ensureThumbs(); companionPortrait('idle'); } catch (e) { /* the sheets still build these on demand */ } }), 800);
   liveWeather.refresh();
-  window.__lr = { openLane,openRadio,visitLaneRoom,returnFromLane,get laneVisit(){return laneVisit;},openNotebook,shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
+  window.__lr = { windDown,get laneModel(){return laneModel;},openLane,openRadio,visitLaneRoom,returnFromLane,get laneVisit(){return laneVisit;},openNotebook,shareSheet,openSharedCode,roomCode,exportBackup,confirmRestore,restoreBackup,gameLibrary,handDrawn,habits,habitsUI,habitCheckIn,placeHabit,openCozyMoments,closeCozyMoments,press,friendCards,friendCardsUI,digest,digestUI,driftPaper,focusGarden,gardenUI,updateFocusGarden, barnaby, french: frenchUI, calendar, calendarModel, googleCalendar, atlas, atlasUI, activity, renderLoop, todayTasks, todayUI, liveWeather, cozy, home, files, dashboard, roomTools, roomToolsUI, letters, wardrobe, wardrobeSheet, widgets, widgetView, companion, rituals, updateRituals, startBreathing, stopBreathing, merchant, catJournal, tickWorld, shop, openShop, crownSheet, care, FILM, filmDay, openCrate, checkDrift, receiveNote, signSheet, get crateIndex() { return crateI; },  room, view, state, meta, Sound, setPhase, setMode, interact, changed, mischief, visit, roomCode, readCode, discover, dailyInfo, ensureDaily, get rooms() { return rooms; } };   // handy for poking at it from the console
 }
 
 // Module dependencies can finish after classic deferred scripts on a cold load.
