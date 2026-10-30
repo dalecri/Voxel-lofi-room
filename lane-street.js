@@ -18,9 +18,12 @@
     m.main();
     m.box(x0 - 1, 0, d + 1, x1 + 1, 1, d + 2, 0x9a8a7a);                  // the step
   }
-  function window_(m, x0, y0, x1, y1, z, frame) {
+  // Windows are glass by day and glow warm once the lane's lights come on (it.on).
+  const GLASS = 0xa8c8e0;
+  const pane = (m, x0, y0, z0, x1, y1, z1, lit) => m.box(x0, y0, z0, x1, y1, z1, lit ? WARM : GLASS, !!lit);
+  function window_(m, x0, y0, x1, y1, z, frame, lit) {
     m.box(x0 - 1, y0 - 1, z, x1 + 1, y1 + 1, z + 1, frame);
-    m.box(x0, y0, z, x1, y1, z + 1, WARM, true);
+    pane(m, x0, y0, z, x1, y1, z + 1, lit);
     m.box(x0, ((y0 + y1) >> 1), z + 1, x1, ((y0 + y1) >> 1) + 1, z + 2, frame);
     m.box(x0 - 1, y0 - 2, z + 1, x1 + 1, y0 - 1, z + 2, frame);              // sill
   }
@@ -29,13 +32,13 @@
   def('lanehome', {
     name: 'Your house', kind: 'floor', group: 'lane', size: [3, 2], wallish: true, tap: 'portal', door: 1,
     vars: [[0xc99872, 0x8f5a4a, 0x6b4334]],
-    build(m, [wall, roof, wood]) {
+    build(m, [wall, roof, wood], s = {}) {
       const W = 24, D = 16, H = 17;
       m.box(0, 0, 1, W, H, D, brickish(wall, 3));
       m.box(0, 0, D - 1, W, 1, D, shade(wall, 0.75));
       for (let k = 0; k < 9; k++) m.box(-1, H + k, k - 1 + 1, W + 1, H + k + 1, D + 1 - k, (x, y, z) => (z === k || z === D - k ? shade(roof, 0.82) : shade(roof, 0.95 + 0.08 * hash3(x >> 1, y, 0, 4))));
       m.box(17, H + 3, 4, 21, H + 13, 8, shade(roof, 0.8)).box(16, H + 13, 3, 22, H + 14, 9, shade(roof, 0.65));
-      window_(m, 2, 7, 6, 12, D, 0xf2e8d8); window_(m, 18, 7, 22, 12, D, 0xf2e8d8);
+      window_(m, 2, 7, 6, 12, D, 0xf2e8d8, s.on); window_(m, 18, 7, 22, 12, D, 0xf2e8d8, s.on);
       door(m, 1, D, 13, wood);
       m.box(9, 14, D, 15, 15, D + 2, shade(roof, 0.9));                    // a little porch hood
       m.box(2, 0, D + 1, 6, 2, D + 3, 0x7a5a48).box(2, 2, D + 1, 6, 3, D + 3, 0x5fae4a);   // window box
@@ -45,16 +48,16 @@
   def('laneshop', {
     name: 'Mallow’s Shop', kind: 'floor', group: 'lane', size: [3, 2], wallish: true, tap: 'portal', door: 2,
     vars: [[0xefe3cf, 0xf07a5a, 0x7a5a48]],
-    build(m, [wall, awning, wood]) {
+    build(m, [wall, awning, wood], s = {}) {
       const W = 24, D = 16, H = 22;
       m.box(0, 0, 1, W, H, D, brickish(wall, 5));
       m.box(-1, H, 0, W + 1, H + 1, D + 1, 0x3c2d4f).box(0, H + 1, 1, W, H + 2, D, (x, y, z) => shade(0x8f5a4a, 0.92 + 0.1 * hash3(x >> 1, 0, z >> 1, 6)));   // a plum cornice and a tiled roof
-      m.box(1, 2, D, 14, 11, D + 1, WARM, true);                              // the shop window
+      pane(m, 1, 2, D, 14, 11, D + 1, s.on);                                 // the shop window
       m.box(0, 1, D, 15, 2, D + 1, wood).box(0, 11, D, 15, 12, D + 1, wood).box(7, 2, D, 8, 11, D + 1, wood);
       m.box(2, 2, D + 1, 6, 4, D + 2, 0x86cc5c).box(9, 2, D + 1, 13, 5, D + 2, 0xe8a0b4);   // finds in the window
       for (let x = -1; x < W + 1; x++) for (let k = 0; k < 4; k++) m.set(x, 14 - k, D + k, (x >> 1) % 2 ? 0xfff4e6 : awning);
       m.box(4, 16, D, 20, 21, D + 1, 0x3c2d4f);
-      m.box(11, 17, D + 1, 13, 20, D + 2, WARM, true);
+      m.box(11, 17, D + 1, 13, 20, D + 2, s.on ? WARM : 0xc8a050, !!s.on);
       for (const x of [6, 8, 15, 17]) m.set(x, 18, D + 1, 0xf2e8d8);
       door(m, 2, D, 12, wood);
     },
@@ -63,12 +66,12 @@
   def('lanepost', {
     name: 'Mail Room', kind: 'floor', group: 'lane', size: [3, 2], wallish: true, tap: 'portal', door: 2,
     vars: [[0x9fb4d8, 0x5b6f9e, 0x43557f]],
-    build(m, [wall, trim, wood]) {
+    build(m, [wall, trim, wood], s = {}) {
       const W = 24, D = 16, H = 22;
       m.box(0, 0, 1, W, H, D, brickish(wall, 7));
       m.box(-1, H - 3, 0, W + 1, H, D + 2, trim).box(0, H, 1, W, H + 2, D, shade(trim, 0.85));
       m.box(0, 0, D, W, 2, D + 1, shade(trim, 0.9));
-      window_(m, 3, 7, 12, 15, D, 0xf2f0ea);
+      window_(m, 3, 7, 12, 15, D, 0xf2f0ea, s.on);
       m.box(5, 4, D + 1, 10, 7, D + 2, 0xfff6e8);
       m.set(6, 6, D + 2, 0xc0675a).set(7, 5, D + 2, 0xc0675a).set(8, 6, D + 2, 0xc0675a);
       for (let x = 3; x < 21; x++) if (hash3(x, 1, 2, 3) < 0.55) m.set(x, H - 2, D + 2, 0xfff6e8);   // lettering
