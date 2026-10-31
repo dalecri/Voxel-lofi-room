@@ -63,7 +63,7 @@
     function spend(n) {if(!Number.isSafeInteger(n)||n<=0||balance<n)return false;balance-=n;store.set('lr.fireflies',balance);return true;}
     function tip(n) {if(![5,10,25].includes(n)||!spend(n))return false;onTip(n);return true;}
     function gild(room) {if(!room||isGilded(room)||!spend(150))return false;room.gild=finishOf(room);return true;}
-    return { earn, buy, gift, tip, gild, owns: id => owned.has(id), available: C => !C.shop || owned.has(C.shop), get balance() { return balance; }, get earnedToday() { return day().earned; } };
+    return { earn, buy, gift, spend, tip, gild, owns: id => owned.has(id), available: C => !C.shop || owned.has(C.shop), get balance() { return balance; }, get earnedToday() { return day().earned; } };
   }
 
   function register(L) {

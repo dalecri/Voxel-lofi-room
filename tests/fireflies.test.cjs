@@ -74,3 +74,9 @@ test('legacy daily ledgers gain task IDs without losing the existing allowance o
  const f=fixture({'lr.fireflyDay':{date:'2026-10-15',earned:49,watered:['room:1']}}),w=f.wallet;
  assert.equal(w.earn('task','task-1'),1);assert.equal(w.earn('task','task-1'),0);assert.equal(w.earn('water','room:1'),0);assert.equal(w.earnedToday,50);assert.deepEqual(f.db.get('lr.fireflyDay').taskIds,['task-1']);assert.deepEqual(f.db.get('lr.fireflyDay').watered,['room:1']);assert.equal(f.reload().balance,31);
 });
+
+test('project spending requires an affordable positive whole amount and persists the debit',()=>{
+ const f=fixture();for(const n of [0,-1,1.5,NaN,Infinity,31,'5'])assert.equal(f.wallet.spend(n),false);
+ assert.equal(f.wallet.balance,30);assert(f.wallet.spend(10));assert.equal(f.reload().balance,20);
+ assert(f.wallet.spend(20));assert.equal(f.reload().balance,0);assert(!f.wallet.spend(1));
+});

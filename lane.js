@@ -119,6 +119,15 @@
         return next;
       },
       returnBook() {const s=read();if(!s.life.book)return false;s.life.book=null;s.life.returned=today();save(s);return true;},
+      build(project, choice, wallet, expectedStep) {
+        const s=read(),date=today(),step=project==='bench'?s.town.bench.stage:project==='court'?s.town.court.picks.length:-1;
+        const cost=PROJECT_COSTS[project]?.[step];
+        if(!cost || step!==expectedStep)return {ok:false,reason:'changed'};
+        const t=project==='bench'?projects.bench(s.town,date,choice):projects.court(s.town,choice,date);
+        if(!t)return {ok:false,reason:'unavailable'};
+        if(!wallet?.spend?.(cost))return {ok:false,reason:'funds',cost};
+        s.town=t;save(s);return {ok:true,town:cleanTown(t),cost};
+      },
       setTown(town) { const s = read(); s.town = cleanTown(town); save(s); },
       // The evening wind-down: only remembers that today's has happened, so the invitation isn't repeated.
       get closedToday() { return read().closed === today(); },
@@ -311,6 +320,7 @@
     strawberry: { name: 'Strawberries', seed: '🍓', c: 2 }, pumpkin: { name: 'A pumpkin', seed: '🎃', c: 3 },
   };
   const GROW = ['Just planted', 'Sprouting', 'Leafing out', 'Budding', 'In full bloom'], GROWN = 4, BEDS = [[1, 10], [2, 10], [3, 10]];
+  const PROJECT_COSTS = {bench:[5,5,10],court:[10,15,10,10,20]};
   const BENCH_STEPS = [
     { label: 'Fit new slats', did: 'You fitted new slats. Juniper held the planks (and read between nails).' },
     { label: 'Sand it smooth', did: 'Sanded smooth. It’s ready for paint.' },
@@ -834,6 +844,18 @@
     function project(act) {
       if (!sheet) return;
       const date = today(), save = (t, opts = {}) => { model.setTown(t); onTown(model.town, opts); };
+      const priceNote=(host,kind,step)=>{
+        const cost=PROJECT_COSTS[kind][step],balance=shop?.balance||0;
+        const info=el('p','lane-project-cost',`${cost} Fireflies · You have ${balance}`,host);
+        info.setAttribute('role','status');
+        if(balance<cost)el('p','muted',`You need ${cost-balance} more. Complete tasks, water plants, or enjoy cozy moments to earn Fireflies.`,host);
+        return cost;
+      };
+      const build=(kind,choice,step,opts)=>{
+        const result=model.build(kind,choice,shop,step);
+        if(!result.ok){notice(result.reason==='funds'?'Not enough Fireflies yet. Your progress is safe.':'This step has changed. Open the project again.');return;}
+        play('chime');onTown(result.town,opts);
+      };
       if (act.startsWith('bed:')) {
         const i = +act.slice(4);
         sheet('Garden bed', host => {
@@ -875,11 +897,11 @@
           const bar = el('div', 'lane-progress', undefined, box); for (let k = 0; k < 3; k++) el('span', k < b.stage ? 'on' : '', undefined, bar);
           if (b.stage >= 3) { el('p', '', 'Mended. Juniper reads here most afternoons now, and the plaque says “Fixed by a neighbour”.', box); return; }
           if (b.last === date) { el('p', 'muted', 'That’s enough for today. Paint and glue like a night to settle.', box); return; }
-          const step = BENCH_STEPS[b.stage];
-          if (b.stage < 2) { const go = el('button', 'chipbtn primary', step.label, box); go.type = 'button'; go.onclick = () => { const t = projects.bench(model.town, date); if (t) { play('click'); save(t, { close: true, say: step.did }); } }; return; }
+          const step = BENCH_STEPS[b.stage],cost=priceNote(box,'bench',b.stage);
+          if (b.stage < 2) { const go = el('button', 'chipbtn primary', `${step.label} · ${cost} Fireflies`, box); go.type = 'button'; go.disabled=(shop?.balance||0)<cost; go.onclick = () => build('bench',null,b.stage,{close:true,say:step.did}); return; }
           el('p', '', 'What colour should it be?', box);
           const row = el('div', 'lane-talk-replies', undefined, box);
-          for (const [key, name] of BENCH_COLORS) { const c = el('button', 'chipbtn lane-paint', name, row); c.type = 'button'; c.dataset.paint = key; c.onclick = () => { const t = projects.bench(model.town, date, key); if (t) { play('chime'); save(t, { close: true, reward: 'bench', say: step.did }); } }; }
+          for (const [key, name] of BENCH_COLORS) { const c = el('button', 'chipbtn lane-paint', `${name} · ${cost} Fireflies`, row); c.type = 'button'; c.dataset.paint = key; c.disabled=(shop?.balance||0)<cost; c.onclick = () => build('bench',key,b.stage,{close:true,say:step.did}); }
         });
         return;
       }
@@ -892,8 +914,9 @@
           if (n >= COURT.length) { el('p', '', 'A table, chairs, lights, plants and a fountain. The neighbours have tea here now.', box); return; }
           if (c.last === date) { el('p', 'muted', 'One new piece a day. Tomorrow: ' + COURT[n].label.toLowerCase() + '.', box); return; }
           el('p', '', `Today: ${COURT[n].label.toLowerCase()}. Which one?`, box);
+          const cost=priceNote(box,'court',n);
           const row = el('div', 'lane-talk-replies', undefined, box);
-          COURT[n].options.forEach((o, k) => { const b = el('button', 'chipbtn', o.name, row); b.type = 'button'; b.onclick = () => { const t = projects.court(model.town, k, date); if (t) { play('chime'); save(t, { close: true, reward: t.court.picks.length >= COURT.length ? 'court' : null, say: `${o.name} for the courtyard.` }); } }; });
+          COURT[n].options.forEach((o, k) => { const b = el('button', 'chipbtn', `${o.name} · ${cost} Fireflies`, row); b.type = 'button'; b.disabled=(shop?.balance||0)<cost; b.onclick = () => build('court',k,n,{close:true,say:`${o.name} for the courtyard.`}); });
         });
       }
     }
@@ -1020,6 +1043,6 @@
     }
     return {data:room.serialize(),actions};
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer, discoveries, keptLetters, giftFor, restSpot, GOODNIGHTS, recap, PLANTS, GROW, BENCH_STEPS, BENCH_COLORS, COURT, cleanTown, projects, growth, townPieces, townNotes, tickTown, laneWeather, cleanLife, remark, VISITORS, LANE_LETTERS };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer, discoveries, keptLetters, giftFor, restSpot, GOODNIGHTS, recap, PROJECT_COSTS, PLANTS, GROW, BENCH_STEPS, BENCH_COLORS, COURT, cleanTown, projects, growth, townPieces, townNotes, tickTown, laneWeather, cleanLife, remark, VISITORS, LANE_LETTERS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

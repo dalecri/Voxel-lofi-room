@@ -81,3 +81,28 @@ test('old town saves catch up from last visit and retain unrelated progress and 
  const m=L.create({store:{get:()=>state,set:(k,v)=>{state=v;}},today:()=>day(30)});m.tick({weather:'clear'});
  assert.equal(L.growth(m.town.beds[0]),4);assert.equal(m.memory('mallow').topic,'sign');assert.equal(m.kept.length,1);
 });
+
+test('town building charges the wallet only for a valid new step, persists it and rejects repeat or stale clicks',()=>{
+ const db=new Map(),store={get:(k,f)=>db.has(k)?structuredClone(db.get(k)):f,set:(k,v)=>db.set(k,structuredClone(v))};
+ let date=day(0);const model=L.create({store,today:()=>date}),wallet=require('../shop.js').create({store,today:()=>date});
+ assert.equal(wallet.balance,30);
+ assert(model.build('bench',null,wallet,0).ok);assert.equal(wallet.balance,25);assert.equal(model.town.bench.stage,1);
+ assert(!model.build('bench',null,wallet,0).ok);assert(!model.build('bench',null,wallet,1).ok);assert.equal(wallet.balance,25);
+ assert(!model.build('court',99,wallet,0).ok);assert.equal(wallet.balance,25);
+ assert(model.build('court',1,wallet,0).ok);assert.equal(wallet.balance,15);assert.deepEqual(model.town.court.picks,[1]);
+ date=day(1);assert(model.build('bench',null,wallet,1).ok);assert.equal(wallet.balance,10);
+ date=day(2);assert(!model.build('bench','invalid',wallet,2).ok);assert.equal(wallet.balance,10);
+ assert(model.build('bench','blue',wallet,2).ok);assert.equal(wallet.balance,0);assert.equal(model.town.bench.color,'blue');
+ const before=model.town;assert.equal(model.build('court',0,wallet,1).reason,'funds');assert.deepEqual(model.town,before);assert.equal(wallet.balance,0);
+ const reloaded=L.create({store,today:()=>date}),cash=require('../shop.js').create({store,today:()=>date});assert.equal(cash.balance,0);assert.deepEqual(reloaded.town,before);
+ cash.earn('daily');assert.equal(cash.balance,15);assert(reloaded.build('court',0,cash,1).ok);assert.equal(cash.balance,0);
+ assert(!reloaded.build('bench','sage',cash,3).ok,'finished projects are not charged');
+});
+test('legacy town progress remains built for free; only future steps cost Fireflies',()=>{
+ let state={town:L.cleanTown({bench:{stage:2,last:day(0)},court:{picks:[0,1],last:day(0)}})};
+ const model=L.create({store:{get:()=>state,set:(k,v)=>{state=v;}},today:()=>day(1)});
+ let spent=0;const wallet={spend:n=>{spent+=n;return true;}};
+ assert.equal(model.town.bench.stage,2);assert.equal(spent,0);
+ assert(model.build('bench','sage',wallet,2).ok);assert.equal(spent,10);
+ assert(model.build('court',1,wallet,2).ok);assert.equal(spent,20);
+});

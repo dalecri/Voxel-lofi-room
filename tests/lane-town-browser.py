@@ -12,7 +12,7 @@ class Quiet(SimpleHTTPRequestHandler):
  def log_message(self,*args):pass
 server=ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(ROOT/'www')));Thread(target=server.serve_forever,daemon=True).start()
 FIXTURE='''if(!localStorage.tFixture){localStorage.tFixture='1';const home={v:1,n:10,name:'Home',wall:{style:'paint',color:0},floor:{style:'oak'},next:2,items:[{id:1,t:'desk',x:6,z:6,c:0,r:0}]};
- for(const [k,v] of Object.entries({'lr.intro':true,'lr.rooms':[{id:501,name:home.name,n:1}],'lr.room.501':home,'lr.meta':{current:501,phase:'day',weather:'clear',realtime:false,dreamy:false,sound:false,music:false,visitors:false,mischief:false,calmPerformance:true}}))localStorage.setItem(k,JSON.stringify(v));}'''
+ for(const [k,v] of Object.entries({'lr.intro':true,'lr.fireflies':100,'lr.rooms':[{id:501,name:home.name,n:1}],'lr.room.501':home,'lr.meta':{current:501,phase:'day',weather:'clear',realtime:false,dreamy:false,sound:false,music:false,visitors:false,mischief:false,calmPerformance:true}}))localStorage.setItem(k,JSON.stringify(v));}'''
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  context=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,reduced_motion='reduce');context.add_init_script(FIXTURE)
@@ -55,7 +55,7 @@ with sync_playwright() as p:
  street(12,weather='rain');assert piece('bed:0')['c']==4,'rain watered it'
  page.evaluate('__lr.interact(+Object.keys(__lr.laneVisit.actions).find(k=>__lr.laneVisit.actions[k]==="talk:puddle"))');sheet.get_by_text('supervising').wait_for();close()
  bal=page.evaluate('__lr.shop.balance');tap('bench');sheet.get_by_role('button',name='Coral').click();done()
- assert piece('bench')['c']==4 and page.evaluate('__lr.shop.balance')>bal,'a finished bench earns a few Fireflies'
+ assert piece('bench')['c']==4 and page.evaluate('__lr.shop.balance')==bal-10,'paint costs exactly 10 Fireflies'
  tap('court');sheet.get_by_role('button',name='Stone lanterns').click();done()
 
  # Day 4: the sunflowers bloom; Juniper reads on the mended bench.
