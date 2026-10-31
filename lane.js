@@ -90,7 +90,7 @@
     return '';
   }
   function create({ store, today }) {
-    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [], talks: cleanTalks(s.talks), day: s.day && valid(s.day.date) ? { date: s.day.date, found: Array.isArray(s.day.found) ? s.day.found.filter(x => typeof x === 'string').slice(0, 8) : [], carrying: typeof s.day.carrying === 'string' ? s.day.carrying : null } : null, kept: Array.isArray(s.kept) ? s.kept.filter(x => typeof x === 'string' && valid(x.slice(0, 10))).slice(-60) : [], town: cleanTown(s.town), closed: valid(s.closed) ? s.closed : null }; };
+    const read = () => { const s = store.get(KEY, {}) || {}; return { firstVisit: valid(s.firstVisit) ? s.firstVisit : '', lastVisit: valid(s.lastVisit) ? s.lastVisit : '', read: Array.isArray(s.read) ? s.read.filter(x => typeof x === 'string').slice(-200) : [], talks: cleanTalks(s.talks), day: s.day && valid(s.day.date) ? { date: s.day.date, found: Array.isArray(s.day.found) ? s.day.found.filter(x => typeof x === 'string').slice(0, 8) : [], carrying: typeof s.day.carrying === 'string' ? s.day.carrying : null } : null, kept: Array.isArray(s.kept) ? s.kept.filter(x => typeof x === 'string' && valid(x.slice(0, 10))).slice(-60) : [], town: cleanTown(s.town), life: cleanLife(s.life), closed: valid(s.closed) ? s.closed : null }; };
     const save = s => store.set(KEY, s);
     return {
       // Called when the lane is shown: returns the away note (once) and records the visit.
@@ -113,6 +113,12 @@
       get kept() { return read().kept; },
       // The street's slow projects: garden beds, the bench, the courtyard.
       get town() { return read().town; },
+      get life() { return read().life; },
+      tick(options={}) { const s=read(),next=tickTown(s.town,s.life,{...options,date:today(),since:s.lastVisit||s.firstVisit});
+        if(JSON.stringify(s.town)!==JSON.stringify(next.town)||JSON.stringify(s.life)!==JSON.stringify(next.life)){s.town=next.town;s.life=next.life;save(s);}
+        return next;
+      },
+      returnBook() {const s=read();if(!s.life.book)return false;s.life.book=null;s.life.returned=today();save(s);return true;},
       setTown(town) { const s = read(); s.town = cleanTown(town); save(s); },
       // The evening wind-down: only remembers that today's has happened, so the invitation isn't repeated.
       get closedToday() { return read().closed === today(); },
@@ -341,11 +347,52 @@
     bench(town, date, color = null) { const b = town.bench; if (!valid(date) || b.stage >= 3 || b.last === date) return null; if (b.stage === 2 && !BENCH_COLORS.some(c => c[0] === color)) return null; const t = copy(town); t.bench.stage++; t.bench.last = date; if (t.bench.stage === 3) t.bench.color = color; return t; },
     court(town, pick, date) { const c = town.court; if (!valid(date) || c.picks.length >= COURT.length || c.last === date || (pick !== 0 && pick !== 1)) return null; const t = copy(town); t.court.picks.push(pick); t.court.last = date; return t; },
   };
+  // A tiny local simulation, replayed on return. Forecasts are cached when available;
+  // otherwise these are fictional Lane showers, not historical real-world weather.
+  const laneWeather = date => seeded('lane-weather|'+date)()<.3?'rain':'clear';
+  const shiftDay = (date,n) => {const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+  function cleanLife(life){
+    life=life&&typeof life==='object'?life:{};
+    const weather={};
+    if(life.weather&&typeof life.weather==='object')for(const date of Object.keys(life.weather).filter(valid).sort().slice(-407)){
+      const w=life.weather[date];if(['clear','clouds','rain','storm','snow','fog','sakura'].includes(w))weather[date]=w;
+    }
+    return {last:valid(life.last)?life.last:null,weather,book:valid(life.book)?life.book:null,returned:valid(life.returned)?life.returned:null,
+      note:life.note&&valid(life.note.date)&&Number.isInteger(life.note.watered)?{date:life.note.date,watered:Math.max(0,Math.min(12,life.note.watered))}:null};
+  }
+  function tickTown(town,life,{date,weather='clear',forecast=[],since=null}={}){
+    let t=copy(town);const s=cleanLife(life);
+    if(!valid(date)||!Number.isFinite(Date.parse(date))||(s.last&&date<s.last))return {town:t,life:s};
+    const start=s.last|| (valid(since)&&since<=date?since:date);
+    // New forecasts can fill unknown dates; never rewrite recorded past weather.
+    if(Array.isArray(forecast))for(const f of forecast)if(f&&valid(f.date)&&f.date>=start&&f.date<=shiftDay(date,7)&&['clear','clouds','rain','storm','snow','fog'].includes(f.condition)){
+      if(f.date>=date||!s.weather[f.date])s.weather[f.date]=f.condition;
+    }
+    let watered=0;
+    const elapsed=Math.min(366,Math.max(0,daysBetween(start,date)));
+    for(let n=elapsed;n>=0;n--){
+      const day=shiftDay(date,-n);
+      const sky=day===date?weather:s.weather[day]||laneWeather(day);
+      // An observed rainy spell still counts if the player returns after it clears.
+      if(!WET(s.weather[day])||WET(sky))s.weather[day]=sky;
+      if(WET(s.weather[day])){
+        const before=t.beds.reduce((sum,b)=>sum+(b?.water.length||0),0);
+        t=projects.rain(t,day);
+        if(day<date)watered+=t.beds.reduce((sum,b)=>sum+(b?.water.length||0),0)-before;
+      }
+      // One keepsake can wait indefinitely. No growing pile of lost belongings.
+      if(!s.book&&t.bench.stage===3&&t.bench.last&&day>=t.bench.last&&n<=7&&(!s.returned||day>s.returned)&&!WET(s.weather[day])&&seeded('juniper-book|'+day)()<.18)s.book=day;
+    }
+    if(watered)s.note={date,watered};
+    s.last=date;
+    return {town:t,life:cleanLife(s)};
+  }
+
   // What the street shows for the projects. act: what tapping it opens.
-  function townPieces(town) {
+  function townPieces(town, life=null) {
     const out = [];
     town.beds.forEach((b, i) => { const g = growth(b); out.push({ t: 'lanebed', x: BEDS[i][0], z: BEDS[i][1], c: b ? 1 + PLANTS[b.plant].c * 5 + g : 0, act: 'bed:' + i }); });
-    out.push({ t: 'lanebench', x: 5, z: 7, r: 2, c: town.bench.stage < 3 ? town.bench.stage : 3 + BENCH_COLORS.findIndex(c => c[0] === town.bench.color), act: 'bench' });
+    out.push({ t: 'lanebench', x: 5, z: 7, r: 2, c: town.bench.stage < 3 ? town.bench.stage : 3 + BENCH_COLORS.findIndex(c => c[0] === town.bench.color) + (life?.book?3:0), act: 'bench' });
     out.push({ t: 'lanecourt', x: 8, z: 9, c: Math.min(town.court.picks.length, COURT.length), act: 'court' });
     town.court.picks.forEach((pick, k) => { for (const [t, x, z, r] of COURT[k].options[pick].items) out.push({ t, x, z, r: r || 0, act: 'court' }); });
     return out;
@@ -595,6 +642,8 @@
       }
       el('p','lane-intro muted','Step outside and stroll the street, pop straight into a place, or open your house to manage your rooms.',lane);
       if (visitRoom) { const p = progress(), line = el('p', 'lane-finds', undefined, lane); line.textContent = p.carrying ? `📦 You’re carrying ${NEIGHBORS[p.carrying.to].name}’s parcel.` : p.found >= p.total ? `✨ You found all ${p.total} little things today.` : `✨ ${p.total - p.found} little thing${p.total - p.found === 1 ? '' : 's'} to find on the lane today.`; }
+      if(model.life?.note?.date===today())el('p','muted','While you were away, Lane showers watered the garden.',lane);
+      if(model.life?.book)el('p','muted','Juniper left a book on the bench. A ribbon marks a page for you.',lane);
       if (visitRoom) { const t = model.town, d = today(), thirsty = t.beds.some(b => b && growth(b) < GROWN && !b.water.includes(d)), bench = t.bench.stage < 3 && t.bench.last !== d, court = t.court.picks.length < COURT.length && t.court.last !== d;
         const todo = [thirsty && 'the garden could use water', bench && 'the bench needs a hand', court && 'the courtyard is ready for its next piece'].filter(Boolean);
         if (todo.length) el('p', 'lane-todo', '🌱 ' + todo.join(', ').replace(/^./, c => c.toUpperCase()) + '.', lane); }
@@ -813,6 +862,15 @@
       if (act === 'bench') {
         sheet('The old bench', host => {
           const box = el('div', 'lane-find lane-project', undefined, host), b = model.town.bench;
+          if(model.life.book){
+            const book=el('section','lane-left-book',undefined,box);
+            el('h3','','Juniper’s book',book);
+            el('p','','A green book lies on the bench, with a ribbon marking a page. Inside, Juniper has pencilled: “For when you have a quiet minute. No need to hurry.”',book);
+            const passages=['The garden kept growing while nobody was watching.','A familiar path can still hold a small surprise.','There was room on the bench for another quiet person.'];
+            el('p','muted','“'+passages[Math.floor(seeded('book-page|'+model.life.book)()*passages.length)]+'”',book);
+            const done=el('button','chipbtn','Leave a thank-you bookmark',book);done.type='button';
+            done.onclick=()=>{if(!model.returnBook())return;book.remove();play('flip');onTown(model.town,{say:'A bookmark tucked inside. Juniper will collect it on her next walk.'});};
+          }
           el('p', 'lane-project-title', BENCH_STATE[b.stage], box);
           const bar = el('div', 'lane-progress', undefined, box); for (let k = 0; k < 3; k++) el('span', k < b.stage ? 'on' : '', undefined, bar);
           if (b.stage >= 3) { el('p', '', 'Mended. Juniper reads here most afternoons now, and the plaque says “Fixed by a neighbour”.', box); return; }
@@ -860,6 +918,7 @@
         };
       }
       for (const line of chat.lines) say(line);
+      if(id==='juniper'&&model.life.returned===date)say('I found your bookmark. A small reply tucked between the pages. Thank you.');
       const note = chat.ask ? remark(id, { town: model.town, weather: weather() }) : null; if (note) say(note);
       if(chat.story)el('p','lane-talk-note muted',`${chat.story.title} · ${chat.story.chapter} of ${chat.story.total}`,box);
       if (chat.ask) say(chat.ask);
@@ -881,7 +940,7 @@
   // same order as the Lane tab, a sidewalk to stroll along and a little green across the road.
   // Doors carry actions ('home', 'go:shop', 'go:mail'); residents are today's pets out and about.
   const STREET = { house: [1, 0, 'lanehome'], shop: [5, 0, 'laneshop'], mail: [9, 0, 'lanepost'], notice: [12, 1, 'laneboard'] };
-  function street(L, { residents = [], season = null, neighbors: folks = [], finds = [], found = [], carrying = null, town = emptyTown(), lit = false } = {}) {
+  function street(L, { residents = [], season = null, neighbors: folks = [], finds = [], found = [], carrying = null, town = emptyTown(), life = null, lit = false } = {}) {
     const room = new L.Room(), actions = {};
     room.n = 14; room.name = 'The Lane';
     room.wall = { style: L.WALLS.none ? 'none' : 'paint', color: 0 };
@@ -896,7 +955,7 @@
     add('streettree', { x: 0, z: 1, c: 0 }); add('plant', { x: 8, z: 1 }); add('mailbox', { x: 12, z: 3 }, 'go:mail');
     add('streetlamp', { x: 0, z: 3, on: lit }); add('streetlamp', { x: 8, z: 6, on: lit }); add('streetlamp', { x: 13, z: 6, on: lit });
     add('streettree', { x: 1, z: 8, c: 1 }); add('streettree', { x: 3, z: 12, c: 0 }); add('streettree', { x: 6, z: 13, c: 2 }); add('streettree', { x: 8, z: 13, c: 1 });
-    for (const p of townPieces(town)) add(p.t, { x: p.x, z: p.z, r: p.r || 0, c: p.c || 0 }, p.act);
+    for (const p of townPieces(town,life)) add(p.t, { x: p.x, z: p.z, r: p.r || 0, c: p.c || 0 }, p.act);
     if (season === 'halloween') { add('pumpkins', { x: 3, z: 2 }); add('pumpkins', { x: 10, z: 3 }); }
     if (season === 'holiday') add('holidaytree', { x: 0, z: 7 });
     // Neighbours stand where their routine puts them; tapping one starts a chat.
@@ -961,6 +1020,6 @@
     }
     return {data:room.serialize(),actions};
   }
-  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer, discoveries, keptLetters, giftFor, restSpot, GOODNIGHTS, recap, PLANTS, GROW, BENCH_STEPS, BENCH_COLORS, COURT, cleanTown, projects, growth, townPieces, townNotes, remark, VISITORS, LANE_LETTERS };
+  const api = { KEY, PLACES, FRONTS, DOING, residents, sayAround, briefColumn, hemisphere, seasonNote, birthdays, dressing, shelf, cycleDays, away, letters, notices, skyNote, daysBetween, seededOrder, create, createView, interior, outside, STREET, NEIGHBORS, neighbors, talk, answer, discoveries, keptLetters, giftFor, restSpot, GOODNIGHTS, recap, PLANTS, GROW, BENCH_STEPS, BENCH_COLORS, COURT, cleanTown, projects, growth, townPieces, townNotes, tickTown, laneWeather, cleanLife, remark, VISITORS, LANE_LETTERS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LRLane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

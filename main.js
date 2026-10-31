@@ -1928,7 +1928,7 @@ function startLofiRooms() {
   $('#bTime').onclick = () => { meta.realtime = false; setPhase(PHASE_ORDER[(PHASE_ORDER.indexOf(meta.phase) + 1) % 4]); Sound.turn(); };
   // Background weather supports clear, rain, storm and snow.
   const WEATHERS = LRWeather.STATES;
-  const liveWeather = LRWeather.create({meta,save:()=>saveMeta(),applyWeather,notice:text=>toast(`<span>${esc(text)}</span>`,2800,true),changed:()=>{const settings=$('#menu-settings');if(sheet.classList.contains('open') && settings && !settings.hidden)renderMenu();}});
+  const liveWeather = LRWeather.create({meta,save:()=>saveMeta(),applyWeather,notice:text=>toast(`<span>${esc(text)}</span>`,2800,true),changed:()=>{tickLaneTown();const settings=$('#menu-settings');if(sheet.classList.contains('open') && settings && !settings.hidden)renderMenu();}});
   const WEATHER_SAY = { clear: 'Clear skies', rain: 'Rain on the window…', storm: 'A storm rolls in', snow: 'It’s snowing' };
   function applyWeather(w, quiet) {
     meta.weather = WEATHERS.includes(w) ? w : 'clear';
@@ -3012,9 +3012,9 @@ function startLofiRooms() {
     const pets=lanePets(),byKey=new Map(pets.map(p=>[p.key,p])),weather=meta.weather||'clear';
     const residents=LRLane.residents({pets,date:today(),phase:meta.phase}).map(r=>({...r,c:byKey.get(r.key)?.c}));
     const day=laneModel.today();
-    if(['rain','storm','snow'].includes(weather))laneModel.setTown(LRLane.projects.rain(laneModel.town,today()));   // rain waters the garden
+    tickLaneTown();
     const town=laneModel.town;
-    return LRLane.interior(LR,'street',[],{residents,town,lit:['evening','night'].includes(meta.phase),finds:laneUI.finds(),found:day.found,carrying:day.carrying,neighbors:LRLane.neighbors({phase:meta.phase,weather,town,closed:laneModel.closedToday}),season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather}).season});
+    return LRLane.interior(LR,'street',[],{residents,town,life:laneModel.life,lit:['evening','night'].includes(meta.phase),finds:laneUI.finds(),found:day.found,carrying:day.carrying,neighbors:LRLane.neighbors({phase:meta.phase,weather,town,closed:laneModel.closedToday}),season:LRLane.dressing({date:today(),seasons:LR.SEASONS||[],weather}).season});
   }
   // A discovery was found: pay out its small reward, hand over a visitor's gift, and update the
   // street in place (works while walking as the character too).
@@ -3039,7 +3039,7 @@ function startLofiRooms() {
     if(laneVisit?.place!=='street')return;
     for(const [iid,act] of Object.entries(laneVisit.actions))if(/^(bed:|bench$|court$|talk:)/.test(act)){room.remove(+iid);delete laneVisit.actions[iid];}
     const town=laneModel.town,put=(t,o,act)=>{if(!CAT[t])return;const it=room.make(t,o);if(!room.canPlace(it))return;room.add(it);laneVisit.actions[it.id]=act;};
-    for(const p of LRLane.townPieces(town))put(p.t,{x:p.x,z:p.z,r:p.r||0,c:p.c||0},p.act);
+    for(const p of LRLane.townPieces(town,laneModel.life))put(p.t,{x:p.x,z:p.z,r:p.r||0,c:p.c||0},p.act);
     for(const n of LRLane.neighbors({phase:meta.phase,weather:meta.weather||'clear',town,closed:laneModel.closedToday}))if(n.place==='street'&&n.piece)put(n.piece,{x:n.at[0],z:n.at[1],c:n.c||0,name:n.name},'talk:'+n.id);
     changed();dirty=false;
   }
@@ -3158,7 +3158,9 @@ function startLofiRooms() {
   document.addEventListener('pointerdown',e=>{if(!e.target.closest('#universalSearch,#roomSearchControl'))collapseUniversalSearch();});
 
   let laneModel = null, laneUI = null, laneAway;   // set up once the places' systems exist (below)
+  function tickLaneTown(){if(laneModel)laneModel.tick({weather:meta.weather||'clear',forecast:meta.liveWeather?meta.weatherDetails?.forecast:[]});}
   function openLane() {
+    tickLaneTown();
     codeSheet('The Lane','',h=>{const root=h('div');root.id='menu-lane';mountLane(root);});
   }
   function mountLane(root) {
@@ -3712,6 +3714,7 @@ function startLofiRooms() {
     return out;
   }
   const laneGifts=LRShop.allCatalog.filter(i=>i.piece&&!i.costume&&CAT[i.piece]).map(i=>i.id).sort();
+  tickLaneTown();
   laneUI = LRLane.createView({ gifts:laneGifts,sheet:(title,fill)=>codeSheet(title,'',h=>fill(h('div'))),onFind:(d,o)=>laneFound(d,o),onTown:(t,o)=>laneTown(o),windDown:()=>windDown(), currentLocation:()=>laneVisit?'You’re visiting '+room.name:null,returnHome:()=>{returnFromLane();},visitRoom:visitLaneRoom, model: laneModel, today, phase: () => meta.phase, pets: lanePets, weather: () => meta.weather || 'clear', seasons: LR.SEASONS || [], location: () => { try { return { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }; } catch (e) { return {}; } }, reducedMotion: () => view.reducedMotion, sound: Sound,
     notice: text => toast(`<span>${esc(text)}</span>`, 2600, true),
     catalog: LRShop.allCatalog, shop, thumb: item => item.costume ? costumeThumb(item.costume) : item.piece ? thumbOf(item.piece) : '',

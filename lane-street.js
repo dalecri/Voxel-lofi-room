@@ -230,8 +230,8 @@
   // The bench: broken, new slats (bare wood), sanded, then painted sage, coral or harbour blue.
   def('lanebench', {
     name: 'The old bench', kind: 'floor', group: 'lane', size: [2, 1], tap: 'lane', seat: 6,
-    vars: [['broken'], ['slats'], ['sanded'], ['painted', 0x9fb894], ['painted', 0xf07a5a], ['painted', 0x5a7fb0]],
-    build(m, [state, paint]) {
+    vars: [['broken'], ['slats'], ['sanded'], ['painted', 0x9fb894], ['painted', 0xf07a5a], ['painted', 0x5a7fb0], ['painted', 0x9fb894, true], ['painted', 0xf07a5a, true], ['painted', 0x5a7fb0, true]],
+    build(m, [state, paint, book]) {
       const IRON = 0x3a3842, raw = 0xd9b080, old = 0x8a7a68, wood = state === 'painted' ? paint : state === 'sanded' ? 0xe8c8a0 : raw;
       for (const x of [1, 14]) m.box(x, 0, 2, x + 1, 6, 3, IRON).box(x, 0, 6, x + 1, 6, 7, IRON).box(x, 5, 2, x + 1, 6, 7, IRON).box(x, 6, 6, x + 1, 13, 7, IRON);
       const slat = (z, y, ok, c) => { if (ok) m.box(0, y, z, 16, y + 1, z + 1, c); };
@@ -244,6 +244,7 @@
       }
       for (const z of [2, 3, 4, 5]) slat(z, 6, true, (z % 2 && state === 'slats') ? shade(wood, 0.92) : wood);
       for (const y of [8, 10, 12]) slat(6, y, true, wood);
+      if(book)m.box(1,7,2,5,8,6,0x50765b).box(1,8,2,5,9,6,0xfff3d5).box(1,9,2,5,10,6,0x50765b).box(3,10,2,4,11,7,0xd8a655);
       if (state === 'painted') { m.box(6, 7, 3, 10, 8, 5, 0xfff6e8); m.set(7, 9, 6, 0xf2c14e).set(8, 9, 6, 0xf2c14e); }   // a cushion and a small brass plaque
     },
   });
