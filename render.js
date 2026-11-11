@@ -583,6 +583,7 @@
   R.visibleMask = function () {
     const dx = Math.sin(this.yaw), dz = Math.cos(this.yaw);
     let m = 0;
+    if (this.wallsHidden) return 0;   // walls tucked away while decorating (see setWallsHidden)
     WALLDEF.forEach((W, k) => { if (W.n[0] * dx + W.n[2] * dz > 0.2) m |= 1 << k; });
     return m;
   };
@@ -590,16 +591,30 @@
     // an open plot (scene mode) has no walls at all, just the floor slab with rounded corners
     this.noWalls = !!(WALLS[room.wall.style] && WALLS[room.wall.style].none);
     if (this.noWalls) mask = 0;
-    const style = room.wall.style + '|' + room.wall.color + '|' + room.floor.style;
+    const style = room.wall.style + '|' + room.wall.color + '|' + room.floor.style + (room.walls || (room.zones && room.zones.length) ? '|' + JSON.stringify([room.walls || 0, room.zones || 0]) : '');
     if (style !== this.shellStyle) { this.shellCache.forEach(g => g.dispose()); this.shellCache.clear(); this.shellStyle = style; }
     let geo = this.shellCache.get(mask);
     if (!geo) {
       const X = N * V + 2 * T, Y = HV + F, Z = X;
       const grid = new Uint32Array(X * Y * Z);
       const at = (x, y, z) => (x + T) + (y + F) * X + (z + T) * X * Y;
-      const wc = WALL_COLORS[room.wall.color] ? WALL_COLORS[room.wall.color][1] : WALL_COLORS[0][1];
-      const wfn = WALLS[room.wall.style].fn, ffn = FLOORS[room.floor.style].fn;
-      const cap = mix(wfn(wc, 1, 30), 0xffffff, 0.45);
+      // zones: every wall can wear its own finish, and floor rectangles their own style
+      const finish = [0, 1, 2, 3].map(k => {
+        const w = (room.walls && room.walls[k]) || room.wall, def = WALLS[w.style] && !WALLS[w.style].none ? WALLS[w.style] : WALLS[room.wall.style];
+        const c = WALL_COLORS[w.color] ? WALL_COLORS[w.color][1] : WALL_COLORS[0][1];
+        return { c, fn: def.fn, cap: mix(def.fn(c, 1, 30), 0xffffff, 0.45) };
+      });
+      const baseFloor = FLOORS[room.floor.style].fn;
+      let ffn = baseFloor;
+      if (room.zones && room.zones.length) {
+        const cells = new Array(N * N).fill(baseFloor);
+        for (const q of room.zones) {
+          const fn = FLOORS[q.style] && FLOORS[q.style].fn;
+          if (fn) for (let cx = Math.max(0, q.x); cx < Math.min(N, q.x + q.w); cx++) for (let cz = Math.max(0, q.z); cz < Math.min(N, q.z + q.d); cz++) cells[cz * N + cx] = fn;
+        }
+        const cell = v => Math.max(0, Math.min(N - 1, Math.floor(v / V)));
+        ffn = (x, z) => cells[cell(z - 64) * N + cell(x - 64)](x, z);
+      }
       const vis = k => (mask >> k) & 1;
       const lo = -T, hi = N * V + T;
       // rounded slab corners where both neighbouring walls are cut away
@@ -626,7 +641,7 @@
         return false;
       };
       const wallVox = (k, x, y, z, u) => {
-        let c = y === HV - 1 ? cap : wfn(wc, u + 64, y);
+        const W = finish[k], c = y === HV - 1 ? W.cap : W.fn(W.c, u + 64, y);
         grid[at(x, y, z)] = c + 1;
       };
       for (let y = 0; y < HV; y++) {
@@ -893,10 +908,15 @@
       const obj = this.objs.get(it.id);
       if (!obj) continue;
       const C = CAT[it.t];
-      obj.visible = it.id !== this.hiddenId && (C.kind !== 'wall' || !!((this.mask >> it.k) & 1)) && (!C.roomTrim || !!this.mask);
+      obj.visible = it.id !== this.hiddenId && (C.kind !== 'wall' || !!((this.mask >> it.k) & 1)) && (!C.roomTrim || !!this.mask) && !(C.partition && this.wallsHidden);
       if(C.roomTrim)this.applyTrimMask(obj,this.mask);
     }
     if(this.ghost?.userData.roomTrim)this.applyTrimMask(this.ghost,this.mask);
+  };
+  // Tuck the walls (and anything hanging on them, and partition walls) out of the way.
+  R.setWallsHidden = function (on) {
+    this.wallsHidden = !!on;
+    if (this.room) { this.buildShell(this.room, this.visibleMask()); this.applyVisibility(); this.assignLights(); }
   };
   R.isShown = function (obj) {
     for (let o = obj; o; o = o.parent) { if (!o.visible) return false; if (o === this.root) return true; }
@@ -958,6 +978,16 @@
       this.plate.material.color.setHex(ok ? 0x9affb0 : 0xff7a7a);
       this.plate.visible = true;
     } else this.plate.visible = false;
+  };
+
+  // the rectangle of floor being painted as a zone (cells, inclusive), or nothing
+  R.setZonePlate = function (x0, z0, x1, z1) {
+    if (x0 == null) { this.plate.visible = false; return; }
+    const x = Math.min(x0, x1), z = Math.min(z0, z1), w = Math.abs(x1 - x0) + 1, d = Math.abs(z1 - z0) + 1;
+    this.plate.scale.set(w, 1, d);
+    this.plate.position.set(x + w / 2, 0.03, z + d / 2);
+    this.plate.material.color.setHex(0x2f9bff);
+    this.plate.visible = true;
   };
 
   // ---- picking ----
@@ -1420,7 +1450,7 @@
     this.zoom += (this.zoomGoal - this.zoom) * k;
     this.pan.lerp(this.panGoal, k);
     this.placeCamera();
-    const mask = this.noWalls ? 0 : this.fp && !this.fp.isometric ? 15 : this.visibleMask();   // inside the room every wall stays up
+    const mask = this.noWalls ? 0 : this.fp && !this.fp.isometric && !this.wallsHidden ? 15 : this.visibleMask();   // inside the room every wall stays up
     if (mask !== this.mask && this.room) { this.buildShell(this.room, mask); this.applyVisibility(); }
 
     let phaseDirty = false;
@@ -1982,10 +2012,14 @@
       const geometry=new THREE.BoxGeometry(1,1,1),material=new THREE.MeshLambertMaterial(),tiles=new THREE.InstancedMesh(geometry,material,n*n+(open?0:n*HC*2));
       owned.push(tiles,geometry,material);const dummy=new THREE.Object3D();let index=0;
       const tile=(x,y,z,w,h,d,color)=>{dummy.position.set(x,y,z);dummy.scale.set(w,h,d);dummy.updateMatrix();tiles.setMatrixAt(index,dummy.matrix);tiles.setColorAt(index++,new THREE.Color(color));};
-      for(let z=0;z<n;z++)for(let x=0;x<n;x++)tile(x+.5,-.22,z+.5,1,.44,1,ffn(x*V+68,z*V+68));
+      // zones: a floor rectangle or a single wall can carry its own finish
+      const zoneFn=(x,z)=>{const zs=Array.isArray(data.zones)?data.zones:[];for(let i=zs.length-1;i>=0;i--){const q=zs[i];if(q&&FLOORS[q.style]&&x>=q.x&&x<q.x+q.w&&z>=q.z&&z<q.z+q.d)return FLOORS[q.style].fn;}return ffn;};
+      const wallOf=k=>{const w=Array.isArray(data.walls)&&data.walls[k];return w&&WALLS[w.style]&&!WALLS[w.style].none?[WALLS[w.style].fn,(WALL_COLORS[w.color] || WALL_COLORS[0])[1]]:[wfn,wallColor];};
+      const [w0,c0]=wallOf(0),[w1,c1]=wallOf(1);
+      for(let z=0;z<n;z++)for(let x=0;x<n;x++)tile(x+.5,-.22,z+.5,1,.44,1,zoneFn(x,z)(x*V+68,z*V+68));
       if(!open)for(let y=0;y<HC;y++)for(let u=0;u<n;u++){
-        tile(u+.5,y+.5,-.22,1,1,.44,wfn(wallColor,u*V+68,y*V+4));
-        tile(-.22,y+.5,n-u-.5,.44,1,1,wfn(wallColor,u*V+68,y*V+4));
+        tile(u+.5,y+.5,-.22,1,1,.44,w0(c0,u*V+68,y*V+4));
+        tile(-.22,y+.5,n-u-.5,.44,1,1,w1(c1,u*V+68,y*V+4));
       }
       group.add(tiles);
       const preview=Object.create(this);preview.env={phase:'day',rain:false,view:data.view || 'city',roomSize:n};preview.glowMat=this.glowMat.clone();preview.glowMat.color.setScalar(1);owned.push(preview.glowMat);

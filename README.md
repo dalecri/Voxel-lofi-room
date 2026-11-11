@@ -54,12 +54,21 @@ Then open http://localhost:5180.
 - **Twenty more furniture themes:** 160 free pieces, with three coordinated palettes per piece. Find each theme as its own group in Decorate → Add: Sugar shack, Laurentian cabin, Pottery studio, Home gym, Observatory, Campsite, Japanese minka, Scandinavian hygge, Moroccan riad, 70s retro lounge, 80s arcade, Art deco speakeasy, Wild west saloon, Viking longhouse, Ancient Egypt, Steampunk workshop, Treehouse, Bakery and patisserie, Music studio, and Finnish sauna. Tap the pottery wheel to spin it, switch the orrery and lamps on or off, play the saloon piano or arcade game, and put jazz on with the gramophone. These use the existing interactions and stay ordinary free furniture.
 - **Sliding glass door:** a free three-cell-wide door in Doors, with oak, walnut and white frames. Its right panel slides over the left. The microwave and sliding door stay open until tapped again, using the existing saved on/off state.
 - **Small things stack.** Mugs, lamps, plants and records sit on desks, tables, dressers, bookshelves, the piano, the mantel and wall shelves. Move a desk and everything on it comes along.
-- **Five decorating tools:**
-  - **Add:** tap or drag to place.
+- **Six decorating tools:**
+  - **Add:** tap or drag to place. The tray's groups are an icon rail, each one a picture of a piece from that group; the chevron folds the tray down to just the rail, and tapping a group opens it again.
   - **Move:** drag pieces around, or drop one onto another to use them together.
   - **Turn:** tap to rotate.
   - **Paint:** change walls, wall colours, floors and the plot size (10×10 up to 24×24), or tap any piece to cycle its colours.
+  - **Pick:** the eyedropper. Tap a piece already in the room and Add is loaded with the same piece, colour and turn.
   - **Remove:** tap to put things away.
+- **Zones: several rooms on one plot.** In Paint, switch on the **Zones** chip and a swatch loads a brush instead of repainting everything:
+  - On **Floor**, drag across the room to lay that floor over a rectangle (a tiled kitchen beside an oak bedroom).
+  - On **Walls** or **Wall colour**, tap one wall to give only that wall the finish.
+  - **Reset** goes back to one finish everywhere. Painting the room's own floor over a zone rubs it out.
+  - The Doors tab has **partition walls** (wide, narrow and one with a doorway) and a **half wall** that small things can sit on, in ten paint colours, for dividing the plot. Turn them like furniture.
+  - Zones are saved with the room, shared in room codes and shown on room cards. Rooms without zones save exactly as before.
+- **Walls away.** The eye button (or <kbd>W</kbd>) drops the walls, everything hanging on them and any partition walls, so corners and back rows are easy to reach. Tap it again to bring them back.
+- **Redo.** After an Undo, a Redo chip appears beside it (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> or <kbd>Ctrl</kbd>+<kbd>Y</kbd>). Any new change clears it.
   
   Beds, sofas, desks and shelves back up against the nearest wall on their own.
 - **Tap things to use them.** Almost everything does something:
@@ -184,7 +193,7 @@ Then open http://localhost:5180.
   - **Fish tank:** the water slowly clouds over a few days; tap a cloudy tank to scrub it clear. A well-kept tank now and then gets a rare golden fish visitor.
   - **Candles and incense:** they burn for about three hours, gutter, then go out. Lighting one in the evening is the Settling in moment.
   - **Bird feeder:** keep it filled and birds drop by on their own. Fill it three days running and they build a tiny nest on top.
-  - **Window views:** in Decorate → Paint → Window view, choose what the room's windows look out on: city, pine forest, ocean or a snowy cabin. Each changes with the time of day and the weather.
+  - **Views and the backdrop:** in Decorate → Paint → View, choose where the room sits: city, pine forest, ocean, a snowy cabin, rolling hills or the Laurentians (old blue mountains, a lake and autumn maples). The windows look out on it, and a chunky pixel landscape of the same place surrounds the whole room, shifting a little as you turn the view. Both follow the time of day and the weather; the **Backdrop** chip switches the landscape off. Photos and the timelapse include it.
 - **Dream mode.** After midnight, at night, the room drifts: the light turns moon-blue, the lamps dim, pale motes float up through the room and the band slows down and softens. It's for night owls; switch it off in Settings.
 - **Dig through the record crate.** Tap the record crate to flip through its sleeves like a real collection (swipe, scroll, the arrows or the arrow keys). Each record is one of the band's moods: navy late-night lofi, blue jazz, yellow sunny morning, pink chillhop, orange bossa, green ambient, plus "Follow the day". Tap the front record and its disc slides out and starts playing. Flip through all of them for the Crate digger moment.
 - **Guest book.** When a friend visits your room, a warm **✍ Sign guest book** pill up top pulses gently until they sign (then it reads **✓ Signed**). They pick a sticker, add their name and a tiny note, and get a reply link to send back. Paste it in **Friends’ room cards → Add a room code** and their note is pinned on a wall of that same room (tap it to read it). The menu keeps a Guest book list. There's no server: the codes carry everything, and notes friends leave you are never included when you share your own room.
@@ -302,13 +311,16 @@ Run `node --test tests/*.test.cjs` and `npm run build`, then `python3 tests/cost
 | Look around | Drag, pinch to zoom, double-tap to zoom in | Drag (left or right button), wheel to zoom, middle-drag to pan |
 | Use something | Tap it | Click it (the cursor turns into a hand over things you can use) |
 | Decorate / done | Decorate button / Done | <kbd>X</kbd> / <kbd>Esc</kbd> |
-| Pick a tool | Tool bar | <kbd>1</kbd>–<kbd>5</kbd> (Add, Move, Turn, Paint, Remove) |
+| Pick a tool | Tool bar | <kbd>1</kbd>–<kbd>6</kbd> (Add, Move, Turn, Paint, Remove, Pick) |
+| Copy a piece | Pick tool, then tap it | Hover a piece, then <kbd>I</kbd> |
+| Hide the walls | Eye button | <kbd>W</kbd> |
 | Browse the tray | Swipe it | Mouse wheel or click-drag over it, the ‹ › arrows, <kbd>←</kbd> <kbd>→</kbd> to pick, <kbd>↑</kbd> <kbd>↓</kbd> (or <kbd>[</kbd> <kbd>]</kbd>) to switch tabs |
 | Place a piece | Tap, or drag to position it | A preview follows the mouse, click to place, <kbd>R</kbd> turns it first |
 | Turn / remove a piece | Turn or Remove tool | Hover a piece (it gets an outline), then <kbd>R</kbd> or <kbd>Delete</kbd> |
 | Turn the room | Two-finger twist or the turn buttons | <kbd>Q</kbd> / <kbd>E</kbd> |
 | Radio on/off | Music chip, or tap a record player to change station | <kbd>M</kbd> |
 | Undo | Undo chip | <kbd>Ctrl</kbd>+<kbd>Z</kbd> or <kbd>U</kbd> |
+| Redo | Redo chip (after an undo) | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> or <kbd>Ctrl</kbd>+<kbd>Y</kbd> |
 | Random room | Surprise | <kbd>G</kbd> |
 | Character view | Character button, then drag to look and tap the floor to walk | <kbd>C</kbd>, then WASD or the arrows to walk, drag or <kbd>Q</kbd>/<kbd>E</kbd> to look, <kbd>Esc</kbd> to leave |
 | Menu | Menu chip | <kbd>H</kbd> |
@@ -330,7 +342,8 @@ npm run apk        # → dist/lofi-rooms.apk
 
 | File | What it does |
 |---|---|
-| `room.js` | The room model. The original furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. It doesn't draw anything, so it runs in Node too. |
+| `room.js` | The room model. The original furniture catalog (each piece is a voxel model built in code), wall and floor styles, placement rules, the templates, the random room generator and the save format. Zones live here too: `room.walls` (a finish per wall) and `room.zones` (floor rectangles), both optional in the save. It doesn't draw anything, so it runs in Node too. |
+| `backdrop.js` | The outdoor backdrop: a pure pixel-landscape painter for each view (it runs in Node) and the small canvas behind the room that repaints only when the sky moves on. |
 | `scene.js` | Scene mode: the open plot, outdoor ground, street tiles, buildings, street furniture, the tram and the scene templates. |
 | `packs/` | The ten theme packs (bar, library, lab, space, mexico, europe, medieval, cave, cyber, garden), plus `cozy.js` with the everyday extras above and `homey.js` with the bathroom, laundry and entryway pieces. Each one is a single file that adds its own pieces, wall and floor styles, Add-tray tab, templates, sounds, screen programs and moments, using the engine's generic hooks: `tap: 'fx'` for declarative interactions, `emit` for steady particles and `float`, `swing` and `blink` parts. |
 | `japan.js` | The Japanese collection: pieces, wall and floor styles, the Tea Room template and two Japanese themes for Surprise rooms. |

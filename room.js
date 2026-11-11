@@ -212,7 +212,8 @@
   };
   // window views: what a room's windows look out on (city, forest, ocean, snowy cabin); each one
   // follows the time of day and the weather. LR.viewNow is the current room's choice.
-  const VIEWS = ['city', 'forest', 'ocean', 'cabin'];
+  const VIEWS = ['city', 'forest', 'ocean', 'cabin', 'hills', 'laurentians'];
+  const ZONE_MAX = 24;      // floor zones a room can hold
   function skyColor(phase, rain, u, y, wseed, view) {
     const s = SKY[phase] || SKY.day;
     const t = y / 21;
@@ -234,6 +235,21 @@
           return w;
         }
         if (y === 8) return mix(sky, 0xffffff, 0.15);                                                        // the horizon
+        return sky;
+      }
+      if (V === 'hills' || V === 'laurentians') {
+        const L = V === 'laurentians';
+        const far = (L ? 10 : 8) + Math.sin(u * 0.5 + wseed) * (L ? 2.2 : 1.4) + Math.sin(u * 0.21 + 1) * 1.3;
+        const mid = (L ? 6 : 5) + Math.sin(u * 0.4 + wseed * 2 + 2) * 1.5;
+        const near = 2.5 + Math.sin(u * 0.33 + wseed + 4) * 1.2;
+        const dim = c => (night ? mix(c, 0x0b1026, 0.72) : dusk ? mix(c, 0x6a4a6a, 0.3) : rain ? mix(c, 0x8a94a0, 0.3) : c);
+        if (y < near) {
+          if (L) { const h = hash3(u, y, wseed, 61); return dim(h < 0.14 ? 0xd9792e : h < 0.22 ? 0xb8432e : h < 0.28 ? 0xe3b340 : 0x2f5a44); }   // autumn woods
+          return dim((u + y * 2) % 5 === 0 ? 0x5a8a48 : 0x669a52);                                              // a near field
+        }
+        if (L && y < near + 2) return dim((u + y + wseed) % 4 === 0 ? mix(sky, 0xffffff, 0.3) : mix(sky, 0x3d6f94, 0.6));   // the lake
+        if (y < mid) return dim(L ? 0x47755e : hash3(u >> 1, 0, wseed, 62) < 0.3 ? mix(0x77a763, 0xd8d27a, 0.3) : 0x77a763);
+        if (y < far) return dim(mix(L ? 0x6c8aa6 : 0x8fb0b8, sky, 0.35));
         return sky;
       }
       // forest and cabin: two layers of pines
@@ -809,6 +825,8 @@
     this.next = 1;
     this.seed = 1;
     this.n = N;          // plot size in cells (scenes can be bigger)
+    this.walls = undefined;   // zones: per-wall finishes [k] = { style, color } | null
+    this.zones = [];          // zones: floor rectangles { x, z, w, d, style }, later ones on top
   }
   const RP = Room.prototype;
 
@@ -907,7 +925,7 @@
   RP.count = function (pred) { return this.items.filter(pred).length; };
 
   RP.serialize = function () {
-    return { v: 1, name: this.name, n: this.n, view: this.view || 'city', ...(this.gild?{gild:this.gild}:{}), wall: this.wall, floor: this.floor, next: this.next, seed: this.seed, items: this.items.filter(i => !i.visitor).map(i => Object.assign({}, i)) };
+    return { v: 1, name: this.name, n: this.n, view: this.view || 'city', ...(this.gild?{gild:this.gild}:{}), wall: this.wall, floor: this.floor, ...(this.walls?{walls:this.walls.map(w=>w?{...w}:null)}:{}), ...(this.zones&&this.zones.length?{zones:this.zones.map(z=>({...z}))}:{}), next: this.next, seed: this.seed, items: this.items.filter(i => !i.visitor).map(i => Object.assign({}, i)) };
   };
   RP.load = function (d) {
     if (!d || d.v !== 1 || !Array.isArray(d.items)) return false;
@@ -926,7 +944,67 @@
     this.next = Math.max(d.next || 1, ...this.items.map(i => i.id + 1), 1);
     this.seed = d.seed || 1;
     this.n = Number.isInteger(d.n) && d.n >= 6 && d.n <= 32 ? d.n : N;
+    // Zones: a finish of its own for any wall, and rectangles of floor with their own style.
+    // Both are optional, so every older room loads exactly as it was.
+    const walls = Array.isArray(d.walls) ? [0, 1, 2, 3].map(k => {
+      const w = d.walls[k];
+      if (!w || typeof w !== 'object' || !WALLS[w.style] || WALLS[w.style].none) return null;
+      return { style: w.style, color: WALL_COLORS[w.color] ? w.color : 0 };
+    }) : null;
+    this.walls = walls && walls.some(Boolean) ? walls : undefined;
+    this.zones = [];
+    if (Array.isArray(d.zones)) for (const z of d.zones.slice(0, ZONE_MAX)) {
+      if (!z || !FLOORS[z.style] || ![z.x, z.z, z.w, z.d].every(Number.isInteger)) continue;
+      const x = Math.max(0, z.x), zz = Math.max(0, z.z), w = Math.min(this.n, z.x + z.w) - x, dd = Math.min(this.n, z.z + z.d) - zz;
+      if (w > 0 && dd > 0) this.zones.push({ x, z: zz, w, d: dd, style: z.style });
+    }
     return true;
+  };
+  // ---- zones ----
+  // the finish a wall wears: its own, or the room's
+  RP.wallAt = function (k) { return (this.walls && this.walls[k]) || this.wall; };
+  RP.paintWall = function (k, patch) {
+    if (!(k >= 0 && k < 4) || (WALLS[this.wall.style] && WALLS[this.wall.style].none)) return false;
+    const next = Object.assign({}, this.wallAt(k), patch);
+    if (!WALLS[next.style] || WALLS[next.style].none || !WALL_COLORS[next.color]) return false;
+    const walls = this.walls ? this.walls.slice() : [null, null, null, null];
+    walls[k] = next.style === this.wall.style && next.color === this.wall.color ? null : { style: next.style, color: next.color };
+    this.walls = walls.some(Boolean) ? walls : undefined;
+    return true;
+  };
+  // the floor style under a cell: the last zone painted over it, or the room's
+  RP.floorAt = function (x, z) {
+    const zs = this.zones || [];
+    for (let i = zs.length - 1; i >= 0; i--) { const q = zs[i]; if (x >= q.x && x < q.x + q.w && z >= q.z && z < q.z + q.d) return q.style; }
+    return this.floor.style;
+  };
+  // paint a rectangle of floor (cells, corners in any order). Painting the room's own style over a
+  // zone rubs it out; zones that end up fully covered are dropped, so the list stays short.
+  RP.paintZone = function (x0, z0, x1, z1, style) {
+    if (!FLOORS[style]) return false;
+    const n = this.n, lo = (a, b) => Math.max(0, Math.min(a, b)), hi = (a, b) => Math.min(n - 1, Math.max(a, b));
+    const x = lo(x0, x1), z = lo(z0, z1), w = hi(x0, x1) - x + 1, d = hi(z0, z1) - z + 1;
+    if (w <= 0 || d <= 0) return false;
+    if (w === n && d === n) { this.floor = { style }; this.zones = []; return true; }
+    const zones = (this.zones || []).slice();
+    zones.push({ x, z, w, d, style });
+    // what each cell ends up showing decides which zones still matter
+    const owner = new Int16Array(n * n).fill(-1);
+    zones.forEach((q, i) => { for (let cx = q.x; cx < q.x + q.w; cx++) for (let cz = q.z; cz < q.z + q.d; cz++) owner[cz * n + cx] = i; });
+    const seen = new Set(owner);
+    let kept = zones.filter((q, i) => seen.has(i));
+    // a zone in the room's own style that sits on bare floor does nothing
+    while (kept.length && kept[0].style === this.floor.style) kept.shift();
+    if (kept.length > ZONE_MAX) return false;
+    this.zones = kept;
+    return true;
+  };
+  RP.hasZones = function () { return !!(this.walls || (this.zones && this.zones.length)); };
+  RP.clearZones = function () { this.walls = undefined; this.zones = []; };
+  // keep zones on the plot when it changes size
+  RP.fitZones = function () {
+    const n = this.n;
+    this.zones = (this.zones || []).map(q => ({ x: q.x, z: q.z, w: Math.min(n, q.x + q.w) - q.x, d: Math.min(n, q.z + q.d) - q.z, style: q.style })).filter(q => q.w > 0 && q.d > 0);
   };
   RP.snapshot = function () { return JSON.stringify(this.serialize()); };
   RP.restore = function (s) { this.load(JSON.parse(s)); };
@@ -935,6 +1013,7 @@
   // Hand-made rooms. Items list: [type, fields, children?]
   function build(room, spec, n) {
     delete room.gild;
+    if (room.clearZones) room.clearZones();   // a template starts from one finish everywhere
     room.items = []; room.next = 1; room.n = n || N;
     const add = (t, o, kids) => {
       const it = room.add(room.make(t, o));
@@ -1080,6 +1159,7 @@
     const th = pick(THEMES);
     const [ws, wc] = pick(th.walls);
     this.wall = { style: ws, color: wc }; this.floor = { style: pick(th.floors) };
+    this.clearZones();
     this.items = []; this.next = 1; this.seed = seed;
     this.name = pick(ADJ) + ' ' + pick(NOUN);
     const fab = () => pick(th.fabric), wood = () => pick(th.wood);

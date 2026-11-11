@@ -153,4 +153,36 @@
       m.box(3, 23, 2, 5, 25, 3, shade(stone, 1.1));                       // keystone
     },
   });
+  // ---- partition walls: free-standing walls for splitting one plot into rooms (see Zones in Paint).
+  // They stand on the floor grid, turn like furniture, and tuck away with the walls (partition: true).
+  const PAINTS = [[0xf2e6d0], [0xf6f4f0], [0xb8cca8], [0x8a8a4e], [0xd99a7a], [0xf0c8c0], [0xbcd6e8], [0x3e4874], [0x5e3e5e], [0x4a4a52]];
+  const HV = LR.HC * LR.V;
+  const slab = (m, x0, x1, y0, y1, c) => m.box(x0, y0, 2, x1, y1, 6, (x, y) => (y < 2 ? 0xece6dc : y === 2 ? 0xf8f4ec : y === y1 - 1 ? mix(c, 0xffffff, 0.45) : c));
+  def('partition', {
+    name: 'Partition wall', kind: 'floor', group: 'doors', size: [2, 1], partition: true, wallish: true,
+    vars: PAINTS,
+    build(m, [c]) { slab(m, 0, 16, 0, HV, c); },
+  });
+  def('partition1', {
+    name: 'Partition wall, narrow', kind: 'floor', group: 'doors', size: [1, 1], partition: true, wallish: true,
+    vars: PAINTS,
+    build(m, [c]) { slab(m, 0, 8, 0, HV, c); },
+  });
+  def('partitiondoor', {
+    name: 'Partition doorway', kind: 'floor', group: 'doors', size: [2, 1], partition: true, wallish: true, walk: true,
+    vars: PAINTS,
+    build(m, [c]) {
+      slab(m, 0, 2, 0, HV, c); slab(m, 14, 16, 0, HV, c);
+      m.box(2, 27, 2, 14, HV, 6, (x, y) => (y === HV - 1 ? mix(c, 0xffffff, 0.45) : c));
+      m.box(2, 0, 2, 3, 27, 6, 0xf8f4ec).box(13, 0, 2, 14, 27, 6, 0xf8f4ec).box(2, 26, 2, 14, 27, 6, 0xf8f4ec);   // the trim round the opening
+    },
+  });
+  def('halfwall', {
+    name: 'Half wall', kind: 'floor', group: 'doors', size: [2, 1], wallish: true, top: 22,
+    vars: PAINTS.map(([c]) => [c, WOOD.oak]),
+    build(m, [c, cap]) {
+      slab(m, 0, 16, 0, 21, c);
+      m.box(0, 20, 1, 16, 22, 7, grain(cap));
+    },
+  });
 })();

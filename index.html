@@ -63,6 +63,10 @@
   button { font-family: inherit; text-align: left; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
   #bg, #stars, #rainfx { position: fixed; inset: 0; }
   #bg { background: linear-gradient(180deg, #f8e8d0, #d8a77e); }
+  /* the outdoor backdrop: chunky pixel hills behind the room (backdrop.js) */
+  #backdrop { position: fixed; top: 0; image-rendering: pixelated; pointer-events: none; will-change: transform; }
+  #backdrop[hidden] { display: none; }
+  #bRedo[hidden] { display: none; }
   #aurora { position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse 55% 12% at 20% 23%,#74dfb947,transparent 72%),radial-gradient(ellipse 65% 8% at 65% 18%,#a29be343,transparent 72%),radial-gradient(ellipse 75% 11% at 70% 30%,#79bcca36,transparent 72%); transform:skewY(-9deg); }
   .atlas-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
   .atlas-row > div { min-width:0; }.atlas-row b,.atlas-row small { display:block; overflow-wrap:anywhere; }.atlas-row > button { flex:none; }
@@ -194,6 +198,26 @@
   .tabs::-webkit-scrollbar, .row::-webkit-scrollbar { display: none; }
   .tab { flex: none; padding: 6px 11px; border-radius: 11px; font-weight: 800; font-size: 12.5px; color: var(--ink-dim); transition: background .15s, color .15s; }
   .tab.on { background: var(--ink); color: var(--panel-solid); }
+  /* the icon rail: Add groups as pictures of their own pieces; the tray folds down to just this strip */
+  .tabs.rail { gap: 3px; align-items: center; }
+  .tabs.rail .tab { position: relative; display: grid; place-items: center; min-width: 40px; height: 40px; padding: 0 9px; border-radius: 12px; }
+  .tabs.rail .tab.icon { width: 40px; padding: 0; }
+  .tabs.rail .tab.icon span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabs.rail .tab img { width: 32px; height: 32px; border-radius: 8px; pointer-events: none; }
+  .tabs.rail .tab img:not([src]) { visibility: hidden; }
+  .tabs.rail .tab.icon.on { background: var(--chip); box-shadow: inset 0 0 0 2px var(--ink); }
+  .tabs.rail .fold { position: sticky; left: 0; z-index: 1; width: 34px; min-width: 34px; padding: 0; color: var(--ink-dim); background: var(--panel-solid); }
+  .tabs.rail .fold svg { width: 20px; height: 20px; transition: transform .2s; }
+  #tray.folded .fold svg { transform: rotate(180deg); }
+  #tray.folded .tabs { padding-bottom: 0; }
+  #tray.folded .row, #tray.folded .tnav { display: none; }
+  #tray.folded { padding: 5px 6px; }
+  body.trayfolded:not(.exploring) .rot { bottom: calc(var(--sab) + 160px); }
+  .row .traychip { flex: none; align-self: center; white-space: nowrap; margin: 0 2px; }
+  .traychip.on { background: var(--ink); color: var(--panel-solid); }
+  #bWalls .slash { opacity: 0; }
+  #bWalls.on { background: var(--ink); color: var(--panel-solid); }
+  #bWalls.on .slash { opacity: 1; }
   .row { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-height: 84px; align-items: stretch; }
   .swatch {
     flex: none; width: 72px; padding: 5px 2px 5px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -229,7 +253,7 @@
   /* tool bar */
   .tools {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--sab) + 16px);
-    width: min(500px, calc(100% - 32px)); display: grid; grid-template-columns: 0.85fr repeat(5, 1fr); gap: 3px;
+    width: min(540px, calc(100% - 20px)); display: grid; grid-template-columns: 0.85fr repeat(6, 1fr); gap: 2px;
     padding: 6px; border-radius: 24px; transition: transform .35s cubic-bezier(.2,.9,.3,1), opacity .25s, background .8s, color .8s;
   }
   .tools button { height: 62px; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; transition: background .2s, transform .15s; }
@@ -516,6 +540,7 @@
 <div id="bg"></div>
 <div id="stars"></div>
 <div id="aurora" aria-hidden="true" hidden></div>
+<canvas id="backdrop" aria-hidden="true"></canvas>
 <div id="rainfx"></div>
 <canvas id="c"></canvas>
 <div id="driftfx"></div>
@@ -532,6 +557,7 @@
     <button class="chip" id="bShare" aria-label="Photo and share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/></svg></button>
     <button class="chip" id="bMenu" aria-label="Menu" aria-controls="sheet" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2" opacity=".45"/></svg></button>
     <button class="chip" id="bUndo" aria-label="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L5 11l4 4"/><path d="M5 11h9a5 5 0 0 1 0 10h-2"/></svg></button>
+    <button class="chip" id="bRedo" aria-label="Redo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l4 4-4 4"/><path d="M19 11h-9a5 5 0 0 0 0 10h2"/></svg></button>
     <button class="chip" id="bSettings" aria-label="Settings" title="Settings" aria-controls="sheet" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
 </header>
@@ -541,6 +567,7 @@
   <button class="panel" id="bAppShortcut" aria-label="Choose room shortcut" title="Choose room shortcut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
   <button class="panel app-shortcut-edit" id="bEditAppShortcut" aria-label="Change room shortcut" title="Change room shortcut" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg></button>
   </div>
+  <button class="panel" id="bWalls" aria-label="Hide walls" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/><path class="slash" d="M4 4l16 16"/></svg></button>
   <button class="panel" id="bCharacter" aria-label="Character view: explore as your character"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg></button>
   <div id="roomSearchControl"></div>
 </div>
@@ -553,6 +580,7 @@
   <button data-tool="move"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span>Move</span></button>
   <button data-tool="turn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4h-4"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" fill-opacity=".25"/></svg><span>Turn</span></button>
   <button data-tool="paint"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="14" height="6" rx="2" fill="#7ac8e8"/><path d="M18 6h2v6h-8v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="10" y="15" width="4" height="6" rx="1.2" fill="currentColor"/></svg><span>Paint</span></button>
+  <button data-tool="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4"/><path d="M12.5 7.5l4 4-7.6 7.6a2 2 0 0 1-1.1.55L4 20.5l.85-3.8a2 2 0 0 1 .55-1.1z"/><path d="M15 3.5a2.5 2.5 0 0 1 3.5 0l2 2a2.5 2.5 0 0 1 0 3.5L18.5 11 13 5.5z" fill="currentColor" fill-opacity=".3"/></svg><span>Pick</span></button>
   <button data-tool="remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg><span>Remove</span></button>
 </nav>
 
@@ -666,6 +694,7 @@
 <script defer src="performance.js"></script>
 <script defer src="village.js"></script>
 <script defer src="room-views.js"></script>
+<script defer src="backdrop.js"></script>
 <script defer src="render.js"></script>
 <script defer src="care.js"></script>
 <script defer src="mail-window.js"></script>

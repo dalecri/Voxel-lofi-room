@@ -158,7 +158,8 @@ function startLofiRooms() {
   // ---------------------------------------------------------------
   // Renderer
   const bg = $('#bg'), stars = $('#stars');
-  let liftNow = 40;
+  const backdrop = LRBackdrop.mount({ canvas: $('#backdrop') });   // pixel hills behind the room (backdrop.js)
+  let liftNow = 40, backdropKey = '';
   const view = new LRRender.Renderer($('#c'), {
     calmPerformance: meta.calmPerformance === true,
     catActivity(id, kind) { recordCat(room.get(id), kind); },
@@ -168,6 +169,7 @@ function startLofiRooms() {
     thunder() { const near = Math.random() < 0.4; setTimeout(() => Sound.thunder(near), near ? 120 : 500 + Math.random() * 900); },
     sky(top, bot, night) {
       bg.style.background = `linear-gradient(180deg, ${top} 0%, ${bot} 100%)`;
+      backdrop.set({ top, bot, night });
       stars.style.opacity = Math.max(0, night - 0.4) * 1.6;
       document.body.classList.toggle('night', night > 0.6);
       const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = top;
@@ -182,8 +184,11 @@ function startLofiRooms() {
   // the living room: care for plants, cats, fires, candles, tanks and feeders (see care.js)
   const care = window.LRCare ? window.LRCare({ growthOverride:it=>it.t==='habitpot'?habits.growth(meta.current,it.id):focusGarden.growth(meta.current,it.id), room, view, CAT, Sound, store, meta, toast: (...a) => toast(...a), discover: k => discover(k), brewed:()=>remember('tea'), watered: it => { shop.earn('water', `${meta.current}:${it.id}`);remember('plant'); }, changed: () => changed(), saveMeta: () => saveMeta(), roomId: () => meta.current, today: () => today(), dateKey: d => dateKey(d) }) : null;
   store.del('lr.mode');   // editing is a temporary session, never a startup preference
-  const state = { mode: 'explore', tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null };
-  const undo = [];
+  const state = { mode: 'explore', tool: 'add', group: 'furniture', add: 'sofa', addR: null, paintTab: 'walls', drag: null,
+    addC: 0,                                            // the colour the eyedropper picked up
+    zone: false, brush: { walls: null, color: null, floor: null },   // Zones: paint one wall or a patch of floor
+    fold: store.get('lr.trayFold', false) === true };   // the Add tray folded down to its icon rail
+  const undo = [], redo = [];
   const roomToolsUI = LRRoomTools.createView({ model: roomTools, sheet: codeSheet, renderer: () => view, room: () => room,
     editing: () => state.mode === 'edit', hidden: () => letters.active || barnaby.active || frenchUI?.active || filming || document.hidden || $('#photo').classList.contains('open'),
     onPhotos: id => cozy.photoPicker(id),
@@ -610,7 +615,9 @@ function startLofiRooms() {
   function pushUndo() {
     undo.push(room.snapshot());
     if (undo.length > 40) undo.shift();
+    redo.length = 0; updateRedo();
   }
+  function updateRedo() { const b = $('#bRedo'); if (b) b.hidden = !redo.length; }
   function changed() {
     view.sync(room); snapshotRoomId=meta.current; driftPaper?.update();villageView?.refresh();
     dirty = true;
@@ -620,13 +627,22 @@ function startLofiRooms() {
   function doUndo() {
     if (!undo.length) { toast('<span>Nothing to undo</span>', 1200); return; }
     const previous = undo.pop();
-    if (typeof previous === 'string') room.restore(previous);
+    if (typeof previous === 'string') { redo.push(room.snapshot()); room.restore(previous); }
     else {
+      redo.length = 0;
       // A surprise is a new draft. Undo travels back without overwriting either room.
       save(); room.restore(previous.data); meta.current = previous.current; baseSig = previous.base;
       if (previous.visit) meta.visit = previous.visit; else delete meta.visit;
     }
-    changed(); updateHeader();
+    changed(); updateHeader(); updateRedo(); renderTray();
+    Sound.turn(); haptic(5);
+  }
+  // Redo walks forward again through whatever Undo just took back; any new change clears it.
+  function doRedo() {
+    if (!redo.length) { toast('<span>Nothing to redo</span>', 1200); return; }
+    undo.push(room.snapshot());
+    room.restore(redo.pop());
+    changed(); updateHeader(); updateRedo(); renderTray();
     Sound.turn(); haptic(5);
   }
 
@@ -653,25 +669,63 @@ function startLofiRooms() {
   // Bound thumbnail work for broad searches across the entire catalog.
   const addItems=()=>addQuery?matchingAddItems().slice(0,60):matchingAddItems();
   addSearch.oninput=()=>{addQuery=addSearch.value.trim();state.addFilter=null;renderTray();};
+  // The icon rail: every Add group is a picture of one of its own pieces, drawn a few at a time so
+  // opening the tray never waits on fifty thumbnails.
+  let railQueue = [], railTimer = 0;
+  const railPiece = group => { let any = null; for (const C of Object.values(CAT)) if (C.group === group) { if (shop.available(C)) return C; any = any || C; } return any; };
+  function pumpRail() {
+    railTimer = 0;
+    const next = railQueue.shift();
+    if (next && next.img.isConnected) next.img.src = thumbOf(next.key, 0);
+    if (railQueue.length) railTimer = setTimeout(pumpRail, 24);
+  }
   function renderTray() {
     const show = state.mode === 'edit' && (state.tool === 'add' || state.tool === 'paint');
+    const folded = show && state.tool === 'add' && state.fold && !addQuery;
     tray.classList.toggle('open', show);
-    tabs.innerHTML = ''; row.innerHTML = '';
-    addSearch.hidden=!show || state.tool!=='add';
+    tray.classList.toggle('folded', folded); document.body.classList.toggle('trayfolded', folded);
+    tabs.innerHTML = ''; row.innerHTML = ''; railQueue = [];
+    tabs.classList.toggle('rail', show && state.tool === 'add');
+    addSearch.hidden=!show || state.tool!=='add' || folded;
     if (!show) return;
-    const tab = (label, on, fn) => {
-      const b = document.createElement('button'); b.className = 'tab' + (on ? ' on' : ''); b.textContent = label;
+    const tab = (label, on, fn, group) => {
+      const b = document.createElement('button'); b.className = 'tab' + (on ? ' on' : '');
+      if (group) {
+        const C = railPiece(group), text = document.createElement('span'); text.textContent = label;
+        b.title = label; b.setAttribute('aria-label', label); b.dataset.group = group;
+        if (C) {
+          const img = document.createElement('img'); img.alt = ''; img.width = img.height = 32; b.classList.add('icon'); b.appendChild(img);
+          const k = C.key + ':0';
+          if (thumbs.has(k)) img.src = thumbs.get(k); else railQueue.push({ img, key: C.key });
+        }
+        b.appendChild(text);
+      } else b.textContent = label;
       b.onclick = () => { fn(); renderTray(); Sound.blip(); };
       tabs.appendChild(b);
     };
+    const chip = (label, on, fn) => {
+      const b = document.createElement('button'); b.className = 'chipbtn traychip' + (on ? ' on' : ''); b.textContent = label;
+      if (on !== null) b.setAttribute('aria-pressed', String(!!on));
+      b.onclick = () => { fn(); Sound.blip(); };
+      row.appendChild(b);
+      return b;
+    };
     if (state.tool === 'add') {
-      GROUPS.forEach(([k, label]) => tab(label, state.group === k, () => { addQuery='';addSearch.value='';state.addFilter=null; state.group = k; }));
+      const fold = document.createElement('button'); fold.className = 'tab fold'; fold.id = 'trayFold';
+      fold.setAttribute('aria-label', folded ? 'Open the tray' : 'Fold the tray'); fold.setAttribute('aria-expanded', String(!folded)); fold.title = folded ? 'Open the tray' : 'Fold the tray';
+      fold.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8l6 6 6-6"/><path d="M6 14l6 6 6-6" opacity=".45"/></svg>';
+      fold.onclick = () => { state.fold = !state.fold; store.set('lr.trayFold', state.fold); renderTray(); Sound.blip(); };
+      tabs.appendChild(fold);
+      GROUPS.forEach(([k, label]) => tab(label, state.group === k, () => { addQuery='';addSearch.value='';state.addFilter=null; state.group = k; if (state.fold) { state.fold = false; store.set('lr.trayFold', false); } }, k));
+      if (railQueue.length && !railTimer) railTimer = setTimeout(pumpRail, 60);
+      const here = tabs.querySelector('.tab.on'); if (here) here.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (folded) { updateTrayArrows(); return; }
       if(state.addFilter){const all=document.createElement('button');all.className='chipbtn';all.textContent='Show all';all.onclick=()=>{state.addFilter=null;renderTray();};row.appendChild(all);}
       addItems().forEach(C => {
         const b = document.createElement('button');
         b.className = 'swatch' + (state.add === C.key ? ' on' : ''); b.dataset.furniture=C.key;
         const name = C.kind === 'pet' ? 'Cats' : C.name;
-        b.innerHTML = `<img alt="" src="${thumbOf(C.key, 0)}"><span>${name}</span>`;
+        b.innerHTML = `<img alt="" src="${thumbOf(C.key, state.add === C.key && C.kind !== 'pet' ? Math.min(state.addC | 0, C.vars.length - 1) : 0)}"><span>${name}</span>`;
         b.title = name;
         b.onclick = () => pickAdd(C.key, true);
         row.appendChild(b);
@@ -683,30 +737,42 @@ function startLofiRooms() {
       tab('Wall colour', state.paintTab === 'color', () => { state.paintTab = 'color'; });
       tab('Floor', state.paintTab === 'floor', () => { state.paintTab = 'floor'; });
       tab('Plot size', state.paintTab === 'size', () => { state.paintTab = 'size'; });
-      tab('Window view', state.paintTab === 'view', () => { state.paintTab = 'view'; });
+      tab('View', state.paintTab === 'view', () => { state.paintTab = 'view'; });
       const wc = (WALL_COLORS[room.wall.color] || WALL_COLORS[0])[1];
+      // Zones: with the chip on, a swatch loads the brush instead of repainting the whole room;
+      // then tap one wall, or drag across the floor.
+      const zoneable = ['walls', 'color', 'floor'].includes(state.paintTab), zone = zoneable && state.zone, brush = state.brush;
+      if (zoneable) {
+        chip('Zones', state.zone, () => {
+          state.zone = !state.zone; renderTray();
+          if (state.zone) toast(`<span>${state.paintTab === 'floor' ? 'Pick a floor, then drag across the room' : 'Pick a finish, then tap a wall'}</span>`, 1800);
+        }).id = 'bZones';
+        if (room.hasZones()) chip('Reset', null, () => { paintRoom(() => room.clearZones(), 'floor'); toast('<span>One finish everywhere again</span>', 1300); }).id = 'bZoneReset';
+      }
+      const load = (key, value) => { brush[key] = value; renderTray(); Sound.tick2(); haptic(4); };
       if (state.paintTab === 'walls') {
-        Object.entries(WALLS).filter(([, W]) => shop.available(W)).forEach(([k, W]) => {
-          const b = document.createElement('button'); b.className = 'swatch' + (room.wall.style === k ? ' on' : '');
+        Object.entries(WALLS).filter(([, W]) => shop.available(W) && !(zone && W.none)).forEach(([k, W]) => {
+          const b = document.createElement('button'); b.className = 'swatch' + ((zone ? brush.walls : room.wall.style) === k ? ' on' : '');
           b.appendChild(swatchCanvas((x, y) => W.fn(wc, x + 64, y + 2)));
           b.insertAdjacentHTML('beforeend', `<span>${W.label}</span>`);
-          b.onclick = () => paintRoom(() => { room.wall.style = k; meta.painted.wall = true; });
+          b.onclick = () => zone ? load('walls', k) : paintRoom(() => { room.wall.style = k; meta.painted.wall = true; });
           row.appendChild(b);
         });
       } else if (state.paintTab === 'color') {
         WALL_COLORS.forEach(([name, c], i) => {
-          const b = document.createElement('button'); b.className = 'dot' + (room.wall.color === i ? ' on' : '');
+          const b = document.createElement('button'); b.className = 'dot' + ((zone ? brush.color : room.wall.color) === i ? ' on' : '');
           b.innerHTML = `<i style="background:${LR.hex(c)}"></i><span>${name}</span>`;
-          b.onclick = () => paintRoom(() => { room.wall.color = i; meta.painted.wall = true; }, 'color');
+          b.onclick = () => zone ? load('color', i) : paintRoom(() => { room.wall.color = i; meta.painted.wall = true; }, 'color');
           row.appendChild(b);
         });
       } else if (state.paintTab === 'view') {
-        const names = { city: 'City', forest: 'Pine forest', ocean: 'Ocean', cabin: 'Snowy cabin' };
+        const names = LRBackdrop.NAMES;
+        chip('Backdrop', meta.backdrop !== false, () => { meta.backdrop = meta.backdrop === false; saveMeta(); renderTray(); }).id = 'bBackdrop';
         LR.VIEWS.forEach(k => {
           const b = document.createElement('button'); b.className = 'swatch' + ((room.view || 'city') === k ? ' on' : '');
           b.appendChild(swatchCanvas((x, y) => LR.skyColor(meta.phase, meta.raining, Math.floor(x * 14 / 24), Math.floor(y * 22 / 24), 7, k) & 0xffffff));
           b.insertAdjacentHTML('beforeend', `<span>${names[k]}</span>`);
-          b.onclick = () => { paintRoom(() => { room.view = k; }); discover('withaview'); toast(`<span>The windows look out on ${names[k].toLowerCase()} now</span>`, 1400); };
+          b.onclick = () => { paintRoom(() => { room.view = k; }, 'view'); discover('withaview'); toast(`<span>${names[k]} outside now</span>`, 1400); };
           row.appendChild(b);
         });
       } else if (state.paintTab === 'size') {
@@ -724,25 +790,38 @@ function startLofiRooms() {
         });
       } else {
         Object.entries(FLOORS).filter(([, Fl]) => shop.available(Fl)).forEach(([k, Fl]) => {
-          const b = document.createElement('button'); b.className = 'swatch' + (room.floor.style === k ? ' on' : '');
+          const b = document.createElement('button'); b.className = 'swatch' + ((zone ? brush.floor : room.floor.style) === k ? ' on' : '');
           b.appendChild(swatchCanvas((x, y) => Fl.fn(x + 64, y + 64)));
           b.insertAdjacentHTML('beforeend', `<span>${Fl.label}</span>`);
-          b.onclick = () => paintRoom(() => { room.floor.style = k; meta.painted.floor = true; }, 'floor');
+          b.onclick = () => zone ? load('floor', k) : paintRoom(() => { room.floor.style = k; meta.painted.floor = true; }, 'floor');
           row.appendChild(b);
         });
       }
       row.insertAdjacentHTML('beforeend', state.paintTab === 'size'
         ? '<div class="hint">Bigger plots fit whole city blocks. Your pieces stay put when it grows.</div>'
+        : zone ? `<div class="hint">${state.paintTab === 'floor' ? 'Drag across the floor to paint that patch.' : 'Tap a wall to paint only that one.'}</div>`
         : '<div class="hint">Tip: tap any piece in the room to try its next colour.</div>');
     }
     const on = row.querySelector('.on');
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
     updateTrayArrows();
   }
+  const setTool = tool => { state.tool = tool; document.querySelectorAll('.tools button').forEach(x => x.classList.toggle('on', x.dataset.tool === tool)); };
+  // Eyedropper: lift a piece's type, colour and turn off the room, ready to place again.
+  function pickFrom(id) {
+    const it = room.get(id), C = it && CAT[it.t];
+    if (!C) return;
+    if (!shop.available(C) || C.group === 'lane' || C.singleton || it.visitor) { Sound.nope(); toast(`<span>There is only one ${C.name.toLowerCase()}</span>`, 1300); return; }
+    state.add = it.t; state.addC = C.kind === 'pet' ? 0 : (it.c | 0); state.addR = C.kind === 'wall' ? null : (it.r || 0);
+    if (GROUPS.some(g => g[0] === C.group)) state.group = C.group;
+    addQuery = ''; addSearch.value = ''; state.addFilter = null; state.fold = false;
+    setTool('add'); renderTray(); view.setHover(0); view.boing(id); Sound.tick2(); haptic(5);
+    toast(`<span>Picked ${C.kind === 'pet' ? 'a cat' : 'the ' + C.name.toLowerCase()}. ${FINE ? 'Click' : 'Tap'} to place another</span>`, 1500);
+  }
   function pickAdd(key, fromTray) {
     const C = CAT[key];
     if (!C || !shop.available(C)) return;
-    state.add = key; state.addR = null;
+    state.add = key; state.addR = null; state.addC = 0;
     renderTray(); Sound.turn(); refreshGhost();
     if (fromTray || !FINE) toast(`<span>${FINE ? 'Click' : 'Tap'} the room to place ${C.kind === 'pet' ? 'a cat' : 'the ' + C.name.toLowerCase()}</span>`, 1400);
   }
@@ -822,7 +901,7 @@ function startLofiRooms() {
       });
       if (out.length) { toast(`<span>Move ${out.length} piece${out.length > 1 ? 's' : ''} in from the edges first</span>`, 1800); Sound.turn(); return; }
     }
-    paintRoom(() => { room.n = n; }, 'size');
+    paintRoom(() => { room.n = n; room.fitZones(); }, 'size');
     toast(`<span>Plot is now ${n}×${n}</span>`, 1100);
   }
   function paintRoom(fn, kind) {
@@ -833,10 +912,9 @@ function startLofiRooms() {
   document.querySelectorAll('.tools button').forEach(b => {
     b.onclick = () => {
       if (b.dataset.mode === 'explore') { setMode('explore'); return; }
-      state.tool = b.dataset.tool;
-      document.querySelectorAll('.tools button').forEach(x => x.classList.toggle('on', x.dataset.tool === state.tool));
+      setTool(b.dataset.tool);
       renderTray(); view.setGhost(null);
-      const tips = { move: 'Drag a piece to move it', turn: 'Tap a piece to turn it', paint: 'Pick a wall or floor style, or tap a piece to recolour it', remove: 'Tap a piece to put it away' };
+      const tips = { move: 'Drag a piece to move it', turn: 'Tap a piece to turn it', paint: 'Pick a wall or floor style, or tap a piece to recolour it', remove: 'Tap a piece to put it away', pick: 'Tap a piece to place more like it' };
       if (tips[state.tool]) toast(`<span>${tips[state.tool]}</span>`, 1500);
       Sound.init(); Sound.turn();
     };
@@ -870,10 +948,10 @@ function startLofiRooms() {
   }
   $('#bEdit').onclick = () => { state.addFilter=null; setMode('edit'); Sound.init(); };
   if (FINE) {
-    const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)' };
+    const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)', pick: 'Pick (6, or I over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bLane:'The Lane', bSettings:'Settings (,)', bUndo: 'Undo (Ctrl+Z)', bShare: 'Photo and share', bHome: 'Control Centre', bMenu: 'Menu (H)', bCharacter: 'Character view (C)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bLane:'The Lane', bSettings:'Settings (,)', bUndo: 'Undo (Ctrl+Z)', bRedo: 'Redo (Ctrl+Shift+Z)', bWalls: 'Hide walls (W)', bShare: 'Photo and share', bHome: 'Control Centre', bMenu: 'Menu (H)', bCharacter: 'Character view (C)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -881,6 +959,7 @@ function startLofiRooms() {
     if(laneVisit)return;
     save();
     undo.push({ data: room.snapshot(), current: meta.current, base: baseSig, visit: meta.visit && { ...meta.visit } });
+    redo.length = 0; updateRedo();
     if (undo.length > 40) undo.shift();
     let id = Date.now();
     while (id === meta.current || rooms.some(r => r.id === id)) id++;
@@ -1578,12 +1657,31 @@ function startLofiRooms() {
     const tool = state.tool;
     if (tool === 'add') {
       const C = CAT[state.add];
-      const base = { t: state.add, c: 0, r: state.addR || 0, on: C.on !== undefined ? C.on : false };
+      const base = { t: state.add, c: Math.min(state.addC | 0, C.vars.length - 1), r: state.addR || 0, on: C.on !== undefined ? C.on : false };
       if (state.add === 'cat') base.c = (room.count(i => i.t === 'cat' && !i.visitor)) % 5;
       const cand = candidate(e.clientX, e.clientY, base);
       if (!cand) { startOrbit(e); return; }
       state.drag = { kind: 'add', base, cand, sx: e.clientX, sy: e.clientY };
       view.setGhost(cand, room.canPlace(cand), room);
+      return;
+    }
+    if (tool === 'paint' && state.zone && state.paintTab !== 'size' && state.paintTab !== 'view') {
+      // Zones: drag a rectangle of floor, or tap one wall. Anywhere else still spins the view.
+      const p = view.pickFloor(e.clientX, e.clientY), onFloor = p && p.x >= 0 && p.z >= 0 && p.x < room.n && p.z < room.n;
+      if (state.paintTab === 'floor') {
+        if (onFloor) {
+          const x = Math.floor(p.x), z = Math.floor(p.z);
+          state.drag = { kind: 'zone', x0: x, z0: z, x1: x, z1: z };
+          view.setZonePlate(x, z, x, z);
+          return;
+        }
+      } else {
+        const w = !onFloor && view.pickWall(e.clientX, e.clientY);
+        startOrbit(e, 0);
+        if (w) orbit.wall = w.k;
+        return;
+      }
+      startOrbit(e, 0);
       return;
     }
     const hit = view.pickItem(e.clientX, e.clientY);
@@ -1636,6 +1734,13 @@ function startLofiRooms() {
   function moveEdit(e) {
     const d = state.drag;
     if (!d) return;
+    if (d.kind === 'zone') {
+      const p = view.pickFloor(e.clientX, e.clientY);
+      if (!p) return;
+      d.x1 = clampI(Math.floor(p.x), 0, room.n - 1); d.z1 = clampI(Math.floor(p.z), 0, room.n - 1);
+      view.setZonePlate(d.x0, d.z0, d.x1, d.z1);
+      return;
+    }
     if (d.kind === 'move') {
       const combo = comboAt(e.clientX, e.clientY, d);
       if ((combo && combo.b.id) !== (d.combo && d.combo.b.id)) {
@@ -1656,6 +1761,7 @@ function startLofiRooms() {
     state.drag = null;
     if (!d) return;
     view.setGhost(null);
+    if (d.kind === 'zone') { paintZone(d); return; }
     if (d.kind === 'add') {
       if (d.cand && room.canPlace(d.cand)) {
         pushUndo();
@@ -1679,10 +1785,25 @@ function startLofiRooms() {
       } else if (d.cand) { Sound.nope(); toast('<span>That spot is taken</span>', 1100); }
     }
   }
+  function paintZone(d) {
+    const style = state.brush.floor;
+    if (!style) { Sound.nope(); toast('<span>Pick a floor from the tray first</span>', 1400); return; }
+    let ok = true;
+    paintRoom(() => { ok = room.paintZone(d.x0, d.z0, d.x1, d.z1, style); meta.painted.floor = true; }, 'floor');
+    if (!ok) { undo.pop(); toast('<span>This floor has all the zones it can hold. Reset to start over</span>', 2000); }
+  }
+  function paintWallTap(k) {
+    const tab = state.paintTab, patch = tab === 'color' ? { color: state.brush.color } : { style: state.brush.walls };
+    if (patch.color == null && patch.style == null) { Sound.nope(); toast(`<span>Pick a ${tab === 'color' ? 'colour' : 'wall style'} from the tray first</span>`, 1400); return; }
+    let ok = true;
+    paintRoom(() => { ok = room.paintWall(k, patch); meta.painted.wall = true; }, tab === 'color' ? 'color' : undefined);
+    if (!ok) { undo.pop(); Sound.nope(); toast('<span>An open plot has no walls to paint</span>', 1400); }
+  }
   function tapEdit(id) {
     const it = room.get(id);
     if (!it) return;
     const C = CAT[it.t];
+    if (state.tool === 'pick') { pickFrom(id); return; }
     if (state.tool === 'remove') {
       pushUndo();
       view.poof(id, [0xf4e6d0, 0xffffff, 0xd8c8b8]);
@@ -1783,7 +1904,7 @@ function startLofiRooms() {
     if (!mouse || state.drag || orbit) return;
     if (state.mode === 'edit' && state.tool === 'add') {
       const C = CAT[state.add];
-      const cand = candidate(mouse.x, mouse.y, { t: state.add, c: state.add === 'cat' ? room.count(i => i.t === 'cat' && !i.visitor) % 5 : 0, r: state.addR || 0, on: C.on !== undefined ? C.on : false });
+      const cand = candidate(mouse.x, mouse.y, { t: state.add, c: state.add === 'cat' ? room.count(i => i.t === 'cat' && !i.visitor) % 5 : Math.min(state.addC | 0, C.vars.length - 1), r: state.addR || 0, on: C.on !== undefined ? C.on : false });
       if (cand) view.setGhost(cand, room.canPlace(cand), room); else view.setGhost(null);
       view.setHover(0); canvas.style.cursor = cand ? 'crosshair' : 'grab';
       return;
@@ -1805,6 +1926,7 @@ function startLofiRooms() {
     if (pointers.size < 2) gesture = null;
     if (orbit && orbit.t0 && e.type === 'pointerup' && pointers.size === 0 && !orbit.moved && performance.now() - orbit.t0 < 450) {
       if(orbit.digest){driftPaper.open();lastTap=null;}
+      else if (orbit.wall !== undefined && state.mode === 'edit' && state.tool === 'paint' && state.zone) { paintWallTap(orbit.wall); lastTap = null; }
       else if (orbit.tapId) {
         if (state.mode === 'explore') interact(orbit.tapId, view.pickItem(e.clientX, e.clientY)); else tapEdit(orbit.tapId);
         lastTap = null;
@@ -1857,7 +1979,8 @@ function startLofiRooms() {
     if (letters.active || barnaby.active || frenchUI?.active || sheet.classList.contains('open')) return;   // writing and sheets own keyboard focus
     if (rituals.breath.active) { if (e.key === 'Escape') stopBreathing(); return; }
     if (e.target.matches('input, textarea, select') || e.target.isContentEditable) return;
-    if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doUndo(); return; }
+    if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); return; }
+    if ((e.key === 'y' || e.key === 'Y') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doRedo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // leave browser shortcuts like Ctrl+R alone
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (view.fp) {   // character view: WASD or the arrows walk, Q/E look around, C or Esc goes back
@@ -1867,7 +1990,7 @@ function startLofiRooms() {
       if (key === 'Escape' || key === 'c') { exitCharacter(); return; }
     } else if (key === 'c' && state.mode === 'explore') { enterCharacter(); return; }
     const trayOpen = tray.classList.contains('open');
-    const keys = { 1: 'add', 2: 'move', 3: 'turn', 4: 'paint', 5: 'remove' };
+    const keys = { 1: 'add', 2: 'move', 3: 'turn', 4: 'paint', 5: 'remove', 6: 'pick' };
     if (keys[key]) { if (state.mode === 'explore') setMode('edit', true); document.querySelector(`.tools [data-tool="${keys[key]}"]`).click(); }
     else if (key === 'ArrowRight' && trayOpen) { e.preventDefault(); stepTray(1); }
     else if (key === 'ArrowLeft' && trayOpen) { e.preventDefault(); stepTray(-1); }
@@ -1881,6 +2004,8 @@ function startLofiRooms() {
     else if (key === 'e') rotate(1);
     else if (key === 'm') toggleRadio();
     else if (key === 'u') doUndo();
+    else if (key === 'w') setWalls(!view.wallsHidden);
+    else if (key === 'i' && state.mode === 'edit' && view.hoverId) { pickFrom(view.hoverId); view.setHover(0); refreshGhost(); }
     else if (key === '?' || key === 'h') { $('#bMenu').click(); }
     else if (key === ',') { $('#bSettings').click(); }
     else if (key === 'Escape') {
@@ -1909,6 +2034,15 @@ function startLofiRooms() {
     Sound.turn();
   }
   $('#bUndo').onclick = doUndo;
+  $('#bRedo').onclick = doRedo;
+  // Walls away: the shell drops to its floor so corners and back rows are easy to reach.
+  function setWalls(hidden) {
+    view.setWallsHidden(hidden);
+    const b = $('#bWalls'); b.setAttribute('aria-pressed', String(!!hidden)); b.classList.toggle('on', !!hidden);
+    b.setAttribute('aria-label', hidden ? 'Show walls' : 'Hide walls'); if (FINE) b.title = (hidden ? 'Show walls' : 'Hide walls') + ' (W)';
+    view.setGhost(null); Sound.turn(); haptic(5);
+  }
+  $('#bWalls').onclick = () => setWalls(!view.wallsHidden);
 
   // ---------------------------------------------------------------
   // Time and weather
@@ -2406,7 +2540,7 @@ function startLofiRooms() {
   function newRoom(k, forcedId) {
     const id = forcedId || Date.now();
     fillRoom(k);
-    meta.current = id; delete meta.visit; undo.length = 0; baseSig = sig();
+    meta.current = id; delete meta.visit; undo.length = 0; redo.length = 0; updateRedo(); baseSig = sig();
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
     if (forcedId) commit(true);   // a room built through a door joins the house straight away
     changed(); save(); saveMeta(); updateHeader();
@@ -3117,7 +3251,7 @@ function startLofiRooms() {
     if (!asked) { leaveThen(() => switchRoom(id, true)); return; }
     exitCharacter(true);
     if (!loadRoom(id)) { toast('<span>Couldn’t open that room</span>', 1500); return; }
-    undo.length = 0; baseSig = sig(); save();
+    undo.length = 0; redo.length = 0; updateRedo(); baseSig = sig(); save();
     view.panGoal.set(0, 0, 0); view.zoomGoal = 1;
     changed(); updateHeader();
     toast(`<b>${room.name}</b>`, 1200); Sound.turn();
@@ -3131,7 +3265,7 @@ function startLofiRooms() {
     if(store.get('lr.mainBedroom',null)===id)store.del('lr.mainBedroom');
     store.del('lr.room.' + id);
     roomSnapshots.remove(id);
-    if (id === meta.current) { loadRoom(rooms[0].id); baseSig = sig(); undo.length = 0; changed(); save(); updateHeader(); }
+    if (id === meta.current) { loadRoom(rooms[0].id); baseSig = sig(); undo.length = 0; redo.length = 0; updateRedo(); changed(); save(); updateHeader(); }
     saveIndex(); saveMeta(); openLane();
   }
   function roomVillage(parent) {
@@ -3388,7 +3522,7 @@ function startLofiRooms() {
     cards.appendChild(presetCards(k => {
       fillRoom(k);
       rooms = [];
-      undo.length = 0; store.set('lr.intro', true);
+      undo.length = 0; redo.length = 0; updateRedo(); store.set('lr.intro', true);
       commit(true); changed(); saveMeta(); updateHeader();
       intro.classList.remove('open'); Sound.init(); Sound.chime();
     }));
@@ -3414,6 +3548,7 @@ function startLofiRooms() {
       const gr = g.createLinearGradient(0, 0, 0, c.height); gr.addColorStop(0, cs[0]); gr.addColorStop(1, cs[cs.length - 1]);
       g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
       if (document.body.classList.contains('night')) { const si = new Image(); si.src = stars.style.backgroundImage.slice(5, -2); g.globalAlpha = 0.8; g.drawImage(si, 0, 0, c.width, c.height); g.globalAlpha = 1; }
+      backdrop.drawTo(g, c.width, img.height, -sy);
       g.drawImage(img, 0, -sy);
       const s = c.width / 400;
       g.font = `600 ${Math.round(13 * s)}px Fredoka, sans-serif`; g.fillStyle = document.body.classList.contains('night') ? 'rgba(255,255,255,0.8)' : 'rgba(74,53,48,0.7)';
@@ -3453,6 +3588,7 @@ function startLofiRooms() {
     g.globalCompositeOperation = 'source-over'; g.fillStyle = gr; g.fillRect(0, 0, W, H);
     const sa = Math.min(1, Math.max(0, night - 0.4) * 1.6);
     if (sa > 0) { g.fillStyle = `rgba(255,255,255,${0.75 * sa})`; for (const [x, y, s] of STARS) g.fillRect(x * W, y * H, s * 1.5, s * 1.5); }
+    backdrop.frame(g, W, H, { top, bot, night });
     g.drawImage(view.r.domElement, 0, 0, W, H);
     const s = W / 400;
     g.font = `600 ${Math.round(13 * s)}px Fredoka, sans-serif`; g.textAlign = 'center';
@@ -3665,6 +3801,9 @@ function startLofiRooms() {
       view.characterMove(f, sd, dt);
     }
     view.beat = meta.music && !stream && !view.reducedMotion ? Sound.beat() : -1;   // the groove: lights pulse and cats bop on the beat
+    const bk = `${view.env.view}|${!!meta.raining}|${meta.backdrop !== false}`;
+    if (bk !== backdropKey) { backdropKey = bk; backdrop.set({ view: view.env.view, rain: !!meta.raining, on: meta.backdrop !== false }); }
+    backdrop.yaw(view.yaw);
     if (!filming && !barnaby.active) { view.frame(dt, t, false); if (widgetView) widgetView.frame(); roomToolsUI.frame(dt); dashboard.frame(); atlasUI.frame(); }
     view.reportActivity();
     activity.report('filming/photo', filming || $('#photo').classList.contains('open'));
