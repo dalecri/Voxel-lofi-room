@@ -40,7 +40,7 @@ with sync_playwright() as p:
  for width in [390,1280]:
   page.set_viewport_size({'width':width,'height':844});page.evaluate('__lr.view.resize();__lr.view.frame(.1,__lr.view.t+.1);__lr.view.draw()');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/pet-room-day-{width}.png')
  page.evaluate('__lr.setPhase("night",true);__lr.view.setPhase("night",true);__lr.view.frame(.1,__lr.view.t+.1);__lr.view.draw()');page.screenshot(path='/tmp/pet-room-night.png')
- page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.get_by_role('switch',name='Reduced motion',exact=True).click();page.keyboard.press('Escape');page.evaluate('advancePets(3)');assert page.evaluate('''() => {const i=__lr.room.items.find(i=>i.t==='hamstercage');return __lr.view.objs.get(i.id).userData.parts.wheel.rotation.z===0;}''')
+ page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-settings');page.get_by_role('switch',name='Reduced motion',exact=True).click();page.keyboard.press('Escape');page.evaluate('advancePets(3)');assert page.evaluate('''() => {const i=__lr.room.items.find(i=>i.t==='hamstercage');return __lr.view.objs.get(i.id).userData.parts.wheel.rotation.z===0;}''')
  code=page.evaluate('__lr.roomCode()');data=page.evaluate('c=>__lr.readCode(c)',code);assert len(data['items'])==29
  assert all(k not in str(data) for k in ['petActivity','petPending','petSlipUntil','petExcitedUntil'])
  assert not errors,errors

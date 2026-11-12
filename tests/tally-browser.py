@@ -29,6 +29,6 @@ with sync_playwright() as p:
    page.set_viewport_size({'width':width,'height':900});assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/pushup-tally-{phase}-{width}.png')
  raw=page.evaluate('async()=>JSON.stringify(await __lr.readCode(await __lr.roomCode()))');assert 'tallycounter' in raw;assert all(s not in raw for s in ['"tally":','"count":','"completed":']);assert page.evaluate("localStorage.getItem('lr.tally')") is None
  page.evaluate('__clock=new Date(2026,9,18,0,0,1).getTime();__lr.roomToolsUI.tick(false)');assert count.inner_text()=='0';assert undo.is_disabled();assert tool.locator('.tally-progress').inner_text()=='0 / 50';assert page.evaluate("JSON.parse(localStorage.getItem('lr.tools')).tally.date")=='2026-10-18'
- page.keyboard.press('Escape');page.click('#bHome');tile=page.locator('#homeView [data-app=tally]');assert tile.is_visible();assert tile.locator('img').count()==1;tile.click();assert count.inner_text()=='0'
+ page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-tools');tile=page.locator('#homeView [data-app=tally]');assert tile.is_visible();assert tile.locator('img').count()==1;tile.click();assert count.inner_text()=='0'
  assert not errors,errors;assert not external,external;print('PASS clicker variants, native keyboard/count/undo, once-only cheer and calendar day, reload/midnight, Control Centre, private shares, day/night mobile and desktop',flush=True);b.close()
 server.shutdown()

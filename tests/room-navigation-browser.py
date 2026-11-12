@@ -18,20 +18,20 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.companion');assert page.evaluate('__lr.room.items.some(i=>i.t==="cat")') is False
 
 
- assert page.locator('header .chips > button').evaluate_all('es=>es.map(e=>e.id)')==['bHome','bLane','bShare','bMenu','bUndo','bRedo','bSettings']
+ assert page.locator('header .chips > button:visible').evaluate_all('es=>es.map(e=>e.id)')==['bUndo','bHome'];assert page.locator('.explorebar > button').evaluate_all('es=>es.map(e=>e.id)')==['bSurprise','bEdit','bShare']
  assert page.locator('#bPhoto,#bMusic,#rotL,#rotR').count()==0
- page.click('#bMenu');assert page.locator('.menu-tabs [role=tab]').evaluate_all('es=>es.map(e=>e.getAttribute("aria-label"))')==['Today','Settings'];page.keyboard.press('Escape')
+ page.click('#bHome');page.click('#hub-tab-today');assert page.locator('.hub-tabs [role=tab]').evaluate_all('es=>es.map(e=>e.textContent)')==['Today','Lane','Tools'];assert page.locator('#sheetBody .menu-nav').count()==0;page.keyboard.press('Escape')
  for width in [320,390,1280]:
-  page.set_viewport_size({'width':width,'height':900});page.click('#bHome');home=page.locator('#homeView');home.wait_for();assert home.locator('.home-settings,.home-shortcut').count()==0
+  page.set_viewport_size({'width':width,'height':900});page.click('#bHome');page.click('#hub-tab-tools');home=page.locator('#homeView');home.wait_for();assert home.locator('.home-settings,.home-shortcut').count()==0
   assert home.locator('input').count()==0
   assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/clean-control-centre-{width}.png');page.keyboard.press('Escape')
  page.click('#bSearch');search=page.locator('#universalSearch input');search.wait_for();search.fill('Lofi radio');page.screenshot(path='/tmp/universal-room-search.png');page.locator('#universalSearch').get_by_role('button',name='Lofi radio',exact=True).click();page.locator('.radio-library').wait_for();page.keyboard.press('Escape');assert page.locator('#universalSearch').is_hidden()
- page.click('#bHome');page.locator('[data-app=sound]').click();page.locator('#menu-sound .radio-library').wait_for();back=page.get_by_role('button',name='Back to Control Centre',exact=True);back.wait_for()
+ page.click('#bHome');page.click('#hub-tab-tools');page.locator('[data-app=sound]').click();page.locator('#menu-sound .radio-library').wait_for();back=page.get_by_role('button',name='Back to Control Centre',exact=True);back.wait_for()
  page.get_by_role('button',name='Play radio',exact=True).click();assert page.evaluate('__lr.meta.music');page.get_by_role('button',name='Pause radio',exact=True).click();assert not page.evaluate('__lr.meta.music')
  page.get_by_role('button',name='Add station',exact=True).click();page.locator('#stName').fill('Fixture station');page.locator('#stUrl').fill('https://example.test/radio');page.locator('#stAdd').click();assert page.locator('.radio-library-station',has_text='Fixture station').count()==1
  back.click();page.locator('#homeView').wait_for();page.keyboard.press('Escape')
  page.click('#bShare');page.locator('.capture-tabs').wait_for();page.get_by_role('button',name='Photo',exact=True).click();page.locator('.capture-photo[src]').wait_for();page.get_by_role('button',name='Save to album',exact=True).click();assert page.evaluate('__lr.files.list("Photos").length')==1
  page.get_by_role('button',name='Share room',exact=True).click();page.locator('.share-card-img[src]').wait_for();assert page.locator('.capture-tabs').count()==1;page.keyboard.press('Escape')
- page.click('#bLane');page.locator('.lane-street').wait_for();assert page.locator('#lane-house').is_hidden();page.screenshot(path='/tmp/lane-directory.png');page.locator('.lane-front[data-place=house]').click();assert page.locator('#lane-house').is_visible();assert 'Your rooms' in page.locator('#lane-house').inner_text()
+ page.click('#bHome');page.click('#hub-tab-lane');page.locator('.lane-street').wait_for();assert page.locator('#lane-house').is_hidden();page.screenshot(path='/tmp/lane-directory.png');page.locator('.lane-front[data-place=house]').click();assert page.locator('#lane-house').is_visible();assert 'Your rooms' in page.locator('#lane-house').inner_text()
  assert not errors,errors
  browser.close();server.shutdown()

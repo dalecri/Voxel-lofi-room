@@ -31,13 +31,13 @@ with sync_playwright() as p:
  tomorrow=page.evaluate("(()=>{const t=new Date();t.setDate(t.getDate()+1);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`})()")
  page.evaluate("d=>__lr.calendarModel.add({date:d,title:'PRIVATE_VET_VISIT'})",tomorrow)
  # The saved 'Rooms' tab lands on the Lane, at your house, with everything the Rooms tab had.
- page.click('#bMenu');lane=page.locator('#menu-lane');lane.locator('.lane-street').wait_for()
+ page.click('#bHome');page.click('#hub-tab-today');lane=page.locator('#menu-lane');lane.locator('.lane-street').wait_for()
  assert page.get_by_role('tab',name='Lane',exact=True).get_attribute('aria-selected')=='true'
  assert lane.locator('.lane-front').count()==4 and lane.locator('.lane-front[data-place=house]').get_attribute('aria-selected')=='true'
  assert page.locator('#bShareCode').is_visible() and page.locator('#bImportCode').is_visible() and 'Your house' in lane.locator('.rooms-heading').inner_text()
  # Back after four days: one kind note, gone after Thanks and not shown again.
  away=lane.locator('.lane-away');assert 'away 4 days' in away.inner_text();away.get_by_role('button',name='Thanks').click();assert lane.locator('.lane-away').count()==0
- page.keyboard.press('Escape');page.click('#bMenu');page.locator('#menu-lane .lane-street').wait_for();assert page.locator('#menu-lane .lane-away').count()==0
+ page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-today');page.locator('#menu-lane .lane-street').wait_for();assert page.locator('#menu-lane .lane-away').count()==0
  # Arrow keys walk the street like tabs.
  house=lane.locator('.lane-front[data-place=house]');house.focus();page.keyboard.press('ArrowRight');assert lane.locator('.lane-front[data-place=shop]').get_attribute('aria-selected')=='true'
  assert page.locator('#bShareCode').is_hidden() and lane.locator('#lane-shop').is_visible()
@@ -58,11 +58,11 @@ with sync_playwright() as p:
  lane.locator('.lane-front[data-place=mail]').click();mail=lane.locator('#lane-mail')
  assert 'Today’s paper' in mail.inner_text();letter=mail.locator('.lane-row',has_text='Welcome to the lane');assert 'unread' in letter.get_attribute('class')
  letter.click();page.locator('#sheetBody .lane-letter').first.wait_for();assert 'Mallow' in page.locator('#sheetBody').inner_text()
- page.keyboard.press('Escape');page.click('#bMenu');page.locator('#menu-lane .lane-front[data-place=mail]').click()
+ page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-today');page.locator('#menu-lane .lane-front[data-place=mail]').click()
  assert 'unread' not in page.locator('#lane-mail .lane-row',has_text='Welcome to the lane').get_attribute('class')
  page.locator('#lane-mail .lane-row',has_text='Today’s paper').click();page.wait_for_function('document.querySelector("#sheetBody h2")?.textContent.includes("brief")||document.querySelector("#sheetBody")?.textContent.includes("Brief")')
  # The Notice Board: tomorrow's calendar event is pinned; the sky line names the next solstice or equinox.
- page.keyboard.press('Escape');page.click('#bMenu');page.locator('#menu-lane .lane-front[data-place=notice]').click();board=page.locator('#lane-notice')
+ page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-today');page.locator('#menu-lane .lane-front[data-place=notice]').click();board=page.locator('#lane-notice')
  assert 'PRIVATE_VET_VISIT' in board.locator('.lane-pin').inner_text() and ('solstice' in board.inner_text() or 'equinox' in board.inner_text())
  # Residents: the room's own pets, renamed or not, spread over the places by day and home at night.
  page.keyboard.press('Escape')
@@ -70,7 +70,7 @@ with sync_playwright() as p:
    const d=new Date();d.setDate(d.getDate()+5);a.calendarModel.add({date:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,title:"Mom's birthday"});}''')
  pets=page.evaluate("__lr.room.items.filter(i=>LR.CAT[i.t]?.kind==='pet'&&!LR.CAT[i.t].robot&&!i.visitor).length");assert pets>=3
  def street():
-  page.click('#bMenu');page.locator('#menu-lane .lane-street').wait_for()
+  page.click('#bHome');page.click('#hub-tab-today');page.locator('#menu-lane .lane-street').wait_for()
   return page.evaluate('''()=>[...document.querySelectorAll('#menu-lane .lane-front')].map(b=>{const n=b.querySelectorAll('.lane-residents svg').length,more=+(b.querySelector('.lane-residents small')?.textContent.slice(1)||0);return [b.dataset.place,n+more]})''')
  page.evaluate("__lr.setPhase('afternoon',true)");day=dict(street())
  assert sum(day.values())==pets,day
@@ -81,7 +81,7 @@ with sync_playwright() as p:
  page.locator('#menu-lane .lane-front[data-place=notice]').click();board=page.locator('#lane-notice')
  assert "Mom's birthday" in board.locator('.lane-cake').inner_text() and board.locator('.lane-who li').count()==pets and board.locator('.lane-season-note').inner_text().strip()
  # Seasonal dressing follows the real date; the weather follows meta.weather.
- page.keyboard.press('Escape');page.evaluate("__lr.meta.weather='snow'");page.click('#bMenu');lane_el=page.locator('#menu-lane .lane')
+ page.keyboard.press('Escape');page.evaluate("__lr.meta.weather='snow'");page.click('#bHome');page.click('#hub-tab-today');lane_el=page.locator('#menu-lane .lane')
  expected=page.evaluate("LRLane.dressing({date:new Date().toISOString().slice(0,10),seasons:LR.SEASONS||[],weather:'snow'})")
  assert lane_el.get_attribute('data-weather')=='snow' and (lane_el.get_attribute('data-season') or '')==expected['season'],expected
  assert page.locator('#menu-lane .lane-snow').first.evaluate('e=>getComputedStyle(e).display')!='none','snow sits on the roofs'
@@ -89,7 +89,7 @@ with sync_playwright() as p:
  assert 'PRIVATE_BISCUIT' not in str(page.evaluate("JSON.parse(localStorage.getItem('lr.lane')||'{}')")),'residents are derived, never stored'
  # Phone and desktop: the street fits, nothing scrolls sideways, in day and night.
  for phase in ['day','night']:
-  page.evaluate(f"__lr.setPhase('{phase}',true)");page.keyboard.press('Escape');page.click('#bMenu');page.locator('#menu-lane .lane-street').wait_for()
+  page.evaluate(f"__lr.setPhase('{phase}',true)");page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-today');page.locator('#menu-lane .lane-street').wait_for()
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':844})
    for place in ['house','shop','mail','notice']:

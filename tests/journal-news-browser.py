@@ -23,13 +23,13 @@ with sync_playwright() as p:
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr')
   # A saved 'Journal' menu choice now lands on the To-Do tab, which holds the task notebook.
-  page.click('#bMenu');assert page.locator('.menu-nav [role=tab][aria-selected=true]').get_attribute('aria-label')=='To-Do';assert page.locator('#menu-todo .today-tasks').is_visible();page.keyboard.press('Escape')
+  page.click('#bHome');page.click('#hub-tab-today');assert page.locator('.menu-nav [role=tab][aria-selected=true]').get_attribute('aria-label')=='To-Do';assert page.locator('#menu-todo .today-tasks').is_visible();page.keyboard.press('Escape')
   # The diaries live in the Cozy moments card under the room name.
-  page.click('#disc');page.locator('#cozyMoments').wait_for();page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
+  page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-row');page.locator('#cozyMoments').wait_for();page.locator('#bCatDiary').click();assert page.locator('#catDiary .d').count()==2
   page.locator('#bMomentDiary').click();assert page.locator('#journalFeed > .d').count()>50;assert page.locator('#journalFeed .journal-paper').count()==0
   page.screenshot(path=f'/tmp/cozy-moments-{width}.png');assert page.locator('#cozyMoments').evaluate('e=>e.getBoundingClientRect().right<=innerWidth');page.keyboard.press('Escape');assert page.locator('#cozyMoments').is_hidden()
   # There is no Daily News anywhere; Control Center offers the Daily Brief instead.
-  page.click('#bHome');assert page.locator('#homeView [data-app=news]').count()==0;brief=page.locator('#homeView [data-app=digest]');assert 'Daily Brief' in brief.inner_text();brief.click()
+  page.click('#bHome');page.click('#hub-tab-tools');assert page.locator('#homeView [data-app=news]').count()==0;brief=page.locator('#homeView [data-app=digest]');assert 'Daily Brief' in brief.inner_text();brief.click()
   paper=page.locator('.drift-paper');paper.wait_for();assert page.locator('.drift-masthead').inner_text()=='Daily Brief';assert page.locator('.journal-paper').count()==0;assert page.evaluate('typeof __lr.dailyNewsSheet')=='undefined'
   assert paper.locator('.drift-section[data-type=forecast]').count()==1;assert page.evaluate('document.documentElement.scrollWidth <= innerWidth');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
   page.screenshot(path=f'/tmp/daily-brief-{width}.png')

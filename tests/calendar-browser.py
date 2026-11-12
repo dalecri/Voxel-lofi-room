@@ -35,7 +35,7 @@ with sync_playwright() as p:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true);__lr.view.draw()}',phase)
   for width in [320,390,1280]:
    page.set_viewport_size({'width':width,'height':844});body.evaluate('e=>Promise.all(e.getAnimations().map(a=>a.finished))');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert body.evaluate('e=>e.scrollWidth<=e.clientWidth');page.screenshot(path=f'/tmp/calendar-{phase}-{width}.png')
- page.keyboard.press('Escape');assert 'open' not in page.locator('#sheet').get_attribute('class');page.click('#bHome');page.locator('[data-app=calendar]').click();assert body.locator('h2.calendar-heading .calendar-month').count()==1
+ page.keyboard.press('Escape');assert 'open' not in page.locator('#sheet').get_attribute('class');page.click('#bHome');page.click('#hub-tab-tools');page.locator('[data-app=calendar]').click();assert body.locator('h2.calendar-heading .calendar-month').count()==1
  decoded=page.evaluate('async()=>__lr.readCode(await __lr.roomCode())');assert all(t not in json.dumps(decoded) for t in ['PRIVATE_','activityLog','calendarEvents','googleCalendarToken']);assert not external,external;assert not errors,errors
  print('PASS calendar furniture/Control Centre, month navigation, ritual hooks and dots, holiday/forecast opt-ins, moon/detail/memory, private event CRUD, unconfigured Google, Escape and mobile/desktop day/night without network or console errors',flush=True)
  # Exercise the configured static browser flow with a fake GIS script and API.

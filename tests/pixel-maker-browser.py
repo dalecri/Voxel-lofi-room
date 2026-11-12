@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(15000)
  def ready():page.wait_for_function('!!window.__lr?.dashboard');page.evaluate('__lr.renderLoop.stop()')
  def menu(tab):
-  page.click('#bMenu');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
+  page.click('#bHome');page.click('#hub-tab-today');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
  def esc():page.keyboard.press('Escape')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  page.evaluate("const a=__lr;a.room.items=[];a.room.n=10;const book=a.room.add(a.room.make('sketchbook',{x:2,z:2}));a.changed();a.interact(book.id)")

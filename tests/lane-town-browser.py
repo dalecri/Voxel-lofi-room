@@ -32,7 +32,7 @@ with sync_playwright() as p:
  juniper=lambda:page.evaluate('(()=>{const id=Object.keys(__lr.laneVisit.actions).find(k=>__lr.laneVisit.actions[k]==="talk:juniper");const it=id&&__lr.room.get(+id);return it?[it.x,it.z]:null})()')
 
  # Day 1: the menu hints at what needs a hand; the street starts bare and broken.
- page.click('#bLane');hint=page.locator('.lane-todo').inner_text();assert 'bench needs a hand' in hint and 'courtyard' in hint,hint;close()
+ page.click('#bHome');page.click('#hub-tab-lane');hint=page.locator('.lane-todo').inner_text();assert 'bench needs a hand' in hint and 'courtyard' in hint,hint;close()
  street(10);assert piece('bench')['c']==0 and piece('bed:0')['c']==0 and piece('court')['c']==0 and juniper()==[2,8]
  tap('bed:0');sheet.get_by_role('button',name='🌻 Sunflowers').click();done();assert piece('bed:0')['c']==2,piece('bed:0')   # planted and watered: sprouting
  tap('bench');sheet.get_by_role('button',name='Fit new slats').click();done();assert piece('bench')['c']==1

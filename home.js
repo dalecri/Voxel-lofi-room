@@ -50,6 +50,21 @@
     const sorted=rows.slice().sort((a,b)=>String(a.label).localeCompare(String(b.label),undefined,{sensitivity:'base'}));
     return mode==='za'?sorted.reverse():sorted;
   }
+  // Home's Tools tab: a handful of named shelves instead of one long list. Anything not
+  // listed here (custom links, apps from furniture) lands on the last shelf, Apps.
+  const GROUPS=[
+    ['Write',['notebook','typewriter','mailbox','ideas','whiteboard','letters']],
+    ['Track',['todo','habits','mood','calendar','tally','savings','groceries']],
+    ['Unwind',['tea','breathing','sound','french','digest']],
+    ['Make',['sketch','wardrobe','camera','photos','scenes']],
+    ['Around',['rooms','merchant','moments']],
+  ];
+  function groupApps(rows){
+    const by=new Map(rows.map(p=>[p.id,p])),used=new Set(),out=[];
+    for(const [name,ids] of GROUPS){const list=ids.map(id=>by.get(id)).filter(Boolean);list.forEach(p=>used.add(p.id));if(list.length)out.push([name,list]);}
+    const rest=rows.filter(p=>!used.has(p.id));out.push(['Apps',rest]);
+    return out;
+  }
   let searchId=0;
   function createSearch({sources,navigate,toggleHost}) {
     const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -97,8 +112,14 @@
     let lastPreviewKey='';
     function updatePreviews(){const key=previewKey();if(key===lastPreviewKey)return;lastPreviewKey=key;const entries=new Map(apps().map(p=>[p.id,p]));for(const b of appGrid.querySelectorAll('[data-app]')){const p=entries.get(b.dataset.app),asset=p&&preview(p);let img=b.querySelector('.home-furniture');if(!asset){img?.remove();b.querySelector('.home-asset-hint')?.remove();continue;}if(!img){img=el('img','home-furniture');img.alt='';img.setAttribute('aria-hidden','true');b.appendChild(img);}if(img.getAttribute('src')!==asset.src)img.src=asset.src;img.classList.toggle('absent',!asset.present);img.dataset.furniture=asset.id;const hint=b.querySelector('.home-asset-hint') || el('small','home-asset-hint muted');hint.textContent=asset.present?'In your room':'Not placed in this room';b.appendChild(hint);}}
     function launchApps(){appGrid.replaceChildren();const q=appSearch.value.trim().toLocaleLowerCase(),rows=sortApps(apps().filter(p=>(q||!p.inNotebook)&&(p.label+' '+(p.description || '')).toLocaleLowerCase().includes(q)),sortMode);appEmpty.textContent=rows.length?'':'No matching apps. Try another word.';
-      for(const p of rows){const b=el('button','home-app'),icon=el('span','home-app-icon',p.icon),copy=el('span');b.type='button';b.dataset.app=p.id;icon.setAttribute('aria-hidden','true');if(p.iconSrc){const art=el('img','mail-access-icon');art.src=p.iconSrc;art.alt='';icon.replaceChildren(art);}copy.append(el('b','',p.label),el('small','muted',p.description));b.append(icon,copy);b.onclick=()=>{if(p.url&&!p.inApp){actions.launch(p);return;}depart(()=>actions.launch(p),p.id);};appGrid.appendChild(b);}
-      const add=el('button','home-app');add.type='button';add.textContent='＋ Add your own';add.onclick=()=>depart(()=>actions.addPortal(),'add');appGrid.appendChild(add);lastPreviewKey=null;updatePreviews();
+      // Browsing in the default order shows small grouped tiles; searching or sorting shows one flat grid.
+      const grouped=!q&&sortMode==='default',groups=grouped?groupApps(rows):[['',rows]];appGrid.classList.toggle('is-grouped',grouped);
+      let grid=appGrid;
+      for(const [name,list] of groups){
+        if(grouped){const sec=el('section','home-group');sec.setAttribute('aria-label',name);sec.appendChild(el('h3','home-group-title',name));grid=el('div','home-apps home-group-grid');sec.appendChild(grid);appGrid.appendChild(sec);}
+        for(const p of list){const b=el('button','home-app'),icon=el('span','home-app-icon',p.icon),copy=el('span');b.type='button';b.dataset.app=p.id;icon.setAttribute('aria-hidden','true');if(p.iconSrc){const art=el('img','mail-access-icon');art.src=p.iconSrc;art.alt='';icon.replaceChildren(art);}copy.append(el('b','',p.label),el('small','muted',p.description));b.append(icon,copy);if(p.description)b.title=p.description;b.onclick=()=>{if(p.url&&!p.inApp){actions.launch(p);return;}depart(()=>actions.launch(p),p.id);};grid.appendChild(b);}
+      }
+      const add=el('button','home-app home-app-add');add.type='button';add.textContent='＋ Add your own';add.onclick=()=>depart(()=>actions.addPortal(),'add');grid.appendChild(add);lastPreviewKey=null;updatePreviews();
     }
     appSearch.oninput=launchApps;
     let active=false,next=0;
@@ -124,5 +145,5 @@
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
     return {open,close:closeView,refresh,view,get active(){return active;},tick(time){if(!active||time<next)return;next=time+1000;refresh();updatePreviews();}};
   }
-  const api={SECTIONS,SORTS,SORT_KEY,sortApps,MOTION_KEY,PHASES,day,reducedMotion,search,coziness,snapshot,createSearch,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRHome=api;
+  const api={SECTIONS,GROUPS,groupApps,SORTS,SORT_KEY,sortApps,MOTION_KEY,PHASES,day,reducedMotion,search,coziness,snapshot,createSearch,createView};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LRHome=api;
 })(typeof window!=='undefined'?window:globalThis);

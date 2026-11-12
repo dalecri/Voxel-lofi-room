@@ -1,0 +1,92 @@
+/* Navigation redesign (Nov 2026): one Home sheet with Today / Lane / Tools tabs,
+   a calm top bar, and Settings as one grouped list. Loaded last so it can settle
+   the older layers; everything inside the sheet is scoped to #sheetBody[data-hub]. */
+:root { --hub-coral: #c4563a; --hub-coral-ink: #fff; }
+
+/* ---- Top bar: the room's name (with Save built in), Undo/Redo and Home ---- */
+header .chips #bLane, header .chips #bMenu, header .chips #bSettings { display: none; }
+.brand { display: flex; align-items: center; gap: 8px; min-height: 48px; box-sizing: border-box; padding: 6px 6px 6px 16px; border-radius: 24px; flex: 0 1 auto; max-width: min(260px, calc(100vw - 172px)); }
+.brand > #brand { flex: 1 1 auto; min-width: 0; text-align: left; }
+.brand > #bTime, .brand > #disc { display: none; }
+.brand .savechip { flex: none; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 18px; background: var(--hub-coral); color: var(--hub-coral-ink); box-shadow: none; }
+.brand .savechip[hidden] { display: none; }
+.brand .savechip svg { width: 18px; height: 18px; }
+.brand .savechip span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.brand:not(:has(.savechip:not([hidden]))) { padding-right: 16px; }
+/* Out on the lane the subtitle says where you are, so it comes back. */
+body.visiting-lane .brand { flex-direction: column; align-items: flex-start; gap: 0; padding: 8px 16px; }
+body.visiting-lane .brand > #disc { display: block; }
+header .chips { gap: 2px; padding: 4px; border-radius: 24px; }
+header .chip, header .chip:is(#bUndo, #bRedo, #bHome) { width: 40px; height: 40px; border-radius: 20px; }
+header .chip#bHome[aria-expanded="true"] { background: var(--chip); }
+
+/* ---- Bottom bar: Surprise, Decorate, Photo ---- */
+.explorebar { grid-template-columns: 54px minmax(0, 1fr) 54px; border-radius: 30px; }
+.explorebar button { border-radius: 24px; }
+.explorebar #bSurprise span { display: none; }
+.explorebar #bShare { background: var(--chip); color: var(--ink); }
+body.visiting-lane .explorebar #bShare { display: none !important; }
+
+/* ---- Home sheet: shared header ---- */
+.sheet #sheetBody[data-hub] { height: 84%; padding-top: 0; }
+#sheetBody[data-hub] > .hub-top { position: sticky; top: 0; z-index: 6; margin: 0 -16px 16px; padding: 8px 16px 12px; background: var(--panel-solid); }
+#sheetBody[data-hub] .hub-head { display: flex; align-items: center; gap: 8px; }
+#sheetBody[data-hub] .hub-title { flex: 1 1 auto; min-width: 0; margin: 0; font: 600 23px/1.15 var(--display); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sheetBody[data-hub] .hub-head .sheet-icon { margin: 0; float: none; border-radius: 22px; }
+#sheetBody[data-hub] .hub-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 14px; padding: 4px; border-radius: 24px; background: var(--chip); }
+#sheetBody[data-hub] .hub-tab { display: grid; place-items: center; text-align: center; min-height: 40px; border-radius: 20px; background: transparent; color: var(--ink-dim); font: 800 15px/1 var(--font); transition: background .2s, color .2s; }
+#sheetBody[data-hub] .hub-tab[aria-selected="true"] { background: var(--panel-solid); color: var(--ink); box-shadow: 0 2px 8px #0000001f; }
+#sheetBody[data-hub] .hub-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The older tab bars and titles each view used to draw stay out of the way. */
+#sheetBody[data-hub] .menu-nav, #sheetBody[data-hub] .home-sheet-actions, #sheetBody[data-hub] .lane-heading { display: none; }
+
+/* A coral card for what's happening today. */
+#sheetBody[data-hub] .hub-card { display: grid; gap: 12px; margin: 0 0 18px; padding: 18px; border-radius: 22px; background: var(--hub-coral); color: var(--hub-coral-ink); }
+#sheetBody[data-hub] .hub-card > p { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: 800 16px/1.3 var(--font); }
+#sheetBody[data-hub] .hub-card .hub-card-line { font-size: 17px; font-weight: 900; }
+#sheetBody[data-hub] .hub-card > button { min-height: 46px; margin: 0; border: 0; border-radius: 23px; background: var(--panel-solid); color: var(--ink); font: 900 16px/1 var(--font); box-shadow: none; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+
+/* ---- Today ---- */
+#sheetBody[data-hub="today"] .hub-today { display: grid; gap: 12px; margin: 0 0 20px; }
+#sheetBody[data-hub="today"] .hub-today .hub-card { margin: 0; }
+#sheetBody[data-hub="today"] .hub-pins { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+#sheetBody[data-hub="today"] .hub-pin { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 80px; padding: 8px 4px; border-radius: 18px; background: var(--chip); color: var(--ink); font: 800 13px/1.1 var(--font); }
+#sheetBody[data-hub="today"] .hub-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 0 14px 0 16px; border-radius: 18px; background: var(--chip); color: var(--ink); font: 800 15px/1 var(--font); text-align: left; }
+#sheetBody[data-hub="today"] .hub-row span { flex: 1 1 auto; }
+#sheetBody[data-hub="today"] .hub-row small { color: var(--ink-dim); font-weight: 800; font-size: 13px; }
+#sheetBody[data-hub] .hub-pin:focus-visible, #sheetBody[data-hub] .hub-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- Lane: short labels on the place cards, no lead-in paragraph ---- */
+#sheetBody[data-hub="lane"] .lane-intro, #sheetBody[data-hub="lane"] .lane-when, #sheetBody[data-hub="lane"] .lane-front-hint { display: none; }
+#sheetBody[data-hub="lane"] .hub-card .lane-walk { order: 9; }
+
+/* ---- Tools: grouped shelves of small square tiles ---- */
+#sheetBody[data-hub="tools"] .home-apps.is-grouped { display: grid; gap: 20px; grid-template-columns: 1fr; }
+#sheetBody[data-hub="tools"] .home-group { display: grid; gap: 10px; }
+#sheetBody[data-hub="tools"] .home-group-title { margin: 0 4px; color: var(--ink-dim); font: 800 12px/1 var(--font); letter-spacing: .1em; text-transform: uppercase; }
+#sheetBody[data-hub="tools"] .home-apps.home-group-grid, #sheetBody[data-hub="tools"] .home-apps:not(.is-grouped) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+#sheetBody[data-hub="tools"] .home-app { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 6px; min-height: 80px; padding: 10px 4px; border: 0; border-radius: 18px; background: var(--chip); text-align: center; }
+#sheetBody[data-hub="tools"] .home-app > span:nth-child(2) { flex: none; }
+#sheetBody[data-hub="tools"] .home-app-icon { font-size: 24px; line-height: 1; }
+#sheetBody[data-hub="tools"] .home-app b { font: 800 12px/1.15 var(--font); overflow-wrap: normal; word-break: normal; }
+#sheetBody[data-hub="tools"] .home-app small, #sheetBody[data-hub="tools"] .home-furniture, #sheetBody[data-hub="tools"] .home-asset-hint { display: none; }
+#sheetBody[data-hub="tools"] .home-app-add { font: 800 12px/1.15 var(--font); color: var(--ink-dim); }
+#sheetBody[data-hub="tools"] .home-app:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 340px) { #sheetBody[data-hub="tools"] .home-apps.home-group-grid, #sheetBody[data-hub="tools"] .home-apps:not(.is-grouped), #sheetBody[data-hub="today"] .hub-pins { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---- Settings: one grouped list, no helper lines ---- */
+#sheetBody[data-hub="settings"] #menu-settings .settings-group .settings-toggle-grid { gap: 0; border-radius: 20px; overflow: hidden; background: var(--chip); }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group .toggle:not(.settings-action) { grid-template-columns: minmax(0, 1fr) auto; min-height: 52px; padding: 0 14px 0 16px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group .toggle:not(.settings-action):first-child { border-top: 0; }
+#sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action) .toggle-icon,
+#sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action) .toggle-copy small { display: none; }
+#sheetBody[data-hub="settings"] #menu-settings .toggle .toggle-name { font: 800 15px/1.2 var(--font); }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group .settings-tool-theme.settings-time { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 8px; }
+#sheetBody[data-hub="settings"] #menu-settings .settings-time .chipbtn { font-size: 13px; padding: 0 4px; }
+/* Sound: four quick switches, dark when on. */
+#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .settings-toggle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border-radius: 0; overflow: visible; background: none; }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle { grid-template-columns: minmax(0, 1fr); min-height: 60px; border: 0; border-radius: 18px; background: var(--chip); }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle i { display: none; }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle.on { background: var(--ink); color: var(--panel-solid); }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle.on .toggle-name { color: var(--panel-solid); }
+#sheetBody[data-hub="settings"] .hub-head .hub-title { text-align: left; }

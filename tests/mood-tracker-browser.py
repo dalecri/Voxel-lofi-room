@@ -14,7 +14,7 @@ with sync_playwright() as p:
  context.add_init_script("localStorage.setItem('lr.intro','true');localStorage.setItem('lr.meta',JSON.stringify({phase:'day',realtime:false,visitors:false,calmPerformance:true}));")
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI');page.evaluate('__lr.renderLoop.stop()');page.click('#bHome');page.locator('[data-app=mood]').click();page.locator('.mood-tracker').wait_for()
+ page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI');page.evaluate('__lr.renderLoop.stop()');page.click('#bHome');page.click('#hub-tab-tools');page.locator('[data-app=mood]').click();page.locator('.mood-tracker').wait_for()
  assert page.locator('#sheet').evaluate('e=>e.classList.contains("open")');assert page.get_by_role('button',name='Back to Control Centre',exact=True).is_visible();assert page.locator('.mood-word').inner_text()=='GOOD'
  assert page.locator('.mood-count').is_hidden();assert page.get_by_role('button',name='Mood',exact=True).get_attribute('aria-pressed')=='true'
  # Empty history is real, not the sample logs from the supplied prototype.

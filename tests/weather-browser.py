@@ -34,7 +34,7 @@ with sync_playwright() as p:
   assert page.evaluate('__lr.view.weather')==expected
   assert page.locator('#bRain').count()==0
  assert 'hanami' not in page.evaluate('JSON.parse(localStorage.getItem("lr.found") || "[]")')
- page.click('#bHome');assert 'Clear' in page.locator('#homeView').inner_text();page.keyboard.press('Escape')
+ page.click('#bHome');page.click('#hub-tab-tools');assert 'Clear' in page.locator('#homeView').inner_text();page.keyboard.press('Escape')
  # Actual tree interaction still bursts petals and discovers Hanami.
  result=page.evaluate('''() => {const a=__lr,C=LR.CAT.sakura;a.room.items=[];a.room.n=10;a.setMode('explore',true);const it=a.room.make('sakura',{x:4,z:4});a.room.add(it);a.changed();let burst=null;const original=a.view.burst;a.view.burst=function(id,kind,n){burst={id,kind,n};return original.call(this,id,kind,n)};try{a.interact(it.id)}finally{a.view.burst=original}return {tap:C.tap,petals:C.petals,burst,found:JSON.parse(localStorage.getItem('lr.found'))};}''')
  assert result['tap']=='petals' and result['petals']
@@ -44,7 +44,7 @@ with sync_playwright() as p:
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.meta.realtime=false;__lr.meta.dreamy=false;__lr.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
-   page.set_viewport_size({'width':width,'height':844});page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
+   page.set_viewport_size({'width':width,'height':844});page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-settings')
    assert page.locator('#menu-settings .toggle').count()==12
    assert page.locator('#menu-settings .toggle span').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")
    assert page.locator('#menu-settings p').evaluate_all("es=>es.every(e=>getComputedStyle(e).textAlign==='left')")

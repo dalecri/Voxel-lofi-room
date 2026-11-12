@@ -25,7 +25,7 @@ with sync_playwright() as p:
   elif 'twostorycaptions.json' in url:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]})
   else:r.abort()
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI');page.evaluate('__lr.renderLoop.stop()');page.click('#bHome');page.locator('[data-app=groceries]').click()
+ page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.roomToolsUI');page.evaluate('__lr.renderLoop.stop()');page.click('#bHome');page.click('#hub-tab-tools');page.locator('[data-app=groceries]').click()
  def add(name):page.get_by_label('Add groceries',exact=True).fill(name);page.get_by_role('button',name='Add to list',exact=True).click()
  add('PRIVATE_MILK');page.get_by_text('Added to Housekeeping in Google Tasks.',exact=True).wait_for();assert posts==[{'title':'PRIVATE_MILK'}];assert page.locator('.grocery-name').all_text_contents()==['PRIVATE_MILK'];assert page.evaluate('__lr.googleCalendar.selectedList')=='work'
  state['fail']=True;add('PRIVATE_EGGS');page.locator('.roomtool-status').filter(has_text='Saved here.').wait_for();assert len(posts)==2;assert 'PRIVATE_EGGS' in page.locator('.grocery-name').all_text_contents()

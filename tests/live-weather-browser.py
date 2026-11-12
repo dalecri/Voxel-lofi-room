@@ -24,7 +24,7 @@ with sync_playwright() as p:
  context.route('**/*',route);page=context.new_page();page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.liveWeather');assert not requests;assert page.evaluate('geoCalls')==0
  def settings():
-  page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
+  page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-settings')
  def live():return page.get_by_role('switch',name='Live weather',exact=True)
  page.evaluate('() => {window.weatherWind=null;__lr.Sound.soundscape=s=>{window.weatherWind=s.wind};}')
  settings();assert page.locator('#menu-settings .toggle').count()==12

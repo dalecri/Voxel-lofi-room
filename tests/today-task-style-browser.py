@@ -30,7 +30,7 @@ with sync_playwright() as p:
   else:r.abort()
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(20000)
  def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
- def open_today():page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
+ def open_today():page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click()
  def reopen(hour=None,day=19):
   page.keyboard.press('Escape')
   if hour is not None:page.evaluate('({hour,day})=>window.__taskClock=new Date(2026,9,day,hour,0).getTime()',{'hour':hour,'day':day})

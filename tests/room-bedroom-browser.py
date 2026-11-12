@@ -16,7 +16,7 @@ with sync_playwright() as p:
  c.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
  page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr');page.evaluate('__lr.renderLoop.stop()')
- def rooms():page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click()
+ def rooms():page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Lane',exact=True).click()
  def star(id):return page.locator(f'.rooms-card[data-room-id="{id}"] .rooms-bedroom')
  rooms();assert page.get_by_role('combobox',name='Main bedroom',exact=True).count()==0;assert page.locator('.rooms-bedroom').count()==2
  star(102).click();assert page.evaluate('__lr.meta.current')==101;assert star(102).get_attribute('aria-pressed')=='true';assert star(102).evaluate('e=>e===document.activeElement');assert star(102).locator('svg').get_attribute('fill')=='currentColor';assert page.evaluate('JSON.parse(localStorage.getItem("lr.mainBedroom"))')==102
