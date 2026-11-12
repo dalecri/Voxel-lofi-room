@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(15000)
  def ready():page.wait_for_function('!!window.__lr?.dashboard');page.evaluate('__lr.renderLoop.stop()')
  def menu(tab):
-  page.click('#bMenu');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
+  page.click('#bHome');page.click('#hub-tab-today');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
  def esc():page.keyboard.press('Escape')
  context.add_init_script("if(!sessionStorage.focusFixture){sessionStorage.focusFixture='true';const key='lr.room.101',room=JSON.parse(localStorage.getItem(key));room.items=[{id:20,t:'focuscandle',x:2,z:2,c:1,on:true}];localStorage.setItem(key,JSON.stringify(room));localStorage.setItem('lr.focusRituals',JSON.stringify({'101:20':{room:101,id:20,start:Date.now(),end:Date.now()+1500000}}));localStorage.setItem('lr.appShortcut',JSON.stringify('focus'));}")
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
@@ -29,7 +29,7 @@ with sync_playwright() as p:
  page.evaluate('__lr.updateRituals();__lr.todayUI.refresh()');assert page.locator('[data-timer=focus]').count()==0
  page.evaluate('window.opened=[];window.open=(...args)=>opened.push(args)')
  for width in [390,1280]:
-  page.set_viewport_size({'width':width,'height':844});page.click('#bHome');assert page.locator('#homeView [data-app=focus]').count()==0
+  page.set_viewport_size({'width':width,'height':844});page.click('#bHome');page.click('#hub-tab-tools');assert page.locator('#homeView [data-app=focus]').count()==0
   assert page.locator('#homeView [data-app]').filter(has_text='Pomodoro Terrarium').count()==0;page.keyboard.press('Escape')
  page.evaluate("const it=__lr.room.add(__lr.room.make('pomodorocandle',{x:4,z:4}));__lr.changed();__lr.interact(it.id)")
  assert page.evaluate('opened.length')==0

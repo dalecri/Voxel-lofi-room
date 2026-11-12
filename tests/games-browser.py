@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.set_default_timeout(15000)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.dashboard')
  # Control Centre: HTML games opens the library, not the collection page.
- page.click('#bHome');tile=page.locator('#homeView [data-app="portal:https://heycristobal.com/my-collection/"]');assert tile.count()==1;tile.click()
+ page.click('#bHome');page.click('#hub-tab-tools');tile=page.locator('#homeView [data-app="portal:https://heycristobal.com/my-collection/"]');assert tile.count()==1;tile.click()
  lib=page.locator('.games-library');assert lib.is_visible();assert page.evaluate('window.__opened')==[];assert page.locator('#sheetBody').get_attribute('data-tool')=='games'
  assert page.locator('#sheetBody .control-back').count()==1
  cart=lib.locator('a.games-cart[data-game="gnomeboy"]');assert cart.count()==1

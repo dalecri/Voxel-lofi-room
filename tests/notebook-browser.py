@@ -16,7 +16,7 @@ with sync_playwright() as p:
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.set_default_timeout(15000)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.dashboard')
- page.click('#bHome');grid=page.locator('#homeView')
+ page.click('#bHome');page.click('#hub-tab-tools');grid=page.locator('#homeView')
  assert grid.locator('[data-app=notebook]').count()==1
  for gone in ['typewriter','ideas','whiteboard','mailbox']:assert grid.locator(f'[data-app={gone}]').count()==0,gone
  grid.locator('[data-app=notebook]').click()

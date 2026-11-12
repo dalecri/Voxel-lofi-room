@@ -32,7 +32,7 @@ with sync_playwright() as p:
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.atlasUI')
  page.evaluate('''() => {const a=__lr;a.room.items=[];a.room.n=10;a.setMode('explore',true);window.ids={};for(const [t,o] of [['galleryframe',{k:0,u:5,e:0}],['barcounter',{x:4,z:4}],['bookshelf',{x:1,z:1}],['cat',{x:1,z:6}]]){const i=a.room.make(t,o);if(!a.room.canPlace(i))throw Error('Cannot place '+t);a.room.add(i);ids[t]=i.id;}a.changed();}''')
  assert not requests,requests
- def menu(tab):page.click('#bMenu');page.get_by_role('tab',name=tab,exact=True).click()
+ def menu(tab):page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name=tab,exact=True).click()
  def tap(t):page.evaluate('t=>__lr.interact(ids[t])',t)
  def esc():page.keyboard.press('Escape');page.locator('#sheet').wait_for(state='hidden')
  menu('Sound');assert not requests;page.get_by_role('button',name='lofi',exact=True).click();page.get_by_role('button',name='Add Fixture radio',exact=True).click();assert page.evaluate('__lr.meta.stations.at(-1).url')=='https://radio.example/live';assert page.evaluate('__lr.meta.music') is False;assert page.evaluate('mediaPlays')==0;esc()

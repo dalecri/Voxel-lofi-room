@@ -19,7 +19,7 @@ with sync_playwright() as p:
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.dashboard')
   canvas=page.locator('#c');assert canvas.evaluate('e=>e.style.filter')=='';assert page.evaluate('document.body.classList.contains("hand-drawn")') is False
   # Settings › Look toggle.
-  page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
+  page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-settings')
   row=page.locator('#menu-settings .toggle',has_text='Hand-drawn wobble');assert row.count()==1;row.click()
   assert page.evaluate('document.body.classList.contains("hand-drawn")');assert page.evaluate('JSON.parse(localStorage.getItem("lr.meta")).handDrawn') is True
   assert page.locator('#lr-wobble-0').count()==1 and page.locator('#paperGrain').count()==1
@@ -30,7 +30,7 @@ with sync_playwright() as p:
   assert later==first=='url("#lr-wobble-0")','the sketch stays still'
   # Survives a reload, then switches off cleanly.
   page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.dashboard');assert page.evaluate('document.body.classList.contains("hand-drawn")')
-  page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click();page.locator('#menu-settings .toggle',has_text='Hand-drawn wobble').click()
+  page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-settings');page.locator('#menu-settings .toggle',has_text='Hand-drawn wobble').click()
   assert canvas.evaluate('e=>e.style.filter')=='';assert page.evaluate('document.body.classList.contains("hand-drawn")') is False
   assert not errors,errors;context.close()
  print('PASS hand-drawn wobble: settings toggle saves, room-only filter, stays still with or without reduced motion, switches off')

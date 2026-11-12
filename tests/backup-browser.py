@@ -18,7 +18,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.set_default_timeout(15000)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.dashboard')
  page.evaluate('__lr.habits.add({name:"Stretch"});__lr.room.name="Backup Den";__lr.changed()')
- def settings():page.click('#bMenu');page.get_by_role('tab',name='Settings',exact=True).click()
+ def settings():page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-settings')
  settings();backup=page.locator('#bBackup');assert 'Back up my home' in backup.inner_text() and 'Last backup' not in backup.inner_text()
  with page.expect_download() as dl:backup.click()
  d=dl.value;assert d.suggested_filename.startswith('lofi-rooms-backup-') and d.suggested_filename.endswith('.json')

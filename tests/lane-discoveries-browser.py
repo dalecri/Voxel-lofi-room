@@ -24,7 +24,7 @@ with sync_playwright() as p:
  sheet=page.locator('#sheetBody')
 
  # The Lane menu says how many little things are waiting.
- page.click('#bLane');assert '3 little things to find' in page.locator('.lane-finds').inner_text(),page.locator('.lane-finds').inner_text()
+ page.click('#bHome');page.click('#hub-tab-lane');assert '3 little things to find' in page.locator('.lane-finds').inner_text(),page.locator('.lane-finds').inner_text()
  page.locator('.lane-walk').click();page.wait_for_function('__lr.laneVisit?.place==="street"')
  got=finds();assert 'laneletter' in got and 'laneparcel' in got and 'lanevisitor' in got and len(got)==4,got   # + the visitor's piece
 
@@ -56,7 +56,7 @@ with sync_playwright() as p:
 
  # All found: the menu says so, and the letter waits in the Mail Room.
  page.get_by_role('button',name='← Home',exact=True).click();page.wait_for_function('!__lr.laneVisit')
- page.click('#bLane');assert 'found all 3' in page.locator('.lane-finds').inner_text()
+ page.click('#bHome');page.click('#hub-tab-lane');assert 'found all 3' in page.locator('.lane-finds').inner_text()
  page.evaluate('__lr.visitLaneRoom("mail")');page.wait_for_function('__lr.laneVisit?.place==="mail"')
  page.evaluate('__lr.interact(__lr.room.items.find(i=>i.t==="morningpaper").id)');sheet.get_by_role('heading',name='Found on the lane').wait_for()
  page.keyboard.press('Escape');page.evaluate('__lr.returnFromLane()')

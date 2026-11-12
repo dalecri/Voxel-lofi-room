@@ -19,9 +19,9 @@ with sync_playwright() as p:
  def shot(n):
   if SHOTS:page.screenshot(path=f'{SHOTS}/{n}.png')
  def hub():
-  page.keyboard.press('Escape');page.click('#bHome');tile=page.locator('#homeView [data-app=habits]');assert tile.is_visible();tile.click();assert page.locator('.habit-home').is_visible()
+  page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-tools');tile=page.locator('#homeView [data-app=habits]');assert tile.is_visible();tile.click();assert page.locator('.habit-home').is_visible()
  # Nothing about habits on the Today dashboard.
- page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();assert page.locator('.today-habits,.today-habit').count()==0
+ page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click();assert page.locator('.today-habits,.today-habit').count()==0
  hub();home=page.locator('.habit-home');assert page.locator('#sheetBody .control-back').count()==1
  old=home.locator('[data-habit="habit-old"]');assert 'No home yet' in old.inner_text()
  # Unplaced habit offers placement instead of a check-in.

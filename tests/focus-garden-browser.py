@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(15000)
  def ready():page.wait_for_function('!!window.__lr?.dashboard');page.evaluate('__lr.renderLoop.stop()')
  def menu(tab):
-  page.click('#bMenu');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
+  page.click('#bHome');page.click('#hub-tab-today');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
  def esc():page.keyboard.press('Escape')
  context.add_init_script('if(!sessionStorage.gardenClock)sessionStorage.gardenClock=String(new Date(2026,9,17,14).getTime());const NativeDate=Date;window.Date=class extends NativeDate{constructor(...args){super(...(args.length?args:[Number(sessionStorage.gardenClock)]))}static now(){return Number(sessionStorage.gardenClock)}};window.__advanceFocus=ms=>sessionStorage.gardenClock=String(Number(sessionStorage.gardenClock)+ms)')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
@@ -27,7 +27,7 @@ with sync_playwright() as p:
  plant=page.evaluate('__lr.focusGarden.active.plant');bed_id=page.evaluate('bed.id');deadline=page.evaluate('__lr.focusGarden.active.end');assert page.evaluate('id=>__lr.room.get(id).p',plant)==bed_id
  def advance(ms):page.evaluate('ms=>{__advanceFocus(ms);__lr.updateRituals();__lr.view.frame(.1,__lr.view.t+.1);__lr.todayUI.refresh()}',ms)
  advance(225000);assert garden.get_attribute('data-stage')=='1';assert page.evaluate('id=>__lr.view.objs.get(id).userData.parts.growth1.visible&&!__lr.view.objs.get(id).userData.parts.growth2.visible',plant)
- page.keyboard.press('Escape');page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();assert page.locator('.today-garden').is_visible();assert 'Back to garden' in page.locator('.today-garden').inner_text();page.locator('.today-garden').click();assert garden.is_visible()
+ page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click();assert page.locator('.today-garden').is_visible();assert 'Back to garden' in page.locator('.today-garden').inner_text();page.locator('.today-garden').click();assert garden.is_visible()
  page.keyboard.press('Escape');page.reload(wait_until='networkidle');ready();assert page.evaluate('__lr.focusGarden.active.end')==deadline;assert page.evaluate('__lr.room.items.filter(i=>i.t==="focusbloom").length')==1;page.evaluate('id=>__lr.gardenUI.open(id)',bed_id)
  advance(225000);assert garden.get_attribute('data-stage')=='2';advance(225000);assert garden.get_attribute('data-stage')=='3'
  page.evaluate('()=>{window.chimes=0;const original=__lr.Sound.ritualChime.bind(__lr.Sound);__lr.Sound.ritualChime=function(){chimes++;return original()}}')

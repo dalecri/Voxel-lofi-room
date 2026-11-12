@@ -39,7 +39,7 @@ with sync_playwright() as p:
  }""")
  page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr?.companion')
  assert len(town()['beds'][0]['water'])==4,'startup catches up without opening Lane'
- page.click('#bLane');assert 'Lane showers watered the garden' in sheet.inner_text();assert 'Juniper left a book' in sheet.inner_text();close()
+ page.click('#bHome');page.click('#hub-tab-lane');assert 'Lane showers watered the garden' in sheet.inner_text();assert 'Juniper left a book' in sheet.inner_text();close()
  street(10);assert piece('bench')['c']==6
  tap('bench');assert 'Juniper’s book' in sheet.inner_text()
  page.screenshot(path='/tmp/lane-away-book.png')

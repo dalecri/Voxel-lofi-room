@@ -16,7 +16,7 @@ with sync_playwright() as p:
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[{'id':'widget-test','desc':'A synthetic caption idea','status':'idea','selectedTones':['Relatable'],'captions':['A synthetic caption'],'created':'2026-10-20T12:00:00Z'}]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
- def open_today():page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
+ def open_today():page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click()
  def order():return page.locator('.today-widget-stack > section').evaluate_all('es=>es.map(e=>e.dataset.widget)')
  def stored():return page.evaluate('JSON.parse(localStorage.getItem("lr.meta")).dashboardWidgetOrder')
  def edit():
@@ -50,14 +50,14 @@ with sync_playwright() as p:
  assert order()[0]=='weather';assert stored()==order()
  handle=page.get_by_role('button',name='Drag Weather widget',exact=True);handle.focus();handle.press('ArrowDown');assert order()[1]=='weather' and stored()==order();handle.press('ArrowUp')
  # Mouse drag moves the first widget below the second, without rebuilding either.
- page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');handle.scroll_into_view_if_needed();a=handle.bounding_box();target=page.locator('[data-widget=week]').bounding_box();end_y=target['y']+target['height']-12
+ handle.evaluate('e=>{const b=document.getElementById("sheetBody");b.scrollTop+=e.getBoundingClientRect().top-b.getBoundingClientRect().top-170}');a=handle.bounding_box();target=page.locator('[data-widget=week]').bounding_box();end_y=target['y']+target['height']-12
  assert end_y<1000
  page.mouse.move(a['x']+22,a['y']+22);page.mouse.down();page.mouse.move(a['x']+22,end_y,steps=12);page.wait_for_timeout(100);page.mouse.up();assert order()[:2]==['week','weather'],(order(),page.locator('.today-widget-status').inner_text());assert stored()==order()
  up('Weather');before=order();done()
  # Chromium touch input drives the actual pointer-capture path, including cancellation.
  cdp=context.new_cdp_session(page)
  def touch_drag(cancel=False):
-  page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');source=page.locator('[data-widget=weather]');source.scroll_into_view_if_needed();a=source.bounding_box();x=a['x']+20;start=a['y']+5
+  page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');source=page.locator('[data-widget=weather]');source.evaluate('e=>{const b=document.getElementById("sheetBody");b.scrollTop+=e.getBoundingClientRect().top-b.getBoundingClientRect().top-170}');a=source.bounding_box();x=a['x']+20;start=a['y']+5
   cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':start}]});page.wait_for_timeout(650)
   assert page.locator('.today-widget-drag-preview').count()==1
   target=page.locator('[data-widget=week]').bounding_box();end=min(960,target['y']+target['height']-12)

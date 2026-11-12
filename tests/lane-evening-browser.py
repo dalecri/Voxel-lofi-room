@@ -26,7 +26,7 @@ with sync_playwright() as p:
  def close():page.keyboard.press('Escape');page.wait_for_function("!document.querySelector('#sheet').classList.contains('open')")
 
  # By day: glass windows, lamps off, and no wind-down button in the Lane menu.
- page.click('#bLane');assert page.locator('.lane-wind').count()==0;close()
+ page.click('#bHome');page.click('#hub-tab-lane');assert page.locator('.lane-wind').count()==0;close()
  page.evaluate('__lr.visitLaneRoom("street")');page.wait_for_function('__lr.laneVisit?.place==="street"');assert not any(lit()),lit()
  # A chat with Juniper (on the mended bench by day) so the recap has something to say.
  page.evaluate('__lr.interact(+Object.keys(__lr.laneVisit.actions).find(k=>__lr.laneVisit.actions[k]==="talk:juniper"))');page.locator('#sheetBody .lane-talk-replies button').first.click();close()
@@ -47,14 +47,14 @@ with sync_playwright() as p:
  card.get_by_role('button',name='Goodnight').click();page.wait_for_function('__lr.meta.phase==="night"');assert card.count()==0
  page.wait_for_function('__lr.room.items.filter(i=>i.t==="streetlamp").every(i=>i.on)');assert who()==[],who()
  # The Lane menu offers another cup, not a second "wind down".
- page.click('#bLane');assert 'Another cup of tea' in page.locator('.lane-wind').inner_text();close()
+ page.click('#bHome');page.click('#hub-tab-lane');assert 'Another cup of tea' in page.locator('.lane-wind').inner_text();close()
  # Leaving the street ends the tea break.
  page.evaluate('__lr.returnFromLane()');assert not page.evaluate('__lr.companion.resting')
 
  # The next evening, rainy, after a quiet day: no catching up, no penalty. Just a kind note. Puddle stays under the awning.
  page.clock.set_fixed_time(datetime.datetime(2026,11,11,19,0));page.evaluate("__lr.meta.weather='rain';__lr.setPhase('evening',true)")
  assert not page.evaluate('__lr.laneModel.closedToday')
- page.click('#bLane');page.locator('.lane-wind').click();card.wait_for()
+ page.click('#bHome');page.click('#hub-tab-lane');page.locator('.lane-wind').click();card.wait_for()
  assert 'A quiet day. Those count too.' in card.inner_text(),card.inner_text()
  st=page.evaluate('[__lr.companion.brain.state.x,__lr.companion.brain.state.z]');assert abs(st[0]-6.5)<.3,st
  assert who()==['talk:puddle'],('Puddle stays dry under the awning',who())

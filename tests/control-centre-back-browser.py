@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.home');page.evaluate('__lr.renderLoop.stop()')
  home=page.locator('#homeView');body=page.locator('#sheetBody');back=page.get_by_role('button',name='Back to Control Centre',exact=True)
- def open_home():page.click('#bHome');home.wait_for()
+ def open_home():page.click('#bHome');page.click('#hub-tab-tools');home.wait_for()
  def launch(app):
   home.locator('.home-search').fill('');home.locator('[data-app='+app+']').click();back.wait_for();assert_header()
  def assert_header():

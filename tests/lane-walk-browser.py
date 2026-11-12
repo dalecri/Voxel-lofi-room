@@ -28,7 +28,7 @@ with sync_playwright() as p:
   page.keyboard.down('w');page.wait_for_function(until);page.keyboard.up('w')
 
  # 1. The Lane tab has a way outside; the street matches the tab: house, shop, mail, notice, left to right.
- page.click('#bLane');page.locator('.lane-walk').click();page.wait_for_function('__lr.laneVisit?.place==="street"')
+ page.click('#bHome');page.click('#hub-tab-lane');page.locator('.lane-walk').click();page.wait_for_function('__lr.laneVisit?.place==="street"')
  order=page.evaluate('["lanehome","laneshop","lanepost","laneboard"].map(t=>__lr.room.items.find(i=>i.t===t).x)');assert order==sorted(order),order
  assert page.locator('#laneVisitBar button').all_inner_texts()==['← Home','Notice board','☕ Wind down']
  page.evaluate('id=>__lr.interact(id)',at('laneboard'));page.locator('#sheetBody .lane-place').wait_for();page.keyboard.press('Escape')

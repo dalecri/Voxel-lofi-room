@@ -22,7 +22,7 @@ with sync_playwright() as p:
   assert page.evaluate('t=>!LRWidgets.attached(t)&&__lr.widgets.destinations(t).length===0',kind)
  for kind in ['lectern','newspaper','pomodorocandle','terrarium','gamingdesk']:
   page.evaluate('t=>__lr.interact(__lr.room.items.find(i=>i.t===t).id)',kind);assert not page.locator('#sheet').evaluate('e=>e.classList.contains("open")');assert page.evaluate('opened.length')==0
- page.click('#bHome');apps=page.locator('#homeView');assert apps.locator('[data-app=library],[data-app=newspaper]').count()==0
+ page.click('#bHome');page.click('#hub-tab-tools');apps=page.locator('#homeView');assert apps.locator('[data-app=library],[data-app=newspaper]').count()==0
  labels=apps.inner_text();assert all(label not in labels for label in ['My Library','Newspaper','Pomodoro Terrarium','Portfolio','QR Code generator','Voxel Worlds']);assert apps.locator('[data-app=notebook],[data-app=digest]').count()==2
  search=page.get_by_role('searchbox',name='Find a tool or app');search.fill('My Library');assert apps.locator('[data-app]').count()==0;page.keyboard.press('Escape');page.keyboard.press('Escape')
  page.evaluate('__lr.dashboard.launcher()');assert all(label not in page.locator('#sheetBody').inner_text() for label in ['Pomodoro Terrarium','Portfolio','QR Code generator','Voxel Worlds']);page.keyboard.press('Escape')

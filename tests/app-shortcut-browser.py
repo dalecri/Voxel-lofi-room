@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(15000)
  def ready():page.wait_for_function('!!window.__lr?.dashboard');page.evaluate('__lr.renderLoop.stop()')
  def menu(tab):
-  page.click('#bMenu');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
+  page.click('#bHome');page.click('#hub-tab-today');assert not errors,errors;page.get_by_role('tab',name=tab,exact=True).click()
  def esc():page.keyboard.press('Escape')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready()
  button=page.locator('#bAppShortcut');body=page.locator('#sheetBody');home=page.locator('#homeView')
@@ -25,10 +25,10 @@ with sync_playwright() as p:
  button.click();assert body.locator('h2').inner_text()=='Room shortcut';assert body.locator('[data-shortcut=typewriter]').is_visible()
  body.get_by_role('searchbox',name='Find a shortcut app',exact=True).fill('notetaker');assert body.locator('[data-shortcut]').count()==1;body.locator('[data-shortcut=typewriter]').click();assert page.evaluate("JSON.parse(localStorage.getItem('lr.appShortcut'))")=='typewriter';assert button.get_attribute('aria-label')=='Open Notetaker';assert button.evaluate('e=>e===document.activeElement')
  assert page.locator('#bEditAppShortcut').is_visible();page.click('#bEditAppShortcut');assert body.locator('[data-shortcut=typewriter]').get_attribute('aria-pressed')=='true';body.locator('[data-shortcut=typewriter]').click();button.click();assert page.locator('#letterBody').is_visible();page.locator('#letterBody').fill('PRIVATE_SHORTCUT_DRAFT');page.click('#letterClose')
- page.click('#bHome');home.get_by_role('button',name='Set room shortcut',exact=True).click();assert body.locator('[data-shortcut=typewriter]').get_attribute('aria-pressed')=='true';body.locator('[data-shortcut=tea]').click();button.click();assert body.locator('h2').inner_text()=='Tea';esc()
+ page.click('#bHome');page.click('#hub-tab-tools');home.get_by_role('button',name='Set room shortcut',exact=True).click();assert body.locator('[data-shortcut=typewriter]').get_attribute('aria-pressed')=='true';body.locator('[data-shortcut=tea]').click();button.click();assert body.locator('h2').inner_text()=='Tea';esc()
  # Private user-added apps come from the live Control Centre directory too.
  page.evaluate("__lr.files.addPortal('PRIVATE_SHORTCUT_APP','https://example.com/private-shortcut');window.opened=[];window.open=(...args)=>opened.push(args);void 0")
- page.click('#bHome');assert home.get_by_role('button',name='Set room shortcut',exact=True).is_visible();assert home.locator('[data-app]').filter(has_text='PRIVATE_SHORTCUT_APP').count()==1;home.get_by_role('button',name='Set room shortcut',exact=True).click();body.get_by_role('button',name='PRIVATE_SHORTCUT_APP',exact=True).click();button.click();assert page.evaluate('opened')==[['https://example.com/private-shortcut','_blank','noopener,noreferrer']],page.evaluate('({opened,shortcut:localStorage.getItem("lr.appShortcut"),label:document.querySelector("#bAppShortcut").ariaLabel})')
+ page.click('#bHome');page.click('#hub-tab-tools');assert home.get_by_role('button',name='Set room shortcut',exact=True).is_visible();assert home.locator('[data-app]').filter(has_text='PRIVATE_SHORTCUT_APP').count()==1;home.get_by_role('button',name='Set room shortcut',exact=True).click();body.get_by_role('button',name='PRIVATE_SHORTCUT_APP',exact=True).click();button.click();assert page.evaluate('opened')==[['https://example.com/private-shortcut','_blank','noopener,noreferrer']],page.evaluate('({opened,shortcut:localStorage.getItem("lr.appShortcut"),label:document.querySelector("#bAppShortcut").ariaLabel})')
  raw=page.evaluate('async()=>JSON.stringify(await __lr.readCode(await __lr.roomCode()))');assert all(t not in raw for t in ['PRIVATE_SHORTCUT_APP','private-shortcut','appShortcut','PRIVATE_SHORTCUT_DRAFT'])
  page.reload(wait_until='networkidle');ready();assert button.get_attribute('aria-label')=='Open PRIVATE_SHORTCUT_APP'
  for phase in ['day','night']:

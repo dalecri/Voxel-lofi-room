@@ -435,7 +435,8 @@ function startLofiRooms() {
     else if(p.id==='rooms')openLane();
     else if(p.id==='settings'){store.set('lr.menuTab','Settings');renderMenu();openSheet();}
   }
-  $('#bHome').onclick=()=>home.open();
+  // Home opens the shared sheet on the tab you used last (Close, Esc or the backdrop put it away).
+  $('#bHome').onclick=()=>{if(hubShowing())return;openHub();try{Sound.slide(true);}catch(e){/* optional interface sound */}};
   $('#bLane').onclick=()=>openLane();
 
   (function starsBg() {
@@ -2111,8 +2112,8 @@ function startLofiRooms() {
     if (!notebookOpening) notebookTab = null;
     if (open) markMoving();
     sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
-    $('#bMenu').setAttribute('aria-expanded','false'); $('#bSettings')?.setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;
-    if (returnFocus) $('#bMenu').focus({preventScroll:true});
+    $('#bMenu').setAttribute('aria-expanded','false'); $('#bSettings')?.setAttribute('aria-expanded','false'); $('#bHome').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;delete $('#sheetBody').dataset.hub;
+    if (returnFocus) $('#bHome').focus({preventScroll:true});
     // Dismissal and the pending room transition must survive an unavailable audio device.
     if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
   }
@@ -2137,7 +2138,7 @@ function startLofiRooms() {
     document.body.classList.remove('breathing'); $('#breathingHud').hidden = true;
     document.querySelectorAll('header, .rot, .explorebar, .tools, #tray').forEach(el => { el.inert = false; });
     if (breathCamera) { view.panGoal.copy(breathCamera.pan); view.zoomGoal = breathCamera.zoom; breathCamera = null; }
-    $('#bMenu').focus();
+    $('#bHome').focus();
     if (completed) { Sound.ritualChime(); toast('<span>Ten quiet minutes. Welcome back to your room.</span>', 3200); }
   }
   const gardenPortraits=new Map();
@@ -2495,7 +2496,7 @@ function startLofiRooms() {
   const settingsOpen = () => sheet.classList.contains('open') && !!$('#menu-settings') && !$('#menu-settings').hidden;
   $('#bSettings').onclick = () => {
     if (settingsOpen()) { closeSheets(); return; }
-    store.set('lr.menuTab', 'Settings'); renderMenu(); openSheet(); $('#bSettings').setAttribute('aria-expanded', 'true');
+    openSettings();
     try { Sound.slide(true); } catch (e) { /* optional interface sound */ }
   };
   sheet.addEventListener('click', e => { if (e.target === sheet) closeSheets(); });
@@ -2627,12 +2628,14 @@ function startLofiRooms() {
     home.close(false);
     roomToolsUI.close();
     if (!tool) tool = SHEET_TOOLS[title] || SHEET_TOOL_SUBS[sub] || '';
-    const body = $('#sheetBody'); delete body.dataset.dashboardFont; if (tool) body.dataset.tool = tool; else delete body.dataset.tool; body.innerHTML = '';
+    const body = $('#sheetBody'); delete body.dataset.dashboardFont; delete body.dataset.hub; $('#bHome').setAttribute('aria-expanded','false'); if (tool) body.dataset.tool = tool; else delete body.dataset.tool; body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
     const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
     h('h2', '', title); if (sub && !SHEET_TOOL_SUBS[sub]) h('p', 'muted', sub);
-    build(h); alignSheetHeader(body);openSheet();
+    build(h); alignSheetHeader(body);
+    const hub = { 'The Lane':'lane', 'Control Centre':'tools' }[title]; if (hub) mountHubNav(hub);
+    openSheet();
     // Notebook tabs ride along while one of its four tools is showing, even as it redraws.
     if (notebookTab && !notebookOpening) { if (NOTEBOOK_TITLES[title] === notebookTab) mountNotebookTabs(); else notebookTab = null; }
   }
@@ -3424,6 +3427,88 @@ function startLofiRooms() {
     browseToggle.onclick=()=>{const expanded=browseToggle.getAttribute('aria-expanded')!=='true';browse.hidden=!expanded;browseToggle.setAttribute('aria-expanded',String(expanded));add.hidden=true;stationToggle.setAttribute('aria-expanded','false');};
     atlasUI.mountRadio(browse);
   }
+  // ---------------------------------------------------------------
+  // Home: one sheet with three tabs. Today (the dashboard), the Lane and Tools (the
+  // Control Centre) each still build their own content; they just share this header.
+  const HUB_TABS=[['today','Today'],['lane','Lane'],['tools','Tools']];
+  const HUB_ICON={
+    gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    close:'<path d="m6 6 12 12M18 6 6 18"/>',back:'<path d="m15 18-6-6 6-6"/>',
+    todo:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+    habits:'<path d="M12 22V10M12 10C12 6 9 4 5 4c0 4 3 6 7 6zM12 13c0-4 3-6 7-6 0 4-3 6-7 6z"/>',
+    mood:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
+    sound:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    sparkle:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>',
+    walk:'<circle cx="13" cy="4" r="1.6"/><path d="M10 22l2-7 3 3v4M8 12l2-4 4 1 2 4M12 15l-2-7"/>',
+    chev:'<path d="m9 18 6-6-6-6"/>'
+  };
+  const hubSvg=(name,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${HUB_ICON[name]}</svg>`;
+  const hubButton=(cls,label,icon,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.setAttribute('aria-label',label);b.title=label;b.innerHTML=hubSvg(icon);b.onclick=fn;return b;};
+  function hubTitle(){return new Date().toLocaleDateString(undefined,{weekday:'long'})+' '+(LRHome.PHASES[meta.phase]||'').toLowerCase();}
+  const hubShowing=()=>sheet.classList.contains('open')&&!!$('#sheetBody').dataset.hub;
+  function openHub(tab=store.get('lr.hubTab','today')){
+    if(!HUB_TABS.some(([id])=>id===tab))tab='today';
+    if(tab==='lane')openLane();
+    else if(tab==='tools')home.open();
+    else{store.set('lr.menuTab','Today');renderMenu();openSheet();}
+  }
+  function openSettings(){store.set('lr.menuTab','Settings');renderMenu();openSheet();$('#bSettings').setAttribute('aria-expanded','true');}
+  // Swap whatever header a tab built for the shared one: title, Settings, Close, then the tabs.
+  function hubHeader(body,{title,lead,tabs}){
+    for(const n of body.querySelectorAll(':scope > .grab, :scope > .sheet-close, :scope > h2, :scope > p.muted:first-of-type, :scope > .menu-nav, :scope > .home-sheet-actions, :scope > .app-sheet-heading'))n.remove();
+    const top=document.createElement('div');top.className='hub-top';
+    const grab=document.createElement('div');grab.className='grab';
+    const head=document.createElement('div');head.className='hub-head';
+    if(lead)head.appendChild(lead);
+    const h2=document.createElement('h2');h2.className='hub-title';h2.textContent=title;head.appendChild(h2);
+    if(tabs)head.appendChild(hubButton('sheet-icon hub-settings','Settings','gear',openSettings));
+    head.appendChild(hubButton('sheet-icon sheet-close','Close','close',closeSheets));
+    top.append(grab,head);
+    if(tabs)top.appendChild(tabs);
+    body.prepend(top);
+  }
+  function mountHubNav(tab){
+    const body=$('#sheetBody');body.dataset.hub=tab;store.set('lr.hubTab',tab);
+    const tabs=document.createElement('div');tabs.className='hub-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Home');
+    for(const [id,label] of HUB_TABS){const b=document.createElement('button');b.type='button';b.className='hub-tab';b.id='hub-tab-'+id;b.setAttribute('role','tab');b.textContent=label;b.setAttribute('aria-selected',String(id===tab));b.tabIndex=id===tab?0:-1;b.onclick=()=>{if(id!==tab){try{Sound.turn();}catch(e){}openHub(id);}};tabs.appendChild(b);}
+    tabs.addEventListener('keydown',e=>{const all=[...tabs.children],i=all.indexOf(document.activeElement);if(i<0||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const n=all[(i+(e.key==='ArrowRight'?1:all.length-1))%all.length];n.click();requestAnimationFrame(()=>$('#hub-tab-'+n.id.slice(8))?.focus());});
+    hubHeader(body,{title:hubTitle(),tabs});
+    if(tab==='lane')hubLane(body);
+    if(tab==='today')hubToday(body.querySelector('#menu-today'));
+    $('#bHome').setAttribute('aria-expanded','true');
+  }
+  function mountSettingsHeader(){
+    const body=$('#sheetBody');body.dataset.hub='settings';
+    hubHeader(body,{title:'Settings',lead:hubButton('sheet-icon hub-back','Back','back',()=>openHub())});
+  }
+  // The Lane tab: the day's finds, the walk and its errands sit together in one card.
+  function hubLane(body){
+    const lane=body.querySelector('.lane');if(!lane)return;
+    const bits=[...lane.querySelectorAll(':scope > .lane-finds, :scope > .lane-todo, :scope > .lane-walk')];if(!bits.length)return;
+    const card=document.createElement('div');card.className='hub-card';bits[0].before(card);card.append(...bits);
+  }
+  // Today: what's going on (lane finds, cozy moments), four pinned tools, then the dashboard.
+  const HUB_PINNED=[['todo','To-Do'],['habits','Habits'],['mood','Mood'],['sound','Radio']];
+  function hubToday(panel){
+    if(!panel)return;
+    const wrap=document.createElement('div');wrap.className='hub-today';
+    const p=laneUI?.progress?.();
+    if(p&&p.total){
+      const card=document.createElement('div');card.className='hub-card';
+      const line=document.createElement('p');line.className='hub-card-line';
+      const left=p.total-p.found;line.innerHTML=hubSvg('sparkle',22);line.append(p.carrying?'A parcel to deliver':left?`${left} find${left===1?'':'s'} on the lane`:'All of today’s finds found');
+      const walk=document.createElement('button');walk.type='button';walk.className='hub-card-action';walk.textContent='Walk the lane';walk.onclick=()=>{closeSheets();visitLaneRoom('street');};
+      card.append(line,walk);wrap.appendChild(card);
+    }
+    const pins=document.createElement('div');pins.className='hub-pins';pins.setAttribute('role','group');pins.setAttribute('aria-label','Pinned tools');
+    for(const [id,label] of HUB_PINNED){const b=document.createElement('button');b.type='button';b.className='hub-pin';b.dataset.pin=id;b.innerHTML=hubSvg(id,24);b.append(label);b.onclick=()=>launchTool({id});pins.appendChild(b);}
+    wrap.appendChild(pins);
+    const moments=document.createElement('button');moments.type='button';moments.className='hub-row';moments.innerHTML=hubSvg('sparkle');
+    const label=document.createElement('span');label.textContent='Cozy moments';const count=document.createElement('small');count.textContent=`${found.size} of ${MOMENTS.length}`;
+    moments.append(label,count);moments.insertAdjacentHTML('beforeend',hubSvg('chev',18));moments.onclick=()=>{closeSheets();openCozyMoments();};
+    wrap.appendChild(moments);
+    panel.prepend(wrap);
+  }
   function renderMenu() { glideSheet(renderMenuNow); }
   function renderMenuNow() {
     frenchUI?.close(false);
@@ -3435,7 +3520,7 @@ function startLofiRooms() {
     saveIndex();
     const body = $('#sheetBody'), focused = document.activeElement;
     const focusState = focused?.matches('.toggle') ? {label:focused.textContent,panel:focused.closest('[role=tabpanel]')?.id,top:body.scrollTop} : null;
-    body.dataset.merchant = ''; delete body.dataset.tool;
+    body.dataset.merchant = ''; delete body.dataset.tool; delete body.dataset.hub;
     body.dataset.dashboardFont=meta.dashboardMono?'mono':'default';
     body.innerHTML = '';
     const sections = LRDashboard.menu(body, store, closeSheets);
@@ -3465,6 +3550,12 @@ function startLofiRooms() {
     const settingsPanel=target;
     // Grouped settings: a small heading, then full-width rows.
     const group=(title)=>{target=settingsPanel;const sec=h('section','settings-group');sec.setAttribute('aria-label',title);const head=document.createElement('h3');head.className='settings-group-title';head.textContent=title;sec.appendChild(head);const grid=document.createElement('div');grid.className='settings-toggle-grid';grid.setAttribute('aria-label',title+' settings');sec.appendChild(grid);target=grid;return sec;};
+    // Time of day lives here now: pick a daypart, or let the room follow the real clock.
+    const timeGroup=group('Time');
+    const timeRow=document.createElement('div');timeRow.className='settings-tool-theme settings-time';timeRow.setAttribute('role','radiogroup');timeRow.setAttribute('aria-label','Time of day');
+    for(const [id,label] of Object.entries(LRHome.PHASES)){const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=label;b.dataset.phase=id;b.setAttribute('role','radio');b.setAttribute('aria-checked',String(meta.phase===id));b.onclick=()=>{meta.realtime=false;setPhase(id,true);saveMeta();Sound.turn();renderMenu();};timeRow.appendChild(b);}
+    timeGroup.insertBefore(timeRow,target);
+    toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
     group('Sound');
     toggle('Music', !!meta.music, () => setControl('music',!meta.music));
     toggle('Sound', Sound.on, () => setControl('sound',!Sound.on));
@@ -3483,7 +3574,6 @@ function startLofiRooms() {
     group('Room life');
     toggle('Cat mischief (cats sometimes knock things over)', meta.mischief !== false, () => { meta.mischief = meta.mischief === false; saveMeta(); });
     toggle('Visitors (a neighbour cat drops by)', meta.visitors !== false, () => { meta.visitors = meta.visitors === false; saveMeta(); });
-    toggle('Follow the clock (morning, afternoon, evening, night)', meta.realtime, () => { meta.realtime = !meta.realtime; saveMeta(); if (meta.realtime) setPhase(realPhase(), true); });
     group('Comfort');
     toggle('Reduced motion', view.reducedMotion, () => setControl('reduced',!view.reducedMotion));
     toggle('Calm performance', meta.calmPerformance === true, () => { meta.calmPerformance = meta.calmPerformance !== true; saveMeta(); activity.setCalm(meta.calmPerformance); view.setCalmPerformance(meta.calmPerformance); });
@@ -3502,17 +3592,12 @@ function startLofiRooms() {
     target=settingsPanel;
     const settingsHelp=h('details','settings-help'),helpTitle=document.createElement('summary');helpTitle.textContent='About these settings';settingsHelp.appendChild(helpTitle);
     for(const [name,description] of settingsNotes){const p=document.createElement('p'),b=document.createElement('b');b.textContent=name+': ';p.append(b,document.createTextNode(description));settingsHelp.appendChild(p);}
-    if(!meta.realtime){
-      const label=h('label','settings-phase');label.textContent='Daypart';
-      const select=document.createElement('select');select.setAttribute('aria-label','Daypart');
-      Object.entries(LRHome.PHASES).forEach(([value,text])=>{const o=document.createElement('option');o.value=value;o.textContent=text;select.appendChild(o);});
-      select.value=meta.phase;select.onchange=()=>setPhase(select.value,true);label.appendChild(select);
-    }
     h('p', 'muted small', 'Explore: drag to look around, pinch to zoom, double-tap to zoom in, tap lamps, records, plants and cats. Decorate: Add places things (tap or drag), Move drags them, Turn spins them, Paint changes walls, floors and colours, Remove puts things away. Small things like mugs and lamps sit on desks, tables and shelves. On a computer: left-drag or right-drag spins, the wheel zooms (or scrolls the tray when the mouse is over it), middle-drag pans. Keys: 1–5 tools, ←/→ pick from the tray, ↑/↓ switch tabs, R turns the piece you’re placing or the one under the mouse, Delete removes it, Q/E turn the room, X switches Explore/Decorate, G makes a surprise room, M plays music, Ctrl+Z or U undoes, Esc goes back.');
     if (focusState) {
       [...(document.getElementById(focusState.panel)?.querySelectorAll('.toggle') || [])].find(b=>b.textContent===focusState.label)?.focus({preventScroll:true});
       body.scrollTop=focusState.top;
     }
+    if(sections.Settings.hidden)mountHubNav('today');else mountSettingsHeader();
   }
 
   function showIntro() {

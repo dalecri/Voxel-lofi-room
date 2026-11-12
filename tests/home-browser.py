@@ -25,10 +25,10 @@ with sync_playwright() as p:
  def open_home():
   for _ in range(2):
    if page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.keyboard.press('Escape')
-  page.click('#bHome');assert page.evaluate('__lr.home.active')
+  page.click('#bHome');page.click('#hub-tab-tools');assert page.evaluate('__lr.home.active')
  def search(q):
   if page.evaluate('__lr.home.active'):page.keyboard.press('Escape')
-  if not page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.click('#bMenu')
+  if not page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.click('#bHome');page.click('#hub-tab-today')
   if page.get_by_role('button',name='Search your space',exact=True).get_attribute('aria-expanded')=='false':page.get_by_role('button',name='Search your space',exact=True).click()
   page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True).fill(q)
   assert page.locator('.space-search').bounding_box()['y']>page.locator('[aria-label="Menu sections"]').bounding_box()['y']

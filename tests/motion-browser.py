@@ -19,7 +19,7 @@ with sync_playwright() as p:
   page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.set_default_timeout(15000)
   page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.dashboard')
   settle=lambda:page.wait_for_function('('+COUNT+')()===0')
-  page.click('#bMenu');settle()
+  page.click('#bHome');page.click('#hub-tab-today');settle()
   # Menu tabs drift in.
   page.get_by_role('tab',name='Lane',exact=True).click();tab=page.evaluate(COUNT)
   settle()
@@ -31,7 +31,7 @@ with sync_playwright() as p:
   page.evaluate("__lr.habitsUI.openHome()");swap2=page.evaluate(COUNT);settle()
   page.evaluate("__lr.habitsUI.openNew()");swap3=page.evaluate(COUNT);settle()
   # Travel from the Rooms tab dims the room first.
-  page.keyboard.press('Escape');settle();page.click('#bMenu');page.get_by_role('tab',name='Lane',exact=True).click();page.wait_for_timeout(300)
+  page.keyboard.press('Escape');settle();page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Lane',exact=True).click();page.wait_for_timeout(300)
   page.locator('.rooms-card[data-room-id="102"] .rooms-visit').click();faded=page.evaluate('document.querySelector("#fade").classList.contains("on")')
   page.wait_for_function('__lr.meta.current===102');page.wait_for_function('!document.querySelector("#fade").classList.contains("on")')
   print('reduced' if reduced else 'motion',dict(tab=tab,swap=swap,still=still,swap2=swap2,swap3=swap3,faded=faded))

@@ -13,7 +13,7 @@ with sync_playwright() as p:
  c.add_init_script("localStorage.setItem('lr.intro','true');localStorage.setItem('lr.meta',JSON.stringify({sound:false,music:false,realtime:false,phase:'day',visitors:false,mischief:false,calmPerformance:true}));if(localStorage.getItem('lr.fireflies')===null)localStorage.setItem('lr.fireflies','30')")
  external=[];c.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else (external.append(r.request.url),r.abort())[-1]);c.route('**/twostorycaptions.json',lambda r:r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[]}));page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
- page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click();panel=page.locator('#menu-today')
+ page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click();panel=page.locator('#menu-today')
  assert page.locator('.today-greeting').count()==0;assert panel.locator('.today-sky .today-welcome').is_visible();assert page.locator('#sheetBody > h2').count()==0
  assert panel.locator('.today-welcome').evaluate('e=>e.closest(".today-sky")!==null');date=panel.locator('.today-date').inner_text();assert panel.inner_text().count(date)==1
  for phase,greeting in [('morning','Good morning'),('day','Good afternoon'),('evening','Good evening'),('night','Good evening')]:
@@ -28,7 +28,7 @@ with sync_playwright() as p:
   page.set_viewport_size({'width':width,'height':900});page.locator('#sheetBody').evaluate('e=>e.scrollTop=0');assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=f'/tmp/today-layout-{width}.png',full_page=True)
   boxes=panel.locator('.today-duo > *').evaluate_all('es=>es.map(e=>({x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y}))');assert (boxes[0]['y']==boxes[1]['y'])==(width>=360)
  for id,selector in [('tea','.tea-dial'),('garden','.focus-garden'),('letter','#lettersView'),('ideas','.idea-stack')]:
-  panel.locator(f'[data-ritual="{id}"]').click();assert page.locator(selector).is_visible(),id;page.keyboard.press('Escape');page.click('#bMenu');page.get_by_role('tab',name='Today',exact=True).click()
+  panel.locator(f'[data-ritual="{id}"]').click();assert page.locator(selector).is_visible(),id;page.keyboard.press('Escape');page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click()
  page.evaluate("() => {const a=__lr;a.roomTools.brew(2);a.letters.model.add('Test room');a.letters.model.update({body:'A small letter',letterhead:'Test'});a.roomTools.addIdea('A spark');a.todayUI.refresh();}");assert 'brewing' in panel.locator('[data-ritual=tea] small').inner_text();assert panel.locator('[data-ritual=letter] small').inner_text()=='draft';assert panel.locator('[data-ritual=ideas] small').inner_text()=='1 spark'
  assert not errors,errors
  print('PASS Today greeting/tab isolation, phase heroes, French keyboard flip, daily claim, notebook progress, ritual destinations and responsive layout');b.close()

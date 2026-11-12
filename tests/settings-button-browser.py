@@ -23,8 +23,8 @@ with sync_playwright() as p:
  assert page.locator('#sheet').get_attribute('class').count('open') and gear.get_attribute('aria-expanded')=='true'
  close();assert gear.get_attribute('aria-expanded')=='false'
  # The Menu button still opens where you left off; the gear always lands on Settings.
- page.click('#bMenu');page.locator('#menu-settings').wait_for(state='visible');close()
- page.evaluate("localStorage.setItem('lr.menuTab',JSON.stringify('Today'))");page.click('#bMenu');page.locator('#menu-today').wait_for(state='visible');close()
+ page.click('#bHome');page.click('#hub-tab-today');page.locator('#menu-settings').wait_for(state='visible');close()
+ page.evaluate("localStorage.setItem('lr.menuTab',JSON.stringify('Today'))");page.click('#bHome');page.click('#hub-tab-today');page.locator('#menu-today').wait_for(state='visible');close()
  gear.click();page.locator('#menu-settings').wait_for(state='visible');close()
  page.keyboard.press(',');page.locator('#menu-settings').wait_for(state='visible');close()
  # Fits on small phones and desktop: the toolbar stays on screen and nothing overlaps the room name.

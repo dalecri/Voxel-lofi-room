@@ -17,7 +17,7 @@ with sync_playwright() as p:
  page=context.new_page();errors=[];dialogs=[];page.on('pageerror',lambda e:errors.append(e.stack));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.on('dialog',lambda d:(dialogs.append(d.message),d.dismiss()));page.set_default_timeout(20000)
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_function('!!window.__lr')
  def open_menu(tab='Today'):
-  page.click('#bMenu');page.wait_for_function('document.querySelector("#sheet").classList.contains("open")');page.get_by_role('tab',name=tab,exact=True).click();assert page.locator('#sheet').get_attribute('aria-hidden')=='false';assert not page.locator('#sheet').evaluate('e=>e.inert');assert page.locator('#bMenu').get_attribute('aria-expanded')=='true'
+  page.click('#bHome');page.click('#hub-tab-today');page.wait_for_function('document.querySelector("#sheet").classList.contains("open")');page.get_by_role('tab',name=tab,exact=True).click();assert page.locator('#sheet').get_attribute('aria-hidden')=='false';assert not page.locator('#sheet').evaluate('e=>e.inert');assert page.locator('#bMenu').get_attribute('aria-expanded')=='true'
  def closed():
   page.wait_for_function('!document.querySelector("#sheet").classList.contains("open") && document.querySelector("#sheet").inert');page.locator('#sheet').wait_for(state='hidden');assert page.locator('#sheet').get_attribute('aria-hidden')=='true';assert page.locator('#bMenu').get_attribute('aria-expanded')=='false'
  def affordance(editing):
@@ -30,7 +30,7 @@ with sync_playwright() as p:
  for width in [390,1280]:
   page.set_viewport_size({'width':width,'height':844})
   assert page.locator('#disc').evaluate('e=>e.tagName==="BUTTON" && !e.closest("#brand") && e.parentElement===document.querySelector("#brand").parentElement')
-  before=len(dialogs);page.click('#disc');assert len(dialogs)==before;assert page.locator('#cozyMoments').is_visible();page.keyboard.press('Escape');assert page.locator('#cozyMoments').is_hidden();page.click('#brand');assert dialogs[-1]=='Name this room'
+  before=len(dialogs);page.click('#bHome');page.click('#hub-tab-today');page.click('.hub-row');assert len(dialogs)==before;assert page.locator('#cozyMoments').is_visible();page.keyboard.press('Escape');assert page.locator('#cozyMoments').is_hidden();page.click('#brand');assert dialogs[-1]=='Name this room'
   for action in ['h','Escape','Close','Menu keyboard','Menu tap']:
    open_menu()
    if action=='h':page.keyboard.press('h')
@@ -52,7 +52,7 @@ with sync_playwright() as p:
   page.click('#bEdit');affordance(True);page.evaluate('localStorage.setItem("lr.mode",JSON.stringify("edit"))');page.reload(wait_until='networkidle');page.wait_for_function('!!window.__lr');affordance(False);assert page.evaluate('localStorage.getItem("lr.mode")') is None
   open_menu('Rooms');assert re.sub(r'\s+',' ',page.locator('#menu-lane h2').first.text_content())=='Rooms';page.keyboard.press('Escape');closed()
   open_menu('Today');heads=page.locator('#menu-today h2,#menu-today h3').all_text_contents();assert heads[0].startswith('Good ');assert heads[1:]==["Today's moment"],heads;assert page.locator('#menu-today .task-notebook').count()==0;assert page.locator('#menu-todo .task-notebook .google-tasks').count()==1
-  assert page.locator('#menu-today .daily-notice').count()==0;assert page.locator('#menu-today .today-sky').evaluate('e=>e.nextElementSibling.classList.contains("today-duo")');page.screenshot(path=f'/tmp/uiux-today-{width}.png');page.get_by_role('tab',name='Settings',exact=True).click()
+  assert page.locator('#menu-today .daily-notice').count()==0;assert page.locator('#menu-today .today-sky').evaluate('e=>e.nextElementSibling.classList.contains("today-duo")');page.screenshot(path=f'/tmp/uiux-today-{width}.png');page.click('.hub-settings')
   switches=page.locator('#menu-settings .toggle');assert switches.count()==13
   assert switches.evaluate_all('es=>es.every(e=>e.getAttribute("role")==="switch" && e.getAttribute("aria-pressed")===String(e.classList.contains("on")) && e.getAttribute("aria-checked")===e.getAttribute("aria-pressed"))')
   mischief=page.get_by_role('switch',name=re.compile('^Cat mischief'));before=mischief.get_attribute('aria-checked');mischief.click();assert mischief.get_attribute('aria-checked')!=before;assert mischief.get_attribute('aria-pressed')==mischief.get_attribute('aria-checked');assert mischief.evaluate('e=>document.activeElement===e');page.screenshot(path=f'/tmp/uiux-settings-{width}.png')
