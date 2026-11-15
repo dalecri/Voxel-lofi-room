@@ -1,9 +1,9 @@
-/* Navigation redesign (Nov 2026): one Home sheet with Today / Lane / Tools tabs,
-   a calm top bar, and Settings as one grouped list. Loaded last so it can settle
+/* Navigation redesign (Nov 2026): a bottom dock (Today, Lane, Decorate, Tools, You)
+   that switches one Home sheet, a calm top bar, and Settings as quick tiles. Loaded last so it can settle
    the older layers; everything inside the sheet is scoped to #sheetBody[data-hub]. */
 :root { --hub-coral: #c4563a; --hub-coral-ink: #fff; }
 
-/* ---- Top bar: the room's name (with Save built in), Undo/Redo and Home ---- */
+/* ---- Top bar: the room's name (with Save built in), Undo/Redo, Surprise and Photo ---- */
 header .chips #bLane, header .chips #bMenu, header .chips #bSettings { display: none; }
 .brand { display: flex; align-items: center; gap: 8px; min-height: 48px; box-sizing: border-box; padding: 6px 6px 6px 16px; border-radius: 24px; flex: 0 1 auto; max-width: min(260px, calc(100vw - 172px)); }
 .brand > #brand { flex: 1 1 auto; min-width: 0; text-align: left; }
@@ -17,26 +17,30 @@ header .chips #bLane, header .chips #bMenu, header .chips #bSettings { display: 
 body.visiting-lane .brand { flex-direction: column; align-items: flex-start; gap: 0; padding: 8px 16px; }
 body.visiting-lane .brand > #disc { display: block; }
 header .chips { gap: 2px; padding: 4px; border-radius: 24px; }
-header .chip, header .chip:is(#bUndo, #bRedo, #bHome) { width: 40px; height: 40px; border-radius: 20px; }
-header .chip#bHome[aria-expanded="true"] { background: var(--chip); }
+header .chip, header .chip:is(#bUndo, #bRedo, #bSurprise, #bShare) { width: 40px; height: 40px; border-radius: 20px; }
+header .chip#bSurprise svg { width: 22px; height: 22px; }
+header .chip#bSurprise svg rect { fill: transparent; }
+header .chip#bSurprise span { display: none; }
 
-/* ---- Bottom bar: Surprise, Decorate, Photo ---- */
-.explorebar { grid-template-columns: 54px minmax(0, 1fr) 54px; border-radius: 30px; }
-.explorebar button { border-radius: 24px; }
-.explorebar #bSurprise span { display: none; }
-.explorebar #bShare { background: var(--chip); color: var(--ink); }
-body.visiting-lane .explorebar #bShare { display: none !important; }
+/* ---- Dock: Home's tabs with Decorate raised in the middle ---- */
+.explorebar.dock { z-index: 12; width: min(420px, calc(100% - 24px)); grid-template-columns: repeat(2, minmax(0, 1fr)) 72px repeat(2, minmax(0, 1fr)); align-items: center; gap: 2px; padding: 6px; border-radius: 28px; background: var(--panel-solid); }
+.dock .dock-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 56px; padding: 0; border-radius: 18px; background: transparent; color: var(--ink-dim); font: 800 12px/1 var(--font); }
+.dock .dock-tab svg { width: 22px; height: 22px; }
+.dock .dock-tab[aria-current="page"] { background: var(--chip); color: var(--ink); }
+.dock .dock-tab:focus-visible, .dock #bEdit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dock #bEdit { justify-self: center; width: 64px; height: 64px; margin-top: -30px; padding: 0; border: 4px solid var(--panel-solid); border-radius: 32px; box-shadow: 0 10px 24px -10px #2814147a; }
+.dock #bEdit span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dock #bEdit svg { width: 24px; height: 24px; }
+/* The dock stays over Home so you can switch tabs; any other sheet (a tool, a place) covers it. */
+body:has(#sheet.open #sheetBody:not([data-hub])) .explorebar.dock { transform: translate(-50%, 140%); opacity: 0; pointer-events: none; }
+body:has(#sheet.open #sheetBody[data-hub]) .dock #bEdit { visibility: hidden; }
 
 /* ---- Home sheet: shared header ---- */
-.sheet #sheetBody[data-hub] { height: 84%; padding-top: 0; }
+.sheet #sheetBody[data-hub] { height: 84%; padding-top: 0; padding-bottom: calc(var(--sab) + 112px); }
 #sheetBody[data-hub] > .hub-top { position: sticky; top: 0; z-index: 6; margin: 0 -16px 16px; padding: 8px 16px 12px; background: var(--panel-solid); }
 #sheetBody[data-hub] .hub-head { display: flex; align-items: center; gap: 8px; }
 #sheetBody[data-hub] .hub-title { flex: 1 1 auto; min-width: 0; margin: 0; font: 600 23px/1.15 var(--display); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #sheetBody[data-hub] .hub-head .sheet-icon { margin: 0; float: none; border-radius: 22px; }
-#sheetBody[data-hub] .hub-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 14px; padding: 4px; border-radius: 24px; background: var(--chip); }
-#sheetBody[data-hub] .hub-tab { display: grid; place-items: center; text-align: center; min-height: 40px; border-radius: 20px; background: transparent; color: var(--ink-dim); font: 800 15px/1 var(--font); transition: background .2s, color .2s; }
-#sheetBody[data-hub] .hub-tab[aria-selected="true"] { background: var(--panel-solid); color: var(--ink); box-shadow: 0 2px 8px #0000001f; }
-#sheetBody[data-hub] .hub-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* The older tab bars and titles each view used to draw stay out of the way. */
 #sheetBody[data-hub] .menu-nav, #sheetBody[data-hub] .home-sheet-actions, #sheetBody[data-hub] .lane-heading { display: none; }
 
@@ -56,9 +60,18 @@ body.visiting-lane .explorebar #bShare { display: none !important; }
 #sheetBody[data-hub="today"] .hub-row small { color: var(--ink-dim); font-weight: 800; font-size: 13px; }
 #sheetBody[data-hub] .hub-pin:focus-visible, #sheetBody[data-hub] .hub-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ---- Lane: short labels on the place cards, no lead-in paragraph ---- */
+/* ---- Lane: the places drawn as one street under the day's sky, no lead-in paragraph ---- */
 #sheetBody[data-hub="lane"] .lane-intro, #sheetBody[data-hub="lane"] .lane-when, #sheetBody[data-hub="lane"] .lane-front-hint { display: none; }
 #sheetBody[data-hub="lane"] .hub-card .lane-walk { order: 9; }
+#sheetBody[data-hub="lane"] .lane-street { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 14px 6px 6px; border-radius: 22px; background: linear-gradient(180deg, #cfe3f4 0 66%, #d9cbb8 66% 100%) !important; }
+#sheetBody[data-hub="lane"] .lane[data-phase=evening] .lane-street { background: linear-gradient(180deg, #f2b98f 0 66%, #cdb9a4 66% 100%) !important; }
+#sheetBody[data-hub="lane"] .lane[data-phase=night] .lane-street { background: linear-gradient(180deg, #2f2a55 0 66%, #4a4058 66% 100%) !important; }
+#sheetBody[data-hub="lane"] .lane .lane-front { justify-content: flex-end; gap: 6px; padding: 4px 2px 8px; border: 0; border-radius: 16px; background: transparent; color: #3a2a26; }
+#sheetBody[data-hub="lane"] .lane[data-phase=night] .lane-front { color: #fff3e4; }
+#sheetBody[data-hub="lane"] .lane .lane-front > svg { width: 100%; max-width: 72px; }
+#sheetBody[data-hub="lane"] .lane .lane-front > span:not(.lane-residents) { font: 800 12px/1.15 var(--font); }
+#sheetBody[data-hub="lane"] .lane .lane-front[aria-expanded=true] { background: #ffffff8c; }
+#sheetBody[data-hub="lane"] .lane[data-phase=night] .lane-front[aria-expanded=true] { background: #ffffff26; }
 
 /* ---- Tools: grouped shelves of small square tiles ---- */
 #sheetBody[data-hub="tools"] .home-apps.is-grouped { display: grid; gap: 20px; grid-template-columns: 1fr; }
@@ -74,19 +87,22 @@ body.visiting-lane .explorebar #bShare { display: none !important; }
 #sheetBody[data-hub="tools"] .home-app:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 340px) { #sheetBody[data-hub="tools"] .home-apps.home-group-grid, #sheetBody[data-hub="tools"] .home-apps:not(.is-grouped), #sheetBody[data-hub="today"] .hub-pins { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
-/* ---- Settings: one grouped list, no helper lines ---- */
-#sheetBody[data-hub="settings"] #menu-settings .settings-group .settings-toggle-grid { gap: 0; border-radius: 20px; overflow: hidden; background: var(--chip); }
-#sheetBody[data-hub="settings"] #menu-settings .settings-group .toggle:not(.settings-action) { grid-template-columns: minmax(0, 1fr) auto; min-height: 52px; padding: 0 14px 0 16px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
-#sheetBody[data-hub="settings"] #menu-settings .settings-group .toggle:not(.settings-action):first-child { border-top: 0; }
-#sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action) .toggle-icon,
+/* ---- You (Settings): time of day up top, then every switch as a tile, dark when on ---- */
+#sheetBody[data-hub="settings"] #menu-settings .settings-group .settings-toggle-grid:not(:has(.settings-action)) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#sheetBody[data-hub="settings"] #menu-settings .settings-group .toggle:not(.settings-action) { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 78px; padding: 12px; border: 0; border-radius: 18px; background: var(--chip); text-align: left; }
+#sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action) i,
 #sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action) .toggle-copy small { display: none; }
-#sheetBody[data-hub="settings"] #menu-settings .toggle .toggle-name { font: 800 15px/1.2 var(--font); }
+#sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action) .toggle-icon { width: auto; height: auto; margin: 0; padding: 0; background: none; font-size: 20px; line-height: 1; }
+#sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action) .toggle-name { font: 800 13px/1.15 var(--font); }
+#sheetBody[data-hub="settings"] #menu-settings .toggle.on:not(.settings-action) { background: var(--ink); color: var(--panel-solid); }
+#sheetBody[data-hub="settings"] #menu-settings .toggle.on:not(.settings-action) .toggle-name { color: var(--panel-solid); }
+#sheetBody[data-hub="settings"] #menu-settings .toggle:not(.settings-action):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #sheetBody[data-hub="settings"] #menu-settings .settings-group .settings-tool-theme.settings-time { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 8px; }
 #sheetBody[data-hub="settings"] #menu-settings .settings-time .chipbtn { font-size: 13px; padding: 0 4px; }
-/* Sound: four quick switches, dark when on. */
-#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .settings-toggle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border-radius: 0; overflow: visible; background: none; }
-#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle { grid-template-columns: minmax(0, 1fr); min-height: 60px; border: 0; border-radius: 18px; background: var(--chip); }
-#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle i { display: none; }
-#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle.on { background: var(--ink); color: var(--panel-solid); }
-#sheetBody[data-hub="settings"] #menu-settings .settings-group[aria-label="Sound"] .toggle.on .toggle-name { color: var(--panel-solid); }
 #sheetBody[data-hub="settings"] .hub-head .hub-title { text-align: left; }
+@media (max-width: 340px) { #sheetBody[data-hub="settings"] #menu-settings .settings-group .settings-toggle-grid:not(:has(.settings-action)) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- Out on the Lane the dock stays, so Home is still a tap away; Decorate waits for home ---- */
+body.visiting-lane .explorebar.dock { display: grid !important; }
+body.visiting-lane .dock #bEdit { visibility: hidden; }
+body.visiting-lane .lane-visit-bar { bottom: calc(var(--sab) + 104px); }

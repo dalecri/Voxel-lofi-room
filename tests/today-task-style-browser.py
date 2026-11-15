@@ -30,7 +30,7 @@ with sync_playwright() as p:
   else:r.abort()
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(20000)
  def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
- def open_today():page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click()
+ def open_today():page.click('#hub-tab-today');page.click('#hub-tab-today')
  def reopen(hour=None,day=19):
   page.keyboard.press('Escape')
   if hour is not None:page.evaluate('({hour,day})=>window.__taskClock=new Date(2026,9,day,hour,0).getTime()',{'hour':hour,'day':day})
@@ -42,11 +42,11 @@ with sync_playwright() as p:
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)
   for width in [320,390,1280]:
-   page.set_viewport_size({'width':width,'height':1000});page.get_by_role('tab',name='Today',exact=True).click();today=page.locator('.today-google-focus .google-task-row').first;today.wait_for();page.mouse.move(0,0);today_style=appearance(today);assert today_style[2]=='20px';assert today_style[8:10]==['18px','18px'];assert 'Nunito' in today_style[5];assert today.evaluate('e=>getComputedStyle(e).animationName')=='none'
+   page.set_viewport_size({'width':width,'height':1000});page.click('#hub-tab-today');today=page.locator('.today-google-focus .google-task-row').first;today.wait_for();page.mouse.move(0,0);today_style=appearance(today);assert today_style[2]=='20px';assert today_style[8:10]==['18px','18px'];assert 'Nunito' in today_style[5];assert today.evaluate('e=>getComputedStyle(e).animationName')=='none'
    page.locator('.today-google-focus').screenshot(path=f'/tmp/shared-tasks-{phase}-{width}.png')
    page.get_by_role('tab',name='To-Do',exact=True).click();page.get_by_role('tab',name='Google',exact=True).click();other=page.locator('#menu-todo .google-task-row').first;other.wait_for();page.mouse.move(0,0);assert appearance(other)==today_style,(phase,width,appearance(other),today_style)
    assert page.locator('#sheetBody').evaluate('e=>e.scrollWidth<=e.clientWidth')
- page.get_by_role('tab',name='Today',exact=True).click();check=focus.get_by_role('checkbox',name='statcan task for today',exact=True);check.click();row=focus.locator('.google-task-row.completed');row.wait_for();assert row.locator('.google-task-copy b').evaluate('e=>getComputedStyle(e).opacity')=='0.4';assert row.locator('.task-checkmark svg').evaluate('e=>getComputedStyle(e).opacity')=='1';assert writes[-1][0]=='statcan';focus.get_by_role('button',name='Undo statcan task for today',exact=True).click();check.wait_for();assert writes[-1][2]['status']=='needsAction'
+ page.click('#hub-tab-today');check=focus.get_by_role('checkbox',name='statcan task for today',exact=True);check.click();row=focus.locator('.google-task-row.completed');row.wait_for();assert row.locator('.google-task-copy b').evaluate('e=>getComputedStyle(e).opacity')=='0.4';assert row.locator('.task-checkmark svg').evaluate('e=>getComputedStyle(e).opacity')=='1';assert writes[-1][0]=='statcan';focus.get_by_role('button',name='Undo statcan task for today',exact=True).click();check.wait_for();assert writes[-1][2]['status']=='needsAction'
  assert not errors,errors;browser.close()
 server.shutdown()
 print('PASS: identical Today/To-Do task card surfaces, spacing, light body text and square checkmarks across themes/widths; reduced motion; check/Undo preserved')

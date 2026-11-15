@@ -16,7 +16,7 @@ with sync_playwright() as p:
  context.route('**/*',lambda r:r.continue_() if r.request.url.startswith('http://127.0.0.1:') else r.fulfill(json={'exportedFrom':'TwoStoryCaptions','clips':[{'id':'widget-test','desc':'A synthetic caption idea','status':'idea','selectedTones':['Relatable'],'captions':['A synthetic caption'],'created':'2026-10-20T12:00:00Z'}]}) if 'twostorycaptions.json' in r.request.url else r.abort())
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
- def open_today():page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click()
+ def open_today():page.click('#hub-tab-today');page.click('#hub-tab-today')
  def order():return page.locator('.today-widget-stack > section').evaluate_all('es=>es.map(e=>e.dataset.widget)')
  def stored():return page.evaluate('JSON.parse(localStorage.getItem("lr.meta")).dashboardWidgetOrder')
  def edit():

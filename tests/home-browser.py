@@ -25,10 +25,10 @@ with sync_playwright() as p:
  def open_home():
   for _ in range(2):
    if page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.keyboard.press('Escape')
-  page.click('#bHome');page.click('#hub-tab-tools');assert page.evaluate('__lr.home.active')
+  page.click('#hub-tab-tools');assert page.evaluate('__lr.home.active')
  def search(q):
   if page.evaluate('__lr.home.active'):page.keyboard.press('Escape')
-  if not page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.click('#bHome');page.click('#hub-tab-today')
+  if not page.locator('#sheet').evaluate("e=>e.classList.contains('open')"):page.click('#hub-tab-today')
   if page.get_by_role('button',name='Search your space',exact=True).get_attribute('aria-expanded')=='false':page.get_by_role('button',name='Search your space',exact=True).click()
   page.get_by_role('searchbox',name='Search furniture, letters, scenes, ideas',exact=True).fill(q)
   assert page.locator('.space-search').bounding_box()['y']>page.locator('[aria-label="Menu sections"]').bounding_box()['y']
@@ -42,7 +42,7 @@ with sync_playwright() as p:
   b=control('Rain')
   if b.evaluate("e=>e.classList.contains('on')")!=value:b.click()
   assert page.evaluate('__lr.meta.weather')==('rain' if value else 'clear')
- page.keyboard.press('Escape');open_home();page.keyboard.press('Escape');assert page.locator('#bHome').evaluate('e=>document.activeElement===e')
+ page.keyboard.press('Escape');open_home();page.keyboard.press('Escape');assert page.evaluate('document.activeElement.classList.contains("dock-tab")')
  # The prominent search preserves all existing destinations and private content.
  search('HOME_PRIVATE');assert body.locator('.home-result-group h3').all_text_contents()==['Letters','Scenes','Ideas'];assert 'PRIVATE_SEALED_BODY' not in body.inner_text()
  body.get_by_role('button',name='HOME_PRIVATE_LETTER',exact=True).click();assert page.locator('#letterBody').inner_text()=='Private home letter body';assert 'open' in page.locator('#sheet').get_attribute('class');page.click('#letterClose')
@@ -58,7 +58,7 @@ with sync_playwright() as p:
  page.evaluate('__lr.room.name="Changed since scene";__lr.changed()');search('HOME_PRIVATE_SCENE');body.get_by_role('button',name='HOME_PRIVATE_SCENE',exact=True).click();assert page.evaluate('__lr.room.name')=='Home room'
  page.evaluate("__lr.interact(__lr.room.items.find(i=>i.t==='phone').id)");body.get_by_role('button',name='Control Centre',exact=True).click();assert page.evaluate('__lr.home.active');assert 'open' in page.locator('#sheet').get_attribute('class');page.keyboard.press('Escape')
  # Weather lives in Today and tasks in To-Do, with live state and persistence.
- search('');page.get_by_role('tab',name='Today',exact=True).click();assert body.locator('.today-sky').count()==1
+ search('');page.click('#hub-tab-today');assert body.locator('.today-sky').count()==1
  assert body.locator('#menu-today .today-tasks').count()==0;page.get_by_role('tab',name='To-Do',exact=True).click();form=body.locator('#menu-todo .today-task-form');form.get_by_role('textbox',name='A little task',exact=True).fill('PRIVATE_SPACE_TASK');form.get_by_role('button',name='＋ Add',exact=True).click();body.get_by_role('checkbox',name='PRIVATE_SPACE_TASK',exact=True).check();page.keyboard.press('Escape');open_home();assert view.get_by_role('checkbox').count()==0;page.keyboard.press('Escape')
  for phase in ['day','night']:
   page.evaluate('p=>{__lr.setPhase(p,true);__lr.view.setPhase(p,true)}',phase)

@@ -30,7 +30,7 @@ with sync_playwright() as p:
   else:r.abort()
  context.route('**/*',route);page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None);page.set_default_timeout(20000)
  def ready():page.wait_for_function('!!window.__lr?.todayUI');page.evaluate('__lr.renderLoop.stop()')
- def open_today():page.click('#bHome');page.click('#hub-tab-today');page.get_by_role('tab',name='Today',exact=True).click()
+ def open_today():page.click('#hub-tab-today');page.click('#hub-tab-today')
  page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');ready();open_today();focus=page.locator('.today-google-focus');check=focus.get_by_role('checkbox',name='statcan task for today',exact=True);check.wait_for();assert focus.get_by_role('button',name='All tasks',exact=True).count()==0
  check.click();undo=focus.get_by_role('button',name='Undo statcan task for today',exact=True);undo.wait_for();undo.click();check.wait_for();assert writes[-1][2]['status']=='needsAction'
  check.click();undo.wait_for();started=page.evaluate('performance.now()');page.wait_for_timeout(1500);assert undo.is_visible();undo.wait_for(state='detached',timeout=2200);elapsed=page.evaluate('performance.now()')-started;assert 2700<=elapsed<=3600,elapsed
@@ -38,7 +38,7 @@ with sync_playwright() as p:
  # Repainting or reopening Today must not bring back an expired Undo.
  page.evaluate('__lr.googleCalendar.selectList("statcan")');assert focus.locator('.google-task-feedback').count()==0
  page.get_by_role('tab',name='To-Do',exact=True).click();page.get_by_role('tab',name='Google',exact=True).click();manual=page.locator('#menu-todo .task-google-page');manual.get_by_role('button',name='Undo statcan task for today',exact=True).wait_for();manual.get_by_role('button',name='Undo statcan task for today',exact=True).click();assert saved[('statcan','one')]=='needsAction'
- page.get_by_role('tab',name='Today',exact=True).click();check.wait_for();assert not errors,errors
+ page.click('#hub-tab-today');check.wait_for();assert not errors,errors
  print('PASS Today Undo works immediately, removes the entire feedback after three seconds, stays expired on repaint, and preserves the To-Do Undo window')
  browser.close()
 server.shutdown()
