@@ -42,8 +42,8 @@ with sync_playwright() as p:
       bot.position.set(4.5,0,4.5);
       return JSON.stringify(cells)===JSON.stringify(Array.from(a.room.walkGrid())) && !a.room.serialize().items.some(i=>i.t==='lampbot');
     }''')
-    page.click('#bHome');page.click('#hub-tab-today')
-    page.get_by_role('tab',name='Lane',exact=True).click()
+    page.click('#hub-tab-today')
+    page.click('#hub-tab-lane')
     page.get_by_role('button', name=re.compile('Cat Loft')).first.click()
     page.wait_for_function('__lr.room.name === "Cat Loft" && __lr.companion.brain.state.roomId===__lr.meta.current')
     assert page.evaluate("__lr.companion.object.uuid===__botUuid && __lr.view.root.children.filter(o=>o.name==='lampbot').length===1")

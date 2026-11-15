@@ -33,7 +33,7 @@ function startLofiRooms() {
   const widgets = LRWidgets.create({ store });
   const wardrobe = LRCostumes.create({ store, owns: id => shop.owns(id), seasons: LR.SEASONS || [] });
   const roomTools = LRRoomTools.create({ store,onBrew:t=>remember('tea',{id:t.endAt}),onTallyGoal:t=>{remember('pushups',{date:t.date,id:t.date});try{Sound.init();if(Sound.on)Sound.chime();}catch(e){/* quiet reps still count */}if(companion)companion.hop();} });
-  const letters = LRLetters.createView({ store,sheet:codeSheet,dismiss:closeSheets,onClose:()=>$('#bHome').focus({preventScroll:true}),onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCharacter(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); }, mailbox:{count:()=>roomTools.state.mail.filter(l=>!l.read).length,open:()=>roomToolsUI.open('mailbox')} });
+  const letters = LRLetters.createView({ store,sheet:codeSheet,dismiss:closeSheets,onClose:()=>dockFocus(),onSaved:l=>remember('letter',{id:l.id}), sound: Sound, roomName: () => room.name, beforeOpen: () => { frenchUI?.close(); barnaby.close(); closeSheets(); closeCrate(); exitCharacter(true); }, onWriting: on => { Sound.setWriting(on); if (stream) stream.volume = on ? .45 : 1; }, sender:()=>roomTools.compose().from, rememberSender:value=>roomTools.setFrom(value), onSendToFuture:letter=>{ letters.close(); roomToolsUI.seal(letter); }, mailbox:{count:()=>roomTools.state.mail.filter(l=>!l.read).length,open:()=>roomToolsUI.open('mailbox')} });
 
   // ---------------------------------------------------------------
   // Cozy moments
@@ -376,7 +376,7 @@ function startLofiRooms() {
     preview:p=>{const f=LRLauncher.furniture(p,room.items,CAT);return f?{...f,src:thumbOf(f.id,f.variant)}:null;},
 
     beforeOpen:()=>{clearControlReturn();frenchUI?.close();letters.close();closeSheets();closeCrate();closePhoto();exitCharacter(true);if(rituals.breath.active)stopBreathing();},
-    onClose:()=>$('#bHome').focus(),
+    onClose:()=>dockFocus(),
     actions:{
       launch:launchTool,
       depart:beginControlReturn,
@@ -435,8 +435,9 @@ function startLofiRooms() {
     else if(p.id==='rooms')openLane();
     else if(p.id==='settings'){store.set('lr.menuTab','Settings');renderMenu();openSheet();}
   }
-  // Home opens the shared sheet on the tab you used last (Close, Esc or the backdrop put it away).
-  $('#bHome').onclick=()=>{if(hubShowing())return;openHub();try{Sound.slide(true);}catch(e){/* optional interface sound */}};
+  // The dock along the bottom is Home's tab bar: Today, Lane, Tools and You (Settings).
+  // Tapping the tab that's already showing leaves it; Close, Esc or the backdrop put the sheet away.
+  document.querySelectorAll('.dock-tab').forEach(b=>{b.onclick=()=>{const id=b.dataset.hubTab;if(hubShowing()&&dockTab()===id)return;try{Sound.init();hubShowing()?Sound.turn():Sound.slide(true);}catch(e){/* optional interface sound */}openHub(id);requestAnimationFrame(()=>b.focus({preventScroll:true}));};});
   $('#bLane').onclick=()=>openLane();
 
   (function starsBg() {
@@ -952,7 +953,7 @@ function startLofiRooms() {
     const hints = { add: 'Add (1)', move: 'Move (2)', turn: 'Turn (3, or R over a piece)', paint: 'Paint (4)', remove: 'Remove (5, or Delete over a piece)', pick: 'Pick (6, or I over a piece)' };
     document.querySelectorAll('.tools [data-tool]').forEach(b => { b.title = hints[b.dataset.tool]; });
     document.querySelector('.tools [data-mode]').title = 'Done (Esc)';
-    const chip = { bTime: 'Time of day', bLane:'The Lane', bSettings:'Settings (,)', bUndo: 'Undo (Ctrl+Z)', bRedo: 'Redo (Ctrl+Shift+Z)', bWalls: 'Hide walls (W)', bShare: 'Photo and share', bHome: 'Control Centre', bMenu: 'Menu (H)', bCharacter: 'Character view (C)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
+    const chip = { bTime: 'Time of day', bLane:'The Lane', bSettings:'Settings (,)', bUndo: 'Undo (Ctrl+Z)', bRedo: 'Redo (Ctrl+Shift+Z)', bWalls: 'Hide walls (W)', bShare: 'Photo and share', bMenu: 'Menu (H)', bCharacter: 'Character view (C)', bEdit: 'Decorate (X)', bSurprise: 'Surprise room (G)' };
     for (const id in chip) { const el = document.getElementById(id); if (el) el.title = chip[id]; }
   }
 
@@ -2107,13 +2108,14 @@ function startLofiRooms() {
     villageView?.destroy(); villageView=null;
     roomToolsUI.close();
     const open = sheet.classList.contains('open');
-    const returnFocus = sheet.contains(document.activeElement);
+    // Back to the dock when focus was in the sheet, or was lost when the sheet's content was swapped.
+    const returnFocus = sheet.contains(document.activeElement) || (open && document.activeElement === document.body);
     sheetScreen = '';
     if (!notebookOpening) notebookTab = null;
     if (open) markMoving();
     sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden','true');
-    $('#bMenu').setAttribute('aria-expanded','false'); $('#bSettings')?.setAttribute('aria-expanded','false'); $('#bHome').setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;delete $('#sheetBody').dataset.hub;
-    if (returnFocus) $('#bHome').focus({preventScroll:true});
+    $('#bMenu').setAttribute('aria-expanded','false'); $('#bSettings')?.setAttribute('aria-expanded','false'); $('#sheetBody').dataset.merchant = '';delete $('#sheetBody').dataset.dashboardFont;delete $('#sheetBody').dataset.hub;updateDock();
+    if (returnFocus) dockFocus();
     // Dismissal and the pending room transition must survive an unavailable audio device.
     if (open) { try { Sound.slide(false); } catch (e) { /* optional interface sound */ } }
   }
@@ -2138,7 +2140,7 @@ function startLofiRooms() {
     document.body.classList.remove('breathing'); $('#breathingHud').hidden = true;
     document.querySelectorAll('header, .rot, .explorebar, .tools, #tray').forEach(el => { el.inert = false; });
     if (breathCamera) { view.panGoal.copy(breathCamera.pan); view.zoomGoal = breathCamera.zoom; breathCamera = null; }
-    $('#bHome').focus();
+    dockFocus();
     if (completed) { Sound.ritualChime(); toast('<span>Ten quiet minutes. Welcome back to your room.</span>', 3200); }
   }
   const gardenPortraits=new Map();
@@ -2628,7 +2630,7 @@ function startLofiRooms() {
     home.close(false);
     roomToolsUI.close();
     if (!tool) tool = SHEET_TOOLS[title] || SHEET_TOOL_SUBS[sub] || '';
-    const body = $('#sheetBody'); delete body.dataset.dashboardFont; delete body.dataset.hub; $('#bHome').setAttribute('aria-expanded','false'); if (tool) body.dataset.tool = tool; else delete body.dataset.tool; body.innerHTML = '';
+    const body = $('#sheetBody'); delete body.dataset.dashboardFont; delete body.dataset.hub; updateDock(); if (tool) body.dataset.tool = tool; else delete body.dataset.tool; body.innerHTML = '';
     const h = (tag, cls, html) => { const el = document.createElement(tag); if (cls) el.className = cls; if (html) el.innerHTML = html; body.appendChild(el); return el; };
     h('div', 'grab');
     const close = h('button', 'chipbtn sheet-close sheet-icon', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.type = 'button'; close.setAttribute('aria-label', 'Close dialog'); close.onclick = closeSheets;
@@ -3428,12 +3430,12 @@ function startLofiRooms() {
     atlasUI.mountRadio(browse);
   }
   // ---------------------------------------------------------------
-  // Home: one sheet with three tabs. Today (the dashboard), the Lane and Tools (the
+  // Home: one sheet, switched from the dock. Today (the dashboard), the Lane and Tools (the
   // Control Centre) each still build their own content; they just share this header.
   const HUB_TABS=[['today','Today'],['lane','Lane'],['tools','Tools']];
   const HUB_ICON={
-    gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
-    close:'<path d="m6 6 12 12M18 6 6 18"/>',back:'<path d="m15 18-6-6 6-6"/>',
+
+    close:'<path d="m6 6 12 12M18 6 6 18"/>',
     todo:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
     habits:'<path d="M12 22V10M12 10C12 6 9 4 5 4c0 4 3 6 7 6zM12 13c0-4 3-6 7-6 0 4-3 6-7 6z"/>',
     mood:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
@@ -3446,7 +3448,12 @@ function startLofiRooms() {
   const hubButton=(cls,label,icon,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.setAttribute('aria-label',label);b.title=label;b.innerHTML=hubSvg(icon);b.onclick=fn;return b;};
   function hubTitle(){return new Date().toLocaleDateString(undefined,{weekday:'long'})+' '+(LRHome.PHASES[meta.phase]||'').toLowerCase();}
   const hubShowing=()=>sheet.classList.contains('open')&&!!$('#sheetBody').dataset.hub;
+  // Which dock tab the open sheet belongs to (Settings shows under You), or '' with the room in view.
+  const dockTab=()=>{const h=$('#sheetBody').dataset.hub||'';return h==='settings'?'you':h;};
+  function updateDock(){const on=dockTab();document.querySelectorAll('.dock-tab').forEach(b=>{if(b.dataset.hubTab===on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});}
+  function dockFocus(){($('#hub-tab-'+store.get('lr.hubTab','today'))||$('#bEdit')).focus({preventScroll:true});}
   function openHub(tab=store.get('lr.hubTab','today')){
+    if(tab==='you'){openSettings();return;}
     if(!HUB_TABS.some(([id])=>id===tab))tab='today';
     if(tab==='lane')openLane();
     else if(tab==='tools')home.open();
@@ -3454,32 +3461,27 @@ function startLofiRooms() {
   }
   function openSettings(){store.set('lr.menuTab','Settings');renderMenu();openSheet();$('#bSettings').setAttribute('aria-expanded','true');}
   // Swap whatever header a tab built for the shared one: title, Settings, Close, then the tabs.
-  function hubHeader(body,{title,lead,tabs}){
+  function hubHeader(body,{title,lead}){
     for(const n of body.querySelectorAll(':scope > .grab, :scope > .sheet-close, :scope > h2, :scope > p.muted:first-of-type, :scope > .menu-nav, :scope > .home-sheet-actions, :scope > .app-sheet-heading'))n.remove();
     const top=document.createElement('div');top.className='hub-top';
     const grab=document.createElement('div');grab.className='grab';
     const head=document.createElement('div');head.className='hub-head';
     if(lead)head.appendChild(lead);
     const h2=document.createElement('h2');h2.className='hub-title';h2.textContent=title;head.appendChild(h2);
-    if(tabs)head.appendChild(hubButton('sheet-icon hub-settings','Settings','gear',openSettings));
     head.appendChild(hubButton('sheet-icon sheet-close','Close','close',closeSheets));
     top.append(grab,head);
-    if(tabs)top.appendChild(tabs);
     body.prepend(top);
   }
   function mountHubNav(tab){
     const body=$('#sheetBody');body.dataset.hub=tab;store.set('lr.hubTab',tab);
-    const tabs=document.createElement('div');tabs.className='hub-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Home');
-    for(const [id,label] of HUB_TABS){const b=document.createElement('button');b.type='button';b.className='hub-tab';b.id='hub-tab-'+id;b.setAttribute('role','tab');b.textContent=label;b.setAttribute('aria-selected',String(id===tab));b.tabIndex=id===tab?0:-1;b.onclick=()=>{if(id!==tab){try{Sound.turn();}catch(e){}openHub(id);}};tabs.appendChild(b);}
-    tabs.addEventListener('keydown',e=>{const all=[...tabs.children],i=all.indexOf(document.activeElement);if(i<0||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const n=all[(i+(e.key==='ArrowRight'?1:all.length-1))%all.length];n.click();requestAnimationFrame(()=>$('#hub-tab-'+n.id.slice(8))?.focus());});
-    hubHeader(body,{title:hubTitle(),tabs});
+    hubHeader(body,{title:hubTitle()});
     if(tab==='lane')hubLane(body);
     if(tab==='today')hubToday(body.querySelector('#menu-today'));
-    $('#bHome').setAttribute('aria-expanded','true');
+    updateDock();
   }
   function mountSettingsHeader(){
     const body=$('#sheetBody');body.dataset.hub='settings';
-    hubHeader(body,{title:'Settings',lead:hubButton('sheet-icon hub-back','Back','back',()=>openHub())});
+    hubHeader(body,{title:'Settings'});updateDock();
   }
   // The Lane tab: the day's finds, the walk and its errands sit together in one card.
   function hubLane(body){
